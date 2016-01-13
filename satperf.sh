@@ -150,6 +150,7 @@ OS_MAJOR_VERSION=`sed -rn 's/.*([0-9])\.[0-9].*/\1/p' /etc/redhat-release`
 HOSTNSAME=`hostname`
 rm -rf scripts/capsule.repo
 echo "[CAPSULEREPO]" >> scripts/capsule.repo
+echo "name = capsule" >> scripts/capsule.repo
 echo "baseurl=$SAT_REPO/latest-stable-Satellite-$SAT_VERSION-RHEL-$OS_MAJOR_VERSION/compose/Capsule/x86_64/os/" >> scripts/capsule.repo
 echo "enabled=1" >> scripts/capsule.repo
 echo "gpgcheck=0" >> scripts/capsule.repo
