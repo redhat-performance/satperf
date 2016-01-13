@@ -2,24 +2,11 @@
 #!/bin/bash
 source satperf.cfg
 config=$2
-testprefix=satelitte61-$config
+testname=satelitte61-$config
 
 function satperf_usage() {
                 printf "The following options are available:\n"
                 printf "\n"
-                printf -- "\t --help :  help options\n"
-                printf -- "\t --install : Install satelitte from latest repo\n"
-                printf -- "\t --sat-backup : Take satelitte server backup to restore further\n"
-                printf -- "\t --sat-restore : Restore from backup\n"
-                printf -- "\t --setup : setup pbench and clear preregistered debug tools \n"
-                printf -- "\t --upload : Upload manifest\n"
-                printf -- "\t --create-life-cycle : create life cycle environments\n"
-                printf -- "\t --enable-content : enable repos\n"
-                printf -- "\t --sync-content : Sync content (concurrent or sequential) from repo server to satelitte server\n"
-                printf -- "\t --install-capsule : install capsule on mentioned capsule nodes \n"
-                printf -- "\t --sync-capsule :  sync capsule (concurrent or sequential) \n"
-                printf -- "\t --remove-capsule : uninstall capsule\n" 
-                printf -- "\t --all : Run all jobs in sequence\n"
 }
 
 function log()
@@ -27,21 +14,15 @@ function log()
     echo "[$(date)]: $*"
 }
 
-function pbench_cleanup()
-{
- log clearing prerigestered tools
- #cleanup tools if any
- clear-tools
- clear-results
- kill-tools
- #drop cache
- echo 3 > /proc/sys/vm/drop_caches
-}
-
 function pbench_config()
 {
+ log clearing preregistered tools
+ echo 3 > /proc/sys/vm/drop_caches
+ #clear preconfigured tools, if any
  if $PBENCH ; then
-   pbench_cleanup
+   kill-tools
+   clear-results
+   clear-tools
    log registering tools
    register-tool-set
  fi
@@ -57,7 +38,7 @@ function pbench_postprocess()
 
 function upload_manifest()
 {
-  log Upload Manifest 
+  log Upload Manifest
   hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" subscription upload --organization "${ORG}" --file $MANIFSET --repository-url $REPOSERVER
 }
 
@@ -71,77 +52,64 @@ function create_life_cycle_env()
 function enable_content()
 {
    log Enable content
-   log Enable RHEL 5 x86_64 content
    time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 5 Server (RPMs)" --basearch="x86_64" --releasever="5Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 
-   log Enable RHEL 5 i386 server
-   time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 5 Server (RPMs)" --basearch="i386" --releasever="5Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 5 Server (RPMs)" --basearch="i386" --releasever="5Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 
 #kickstart
 #  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 5 Server (Kickstart)" --basearch="x86_64" --releasever="${RHEL5}" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 #  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 6 Server (Kickstart)" --basearch="x86_64" --releasever="${RHEL6}" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 
-  log Enable RHEL6 x86_64 content
   time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 6 Server (RPMs)" --basearch="x86_64" --releasever="6Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 
-  log Enable RHEL6 i386 content
-  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 6 Server (RPMs)" --basearch="i386" --releasever="6Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 6 Server (RPMs)" --basearch="i386" --releasever="6Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 
 #  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 7 Server (Kickstart)" --basearch="x86_64" --releasever="${RHEL7}" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
-  log Enable RHEL 7 x86_64 content
+
   time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable --name="Red Hat Enterprise Linux 7 Server (RPMs)" --basearch="x86_64" --releasever="7Server" --product "Red Hat Enterprise Linux Server" --organization "${ORG}"
 }
 
-function sync_content_seq()
+function sync_content()
 {
- log sync content sequentially
- pbench_config
- for repo in `seq 1 $REPONUM`; do
-  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id $repo --organization="${ORG}"  2>&1
- done
- pbench_postprocess
+# for org in $(hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" --csv repository list --organization="${ORG}" --per-page=1000 | cut -d ',' -f 1 | grep -vi '^ID')
+ hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 1 --organization="${ORG}"  2>&1
+ hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 2 --organization="${ORG}"  2>&1
+ hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 3 --organization="${ORG}"  2>&1
+ hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 4 --organization="${ORG}"  2>&1
+ hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 5 --organization="${ORG}"  2>&1
+ hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 6 --organization="${ORG}"  2>&1
 }
 
-function sync_enable_conc()
+function sync_enable_bg()
 {
-log sync content concurrently
-pbench_config
-testname="${testprefix}"
-user-benchmark  --config=$tname-sync  -- "./scripts/sync_content.sh ${REPONUM} ${testname}-sync-repos-conc"
-pbench_postprocess
+user-benchmark  --config=$tname-sync  -- "./scripts/sync-repos.sh"
 }
 
 function content_view_create()
 {
 user-benchmark --config=$tname-cv-create -- "./scripts/cv_create.sh"
-pbench_postprocess
 }
 
 function content_view_publish()
 {
+chmod 0655 cv_publish.sh
 user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
-pbench_postprocess
 }
 
 function content_view_promote()
 {
+chmod 0655 cv_promote.sh
 user-benchmark  --config=$tname-cv-promote -- "./scripts/cv_promote.sh"
-pbench_postprocess
 }
 
-function sync_content_conc()
+function sync_content_bg()
 {
-pbench_config
-chmod 655 scripts/sync_content.sh
-user-benchmark  --config=$testprefix-sync-repos -- "./scripts/sync_content.sh"
-pbench_postprocess
+user-benchmark  --config=$tname -- "./scripts/sync_content.sh"
 }
 
-function enable_content_conc()
+function enable_content_bg()
 {
-pbench_config
-user-benchmark  --config=$tname-cv-promote -- "./scripts/enable_content_conc.sh"
-pbench_postprocess
+user-benchmark  --config=$tname-cv-promote -- "./scripts/enable_content_bg.sh"
 }
 
 function install_capsule()
@@ -149,7 +117,7 @@ function install_capsule()
 OS_MAJOR_VERSION=`sed -rn 's/.*([0-9])\.[0-9].*/\1/p' /etc/redhat-release`
 HOSTNSAME=`hostname`
 rm -rf scripts/capsule.repo
-echo "[CAPSULEREPO]" >> scripts/capsule.repo
+echo "[CAPSULE REPO]" >> scripts/capsule.repo
 echo "baseurl=$SAT_REPO/latest-stable-Satellite-$SAT_VERSION-RHEL-$OS_MAJOR_VERSION/compose/Capsule/x86_64/os/" >> scripts/capsule.repo
 echo "enabled=1" >> scripts/capsule.repo
 echo "gpgcheck=0" >> scripts/capsule.repo
@@ -185,41 +153,10 @@ scp -o "${SSH_OPTS}" ~/$capsule-certs.tar root@$capsule:.
 scp -o "${SSH_OPTS}" scripts/capsule.repo root@$capsule:/etc/yum.repos.d/
 scp -o "${SSH_OPTS}" scripts/requirements-capsule.txt root@$capsule:.
 scp -o "${SSH_OPTS}" scripts/capsule_install_$capsule.sh root@$capsule:.
-ssh -o "${SSH_OPTS}" root@$capsule "chmod 655 capsule_install_$capsule.sh;  ./capsule_install_$capsule.sh"
+ssh -o "${SSH_OPTS}" root@$capsule "chmod 0655 capsule_install_$capsule.sh;  ./capsule_install_$capsule.sh"
 
 rm -rf scripts/capsule_install_$capsule.sh
 done
-}
-
-function sync_capsule_conc()
-{
- numcapsules=0;
- for capsule in $CAPSULES; do numcapsules=`expr ${numcapsules} + 1`; done
- for numcap in `seq 1 ${numcapsules}`; do
-   capid=`expr ${numcap} + 1`
-   #add Lifecycle environment 
-   hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" capsule content add-lifecycle-environment --environment-id 1 --id "${capid}"
-   #clear tools if already registered
-   done
-  #clear capsules 
- for capsule in $CAPSULES;  do
-    ssh -o "${SSH_OPTS}" root@$capsule "clear-results; clear-tools; kill-tools"
- done
-  #Register tools
- register-tool-set
- for capsule in $CAPSULES;  do
-    ssh -o "${SSH_OPTS}" root@$capsule "register-tool-set"
- done
- testname="${testprefix}"
- user-benchmark --config=${testprefix} -- "./scripts/sync_capsules.sh ${numcapsules} ${testname}" 
- for numcap in `seq 1 ${numcapsules}`; do
-   capid=`expr ${numcap} + 1`
-   hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" capsule content remove-lifecycle-environment --environment-id 1 --id "${capid}"
- done
- clear-tools; kill-tools
- for capsule in $CAPSULES;  do
-    ssh -o "${SSH_OPTS}" root@$capsule "clear-results; clear-tools; kill-tools"
- done
 }
 
 function remove_capsule()
@@ -245,7 +182,7 @@ function install()
 python install_satelite.py
 }
 
-opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,sync-content,install-capsule,sync-capsule,remove-capsule,all" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,sync-content,install-capsule,remove-capsule,all" -n "getopt.sh" -- "$@");
 
 eval set -- "$opts";
 while true; do
@@ -285,25 +222,13 @@ while true; do
 		shift
 		;;
                 --sync-content)
-                if $CONCURRENT ; then
-		    sync_content_conc
-                else
-                   sync_content_seq
-                fi
+		sync_content
 		shift
 		;;
 	        --install-capsule)
 		install_capsule
 		shift
 		;;
-                --sync-capsule)
-                if $CONCURRENT ; then
-                    sync_capsule_conc
-                else
-                   sync_capsule_seq
-                fi
-                shift
-                ;;
 	        --remove-capsule)
 		remove_capsule
 		shift
@@ -325,3 +250,4 @@ while true; do
                	;;
 	esac
 done
+
