@@ -15,7 +15,6 @@ def which_release():
         vendor = "Redhat"
         str = open('/etc/redhat-release','r')
 	release_no = str.readlines()[0].split()[6].split('.')[0]
-	print release_no
         return release_no
     else:
         # TODO
@@ -54,7 +53,6 @@ def subscription(release=None, username=None, password=None, pool_id=None):
     """
     Subscription
     """
-    print username
     sub_cmd="subscription-manager register --username=%s --password=%s" % (username, password)
     sum_cmd_attach = "subscription-manager attach --pool=%s" % (pool_id)
     yum_utils_cmd="yum install yum-utils.noarch"
