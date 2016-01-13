@@ -314,9 +314,9 @@ while true; do
 		upload_manifest
 		enable_content
 		sleep 10
-		sync_content
+		sync_content_conc
 		install_capsule
-		sync_capsule
+		sync_capsule_conc
                 shift
 		;;
             	--)
