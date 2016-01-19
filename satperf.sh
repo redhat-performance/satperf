@@ -58,7 +58,7 @@ function pbench_postprocess()
 function upload_manifest()
 {
   log Upload Manifest 
-  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" subscription upload --organization "${ORG}" --file $MANIFSET --repository-url $REPOSERVER
+  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" subscription upload --organization "${ORG}" --file $MANIFSET --repository-url $REPOSERVER
 }
 
 function create_life_cycle_env()
@@ -113,18 +113,21 @@ pbench_postprocess
 
 function content_view_create()
 {
+pbench_config
 user-benchmark --config=$tname-cv-create -- "./scripts/cv_create.sh"
 pbench_postprocess
 }
 
 function content_view_publish()
 {
+pbench_config
 user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
 pbench_postprocess
 }
 
 function content_view_promote()
 {
+pbench_config
 user-benchmark  --config=$tname-cv-promote -- "./scripts/cv_promote.sh"
 pbench_postprocess
 }
@@ -180,6 +183,8 @@ echo  'capsule-installer --parent-fqdn          "'$HOSTNAME'"\
 if [ -f ~/$capsule-certs.tar ]; then
 	rm -rf ~/$capsule-certs.tar
 fi
+
+log Generating certs of capsule:$capsule 
 capsule-certs-generate --capsule-fqdn $capsule --certs-tar $capsule-certs.tar
 
 scp -o "${SSH_OPTS}" ~/$capsule-certs.tar root@$capsule:.
@@ -234,12 +239,14 @@ done
 function sat_backup()
 {
  rm -rf /home/backup
- katello-backup /home/backup
+ log Backup satelitte
+ time katello-backup /home/backup
 }
 
 function restore_backup()
 {
- katello-restore /home/backup/
+ log Restoring from Backup
+ time katello-restore /home/backup/
 }
 function install()
 {
@@ -256,8 +263,8 @@ while true; do
                 exit
                 ;;
 		--install)
-		echo "install"
-		python install_satelitte.py
+                log Installing satelitte
+		time python install_satelitte.py
 		#install
 		shift
 		;;
