@@ -2,7 +2,7 @@
 #!/bin/bash
 source satperf.cfg
 config=$2
-testprefix=satelitte61-$config
+tname=satelitte61-$config
 
 function satperf_usage() {
                 printf "The following options are available:\n"
@@ -106,38 +106,76 @@ function sync_enable_conc()
 {
 log sync content concurrently
 pbench_config
-testname="${testprefix}"
+testname="${tname}"
 user-benchmark  --config=$tname-sync  -- "./scripts/sync_content.sh ${REPONUM} ${testname}-sync-repos-conc"
 pbench_postprocess
 }
 
-function content_view_create()
+function content_view_publish_conc()
 {
+log content view publish concurrent
+chmod 655 scripts/cv_publish_conc.sh
 pbench_config
-user-benchmark --config=$tname-cv-create -- "./scripts/cv_create.sh"
+user-benchmark  --config=$tname-cv-publish -- "./scripts/cv_publish_conc.sh"
 pbench_postprocess
 }
 
-function content_view_publish()
+function content_view_publish_seq()
 {
+log content view publish sequential
+chmod 655 scripts/cv_publish_seq.sh
 pbench_config
-user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
+user-benchmark --config=$tname-cv-publish-seq -- "./scripts/cv_publish_seq.sh"
 pbench_postprocess
 }
 
-function content_view_promote()
+function content_view_promote_conc()
 {
+log content view promote concurrently
+chmod 655 scripts/cv_promote_conc.sh
 pbench_config
-user-benchmark  --config=$tname-cv-promote -- "./scripts/cv_promote.sh"
+user-benchmark  --config=$tname-cv-promote-conc -- "./scripts/cv_promote_conc.sh"
+pbench_postprocess
+}
+
+function content_view_promote_seq()
+{
+log content view promote sequential
+chmod 655 scripts/cv_promote_seq.sh
+pbench_config
+user-benchmark  --config=$tname-cv-promote-seq -- "./scripts/cv_promote_seq.sh"
 pbench_postprocess
 }
 
 function sync_content_conc()
 {
-pbench_config
+log sync content concurrently from repo server
 chmod 655 scripts/sync_content.sh
-user-benchmark  --config=$testprefix-sync-repos -- "./scripts/sync_content.sh"
+pbench_config
+user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
 pbench_postprocess
+}
+
+function content_view_create()
+{
+log create content view
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-x86_64-cv" --organization="${ORG}" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-6-server-x86_64-cv" --organization="${ORG}" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-7-server-x86_64-cv" --organization="${ORG}" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-i386-cv" --organization="${ORG}" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-i386-cv" --organization="${ORG}" 2>&1
+
+log add repos to content view
+log add RHEL 5 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-5-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 5 Server RPMs x86_64 5Server"  2>&1
+log add RHEL 6 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-6-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server" 2>&1
+log add RHEL 7 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-7-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server" 2>&1
+log add RHEL 5 i386 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-5-server-i386-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 5 Server RPMs i386 5Server"  2>&1
+log add RHEL 6 i386 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-6-server-i386-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs i386 6Server" 2>&1
 }
 
 function enable_content_conc()
@@ -216,8 +254,8 @@ function sync_capsule_conc()
  for capsule in $CAPSULES;  do
     ssh -o "${SSH_OPTS}" root@$capsule "register-tool-set"
  done
- testname="${testprefix}"
- user-benchmark --config=${testprefix} -- "./scripts/sync_capsules.sh ${numcapsules} ${testname}" 
+ testname="${tname}"
+ user-benchmark --config=${tname} -- "./scripts/sync_capsules.sh ${numcapsules} ${testname}" 
  for numcap in `seq 1 ${numcapsules}`; do
    capid=`expr ${numcap} + 1`
    hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" capsule content remove-lifecycle-environment --environment-id 1 --id "${capid}"
@@ -253,7 +291,7 @@ function install()
 python install_satelite.py
 }
 
-opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,sync-content,install-capsule,sync-capsule,remove-capsule,all" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,content-view-create,content-view-publish,content-view-promote,sync-content,install-capsule,sync-capsule,remove-capsule,add-content-hosts,all" -n "getopt.sh" -- "$@");
 
 eval set -- "$opts";
 while true; do
@@ -292,6 +330,26 @@ while true; do
 		enable_content
 		shift
 		;;
+                --content-view-create)
+                content_view_create
+                shift
+                ;;
+                --content-view-publish)
+                if $CONCURRENT ; then
+                   content_view_publish_conc
+                else
+                   content_view_publish_sync
+                fi
+                shift
+                ;;
+                --content-view-promote)
+                if $CONCURRENT ; then
+                   content_view_promote_conc
+                else
+                   content_view_promote_sync
+                fi
+                shift
+                ;;
                 --sync-content)
                 if $CONCURRENT ; then
 		    sync_content_conc
