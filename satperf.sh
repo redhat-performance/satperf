@@ -15,6 +15,8 @@ function satperf_usage() {
                 printf -- "\t --upload : Upload manifest\n"
                 printf -- "\t --create-life-cycle : create life cycle environments\n"
                 printf -- "\t --enable-content : enable repos\n"
+                printf -- "\t --content-view-create : create content view and add repos\n"
+                printf -- "\t --enable-view-publish : publish content views\n"
                 printf -- "\t --sync-content : Sync content (concurrent or sequential) from repo server to satelitte server\n"
                 printf -- "\t --install-capsule : install capsule on mentioned capsule nodes \n"
                 printf -- "\t --sync-capsule :  sync capsule (concurrent or sequential) \n"
