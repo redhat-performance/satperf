@@ -27,8 +27,7 @@ def yum_setup(release=None, sat_repo_url=None):
     """
     #Repo links
 
-    sat_link = urljoin(sat_repo_url, 
-                    "latest-stable-Satellite-6.1-RHEL-" + release + "/compose/Satellite/x86_64/os/")
+    sat_link = urljoin(sat_repo_url,"latest-Satellite-6.1-RHEL-" + release + "/compose/Satellite/x86_64/os/")
 
     #Repo paths   
     sat6_repo = "/etc/yum.repos.d/sat6.repo"
