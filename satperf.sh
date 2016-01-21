@@ -204,7 +204,7 @@ foreman_oauth_key=$(awk '{print $2}' /var/lib/puppet/foreman_cache_data/oauth_co
 
 for  capsule in $CAPSULES; do
 
-echo 'subscription-manager register --username='$RHN_USERNAME' --password='RHN_PASSWORD' --force' >> scripts/capsule_install_$capsule.sh
+echo 'subscription-manager register --username='$RHN_USERNAME' --password='$RHN_PASSWORD' --force' >> scripts/capsule_install_$capsule.sh
 echo 'subscription-manager attach --pool='$pool_id'' >> scripts/capsule_install_$capsule.sh
 cat scripts/capsule_install.sh >> scripts/capsule_install_$capsule.sh
 echo 'subscription-manager register --org "Default_Organization"  --username '$ADMIN_USER' --password '$ADMIN_PASSWORD' --force' >> scripts/capsule_install_$capsule.sh
