@@ -1,8 +1,8 @@
 #Author Pradeep Kumar Surisetty<psuriset@redhat.com>
 #!/bin/bash
 source satperf.cfg
-config=$2
-tname=satelitte61-$config
+tname=$2
+testprefix=satelitte61-$tname
 
 function satperf_usage() {
                 printf "The following options are available:\n"
@@ -15,9 +15,10 @@ function satperf_usage() {
                 printf -- "\t --upload : Upload manifest\n"
                 printf -- "\t --create-life-cycle : create life cycle environments\n"
                 printf -- "\t --enable-content : enable repos\n"
-                printf -- "\t --content-view-create : create content view and add repos\n"
-                printf -- "\t --enable-view-publish : publish content views\n"
+	        printf -- "\t --content-view-create : create content view and add repos\n"
+		printf -- "\t --content-view-publish : publish content views\n"
                 printf -- "\t --sync-content : Sync content (concurrent or sequential) from repo server to satelitte server\n"
+                printf -- "\t --resync-content : Resync content (concurrent or sequential) from repo server to satelitte server\n"
                 printf -- "\t --install-capsule : install capsule on mentioned capsule nodes \n"
                 printf -- "\t --sync-capsule :  sync capsule (concurrent or sequential) \n"
                 printf -- "\t --remove-capsule : uninstall capsule\n" 
@@ -46,6 +47,7 @@ function pbench_config()
    pbench_cleanup
    log registering tools
    register-tool-set
+   unregister-tool --name perf
  fi
 }
 
@@ -54,6 +56,7 @@ function pbench_postprocess()
   log clearing tools
   kill-tools
   clear-tools
+  #clear-results
   move-results
 }
 
@@ -98,92 +101,109 @@ function sync_content_seq()
 {
  log sync content sequentially
  pbench_config
- for repo in `seq 1 $REPONUM`; do
-  time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id $repo --organization="${ORG}"  2>&1
- done
+ time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 1 --organization="${ORG}"  2>&1
+ time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 2 --organization="${ORG}"  2>&1
+ time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 3 --organization="${ORG}"  2>&1
+ time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 4 --organization="${ORG}"  2>&1
+ time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id 5 --organization="${ORG}"  2>&1
  pbench_postprocess
 }
 
 function sync_enable_conc()
 {
-log sync content concurrently
-pbench_config
-testname="${tname}"
-user-benchmark  --config=$tname-sync  -- "./scripts/sync_content.sh ${REPONUM} ${testname}-sync-repos-conc"
-pbench_postprocess
-}
-
-function content_view_publish_conc()
-{
-log content view publish concurrent
-chmod 655 scripts/cv_publish_conc.sh
-pbench_config
-user-benchmark  --config=$tname-cv-publish -- "./scripts/cv_publish_conc.sh"
-pbench_postprocess
-}
-
-function content_view_publish_seq()
-{
-log content view publish sequential
-chmod 655 scripts/cv_publish_seq.sh
-pbench_config
-user-benchmark --config=$tname-cv-publish-seq -- "./scripts/cv_publish_seq.sh"
-pbench_postprocess
-}
-
-function content_view_promote_conc()
-{
-log content view promote concurrently
-chmod 655 scripts/cv_promote_conc.sh
-pbench_config
-user-benchmark  --config=$tname-cv-promote-conc -- "./scripts/cv_promote_conc.sh"
-pbench_postprocess
+wget http://perf1.perf.lab.eng.bos.redhat.com/psuriset/sync_repos.sh
+user-benchmark  --config=$config-sync  -- "./scripts/sync-repos.sh"
 }
 
 function content_view_promote_seq()
 {
-log content view promote sequential
-chmod 655 scripts/cv_promote_seq.sh
 pbench_config
-user-benchmark  --config=$tname-cv-promote-seq -- "./scripts/cv_promote_seq.sh"
+user-benchmark --config=$tname-cv-promote-seq -- "./scripts/cv_promote_seq.sh"
 pbench_postprocess
 }
-
-function sync_content_conc()
+function content_view_promote_conc()
 {
-log sync content concurrently from repo server
-chmod 655 scripts/sync_content.sh
 pbench_config
-user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
+user-benchmark --config=$tname-cv-promote-concurrent -- "./scripts/cv_promote_conc.sh"
 pbench_postprocess
 }
 
 function content_view_create()
 {
 log create content view
-time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-x86_64-cv" --organization="${ORG}" 2>&1
-time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-6-server-x86_64-cv" --organization="${ORG}" 2>&1
-time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-7-server-x86_64-cv" --organization="${ORG}" 2>&1
-time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-i386-cv" --organization="${ORG}" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-x86_64-cv" --organization="${ORG}" 2>&1 
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-6-server-x86_64-cv" --organization="${ORG}" 2>&1 
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-7-server-x86_64-cv" --organization="${ORG}" 2>&1 
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-i386-cv" --organization="${ORG}" 2>&1   
 time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name="rhel-5-server-i386-cv" --organization="${ORG}" 2>&1
 
 log add repos to content view
 log add RHEL 5 x86_64 server repo
 time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-5-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 5 Server RPMs x86_64 5Server"  2>&1
 log add RHEL 6 x86_64 server repo
-time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-6-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-6-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server" 2>&1 
 log add RHEL 7 x86_64 server repo
 time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-7-server-x86_64-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server" 2>&1
-log add RHEL 5 i386 server repo
+log add RHEL 5 x86_64 server repo
 time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-5-server-i386-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 5 Server RPMs i386 5Server"  2>&1
-log add RHEL 6 i386 server repo
+log add RHEL 6 x86_64 server repo
 time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name="rhel-6-server-i386-cv" --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs i386 6Server" 2>&1
+}
+
+function content_view_create_scale()
+{
+log create content view upto $NUMCV
+
+for cvnum in `seq 1 $NUMCV`; do
+
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view create --name=cv$cvnum --organization="${ORG}" 2>&1
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name=cv$cvnum --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 5 Server RPMs x86_64 5Server"  2>&1
+log add RHEL 6 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name=cv$cvnum --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server" 2>&1
+log add RHEL 7 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name=cv$cvnum  --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server" 2>&1
+log add RHEL 5 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name=cv$cvnum --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 5 Server RPMs i386 5Server"  2>&1
+log add RHEL 6 x86_64 server repo
+time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" content-view add-repository --name=cv$cvnum --organization="${ORG}" --product="Red Hat Enterprise Linux Server" --repository="Red Hat Enterprise Linux 6 Server RPMs i386 6Server" 2>&1
+
+done      
+}
+
+function content_view_publish_scale()
+{
+for numcvpublish  in `seq 1 ${NUM_CV_PUBLISH}`; do
+  pbench_config
+  chmod +x scripts/cv_publish_scale.sh
+  user-benchmark  --config=$tname-cv-publish-cv:$NUMCV-cvpublishno:$numcvpublish -- "./scripts/cv_publish_scale.sh"
+  pbench_postprocess
+  sleep 10
+done
+}
+
+function content_view_publish()
+{
+chmod +x scripts/cv_publish.sh
+user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
+}
+
+function content_view_promote()
+{
+chmod +x scripts/cv_promote.sh
+user-benchmark  --config=$tname-cv-promote -- "./scripts/cv_promote.sh"
+}
+
+function sync_content_conc()
+{
+pbench_config
+user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
+pbench_postprocess
 }
 
 function enable_content_conc()
 {
 pbench_config
-user-benchmark  --config=$tname-cv-promote -- "./scripts/enable_content_conc.sh"
+user-benchmark  --config=$tname-cv-promote -- "./scripts/enable_content_bg.sh"
 pbench_postprocess
 }
 
@@ -193,8 +213,8 @@ OS_MAJOR_VERSION=`sed -rn 's/.*([0-9])\.[0-9].*/\1/p' /etc/redhat-release`
 HOSTNSAME=`hostname`
 rm -rf scripts/capsule.repo
 echo "[CAPSULEREPO]" >> scripts/capsule.repo
-echo "name = capsule" >> scripts/capsule.repo
-echo "baseurl=$SAT_REPO/latest-stable-Satellite-$SAT_VERSION-RHEL-$OS_MAJOR_VERSION/compose/Capsule/x86_64/os/" >> scripts/capsule.repo
+echo "name=capsulerepo" >> scripts/capsule.repo
+echo "baseurl=$SAT_REPO/latest-Satellite-$SAT_VERSION-RHEL-$OS_MAJOR_VERSION/compose/Capsule/x86_64/os/" >> scripts/capsule.repo
 echo "enabled=1" >> scripts/capsule.repo
 echo "gpgcheck=0" >> scripts/capsule.repo
 
@@ -223,15 +243,14 @@ echo  'capsule-installer --parent-fqdn          "'$HOSTNAME'"\
 if [ -f ~/$capsule-certs.tar ]; then
 	rm -rf ~/$capsule-certs.tar
 fi
-
-log Generating certs of capsule:$capsule 
 capsule-certs-generate --capsule-fqdn $capsule --certs-tar $capsule-certs.tar
 
 scp -o "${SSH_OPTS}" ~/$capsule-certs.tar root@$capsule:.
 scp -o "${SSH_OPTS}" scripts/capsule.repo root@$capsule:/etc/yum.repos.d/
 scp -o "${SSH_OPTS}" scripts/requirements-capsule.txt root@$capsule:.
 scp -o "${SSH_OPTS}" scripts/capsule_install_$capsule.sh root@$capsule:.
-ssh -o "${SSH_OPTS}" root@$capsule "chmod 655 capsule_install_$capsule.sh;  ./capsule_install_$capsule.sh"
+ssh -o "${SSH_OPTS}" root@$capsule "chmod +x capsule_install_$capsule.sh"
+ssh -o "${SSH_OPTS}" root@$capsule " ./capsule_install_$capsule.sh"
 
 rm -rf scripts/capsule_install_$capsule.sh
 done
@@ -256,8 +275,7 @@ function sync_capsule_conc()
  for capsule in $CAPSULES;  do
     ssh -o "${SSH_OPTS}" root@$capsule "register-tool-set"
  done
- testname="${tname}"
- user-benchmark --config=${tname} -- "./scripts/sync_capsules.sh ${numcapsules} ${testname}" 
+ user-benchmark --config=${tname}-capsule-sync-concurrent -- "./scripts/sync_capsules.sh ${numcapsules} ${tname}" 
  for numcap in `seq 1 ${numcapsules}`; do
    capid=`expr ${numcap} + 1`
    hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" capsule content remove-lifecycle-environment --environment-id 1 --id "${capid}"
@@ -279,21 +297,19 @@ done
 function sat_backup()
 {
  rm -rf /home/backup
- log Backup satelitte
- time katello-backup /home/backup
+ time  katello-backup /home/backup
 }
 
 function restore_backup()
 {
- log Restoring from Backup
- time katello-restore /home/backup/
+time katello-restore /home/backup/
 }
 function install()
 {
 python install_satelite.py
 }
 
-opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,content-view-create,content-view-publish,content-view-promote,sync-content,install-capsule,sync-capsule,remove-capsule,add-content-hosts,all" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,content-view-create,content-view-publish,sync-content,resync-content,install-capsule,sync-capsule,remove-capsule,all" -n "getopt.sh" -- "$@");
 
 eval set -- "$opts";
 while true; do
@@ -303,7 +319,7 @@ while true; do
                 exit
                 ;;
 		--install)
-                log Installing satelitte
+		echo "install"
 		time python install_satelitte.py
 		#install
 		shift
@@ -333,25 +349,29 @@ while true; do
 		shift
 		;;
                 --content-view-create)
-                content_view_create
-                shift
-                ;;
+		if $CVSCALE ; then
+	           content_view_create_scale
+		else
+		   content_view_create
+		fi
+		shift
+		;;
                 --content-view-publish)
-                if $CONCURRENT ; then
-                   content_view_publish_conc
+                if $CVSCALE ; then
+		   content_view_publish_scale
                 else
-                   content_view_publish_sync
+                   content_view_publish
                 fi
-                shift
-                ;;
+		shift
+		;;
                 --content-view-promote)
-                if $CONCURRENT ; then
-                   content_view_promote_conc
+                if $CVSCALE ; then
+                   content_view_promote_scale
                 else
-                   content_view_promote_sync
+                   content_view_promote
                 fi
                 shift
-                ;;
+                ;;  
                 --sync-content)
                 if $CONCURRENT ; then
 		    sync_content_conc
@@ -360,6 +380,14 @@ while true; do
                 fi
 		shift
 		;;
+                --resync-content)
+                if $CONCURRENT ; then
+                   sync_content_conc
+                else
+                   sync_content_seq
+                fi
+                shift
+                ;;
 	        --install-capsule)
 		install_capsule
 		shift
@@ -382,9 +410,9 @@ while true; do
 		upload_manifest
 		enable_content
 		sleep 10
-		sync_content_conc
+		sync_content
 		install_capsule
-		sync_capsule_conc
+		sync_capsule
                 shift
 		;;
             	--)
