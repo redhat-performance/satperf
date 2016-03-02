@@ -290,7 +290,7 @@ function remove_capsule()
 {
 for  capsule in $CAPSULES; do
   scp scripts/capsule-remove root@$capsule:/usr/sbin/
-  ssh root@$capsule "rm -rf /home/backup/ ;  capsule-remove"
+  ssh -o "${SSH_OPTS}" root@$capsule "rm -rf /home/backup/ ;  capsule-remove"
 done
 }
 
