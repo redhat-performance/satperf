@@ -109,20 +109,16 @@ function sync_content_seq()
  pbench_postprocess
 }
 
-function sync_enable_conc()
-{
-wget http://perf1.perf.lab.eng.bos.redhat.com/psuriset/sync_repos.sh
-user-benchmark  --config=$config-sync  -- "./scripts/sync-repos.sh"
-}
-
 function content_view_promote_seq()
 {
+log content view promote sequentially 
 pbench_config
 user-benchmark --config=$tname-cv-promote-seq -- "./scripts/cv_promote_seq.sh"
 pbench_postprocess
 }
 function content_view_promote_conc()
 {
+log content view promote concurrently 
 pbench_config
 user-benchmark --config=$tname-cv-promote-concurrent -- "./scripts/cv_promote_conc.sh"
 pbench_postprocess
@@ -172,6 +168,7 @@ done
 
 function content_view_publish_scale()
 {
+log content view publish at scale
 for numcvpublish  in `seq 1 ${NUM_CV_PUBLISH}`; do
   pbench_config
   chmod +x scripts/cv_publish_scale.sh
@@ -183,32 +180,22 @@ done
 
 function content_view_publish()
 {
+log content view publish
 chmod +x scripts/cv_publish.sh
 user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
 }
 
-function content_view_promote()
-{
-chmod +x scripts/cv_promote.sh
-user-benchmark  --config=$tname-cv-promote -- "./scripts/cv_promote.sh"
-}
-
 function sync_content_conc()
 {
+log sync content repos concurrently
 pbench_config
 user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
 pbench_postprocess
 }
 
-function enable_content_conc()
-{
-pbench_config
-user-benchmark  --config=$tname-cv-promote -- "./scripts/enable_content_bg.sh"
-pbench_postprocess
-}
-
 function install_capsule()
 {
+log instll capsules
 OS_MAJOR_VERSION=`sed -rn 's/.*([0-9])\.[0-9].*/\1/p' /etc/redhat-release`
 HOSTNSAME=`hostname`
 rm -rf scripts/capsule.repo
@@ -258,6 +245,7 @@ done
 
 function sync_capsule_conc()
 {
+ log sync capsules concurrently 
  numcapsules=0;
  for capsule in $CAPSULES; do numcapsules=`expr ${numcapsules} + 1`; done
  for numcap in `seq 1 ${numcapsules}`; do
@@ -288,6 +276,7 @@ function sync_capsule_conc()
 
 function remove_capsule()
 {
+log remove capsules if, any registered 
 for  capsule in $CAPSULES; do
   scp scripts/capsule-remove root@$capsule:/usr/sbin/
   ssh -o "${SSH_OPTS}" root@$capsule "rm -rf /home/backup/ ;  capsule-remove"
@@ -296,14 +285,17 @@ done
 
 function sat_backup()
 {
+ log backup satelitte
  rm -rf /home/backup
  time  katello-backup /home/backup
 }
 
 function restore_backup()
 {
+log restoring satellite from backup
 time katello-restore /home/backup/
 }
+
 function install()
 {
 python install_satelite.py
@@ -366,9 +358,9 @@ while true; do
 		;;
                 --content-view-promote)
                 if $CVSCALE ; then
-                   content_view_promote_scale
+                   content_view_promote_conc
                 else
-                   content_view_promote
+                   content_view_promote_seq
                 fi
                 shift
                 ;;  
