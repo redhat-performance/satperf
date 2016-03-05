@@ -2,27 +2,26 @@
 
 #satperf: What does it have? 
 
-This started a project to run performance tests on Redhat Satelitte.
-satperf need to be run from Satelitte server. It contains
+This project was started to run performance tests on Redhat Satelitte.
+satperf needs to be run from Satelitte server. It does the following activities:
 
- Satelitte install
- upload manigfest, update repo
- concurrently sync multiple Repositories from Repo Server
- create lifecycle environments
- create capsules
- concurrently  syncronize multiple capsules
+ Satelitte installation
+ uploads manigfest, updates repo
+ concurrently syncs multiple Repositories from Repo Server
+ creates lifecycle environments
+ creates capsules
+ concurrently  syncronizes multiple capsules
  ..etc
 
  
- Measure time for all while capturing resources using pbench. 
+ Measures time for all while capturing resources using pbench. 
  https://github.com/distributed-system-analysis/pbench
 
-#Before Running satperf
-Make sure to update satperf.cfg which contains details like RHN_USERNAME, 
-RHN_PASSWD, pool_id, capsule names. 
+Note: 
+#Before Running satperf,update satperf.cfg with details like RHN_USERNAME, 
+RHN_PASSWD, pool_id, capsule names etc.
 
 Update PBENCH_REPO and  install pbench using pbench/install_pench.sh on 
 required nodes. ./pbench/install_pbensh.sh  
 
-And also make sure to copy public keys of satelitte server and capsules 
-amond them. 
+And copy public keys of satelitte server and capsules.
