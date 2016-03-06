@@ -17,8 +17,8 @@ satperf needs to be run from Satelitte server. It does the following activities:
  Measures time for all while capturing resources using pbench. 
  https://github.com/distributed-system-analysis/pbench
 
-Note: 
-#Before Running satperf,update satperf.cfg with details like RHN_USERNAME, 
+#Note: 
+Before Running satperf,update satperf.cfg with details like RHN_USERNAME, 
 RHN_PASSWD, pool_id, capsule names etc.
 
 Update PBENCH_REPO and  install pbench using pbench/install_pench.sh on 
