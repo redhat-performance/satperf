@@ -13,6 +13,7 @@ function satperf_usage() {
                 printf -- "\t --sat-restore : Restore from backup\n"
                 printf -- "\t --setup : setup pbench and clear preregistered debug tools \n"
                 printf -- "\t --upload : Upload manifest\n"
+                printf -- "\t --add-product : Adding products\n"
                 printf -- "\t --create-life-cycle : create life cycle environments\n"
                 printf -- "\t --enable-content : enable repos\n"
 	        printf -- "\t --content-view-create : create content view and add repos\n"
@@ -64,6 +65,15 @@ function upload_manifest()
 {
   log Upload Manifest 
   time hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" subscription upload --organization "${ORG}" --file $MANIFSET --repository-url $REPOSERVER
+}
+
+function add_products()
+{
+  log Add products
+  for product in $PRODUCTS; do
+     echo "[$(date -R)] Adding Product: ${product}"
+     time hammer -u admin -p changeme product create --organization-id 1 --name ${product}  
+ done
 }
 
 function create_life_cycle_env()
@@ -301,7 +311,7 @@ function install()
 python install_satelite.py
 }
 
-opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,create-life-cycle,enable-content,content-view-create,content-view-publish,sync-content,resync-content,install-capsule,sync-capsule,remove-capsule,all" -n "getopt.sh" -- "$@");
+opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,add-product,create-life-cycle,enable-content,content-view-create,content-view-publish,sync-content,resync-content,install-capsule,sync-capsule,remove-capsule,all" -n "getopt.sh" -- "$@");
 
 eval set -- "$opts";
 while true; do
@@ -332,6 +342,10 @@ while true; do
 		upload_manifest
 		shift
 		;;
+                --add-product)
+                add_products
+                shift
+                ;;
 	        --create-life-cycle)
 		create_life_cycle_env
 		shift
