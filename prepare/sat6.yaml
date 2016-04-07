@@ -1,0 +1,51 @@
+---
+- hosts: satellite
+  remote_user: root
+  roles:
+    - common
+  tasks:
+    - copy: src="{{ sat_repo_file }}" dest=/etc/yum.repos.d/
+
+    ###- command:
+    ###    subscription-manager register --force --username '{{ rhsm_user }}' --password '{{ rhsm_pass }}'
+    ###- command:
+    ###    subscription-manager attach --pool 8a85f9823e3d5e43013e3ddd4e2a0977 --pool 8a85f98148751d4301488e7352f725e6
+    - redhat_subscription:
+        state=present
+        username="{{ rhsm_user }}"
+        password="{{ rhsm_pass }}"
+        pool="{{ rhsm_pools }}"
+        autosubscribe=true
+      register: registration
+    - shell: |
+        subscription-manager repos --disable 'rh*'
+        subscription-manager repos --enable rhel-6-server-rpms
+        subscription-manager repos --enable rhel-server-rhscl-6-rpms
+      when: registration.changed
+
+    - yum:
+        name="{{ sat_installer_pkg }}"
+        state=present
+      register: installation
+    - command:
+        "{{ sat_installer_cmd }} --foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
+      when: installation.changed
+
+    - copy: src=files/manifest.zip dest=/root/
+      register: manifest_copied
+    - command:
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" subscription upload --organization 'Default Organization' --file /root/manifest.zip
+      when: manifest_copied.changed
+
+    - shell: |
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository-set enable --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server - RH Common RPMs' --basearch x86_64 --releasever 6Server --organization-id 1
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository-set enable --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs' --basearch x86_64 --releasever 6Server --organization-id 1
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository-set enable --product 'Red Hat Software Collections for RHEL Server' --name 'Red Hat Software Collections RPMs for Red Hat Enterprise Linux 6 Server' --basearch x86_64 --releasever 6Server --organization-id 1
+      when: manifest_copied.changed
+      register: repos_enabled
+
+    - shell: |
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server - RH Common RPMs x86_64 6Server' --organization-id 1
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --organization-id 1
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --product 'Red Hat Software Collections for RHEL Server' --name 'Red Hat Software Collections RPMs for Red Hat Enterprise Linux 6 Server x86_64 6Server' --organization-id 1
+      ###when: repos_enabled.changed

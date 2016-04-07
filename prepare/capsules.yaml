@@ -1,0 +1,83 @@
+---
+- hosts: capsules
+  remote_user: root
+  roles:
+    - common
+  tasks:
+    #- get_url:
+    #    url=http://{{ rhn_server }}/pub/RHN-ORG-TRUSTED-SSL-CERT
+    #    dest=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
+    #- shell:
+    #    # This is a workaround for https://github.com/ansible/ansible-modules-core/pull/3288
+    #    echo 'sslCACert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}' >>/etc/sysconfig/rhn/up2date
+    #- rhn_register:
+    #    state=present
+    #    username={{ rhn_user }}
+    #    password={{ rhn_pass }}
+    #    server_url=https://{{ rhn_server }}/XMLRPC
+    #    ###sslcacert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
+
+    #- command:
+    #    subscription-manager register --force --username '{{ rhsm_user }}' --password '{{ rhsm_pass }}'
+    #- command:
+    #    subscription-manager attach --pool 8a85f9823e3d5e43013e3ddd4e2a0977 --pool 8a85f98148751d4301488e7352f725e6
+    #- command:
+    #    subscription-manager repos --disable 'rh*'
+    #- command:
+    #    subscription-manager repos --enable rhel-6-server-rpms
+    #- command:
+    #    subscription-manager repos --enable rhel-server-rhscl-6-rpms
+    - copy: src="{{ capsule_repo_file }}" dest=/etc/yum.repos.d/
+    - yum:
+        name="{{ capsule_installer_pkg }}"
+        state=present
+
+    - shell:
+        "capsule-certs-generate --capsule-fqdn {{ inventory_hostname }} --certs-tar /var/www/html/pub/{{ inventory_hostname }}-certs.tar >/var/www/html/pub/{{ inventory_hostname }}-out.raw"
+      delegate_to: "{{ sat_server }}"
+      register: mycmd
+      # Output of this command looks like this:
+      # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
+      # Installing             Done                                               [100%] [..........]
+      #   Success!
+      # 
+      #   To finish the installation, follow these steps:
+      # 
+      #   1. Ensure that the foreman-installer-katello package is installed on the system.
+      #   2. Copy aaa.tar to the system capsule.example.com
+      #   3. Run the following commands on the capsule (possibly with the customized
+      #      parameters, see foreman-installer --scenario capsule --help and
+      #      documentation for more info on setting up additional services):
+      # 
+      #   yum -y localinstall http://sat62.example.com/pub/katello-ca-consumer-latest.noarch.rpm
+      #   subscription-manager register --org "Default_Organization"
+      #   foreman-installer --scenario capsule\
+      #                     --parent-fqdn                         "sat62.example.com"\
+      #                     --register-in-foreman                 "true"\
+      #                     --foreman-base-url                    "https://sat62.example.com"\
+      #                     --trusted-hosts                       "sat62.example.com"\
+      #                     --trusted-hosts                       "capsule62.example.com"\
+      #                     --oauth-consumer-key                  "ZpFxdhmWhArPmdV5dXn98uuZZzqEMJxc"\
+      #                     --oauth-consumer-secret               "4xaW6ZvyP8sJeHyhehEhzt7nspDq6k3W"\
+      #                     --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
+      #                     --certs-tar                           "aaa.tar"
+      #   The full log is at /var/log/capsule-certs-generate.log
+    ##- yum:
+    ##    name=rsync
+    ##    state=present
+    ##- synchronize:
+    ##    mode=push
+    ##    src="/root/{{ inventory_hostname }}-certs.tar"
+    ##    dest="/root/{{ inventory_hostname }}-certs.tar"
+    ##  delegate_to: sat6.example.com
+    - get_url:
+        url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-certs.tar"
+        dest="/root/{{ inventory_hostname }}-certs.tar"
+    - get_url:
+        url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-out.raw"
+        dest="/root/{{ inventory_hostname }}-out.raw"
+    - name: Parse only command we want from instructions
+      shell:
+        grep -e '^\s\+foreman-installer' -e '^\s\+capsule-installer' -e '^\s\+--' "{{ inventory_hostname }}-out.raw" | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"|' > "{{ inventory_hostname }}-script.sh"
+    #- command:
+    #    bash "{{ inventory_hostname }}-script.sh"

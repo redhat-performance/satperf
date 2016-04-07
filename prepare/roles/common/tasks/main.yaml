@@ -1,0 +1,28 @@
+---
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.77\s+docker.example.com' line='192.168.122.77 docker.example.com'
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.147\s+sat6.example.com' line='192.168.122.147 sat6.example.com'
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.180\s+sat61.example.com' line='192.168.122.180 sat61.example.com'
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.21\s+capsule.example.com' line='192.168.122.21 capsule.example.com'
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.249\s+capsule61.example.com' line='192.168.122.249 capsule61.example.com'
+
+  #- command:
+  #    shutdown -h 1
+
+  #- get_url:
+  #    url=http://{{ rhn_server }}/pub/RHN-ORG-TRUSTED-SSL-CERT
+  #    dest=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
+  #- shell:
+  #    # This is a workaround for https://github.com/ansible/ansible-modules-core/pull/3288
+  #    echo 'sslCACert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}' >>/etc/sysconfig/rhn/up2date
+  #- rhn_register:
+  #    state=present
+  #    username={{ rhn_user }}
+  #    password={{ rhn_pass }}
+  #    server_url=https://{{ rhn_server }}/XMLRPC
+  #    ###sslcacert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
+  - yum:
+      name=libselinux-python,rsync
+      state=present
+  #- rhn_register:
+  #    state=absent
+...
