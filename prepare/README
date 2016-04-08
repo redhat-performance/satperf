@@ -1,3 +1,10 @@
+To install systems in AWS:
+
+  # rpm -q python2-boto || yum -y install python2-boto
+  $ export AWS_ACCESS_KEY_ID='AK123'
+  $ export AWS_SECRET_ACCESS_KEY='abc123'
+  $ ansible-playbook -i hosts.ini aws.yaml
+
 To sync repos so we can have these locally:
 
   # cat /etc/yum.repos.d/reposync.repo 
