@@ -5,7 +5,7 @@ To install systems in AWS:
   $ export AWS_SECRET_ACCESS_KEY='abc123'
   $ ansible-playbook -i hosts.ini aws.yaml
 
-To sync repos so we can have these locally:
+To sync repos so we can have it locally:
 
   # cat /etc/yum.repos.d/reposync.repo 
   [Satellite-6.1.0-RHEL-6-20160321.0-Satellite-x86_64]
@@ -39,3 +39,8 @@ To prepare Satellite:
 To prepare Capsules:
 
   $ ansible-playbook -i hosts.ini sat6.yaml
+
+To display facts stored by Ansible about all hosts (warning: looks like
+it is quite expensive operation):
+
+  $ ansible capsule61.example.com -i hosts.ini --user=root -m setup

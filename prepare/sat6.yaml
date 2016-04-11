@@ -3,13 +3,18 @@
   remote_user: root
   roles:
     - common
+  vars:
+    orgid=1
+    releasever="6Server"
+    product1="Red Hat Enterprise Linux Server"
+    product2="Red Hat Enterprise Linux Server"
+    product3="Red Hat Software Collections for RHEL Server"
+    reposet1="Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server RPMs"
+    reposet2="Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common RPMs"
+    reposet3="Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
   tasks:
     - copy: src="{{ sat_repo_file }}" dest=/etc/yum.repos.d/
 
-    ###- command:
-    ###    subscription-manager register --force --username '{{ rhsm_user }}' --password '{{ rhsm_pass }}'
-    ###- command:
-    ###    subscription-manager attach --pool 8a85f9823e3d5e43013e3ddd4e2a0977 --pool 8a85f98148751d4301488e7352f725e6
     - redhat_subscription:
         state=present
         username="{{ rhsm_user }}"
@@ -19,8 +24,8 @@
       register: registration
     - shell: |
         subscription-manager repos --disable 'rh*'
-        subscription-manager repos --enable rhel-6-server-rpms
-        subscription-manager repos --enable rhel-server-rhscl-6-rpms
+        subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+        subscription-manager repos --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
       when: registration.changed
 
     - yum:
@@ -34,18 +39,18 @@
     - copy: src=files/manifest.zip dest=/root/
       register: manifest_copied
     - command:
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" subscription upload --organization 'Default Organization' --file /root/manifest.zip
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription upload --organization 'Default Organization' --file /root/manifest.zip
       when: manifest_copied.changed
 
     - shell: |
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository-set enable --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server - RH Common RPMs' --basearch x86_64 --releasever 6Server --organization-id 1
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository-set enable --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs' --basearch x86_64 --releasever 6Server --organization-id 1
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository-set enable --product 'Red Hat Software Collections for RHEL Server' --name 'Red Hat Software Collections RPMs for Red Hat Enterprise Linux 6 Server' --basearch x86_64 --releasever 6Server --organization-id 1
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ product1 }}' --name '{{ reposet1 }}' --basearch '{{ ansible_architecture }}' --releasever '{{ releasever }}' --organization-id '{{ orgid }}'
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ product2 }}' --name '{{ reposet2 }}' --basearch '{{ ansible_architecture }}' --releasever '{{ releasever }}' --organization-id '{{ orgid }}'
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ product3 }}' --name '{{ reposet3 }}' --basearch '{{ ansible_architecture }}' --releasever '{{ releasever }}' --organization-id '{{ orgid }}'
       when: manifest_copied.changed
       register: repos_enabled
 
     - shell: |
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server - RH Common RPMs x86_64 6Server' --organization-id 1
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --organization-id 1
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --product 'Red Hat Software Collections for RHEL Server' --name 'Red Hat Software Collections RPMs for Red Hat Enterprise Linux 6 Server x86_64 6Server' --organization-id 1
-      ###when: repos_enabled.changed
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ product1 }}' --name '{{ reposet1 }} {{ ansible_architecture }} {{ releasever }}' --organization-id '{{ orgid }}'
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ product2 }}' --name '{{ reposet2 }} {{ ansible_architecture }} {{ releasever }}' --organization-id '{{ orgid }}'
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ product3 }}' --name '{{ reposet3 }} {{ ansible_architecture }} {{ releasever }}' --organization-id '{{ orgid }}'
+      when: repos_enabled.changed
