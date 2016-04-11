@@ -17,14 +17,21 @@
     #    server_url=https://{{ rhn_server }}/XMLRPC
     #    ###sslcacert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
 
-    #- command:
-    #    subscription-manager register --force --username '{{ rhsm_user }}' --password '{{ rhsm_pass }}'
-    #- command:
-    #    subscription-manager attach --pool 8a85f9823e3d5e43013e3ddd4e2a0977 --pool 8a85f98148751d4301488e7352f725e6
-    #- command:
-    #    subscription-manager repos --disable 'rh*'
-    #- command:
-    #    subscription-manager repos --enable rhel-6-server-rpms
+    - yum:
+        name="http://{{ sat_server }}/pub/katello-ca-consumer-latest.noarch.rpm"
+        state=present
+    - redhat_subscription:
+        state=present
+        username="{{ sat_user }}"
+        password="{{ sat_pass }}"
+        pool="{{ rhsm_pools }}"
+        autosubscribe=true
+      register: registration
+    - shell: |
+        subscription-manager repos --disable 'rh*'
+        subscription-manager repos --enable rhel-6-server-rpms
+        subscription-manager repos --enable rhel-server-rhscl-6-rpms
+      when: registration.changed
     #- command:
     #    subscription-manager repos --enable rhel-server-rhscl-6-rpms
     - copy: src="{{ capsule_repo_file }}" dest=/etc/yum.repos.d/
@@ -76,8 +83,9 @@
     - get_url:
         url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-out.raw"
         dest="/root/{{ inventory_hostname }}-out.raw"
-    - name: Parse only command we want from instructions
+    # TODO: Looks like we need to install httpd manually as well
+    - name: Parse only commands we need to run
       shell:
-        grep -e '^\s\+foreman-installer' -e '^\s\+capsule-installer' -e '^\s\+--' "{{ inventory_hostname }}-out.raw" | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"|' > "{{ inventory_hostname }}-script.sh"
-    #- command:
-    #    bash "{{ inventory_hostname }}-script.sh"
+        sed 's/\x1B\[[0-9;]*[JKmsu]//g' "{{ inventory_hostname }}-out.raw" | grep -e '^\s\+foreman-installer ' -e '^\s\+capsule-installer ' -e '^\s\+--' | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\|' > "{{ inventory_hostname }}-script.sh"
+    - command:
+        bash "{{ inventory_hostname }}-script.sh"
