@@ -11,7 +11,6 @@ function satperf_usage() {
     printf "The following options are available:\n"
     printf "\n"
     printf -- "\t --help : Help options\n"
-    printf -- "\t --install : Install satelitte from latest repo\n"
     printf -- "\t --sat-backup : Take satelitte server backup to restore further\n"
     printf -- "\t --sat-restore : Restore from backup\n"
     printf -- "\t --setup : Setup pbench and clear preregistered debug tools \n"
@@ -23,7 +22,6 @@ function satperf_usage() {
     printf -- "\t --content-view-publish : Publish content views\n"
     printf -- "\t --sync-content : Sync content (concurrent or sequential) from repo server to satelitte server\n"
     printf -- "\t --resync-content : Resync content (concurrent or sequential) from repo server to satelitte server\n"
-    printf -- "\t --install-capsule : Install capsule on mentioned capsule nodes \n"
     printf -- "\t --sync-capsule :  Sync capsule (concurrent or sequential) \n"
     printf -- "\t --register-content-hosts :  Register content hosts (concurrent or sequential) \n"
     printf -- "\t --remove-capsule : Uninstall capsule\n"
@@ -34,6 +32,12 @@ function satperf_usage() {
 function log()
 {
     echo "[$(date)]: $*"
+}
+
+
+function warn()
+{
+    log "WARN: $*" >&2
 }
 
 
@@ -223,57 +227,6 @@ function sync_content_conc()
 }
 
 
-function install_capsule()
-{
-    log instll capsules
-    OS_MAJOR_VERSION=`sed -rn 's/.*([0-9])\.[0-9].*/\1/p' /etc/redhat-release`
-    HOSTNSAME=`hostname`
-    rm -rf scripts/capsule.repo
-    echo "[CAPSULEREPO]" >> scripts/capsule.repo
-    echo "name=capsulerepo" >> scripts/capsule.repo
-    echo "baseurl=$SAT_REPO/latest-Satellite-$SAT_VERSION-RHEL-$OS_MAJOR_VERSION/compose/Capsule/x86_64/os/" >> scripts/capsule.repo
-    echo "enabled=1" >> scripts/capsule.repo
-    echo "gpgcheck=0" >> scripts/capsule.repo
-
-    pulp_oauth_secret=$(awk '{print $2}' /var/lib/puppet/foreman_cache_data/katello_oauth_secret)
-    foreman_oauth_secret=$(awk '{print $2}' /var/lib/puppet/foreman_cache_data/oauth_consumer_secret)
-    foreman_oauth_key=$(awk '{print $2}' /var/lib/puppet/foreman_cache_data/oauth_consumer_key)
-
-    for  capsule in $CAPSULES; do
-
-    echo 'subscription-manager register --username='$RHN_USERNAME' --password='$RHN_PASSWORD' --force' >> scripts/capsule_install_$capsule.sh
-    echo 'subscription-manager attach --pool='$pool_id'' >> scripts/capsule_install_$capsule.sh
-    cat scripts/capsule_install.sh >> scripts/capsule_install_$capsule.sh
-    echo 'subscription-manager register --org "Default_Organization"  --username '$ADMIN_USER' --password '$ADMIN_PASSWORD' --force' >> scripts/capsule_install_$capsule.sh
-    echo 'rpm -Uvh http://'$HOSTNAME'/pub/katello-ca-consumer-latest.noarch.rpm' >> scripts/capsule_install_$capsule.sh
-    echo  'capsule-installer --parent-fqdn          "'$HOSTNAME'"\
-                 --register-in-foreman  "true"\
-                 --foreman-oauth-key    "'$foreman_oauth_key'"\
-                 --foreman-oauth-secret "'$foreman_oauth_secret'"\
-                 --pulp-oauth-secret    "'$pulp_oauth_secret'"\
-                 --certs-tar            "/root/'"$capsule"'-certs.tar"\
-                 --puppet               "true"\
-                 --puppetca             "true"\
-                 --pulp                 "true"' >>  scripts/capsule_install_$capsule.sh
-
-        #clear old certs if any
-        if [ -f ~/$capsule-certs.tar ]; then
-            rm -rf ~/$capsule-certs.tar
-        fi
-        capsule-certs-generate --capsule-fqdn $capsule --certs-tar $capsule-certs.tar
-
-        scp -o "${SSH_OPTS}" ~/$capsule-certs.tar root@$capsule:.
-        scp -o "${SSH_OPTS}" scripts/capsule.repo root@$capsule:/etc/yum.repos.d/
-        scp -o "${SSH_OPTS}" scripts/requirements-capsule.txt root@$capsule:.
-        scp -o "${SSH_OPTS}" scripts/capsule_install_$capsule.sh root@$capsule:.
-        ssh -o "${SSH_OPTS}" root@$capsule "chmod +x capsule_install_$capsule.sh"
-        ssh -o "${SSH_OPTS}" root@$capsule " ./capsule_install_$capsule.sh"
-
-        rm -rf scripts/capsule_install_$capsule.sh
-    done
-}
-
-
 function sync_capsule_conc()
 {
     log sync capsules concurrently
@@ -343,12 +296,6 @@ function restore_backup()
 }
 
 
-function install()
-{
-    python install_satelite.py
-}
-
-
 opts=$(getopt -q -o jic:t:b:sd:r: --longoptions "help,install,sat-backup,sat-restore,setup,upload,add-product,create-life-cycle,enable-content,content-view-create,content-view-publish,sync-content,resync-content,install-capsule,sync-capsule,register-content-hosts,remove-capsule,all" -n "getopt.sh" -- "$@");
 
 eval set -- "$opts";
@@ -359,9 +306,11 @@ while true; do
         exit
         ;;
     --install)
-        echo "install"
-        time python install_satelitte.py
-        #install
+        warn "Satellite installation is deprecated, please use Ansible scripts is directory 'prepare/'. Skipping."
+        shift
+        ;;
+    --install-capsule)
+        warn "Capsule installation is deprecated, please use Ansible scripts is directory 'prepare/'. Skipping."
         shift
         ;;
     --sat-backup)
@@ -432,10 +381,6 @@ while true; do
         fi
         shift
         ;;
-    --install-capsule)
-        install_capsule
-        shift
-        ;;
     --sync-capsule)
         if $CONCURRENT ; then
             sync_capsule_conc
@@ -457,13 +402,11 @@ while true; do
         shift
         ;;
     --all)
-        python install_satelite.py
         sat_backup
         upload_manifest
         enable_content
         sleep 10
         sync_content
-        install_capsule
         sync_capsule
         shift
         ;;
