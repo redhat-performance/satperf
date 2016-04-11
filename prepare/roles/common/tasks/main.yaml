@@ -5,6 +5,10 @@
   - lineinfile: dest=/etc/hosts regexp='192.168.122.21\s+capsule.example.com' line='192.168.122.21 capsule.example.com'
   - lineinfile: dest=/etc/hosts regexp='192.168.122.249\s+capsule61.example.com' line='192.168.122.249 capsule61.example.com'
 
+  - selinux:
+      policy=targeted
+      state=enforcing
+
   #- command:
   #    shutdown -h 1
 
