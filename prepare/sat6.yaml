@@ -3,6 +3,7 @@
   remote_user: root
   roles:
     - common
+    - pbench_client
   vars:
     orgid=1
     releasever="6Server"

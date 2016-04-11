@@ -3,6 +3,7 @@
   remote_user: root
   roles:
     - common
+    - pbench_client
   tasks:
     #- get_url:
     #    url=http://{{ rhn_server }}/pub/RHN-ORG-TRUSTED-SSL-CERT
