@@ -38,7 +38,7 @@ To prepare Satellite:
 
 To prepare Capsules:
 
-  $ ansible-playbook -i hosts.ini sat6.yaml
+  $ ansible-playbook -i hosts.ini capsules.yaml
 
 To display facts stored by Ansible about all hosts (warning: looks like
 it is quite expensive operation):
