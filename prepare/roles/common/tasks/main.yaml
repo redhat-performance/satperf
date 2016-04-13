@@ -1,9 +1,9 @@
 ---
   - lineinfile: dest=/etc/hosts regexp='192.168.122.77\s+docker.example.com' line='192.168.122.77 docker.example.com'
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.147\s+sat6.example.com' line='192.168.122.147 sat6.example.com'
   - lineinfile: dest=/etc/hosts regexp='192.168.122.180\s+sat61.example.com' line='192.168.122.180 sat61.example.com'
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.21\s+capsule.example.com' line='192.168.122.21 capsule.example.com'
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.212\s+sat62.example.com' line='192.168.122.212 sat62.example.com'
   - lineinfile: dest=/etc/hosts regexp='192.168.122.249\s+capsule61.example.com' line='192.168.122.249 capsule61.example.com'
+  - lineinfile: dest=/etc/hosts regexp='192.168.122.99\s+capsule62.example.com' line='192.168.122.99 capsule62.example.com'
 
   - selinux:
       policy=targeted

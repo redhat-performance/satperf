@@ -6,22 +6,20 @@ sat_email: root@localhost
 sat_server: sat61.example.com
 
 # Satellite install options
-sat_repo_file: files/sat61.repo
-sat_installer_pkg: katello
-sat_installer_cmd: katello-installer
-###sat_repo_file: files/sat62.repo
-###sat_installer_pkg: satellite
-###sat_installer_cmd: foreman-installer --scenario katello
+###sat_repo_file: files/sat61.repo
+###sat_installer_pkg: katello
+###sat_installer_cmd: katello-installer
+sat_repo_file: files/sat62.repo
+sat_installer_pkg: satellite
+sat_installer_cmd: foreman-installer --scenario katello
 
 # Capsule install options
-capsule_repo_file: files/capsule61.repo
+###capsule_repo_file: files/capsule61.repo
+###capsule_installer_pkg: capsule-installer
+###capsule_installer_cmd: katello-installer
+capsule_repo_file: files/capsule62.repo
 capsule_installer_pkg: capsule-installer
-capsule_installer_cmd: katello-installer
-
-# Credentials for RHSM (for Satellite machine registration)
-rhsm_user: user
-rhsm_pass: password
-rhsm_pools: '^(Employee SKU|Red Hat Satellite Employee Subscription)$'
+capsule_installer_cmd: foreman-installer --scenario capsule
 
 # Sat5 server
 rhn_user: admin

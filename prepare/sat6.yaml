@@ -3,31 +3,19 @@
   remote_user: root
   roles:
     - common
+    - rhsm
     - pbench_client
   vars:
-    orgid=1
-    releasever="6Server"
-    product1="Red Hat Enterprise Linux Server"
-    product2="Red Hat Enterprise Linux Server"
-    product3="Red Hat Software Collections for RHEL Server"
-    reposet1="Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server RPMs"
-    reposet2="Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common RPMs"
-    reposet3="Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
+    orgid: 1
+    releasever: "6Server"
+    product1: "Red Hat Enterprise Linux Server"
+    product2: "Red Hat Enterprise Linux Server"
+    product3: "Red Hat Software Collections for RHEL Server"
+    reposet1: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server RPMs"
+    reposet2: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common RPMs"
+    reposet3: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
   tasks:
     - copy: src="{{ sat_repo_file }}" dest=/etc/yum.repos.d/
-
-    - redhat_subscription:
-        state=present
-        username="{{ rhsm_user }}"
-        password="{{ rhsm_pass }}"
-        pool="{{ rhsm_pools }}"
-        autosubscribe=true
-      register: registration
-    - shell: |
-        subscription-manager repos --disable 'rh*'
-        subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-        subscription-manager repos --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
-      when: registration.changed
 
     - yum:
         name="{{ sat_installer_pkg }}"
