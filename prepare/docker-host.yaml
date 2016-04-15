@@ -2,28 +2,17 @@
 - hosts: docker-hosts
   remote_user: root
   roles:
+    - rhsm
     - common
   tasks:
-    - get_url:
-        url=http://{{ rhn_server }}/pub/RHN-ORG-TRUSTED-SSL-CERT
-        dest=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
-    - shell:
-        # This is a workaround for https://github.com/ansible/ansible-modules-core/pull/3288
-        echo 'sslCACert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}' >>/etc/sysconfig/rhn/up2date
-    - rhn_register:
-        state=present
-        username={{ rhn_user }}
-        password={{ rhn_pass }}
-        server_url=https://{{ rhn_server }}/XMLRPC
-        ###sslcacert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
     - command:
-        # Module rhn_channel needs full API credentials
-        rhn-channel -u "{{ rhn_user }}" -p "{{ rhn_pass }}" -a -c rhel-x86_64-server-extras-7
+        subscription-manager repos --enable 'rhel-7-server-extras-rpms'
     - yum:
         name=docker
         state=present
     - service:
         name=docker
         state=running
+        enabled=yes
     - command:
         docker pull jhutar/katello-client:rhel-6.7
