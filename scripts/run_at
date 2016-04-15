@@ -12,6 +12,7 @@
 # Script runs specified command in specified time and returns action ID.
 # Later you can check these files for results:
 #
+#   /run_at.ID.pid   Contains PID of a waiting command
 #   /run_at.ID.rc    Contains exit code for the command
 #   /run_at.ID.out   Contains stdout
 #   /run_at.ID.err   Contains stderr
@@ -19,7 +20,7 @@
 # If *.rc file do not exist yet, command is still waiting to be executed
 # or is being executed.
 
-set -x
+###set -x
 TIMESTAMP="$1"
 COMMAND="$2"
 
@@ -60,6 +61,7 @@ fi
     echo $? >/run_at.$ID.rc
 
 ) >/run_at.$ID.out 2>/run_at.$ID.err &
+echo $! >/run_at.$ID.pid
 
 
 # Now report the ID of the command we have just scheduled
