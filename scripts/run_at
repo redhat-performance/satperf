@@ -45,6 +45,7 @@ if [[ -z $ID ]]; then
     echo "ERROR: Was not able to determine ID" >&2
     exit 3
 fi
+rm -f /run_at.$ID.rc
 
 
 # Start in background
