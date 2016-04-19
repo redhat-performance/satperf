@@ -24,7 +24,7 @@
 #   # for h in docker1 docker2 docker3 docker4 docker5; do
 #       # Wondering why the "-v /tmp/yum-cache-$i/:/var/cache/yum/" there?
 #       # See https://github.com/optimizationBenchmarking/environments-linux-evaluator-runtime/commit/d00176e9cad3f54bf0b9f789e8e64e544290a281
-#       ssh root@$h 'for i in `seq 250`; do mkdir /tmp/yum-cache-$i/; docker run -d -v /tmp/yum-cache-$i/:/var/cache/yum/ r7perfsat; done' &
+#       ssh root@$h 'for i in `seq 250`; do [ -d /tmp/yum-cache-$i/ ] || mkdir /tmp/yum-cache-$i/; docker run -d -v /tmp/yum-cache-$i/:/var/cache/yum/ r7perfsat; done' &
 #   done
 #
 #   Get IPs of all the contaiers
