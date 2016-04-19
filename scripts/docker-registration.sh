@@ -36,7 +36,7 @@
 # Some variables
 satellite_ip=172.17.50.5
 capsule_ip=172.17.50.5
-batch=100
+batch=${1:-100}
 cleanup_sequence="clear-tools; clear-results; kill-tools; echo 3 > /proc/sys/vm/drop_caches;"
 ansible_failed_re="^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+ | FAILED | rc=[1-9][0-9]* | "
 uuid_re="[a-f0-9]\{8\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{12\}"
