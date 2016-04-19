@@ -40,7 +40,7 @@ batch=${1:-100}
 cleanup_sequence="clear-tools; clear-results; kill-tools; echo 3 > /proc/sys/vm/drop_caches;"
 ansible_failed_re="^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+ | FAILED | rc=[1-9][0-9]* | "
 uuid_re="[a-f0-9]\{8\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{12\}"
-if [ "$satellite_ip" -eq "$capsule_ip" ]; then
+if [[ $satellite_ip = $capsule_ip ]]; then
     is_capsule=false
 else
     is_capsule=true
@@ -111,13 +111,13 @@ cut -d ' ' -f 2 /root/container-ips \
 
 # Configure container
 log=$( mktemp )
-ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
-    && log "Cleanup passed (full log in '$log')"
-    || die "Cleanup failed (full log in '$log')"
-log=$( mktemp )
 ansible-playbook -i $list --forks 100 setup.yaml &>$log \
-    && log "Setup passed (full log in '$log')"
+    && log "Setup passed (full log in '$log')" \
     || die "Setup failed (full log in '$log')"
+log=$( mktemp )
+ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
+    && log "Cleanup passed (full log in '$log')" \
+    || die "Cleanup failed (full log in '$log')"
 
 # Finally schedule registration
 stdout=$( mktemp )
@@ -142,9 +142,9 @@ fi
 # Do some cleanup now
 log=$( mktemp )
 ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager unregister" &>$log \
-    && log "Unregistration passed (full log in '$log')"
+    && log "Unregistration passed (full log in '$log')" \
     || die "Unregistration failed (full log in '$log')"
 log=$( mktemp )
 ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
-    && log "Cleanup passed (full log in '$log')"
+    && log "Cleanup passed (full log in '$log')" \
     || die "Cleanup failed (full log in '$log')"
