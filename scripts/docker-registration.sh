@@ -84,17 +84,17 @@ function die() {
 
 log "RUNNING BATCH OF $batch REGISTRATIONS"
 
-# Give Satellite some rest after previous round, do some
-# Satellite's/Capsule's caches cleanup, restart measurement
-log "Sleeping"
-sleep 600
-ssh root@$satellite_ip "$cleanup_sequence" \
-    || warn "Cleanup seqence on '$satellite_ip' failed. Ignoring."
-if [[ $satellite_ip != $capsule_ip ]]; then
-    ssh root@$capsule_ip "$cleanup_sequence" \
-        || warn "Cleanup seqence on '$capsule_ip' failed. Ignoring."
-fi
-sleep 60
+#### Give Satellite some rest after previous round, do some
+#### Satellite's/Capsule's caches cleanup, restart measurement
+###log "Sleeping"
+###sleep 600
+###ssh root@$satellite_ip "$cleanup_sequence" \
+###    || warn "Cleanup seqence on '$satellite_ip' failed. Ignoring."
+###if [[ $satellite_ip != $capsule_ip ]]; then
+###    ssh root@$capsule_ip "$cleanup_sequence" \
+###        || warn "Cleanup seqence on '$capsule_ip' failed. Ignoring."
+###fi
+###sleep 60
 
 # Select container IPs we are going to work with
 list=$( mktemp )
