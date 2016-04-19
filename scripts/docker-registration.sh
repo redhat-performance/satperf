@@ -123,7 +123,7 @@ end=$( date +%s )
 log "Finished now (elapsed $( expr $end - $start ) seconds)"
 [[ $( wc -l $stderr | cut -d ' ' -f 1 ) -ne 0 ]] \
     && die "StdErr log '$stderr' should be empty, but it is not"
-if [[ $( grep "$ansible_failed_re" $stderr | wc -l | cut -d ' ' -f 1 ) -eq 0 ]]; then
+if [[ $( grep "$ansible_failed_re" $stdout | wc -l | cut -d ' ' -f 1 ) -eq 0 ]]; then
     log "No errors encountered here (full log in '$stdout')"
 else
     log "Errors encountered were (full log in '$stdout'):"
