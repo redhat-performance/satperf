@@ -57,13 +57,18 @@ cat >setup.yaml <<EOF
     - shell:
         if [ -d /etc/pki/entitlement-host ]; then mv /etc/pki/entitlement-host{,.ORIG}; else true; fi
     - shell:
+        rpm -Uvh http://$capsule_ip/pub/katello-ca-consumer-latest.noarch.rpm
+EOF
+cat >cleanup.yaml <<EOF
+- hosts: all
+  remote_user: root
+  tasks:
+    - shell:
         yum -y remove katello-ca-consumer-\*
     - shell:
         subscription-manager clean
     - shell:
         rm -rf /var/cache/yum/*
-    - shell:
-        rpm -Uvh http://$capsule_ip/pub/katello-ca-consumer-latest.noarch.rpm
     # TODO: stop and uninstall katello-agent and gofferd
 EOF
 
@@ -106,6 +111,10 @@ cut -d ' ' -f 2 /root/container-ips \
 
 # Configure container
 log=$( mktemp )
+ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
+    && log "Cleanup passed (full log in '$log')"
+    || die "Cleanup failed (full log in '$log')"
+log=$( mktemp )
 ansible-playbook -i $list --forks 100 setup.yaml &>$log \
     && log "Setup passed (full log in '$log')"
     || die "Setup failed (full log in '$log')"
@@ -129,3 +138,13 @@ else
     log "Errors encountered were (full log in '$stdout'):"
     grep "$ansible_failed_re" $stdout | sed "s/$ansible_failed_re//" | sed "s/$uuid_re/<uuid>/" | sort | uniq -c
 fi
+
+# Do some cleanup now
+log=$( mktemp )
+ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager unregister" &>$log \
+    && log "Unregistration passed (full log in '$log')"
+    || die "Unregistration failed (full log in '$log')"
+log=$( mktemp )
+ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
+    && log "Cleanup passed (full log in '$log')"
+    || die "Cleanup failed (full log in '$log')"
