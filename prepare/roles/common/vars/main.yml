@@ -13,14 +13,6 @@ sat_repo_file: files/sat62.repo
 sat_installer_pkg: satellite
 sat_installer_cmd: foreman-installer --scenario katello
 
-# Capsule install options
-###capsule_repo_file: files/capsule61.repo
-###capsule_installer_pkg: capsule-installer
-###capsule_installer_cmd: katello-installer
-capsule_repo_file: files/capsule62.repo
-capsule_installer_pkg: capsule-installer
-capsule_installer_cmd: foreman-installer --scenario capsule
-
 # Sat5 server
 rhn_user: admin
 rhn_pass: password

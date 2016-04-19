@@ -2,8 +2,8 @@
 - hosts: docker-hosts
   remote_user: root
   roles:
-    - rhsm
     - common
+    - rhsm
   tasks:
     - command:
         subscription-manager repos --enable 'rhel-7-server-extras-rpms'
