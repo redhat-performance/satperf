@@ -1,9 +1,27 @@
 ---
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.77\s+docker.example.com' line='192.168.122.77 docker.example.com'
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.180\s+sat61.example.com' line='192.168.122.180 sat61.example.com'
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.212\s+sat62.example.com' line='192.168.122.212 sat62.example.com'
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.249\s+capsule61.example.com' line='192.168.122.249 capsule61.example.com'
-  - lineinfile: dest=/etc/hosts regexp='192.168.122.99\s+capsule62.example.com' line='192.168.122.99 capsule62.example.com'
+  # Taken from https://gist.github.com/rothgar/8793800
+  - name: "Build hosts file"
+      lineinfile:
+        dest=/etc/hosts
+        regexp='.*{{ item }}$'
+        line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}"
+        state=present
+      when: hostvars[item].ansible_default_ipv4.address is defined
+      with_items: groups['all']
+
+  # Taken from http://stackoverflow.com/questions/21892603/how-to-make-ansible-execute-a-shell-script-if-a-package-is-not-installed
+  - name: "Check if firewalld is installed"
+    command:
+      rpm -q firewalld
+    register: firewalld_is_installed
+    failed_when: firewalld_is_installed.rc > 1
+    changed_when: no
+  - name: "Disable firewalld"
+    service:
+      name=firewalld
+      state=stopped
+      enabled=no
+    when: firewalld_is_installed.rc == 0
 
   - selinux:
       policy=targeted
