@@ -36,9 +36,13 @@
 # Some variables
 satellite_ip=172.17.50.5
 capsule_ip=172.17.50.5
-batch=${1:-100}
+batch=${1:-100}   # how many systems to use
+offset=${2:0}   # how many $batch-es from start of the file to skipp (only for "sequence" queue type)
+queue=${3:-random}   # how to use systems we will work with?
+                     #   random ... choos randomly
+                     #   sequence ... choose from start (controled by $offset and $batch)
 cleanup_sequence="clear-tools; clear-results; kill-tools; echo 3 > /proc/sys/vm/drop_caches;"
-ansible_failed_re="^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+ | FAILED | rc=[1-9][0-9]* | "
+ansible_failed_re="^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+ | FAILED"   # Ansible 2.0 and 1.9 differs here
 uuid_re="[a-f0-9]\{8\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{12\}"
 if [[ $satellite_ip = $capsule_ip ]]; then
     is_capsule=false
@@ -59,6 +63,13 @@ cat >setup.yaml <<EOF
     - shell:
         rpm -Uvh http://$capsule_ip/pub/katello-ca-consumer-latest.noarch.rpm
 EOF
+cat >unregister.yaml <<EOF
+- hosts: all
+  remote_user: root
+  tasks:
+    - shell:
+        subscription-manager unregister
+EOF
 cat >cleanup.yaml <<EOF
 - hosts: all
   remote_user: root
@@ -71,7 +82,6 @@ cat >cleanup.yaml <<EOF
         rm -rf /var/cache/yum/*
     # TODO: stop and uninstall katello-agent and gofferd
 EOF
-
 
 function log() {
     echo "[$(date)]: $*"
@@ -103,48 +113,65 @@ log "RUNNING BATCH OF $batch REGISTRATIONS"
 
 # Select container IPs we are going to work with
 list=$( mktemp )
-cut -d ' ' -f 2 /root/container-ips \
-    | sort --random-sort \
-    | head -n $batch > $list
+case $queue in
+    random)
+        cut -d ' ' -f 2 /root/container-ips \
+            | sort --random-sort \
+            | head -n $batch > $list
+    ;;
+    sequence)
+        # We need to choose from randomly sorted list not to overload one
+        # docker host, but that randomly sorted list have to be same each
+        # time so with different $offset we get different IPs
+        if [ ! -f /root/container-ips.shuffled ] ||
+           ! cmp <( sort /root/container-ips ) <( sort /root/container-ips.shuffled ); then
+            head -n $( expr $batch \* $offset + $batch ) /root/container-ips \
+                | tail -n $batch \
+                | cut -d ' ' -f 2 > $list
+        fi
+    ;;
+    *)
+        die "Unknown queue type '$queue'"
+    ;;
+esac
 [[ $( wc -l $list | cut -d ' ' -f 1 ) -ne $batch ]] \
-    && die "Was not able to determine IPs to use"
+    && die "Was not able to determine IPs to use (see '$list')"
 
-# Configure container
-log=$( mktemp )
-ansible-playbook -i $list --forks 100 setup.yaml &>$log \
-    && log "Setup passed (full log in '$log')" \
-    || die "Setup failed (full log in '$log')"
-log=$( mktemp )
-ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
-    && log "Cleanup passed (full log in '$log')" \
-    || die "Cleanup failed (full log in '$log')"
+function ansible_playbook() {
+    local desc=$playbook
+    local log=$( mktemp )
+    ansible-playbook -i $list --forks 50 $playbook &>$log \
+        && log "$playbook passed (full log in '$log')" \
+        || die "$playbook failed (full log in '$log')"
+}
+
+# Prepare container for registration
+ansible_playbook setup.yaml
+ansible_playbook cleanup.yaml
 
 # Finally schedule registration
 stdout=$( mktemp )
 stderr=$( mktemp )
 log "Starting now (stdout: '$stdout', stderr: '$stderr')"
 start=$( date +%s )
-ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager register --org=Default_Organization --environment=Library --username admin --password changeme --auto-attach --force" >$stdout 2>$stderr
+# Note that on Ansible 2.0, you might run into:
+#   https://github.com/ansible/ansible/issues/13862
+ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager register --org Default_Organization --environment=Library --username admin --password changeme --auto-attach --force" >$stdout 2>$stderr
 rc=$?
 end=$( date +%s )
+log "Finished now (elapsed $( expr $end - $start ) seconds; exit code was $rc)"
 
 # Report results
-log "Finished now (elapsed $( expr $end - $start ) seconds)"
 [[ $( wc -l $stderr | cut -d ' ' -f 1 ) -ne 0 ]] \
     && die "StdErr log '$stderr' should be empty, but it is not"
 if [[ $( grep "$ansible_failed_re" $stdout | wc -l | cut -d ' ' -f 1 ) -eq 0 ]]; then
     log "No errors encountered here (full log in '$stdout')"
+    grep "FAILED" $stdout || true   # just to be sure there were really no failures
 else
     log "Errors encountered were (full log in '$stdout'):"
     grep "$ansible_failed_re" $stdout | sed "s/$ansible_failed_re//" | sed "s/$uuid_re/<uuid>/" | sort | uniq -c
 fi
 
-# Do some cleanup now
-log=$( mktemp )
-ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager unregister" &>$log \
-    && log "Unregistration passed (full log in '$log')" \
-    || die "Unregistration failed (full log in '$log')"
-log=$( mktemp )
-ansible-playbook -i $list --forks 100 cleanup.yaml &>$log \
-    && log "Cleanup passed (full log in '$log')" \
-    || die "Cleanup failed (full log in '$log')"
+#### Do some cleanup now
+###ansible_playbook unregister.yaml
+###ansible_playbook cleanup.yaml
