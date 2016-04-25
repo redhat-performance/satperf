@@ -1,4 +1,4 @@
-#!/bin/sh
+#!/bin/bash
 
 # This expects you have lots of containers available and their IPs in file
 # container-ips which have format:
@@ -125,10 +125,12 @@ case $queue in
         # time so with different $offset we get different IPs
         if [ ! -f /root/container-ips.shuffled ] ||
            ! cmp <( sort /root/container-ips ) <( sort /root/container-ips.shuffled ); then
-            head -n $( expr $batch \* $offset + $batch ) /root/container-ips \
-                | tail -n $batch \
-                | cut -d ' ' -f 2 > $list
+            warn "Shufeling /root/container-ips to /root/container-ips.shuffled"
+            sort --random-sort /root/container-ips > /root/container-ips.shuffled
         fi
+        head -n $( expr $batch \* $offset + $batch ) /root/container-ips.shuffled \
+            | tail -n $batch \
+            | cut -d ' ' -f 2 > $list
     ;;
     *)
         die "Unknown queue type '$queue'"
@@ -138,7 +140,7 @@ esac
     && die "Was not able to determine IPs to use (see '$list')"
 
 function ansible_playbook() {
-    local desc=$playbook
+    local playbook=$1
     local log=$( mktemp )
     ansible-playbook -i $list --forks 50 $playbook &>$log \
         && log "$playbook passed (full log in '$log')" \
