@@ -61,6 +61,8 @@ cat >setup.yaml <<EOF
     - shell:
         if [ -d /etc/pki/entitlement-host ]; then mv /etc/pki/entitlement-host{,.ORIG}; else true; fi
     - shell:
+        yum -y remove katello-ca-consumer-\*
+    - shell:
         rpm -Uvh http://$capsule_ip/pub/katello-ca-consumer-latest.noarch.rpm
 EOF
 cat >unregister.yaml <<EOF
@@ -74,8 +76,6 @@ cat >cleanup.yaml <<EOF
 - hosts: all
   remote_user: root
   tasks:
-    - shell:
-        yum -y remove katello-ca-consumer-\*
     - shell:
         subscription-manager clean
     - shell:
