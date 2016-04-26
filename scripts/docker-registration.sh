@@ -158,7 +158,7 @@ log "Starting now (stdout: '$stdout', stderr: '$stderr')"
 start=$( date +%s )
 # Note that on Ansible 2.0, you might run into:
 #   https://github.com/ansible/ansible/issues/13862
-ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager register --org Default_Organization --environment=Library --username admin --password changeme --auto-attach --force" >$stdout 2>$stderr
+ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --auto-attach --force" >$stdout 2>$stderr
 rc=$?
 end=$( date +%s )
 log "Finished now (elapsed $( expr $end - $start ) seconds; exit code was $rc)"
