@@ -97,8 +97,6 @@ function die() {
 }
 
 
-log "RUNNING BATCH OF $batch REGISTRATIONS"
-
 #### Give Satellite some rest after previous round, do some
 #### Satellite's/Capsule's caches cleanup, restart measurement
 ###log "Sleeping"
@@ -118,6 +116,7 @@ case $queue in
         cut -d ' ' -f 2 /root/container-ips \
             | sort --random-sort \
             | head -n $batch > $list
+        log "RUNNING BATCH OF $batch REGISTRATIONS ($queue)"
     ;;
     sequence)
         # We need to choose from randomly sorted list not to overload one
@@ -131,6 +130,7 @@ case $queue in
         head -n $( expr $batch \* $offset + $batch ) /root/container-ips.shuffled \
             | tail -n $batch \
             | cut -d ' ' -f 2 > $list
+        log "RUNNING BATCH OF $batch REGISTRATIONS ($queue from line $( expr $batch \* $offset ) to $( expr $batch \* $offset + $batch ))"
     ;;
     *)
         die "Unknown queue type '$queue'"
