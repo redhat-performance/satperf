@@ -42,13 +42,16 @@ queue=${3:-random}   # how to use systems we will work with?
                      #   random ... choos randomly
                      #   sequence ... choose from start (controled by $offset and $batch)
 cleanup_sequence="clear-tools; clear-results; kill-tools; echo 3 > /proc/sys/vm/drop_caches;"
-ansible_failed_re="^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+ | FAILED"   # Ansible 2.0 and 1.9 differs here
-uuid_re="[a-f0-9]\{8\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{12\}"
 if [[ $satellite_ip = $capsule_ip ]]; then
     is_capsule=false
 else
     is_capsule=true
 fi
+
+ansible_failed_re="^[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+ | FAILED"   # Ansible 2.0 and 1.9 differs here
+uuid_re="[a-f0-9]\{8\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{4\}-[a-f0-9]\{12\}"
+time_re="[0-9]\{1,2\}:[0-9]\{2\}:[0-9]\{2\}\.[0-9]\+"
+date_re="[0-9]\{4\}-[0-9]\{2\}-[0-9]\{2\}"
 
 
 # We will use this ansible script
@@ -171,7 +174,12 @@ if [[ $( grep "$ansible_failed_re" $stdout | wc -l | cut -d ' ' -f 1 ) -eq 0 ]];
     grep "FAILED" $stdout || true   # just to be sure there were really no failures
 else
     log "Errors encountered were (full log in '$stdout'):"
-    grep "$ansible_failed_re" $stdout | sed "s/$ansible_failed_re//" | sed "s/$uuid_re/<uuid>/" | sort | uniq -c
+    grep "$ansible_failed_re" $stdout \
+        | sed -e "s/$ansible_failed_re//" \
+              -e "s/$uuid_re/<uuid>/" \
+              -e "s/$date_re/<date>/g" \
+              -e "s/$time_re/<time>/g" \
+            | sort | uniq -c
 fi
 
 #### Do some cleanup now
