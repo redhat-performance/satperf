@@ -64,7 +64,7 @@ cat >setup.yaml <<EOF
     - shell:
         if [ -d /etc/pki/entitlement-host ]; then mv /etc/pki/entitlement-host{,.ORIG}; else true; fi
     - shell:
-        yum -y remove katello-ca-consumer-\*
+        rpm -qa | grep katello-ca-consumer && yum --disablerepo=\* -y remove katello-ca-consumer-\* || true
     - shell:
         rpm -Uvh http://$capsule_ip/pub/katello-ca-consumer-latest.noarch.rpm
 EOF
