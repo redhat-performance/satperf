@@ -92,6 +92,8 @@ end=$( date +%s )
 log "Finished now (elapsed $( expr $end - $start ) seconds; exit code was $rc)"
 
 # Report results
+[[ $( wc -l $stderr | cut -d ' ' -f 1 ) -ne 0 ]] \
+    && die "StdErr log '$stderr' should be empty, but it is not"
 ansible_errors_histogram $stdout
 
 #### Do some cleanup now

@@ -94,8 +94,6 @@ function ansible_playbook() {
     ansible-playbook -i $list --forks $forks $playbook &>$log \
         && log "$playbook passed (full log in '$log')" \
         || die "$playbook failed (full log in '$log')"
-    [[ $( wc -l $stderr | cut -d ' ' -f 1 ) -ne 0 ]] \
-        && die "StdErr log '$stderr' should be empty, but it is not"
 }
 
 
