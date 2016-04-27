@@ -50,13 +50,13 @@ function die() {
 
 
 function get_list() {
-    local queue=$1
-    local batch=$2
-    local offset=$3
-    if [ -z "$queue" -o -z "$batch" -o -z "$offset" -o $# -ne 3 ]; then
+    local list=$1
+    local queue=$2
+    local batch=$3
+    local offset=$4
+    if [ ! -w "$list" -o -z "$queue" -o -z "$batch" -o -z "$offset" -o $# -ne 4 ]; then
         die "Function get_list called with incorrect params $*"
     fi
-    local list=$( mktemp )
     case $queue in
         random)
             cut -d ' ' -f 2 /root/container-ips \
@@ -84,7 +84,6 @@ function get_list() {
     esac
     [[ $( wc -l $list | cut -d ' ' -f 1 ) -ne $batch ]] \
         && die "Was not able to determine IPs to use (see '$list')"
-    echo $list
 }
 
 

@@ -72,7 +72,8 @@ EOF
 ###sleep 60
 
 # Select container IPs we are going to work with
-list=$( get_list $queue $batch $offset | tail -n 1 )
+list=$( mktemp )
+get_list $list $queue $batch $offset
 
 # Prepare container for registration
 ansible_playbook setup.yaml
