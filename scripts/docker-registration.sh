@@ -9,8 +9,8 @@
 #   done
 
 # Some variables
-satellite_ip=172.17.50.5
-capsule_ip=172.17.50.5
+satellite_ip=192.168.122.10
+capsule_ip=192.168.122.20
 batch=${1:-100}   # how many systems to use
 offset=${2:0}   # how many $batch-es from start of the file to skipp (only for "sequence" queue type)
 queue=${3:-random}   # how to use systems we will work with?

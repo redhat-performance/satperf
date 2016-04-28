@@ -4,9 +4,9 @@
 # container-ips which have format:
 #
 #   # head -n 3 container-ips
-#   a6ccc312d286771261cb337504fd214f0cafe74dad39fa0339874a6fcf6d9360 172.1.0.249
-#   3cacfc995a6c962a1ac0943983abdb321608219cfb82e35df8ba7de43d5dfc39 172.1.0.248
-#   467187bc9bd0014b40ad6f30b00d2e2a39480ff24cf96069c1fe6e9062fcb75f 172.1.0.247
+#   a6ccc312d286771261cb337504fd214f0cafe74dad39fa0339874a6fcf6d9360 192.168.122.100
+#   3cacfc995a6c962a1ac0943983abdb321608219cfb82e35df8ba7de43d5dfc39 192.168.122.101
+#   467187bc9bd0014b40ad6f30b00d2e2a39480ff24cf96069c1fe6e9062fcb75f 192.168.122.102
 #
 # In setup we have used we had 5 VMs running with networking set and this
 # was used to create all the containers:
