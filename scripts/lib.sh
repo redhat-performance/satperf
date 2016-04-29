@@ -62,7 +62,7 @@ function get_list() {
             cut -d ' ' -f 2 /root/container-ips \
                 | sort --random-sort \
                 | head -n $batch > $list
-            log "RUNNING BATCH OF $batch REGISTRATIONS ($queue)"
+            log "RUNNING BATCH OF $batch REGISTRATIONS ($list; $queue)"
         ;;
         sequence)
             # We need to choose from randomly sorted list not to overload one
@@ -76,7 +76,7 @@ function get_list() {
             head -n $( expr $batch \* $offset + $batch ) /root/container-ips.shuffled \
                 | tail -n $batch \
                 | cut -d ' ' -f 2 > $list
-            log "RUNNING BATCH OF $batch REGISTRATIONS ($queue from line $( expr $batch \* $offset ) to $( expr $batch \* $offset + $batch ))"
+            log "RUNNING BATCH OF $batch REGISTRATIONS ($list; $queue from line $( expr $batch \* $offset ) to $( expr $batch \* $offset + $batch ))"
         ;;
         *)
             die "Unknown queue type '$queue'"
