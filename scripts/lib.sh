@@ -113,7 +113,7 @@ function ansible_errors_histogram() {
         log "Errors encountered were (full log in '$log'):"
         grep "$ansible_failed_re" $log \
             | sed -e "s/$ansible_failed_re//" \
-                  -e "s/$uuid_re/<uuid>/" \
+                  -e "s/$uuid_re/<uuid>/g" \
                   -e "s/$date_re/<date>/g" \
                   -e "s/$time_re/<time>/g" \
                 | sort | uniq -c

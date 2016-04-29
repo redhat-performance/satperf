@@ -90,7 +90,7 @@ ansible all --forks $batch --one-line -u root -i $list -m shell -a "subscription
 rc=$?
 end=$( date +%s )
 log "Finished now (elapsed $( expr $end - $start ) seconds; exit code was $rc)"
-echo "$( date ),$batch,$offset,$rc,$( expr $end - $start )" >>docker-registration.timing
+echo "$( date ),$capsule_ip,$batch,$offset,$rc,$( expr $end - $start )" >>docker-registration.timing
 
 # Report results
 [[ $( wc -l $stderr | cut -d ' ' -f 1 ) -ne 0 ]] \
