@@ -7,6 +7,13 @@
 #       ./docker-registration.sh 50 $i sequence
 #       sleep 60
 #   done
+#
+# It might be also handy to drop cache on all systems running your containers
+# after each batch or so:
+#
+#   # for h in host1.example.com host2.example.com host3.example.com; do
+#       ssh root@$h 'echo 3 > /proc/sys/vm/drop_caches'
+#   done
 
 # Some variables
 satellite_ip=192.168.122.10
@@ -30,7 +37,16 @@ source lib.sh
 cat >setup.yaml <<EOF
 - hosts: all
   remote_user: root
+  gather_facts: no
   tasks:
+    # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
+    - name: "Wait for machine to be available"
+      local_action: wait_for
+        host="{{ ansible_ssh_host }}"
+        port=22
+        delay=5
+        timeout=300
+        state=started
     - shell:
         if [ -d /etc/rhsm-host ]; then mv /etc/rhsm-host{,.ORIG}; else true; fi
     - shell:
