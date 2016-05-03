@@ -15,6 +15,7 @@ offset=${2:0}   # how many $batch-es from start of the file to skipp (only for "
 queue=${3:-sequence}   # how to use systems we will work with?
                      #   random ... choos randomly
                      #   sequence ... choose from start (controled by $offset and $batch)
+satellite_ip=192.168.122.10
 
 # Source library
 source lib.sh
@@ -24,16 +25,40 @@ cat >setup.yaml <<EOF
 - hosts: all
   remote_user: root
   tasks:
-    - shell: |
+      # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
+    - name: "Wait for machine to be available"
+      local_action: wait_for
+        host="{{ ansible_ssh_host }}"
+        port=22
+        delay=5
+        timeout=300
+        state=started
+    - get_url:
+        url=http://$satellite_ip/pub/katello-server-ca.crt
+        dest=/etc/rhsm/ca/katello-default-ca.pem
+        force=yes
+    - get_url:
+        url=http://$satellite_ip/pub/katello-server-ca.crt
+        dest=/etc/rhsm/ca/katello-server-ca.pem
+        force=yes
+    - name: "Enable required repos"
+      shell: |
         subscription-manager repos --enable rhel-7-server-rh-common-rpms
-        subscription-manager attach --pool 8a909d8b5451f1d7015457077aa54474
+        subscription-manager attach --pool 8a909d8b545fbc2d01546006d67a0182 --pool 8a909d8b54625509015475d5542655dc
         subscription-manager repos --enable Default_Organization_Stuff_from_CI_server_Tools_RHEL7_x86_64
-    - yum:
+    - name: "Install katello-agent"
+      yum:
         name=katello-agent
         state=latest
-    - shell:
-        /usr/lib/systemd/systemd-journald &
-    - shell:
+    - name: "Make sure we have at least one errata applicable"
+      command:
+        yum -y downgrade sos-3.2-15.el7_1.5.noarch
+    - name: "Start journald"
+      shell:
+        pgrep --full '/usr/lib/systemd/systemd-journald' || /usr/lib/systemd/systemd-journald &
+    - name: "(Re)start goferd"
+      shell: |
+        pgrep --full '/usr/bin/goferd' && pkill --full '/usr/bin/goferd'
         /usr/bin/goferd --foreground
 EOF
 cat >uninstall.yaml <<EOF
