@@ -45,9 +45,9 @@ function pbench_cleanup()
 {
     log clearing prerigestered tools
     #cleanup tools if any
-    clear-tools
-    clear-results
-    kill-tools
+    pbench-clear-tools
+    pbench-clear-results
+    pbench-kill-tools
     #drop cache
     echo 3 > /proc/sys/vm/drop_caches
 }
@@ -58,8 +58,8 @@ function pbench_config()
      if $PBENCH ; then
          pbench_cleanup
          log registering tools
-         register-tool-set
-         unregister-tool --name perf
+         pbench-register-tool-set
+         pbench-clear-tools --name perf
      fi
 }
 
@@ -67,10 +67,10 @@ function pbench_config()
 function pbench_postprocess()
 {
       log clearing tools
-      kill-tools
-      clear-tools
-      #clear-results
-      move-results
+      pbench-kill-tools
+      pbench-clear-tools
+      #pbench-clear-results
+      pbench-move-results
 }
 
 
@@ -240,7 +240,7 @@ function sync_capsule_conc()
     done
     #clear capsules
     for capsule in $CAPSULES;  do
-        ssh -o "${SSH_OPTS}" root@$capsule "clear-results; clear-tools; kill-tools"
+        ssh -o "${SSH_OPTS}" root@$capsule "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
     done
     #Register tools
     register-tool-set
@@ -252,9 +252,9 @@ function sync_capsule_conc()
         capid=`expr ${numcap} + 1`
         hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" capsule content remove-lifecycle-environment --environment-id 1 --id "${capid}"
     done
-    clear-tools; kill-tools
+    pbench-clear-tools; pbench-kill-tools
     for capsule in $CAPSULES;  do
-        ssh -o "${SSH_OPTS}" root@$capsule "clear-results; clear-tools; kill-tools"
+        ssh -o "${SSH_OPTS}" root@$capsule "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
     done
 }
 
