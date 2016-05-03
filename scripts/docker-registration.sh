@@ -23,7 +23,7 @@ offset=${2:0}   # how many $batch-es from start of the file to skipp (only for "
 queue=${3:-random}   # how to use systems we will work with?
                      #   random ... choos randomly
                      #   sequence ... choose from start (controled by $offset and $batch)
-cleanup_sequence="clear-tools; clear-results; kill-tools; echo 3 > /proc/sys/vm/drop_caches;"
+cleanup_sequence="pbench-clear-tools; pbench-clear-results; pbench-kill-tools; echo 3 > /proc/sys/vm/drop_caches;"
 if [[ $satellite_ip = $capsule_ip ]]; then
     is_capsule=false
 else
