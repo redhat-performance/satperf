@@ -47,9 +47,14 @@ cat >setup.yaml <<EOF
         subscription-manager attach --pool 8a909d8b545fbc2d01546006d67a0182 --pool 8a909d8b54625509015475d5542655dc
         subscription-manager repos --enable Default_Organization_Stuff_from_CI_server_Tools_RHEL7_x86_64
     - name: "Install katello-agent"
-      yum:
-        name=katello-agent
-        state=latest
+      action:
+        yum
+          name=katello-agent
+          state=latest
+      register: installed
+      until: "installed.rc != 0"
+      retries: 10
+      delay: 10
     - name: "Make sure we have at least one errata applicable"
       command:
         yum -y downgrade sos-3.2-15.el7_1.5.noarch
