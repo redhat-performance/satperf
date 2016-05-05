@@ -1,7 +1,0 @@
----
-- hosts: capsules
-  remote_user: root
-  roles:
-    - common
-    - capsule
-    - pbench_client

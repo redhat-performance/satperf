@@ -1,3 +1,0 @@
----
-pbench_repo_file: "https://copr.fedorainfracloud.org/coprs/ndokos/pbench/repo/epel-{{ ansible_distribution_major_version }}/ndokos-pbench-epel-{{ ansible_distribution_major_version }}.repo"
-...
