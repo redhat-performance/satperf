@@ -1,0 +1,20 @@
+---
+# Satellite credentials
+sat_user: admin
+sat_pass: changeme
+sat_email: root@localhost
+sat_server: sat61.example.com
+
+# Satellite install options
+###sat_repo_file: files/sat61.repo
+###sat_installer_pkg: katello
+###sat_installer_cmd: katello-installer
+sat_repo_file: files/sat62.repo
+sat_installer_pkg: satellite
+sat_installer_cmd: foreman-installer --scenario katello
+
+# Sat5 server
+rhn_user: admin
+rhn_pass: password
+rhn_server: sat5.example.com
+...

@@ -1,0 +1,46 @@
+To install systems in AWS:
+
+  # rpm -q python2-boto || yum -y install python2-boto
+  $ export AWS_ACCESS_KEY_ID='AK123'
+  $ export AWS_SECRET_ACCESS_KEY='abc123'
+  $ ansible-playbook -i hosts.ini aws.yaml
+
+To sync repos so we can have it locally:
+
+  # cat /etc/yum.repos.d/reposync.repo 
+  [Satellite-6.1.0-RHEL-6-20160321.0-Satellite-x86_64]
+  name=Satellite-6.1.0-RHEL-6-20160321.0/compose/Satellite/x86_64
+  baseurl=http://remote.server.example.com/devel/candidate-trees/Satellite/Satellite-6.1.0-RHEL-6-20160321.0/compose/Satellite/x86_64/os/
+  enabled=0
+  gpgcheck=0
+
+  [Satellite-6.1.0-RHEL-6-20160321.0-Capsule-x86_64]
+  name=Satellite-6.1.0-RHEL-6-20160321.0/compose/Capsule/x86_64
+  baseurl=http://remote.server.example.com/devel/candidate-trees/Satellite/Satellite-6.1.0-RHEL-6-20160321.0/compose/Capsule/x86_64/os/
+  enabled=0
+  gpgcheck=0
+  # cd /var/www/html/repos
+  # reposync --downloadcomps --repoid Satellite-6.1.0-RHEL-6-20160321.0-Satellite-x86_64
+  # cd Satellite-6.1.0-RHEL-6-20160321.0-Satellite-x86_64
+  # createrepo --groupfile comps.xml .
+  # cd ..
+  ### Repeat for the Capsule repo
+
+Save your Sat6 manifest as files/manifest.zip. Configure your constants in roles/common/vars/main.yml.
+
+To prepare Docker hosts:
+
+  $ ansible-playbook -i hosts.ini docker-host.yaml
+
+To prepare Satellite:
+
+  $ ansible-playbook -i hosts.ini sat6.yaml
+
+To prepare Capsules:
+
+  $ ansible-playbook -i hosts.ini capsules.yaml
+
+To display facts stored by Ansible about all hosts (warning: looks like
+it is quite expensive operation):
+
+  $ ansible capsule61.example.com -i hosts.ini --user=root -m setup

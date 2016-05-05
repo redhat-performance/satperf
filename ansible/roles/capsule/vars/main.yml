@@ -1,0 +1,9 @@
+---
+# Capsule install options
+capsule_repo_file: files/capsule61.repo
+capsule_installer_pkg: capsule-installer
+capsule_installer_cmd: katello-installer
+###capsule_repo_file: files/capsule62.repo
+###capsule_installer_pkg: capsule-installer
+###capsule_installer_cmd: foreman-installer --scenario capsule
+...

@@ -1,0 +1,50 @@
+---
+  # Taken from https://gist.github.com/rothgar/8793800
+  - name: "Build hosts file"
+    lineinfile:
+      dest=/etc/hosts
+      regexp='.*{{ item }}$'
+      line="{{ hostvars[item].ansible_default_ipv4.address }} {{ item }}"
+      state=present
+    when: hostvars[item].ansible_default_ipv4.address is defined
+    with_items: groups['all']
+
+  # Taken from http://stackoverflow.com/questions/21892603/how-to-make-ansible-execute-a-shell-script-if-a-package-is-not-installed
+  - name: "Check if firewalld is installed"
+    command:
+      rpm -q firewalld
+    register: firewalld_is_installed
+    failed_when: firewalld_is_installed.rc > 1
+    changed_when: no
+  - name: "Disable firewalld"
+    service:
+      name=firewalld
+      state=stopped
+      enabled=no
+    when: firewalld_is_installed.rc == 0
+
+  - selinux:
+      policy=targeted
+      state=enforcing
+
+  #- command:
+  #    shutdown -h 1
+
+  #- get_url:
+  #    url=http://{{ rhn_server }}/pub/RHN-ORG-TRUSTED-SSL-CERT
+  #    dest=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
+  #- shell:
+  #    # This is a workaround for https://github.com/ansible/ansible-modules-core/pull/3288
+  #    echo 'sslCACert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}' >>/etc/sysconfig/rhn/up2date
+  #- rhn_register:
+  #    state=present
+  #    username={{ rhn_user }}
+  #    password={{ rhn_pass }}
+  #    server_url=https://{{ rhn_server }}/XMLRPC
+  #    ###sslcacert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
+  - yum:
+      name=libselinux-python,rsync
+      state=present
+  #- rhn_register:
+  #    state=absent
+...
