@@ -11,7 +11,7 @@ sat_server: sat61.example.com
 ###sat_installer_cmd: katello-installer
 sat_repo_file: files/sat62.repo
 sat_installer_pkg: satellite
-sat_installer_cmd: foreman-installer --scenario katello
+sat_installer_cmd: satellite-installer--scenario katello 
 
 # Sat5 server
 rhn_user: admin
