@@ -1,3 +1,24 @@
+Table of Contents
+=================
+
+- [Ansible for satperf](#ansible-for-satperf)
+    - [Getting Started](#install-systems-on-aws)
+    - [sync repos](#sync-repos-to-satellite)
+    - [Performance Check](#performance-check)
+    - [Performance Tune](#performance-tune)
+    - [Adjust your overcloud](#adjust-your-overcloud)
+
+#Ansible for satperf
+
+Playbooks for:
+* Installing satellite
+* Installing capsule
+* Registering containers as hosts to capsule
+* Install ketello-agent and run errata
+* sync content
+* Puppet module update
+
+
 To install systems in AWS:
 
   # rpm -q python2-boto || yum -y install python2-boto
