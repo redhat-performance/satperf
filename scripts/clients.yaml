@@ -1,0 +1,262 @@
+# This playbook is supposed to:
+#
+#   * register container via subscription-manager as a fake real system
+#   * makes sure there is applicable errata (so it can be applied from Satellite's webUI)
+#   * setup katello-agent on registered container
+#   * register via puppet and do initial run
+#   * it also gathers lsof info from Satellite and Capsule after each run
+#
+# Here comes some useful copy&paste ready commands when starting containers on multiple hosts:
+#
+#   # dockers="dockerhost1.example.com dockerhost2.example.com dockerhost3.example.com"
+#   # for h in $dockers; do
+#       echo "=== $h ==="
+#       ssh root@$h 'for i in `seq 250`; do [ -d /tmp/yum-cache-$i/ ] || mkdir /tmp/yum-cache-$i/; rm -rf /tmp/yum-cache-$i/*; docker run -h `hostname -s`container$i.example.com -d -v /tmp/yum-cache-$i/:/var/cache/yum/ r7perfsat; done' &
+#   done
+#   # for h in $dockers; do
+#       ssh root@$h 'for c in $(docker ps -q); do docker inspect $c | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0][\"Id\"], obj[0][\"NetworkSettings\"][\"IPAddress\"]"; done'
+#   done >/root/container-ips
+#   # sort -R /root/container-ips >/root/container-ips.shuffled
+#
+# Here comes some commands to prepare inventory file and actually start the playbook:
+#
+#   # cut -d ' ' -f 2 /root/container-ips.shuffled | head -n 150 | tail -n 25 >clients.ini
+#   # ansible-playbook -f25 -i clients.ini clients.yaml
+#
+# But first of all, you will need some config on the Satellite and changes in this playbook:
+#
+#   * create product "RHEL7 x86_64"
+#       create yum repo "RHEL7 x86_64" with RHEL 7.2 content (newer should be good as well)
+#         Sync Now
+#   * create product "Satellite Tools 6.2 Beta"
+#       create yum repo "Satellite Tools 6.2 Beta"
+#   * make sure there is "daemonize-1.7.7-1.el7.x86_64.rpm" on http://<satellite>/pub/
+#   * create puppet product + module:
+#       # PUPPET_MODULE=puppet-qaredhattest
+#       # PUPPET_MODULE_FILE=/tmp/puppet-qaredhattest.txt
+#       # PUPPET_MODULE_FILE_CONTENT="Some important sentence."
+#       # puppet module generate "$PUPPET_MODULE" --skip-interview
+#       # cat <<EOF > $PUPPET_MODULE/manifests/init.pp
+#       # class qaredhattest {
+#       #   file { "$PUPPET_MODULE_FILE":
+#       #     ensure => file,
+#       #     mode   => 755,
+#       #     owner  => root,
+#       #     group  => root,
+#       #     content => "$PUPPET_MODULE_FILE_CONTENT",
+#       #   }
+#       # }
+#       # EOF
+#       # puppet module build $PUPPET_MODULE
+#       # PUPPET_PRODUCT='MyPuppetProduct'
+#       # PUPPET_REPO='MyPuppetRepo'
+#       # hammer --username admin --password changeme product create --label $PUPPET_PRODUCT --name $PUPPET_PRODUCT --organization-id 1
+#       # hammer --username admin --password changeme repository create --content-type puppet --label $PUPPET_REPO --name $PUPPET_REPO --organization-id 1 --product $PUPPET_PRODUCT
+#       # hammer --username admin --password changeme repository upload-content --name $PUPPET_REPO --path $PUPPET_MODULE/pkg/$PUPPET_MODULE-0.1.0.tar.gz --product $PUPPET_PRODUCT --organization-id 1
+#   * create content view "test"
+#       add "qaredhattest" puppet module to it, select latest version
+#       "Publish New Version" of the content view
+#       check that there is "KT_Default_Organization_Library_test_2" in Configure -> Environments
+#   * once you have installed capsule
+#       move it to "Default Organization" in Infrastructure -> Capsules
+#       now for all capsules (including Satellite capsule):
+#         add Autosign -> New -> "*"
+#         assign "Library" to the capsule
+#         let the capsule "Synchronize" the content
+#           maybe you will need patch from https://bugzilla.redhat.com/show_bug.cgi?id=1337306 on Sat
+
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  vars:
+    #sat: sat61.example.com
+    #server: capsule61.example.com
+    #pool_rhel: 4028fa25545bed6101545c14bbf10063
+    #pool_tools: 4028fa25545bed6101547f49f12602e7
+    sat: sat62.example.com
+    server: capsule62.example.com
+    pool_rhel: 4028fab8545c099a01545c14c84d0063
+    pool_tools: 4028fab85461d5df01547f4c73e4005c
+    puppet_env: KT_Default_Organization_Library_test_2
+  tasks:
+    # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
+    - name: "Wait for machine to be available"
+      local_action: wait_for
+        host="{{ inventory_hostname }}"
+        port=22
+        delay=5
+        timeout=300
+        state=started
+    - name: "Gather facts"
+      setup:
+    - name: "Rename /etc/rhsm-host and /etc/pki/entitlement-host"
+      shell: |
+        if [ -d /etc/rhsm-host ]; then mv /etc/rhsm-host{,.ORIG}; else true; fi
+        if [ -d /etc/pki/entitlement-host ]; then mv /etc/pki/entitlement-host{,.ORIG}; else true; fi
+    - name: "Make sure /etc/hosts contains al capsules"
+      shell: |
+        grep sat61 /etc/hosts || echo "192.168.122.165 sat61.example.com">>/etc/hosts
+        grep sat62 /etc/hosts || echo "192.168.122.56 sat62.example.com">>/etc/hosts
+        grep capsule61 /etc/hosts || echo "192.168.122.45 capsule61.example.com">>/etc/hosts
+        grep capsule62 /etc/hosts || echo "192.168.122.141 capsule62.example.com">>/etc/hosts
+    - name: "Clean subscription-manager stuff"
+      shell:
+        subscription-manager clean
+    - name: "Remove katello-ca-consumer package"
+      shell: |
+        if rpm -qa | grep katello-ca-consumer; then
+          yum --disablerepo=\* -y remove katello-ca-consumer-\*
+        fi
+    - name: "Remove other repos which might be broken"
+      shell:
+        rm -f /etc/yum.repos.d/*.repo
+    - name: "Install katello-ca-consumer"
+      action:
+        shell
+          rpm -Uvh "http://{{ server }}/pub/katello-ca-consumer-latest.noarch.rpm"
+      register: installed
+      until: "{{ installed.rc }} == 0"
+      retries: 10
+      delay: 10
+    - name: "Clean yum cache"
+      shell:
+        rm -rf /var/cache/yum/*
+    - name: "Register"
+      shell:
+        subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
+    - name: "Attach to RHEL product"
+      shell:
+        subscription-manager attach --pool "{{ pool_rhel }}"
+    - name: "Attach to 6.2 Tools custom product"
+      shell:
+        subscription-manager attach --pool "{{ pool_tools }}"
+
+    - name: "Remove katello-agent when installed"
+      yum:
+        name=katello-agent
+        state=absent
+    - name: "Remove gofer when installed"
+      yum:
+        name=gofer
+        state=absent
+    - name: "Make sure daemonize is installed"
+      shell: |
+        if ! rpm -q daemonize; then
+          rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
+            || rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
+            || rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm"
+        fi
+    - name: "Install katello-agent"
+      action:
+        yum
+          name=katello-agent
+          state=latest
+      register: installed
+      until: "{{ installed.rc }} == 0"
+      retries: 10
+      delay: 10
+    - name: "Kill journald if it is running"
+      shell: |
+        if ! pkill --full '/usr/lib/systemd/systemd-journald'; then
+          true
+        fi
+      ignore_errors: yes
+    - name: "Start journald"
+      command:
+        daemonize /usr/lib/systemd/systemd-journald
+    - name: "Kill goferd if it is running"
+      shell: |
+        if pkill --full '/usr/bin/goferd'; then
+          true
+        fi
+      ignore_errors: yes
+    - name: "Start goferd"
+      command:
+        daemonize -- /usr/bin/goferd --foreground
+
+    - name: "Downgrade ksh package so we have some applicable errata"
+      shell: |
+        rpm -q ksh && rpm -e ksh
+        yum -y install ksh-20120801-19.el7
+
+   - name: "Install puppet"
+      action:
+        yum
+          name=puppet
+          state=latest
+      register: installed
+      until: "{{ installed.rc }} == 0"
+      retries: 10
+      delay: 10
+    - name: "Set puppet server"
+      command:
+        /usr/bin/puppet config set server "{{ server }}" --section agent
+    - name: "Set puppet ca_server"
+      command:
+        /usr/bin/puppet config set ca_server "{{ server }}" --section agent
+    - name: "Set puppet environment"
+      command:
+        /usr/bin/puppet config set environment "{{ puppet_env }}" --section agent
+    # We need to serialize these hammer calls because of https://bugzilla.redhat.com/show_bug.cgi?id=1336007
+    - name: "Configure puppet stuff on Sat for given container"
+      command:
+        hammer -u admin -p changeme host update --name "{{ hostvars[item]['ansible_fqdn'] }}" --puppet-proxy "{{ server }}" --puppet-ca-proxy "{{ server }}" --environment "{{ puppet_env }}" --puppet-classes qaredhattest
+      with_items: groups['all']
+      run_once: true
+      delegate_to: "{{ sat }}"
+    - name: "Register puppet host"
+      shell:
+        /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
+    - name: "Pickup action"
+      command:
+        /usr/bin/puppet agent --onetime
+    - name: "Check if file was created"
+      action: command
+        cat /tmp/puppet-qaredhattest.txt
+      register: deployed
+      until: "{{ deployed.rc }} == 0"
+      retries: 60
+      delay: 10
+
+    - name: "Gather lsof on Sat"
+      delegate_to: "{{ sat }}"
+      shell: lsof | cut -d ' ' -f 1 | sort | uniq -c | sort -n | tail -n 50
+      register: lsof_command
+      run_once: true
+    - name: "Save lsof log from Sat"
+      local_action:
+        copy content="{{ lsof_command.stdout }}" dest="/root/lsof-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+    - name: "Gather qpid on Sat"
+      delegate_to: "{{ sat }}"
+      command: qpid-stat --ssl-certificate=/etc/pki/katello/qpid_client_striped.crt -b amqps://localhost:5671 -g
+      register: qpidstat_command
+      run_once: true
+    - name: "Save qpid log from Sat"
+      local_action:
+        copy content="{{ qpidstat_command.stdout }}" dest="/root/qpidstat-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+
+    - name: "Gather lsof on Capsule"
+      delegate_to: "{{ server }}"
+      shell: lsof | cut -d ' ' -f 1 | sort | uniq -c | sort -n | tail -n 50
+      register: lsof_command
+      run_once: true
+    - name: "Save lsof log from Capsule"
+      local_action:
+        copy content="{{ lsof_command.stdout }}" dest="/root/lsof-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+    - name: "Gather qpid on Capsule"
+      delegate_to: "{{ sat }}"
+      command: qpid-stat --ssl-certificate=/etc/pki/katello/qpid_client_striped.crt -b amqps://localhost:5671 -g
+      register: qpidstat_command
+      run_once: true
+    - name: "Save qpid log from Capsule"
+      local_action:
+        copy content="{{ qpidstat_command.stdout }}" dest="/root/qpidstat-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+
+    - name: "Drop caches on localhost"
+      local_action:
+        shell echo 3 > /proc/sys/vm/drop_caches
+      run_once: true
