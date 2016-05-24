@@ -93,7 +93,7 @@
       shell: |
         if [ -d /etc/rhsm-host ]; then mv /etc/rhsm-host{,.ORIG}; else true; fi
         if [ -d /etc/pki/entitlement-host ]; then mv /etc/pki/entitlement-host{,.ORIG}; else true; fi
-    - name: "Make sure /etc/hosts contains al capsules"
+    - name: "Make sure /etc/hosts contains all capsules"
       shell: |
         grep sat61 /etc/hosts || echo "192.168.122.165 sat61.example.com">>/etc/hosts
         grep sat62 /etc/hosts || echo "192.168.122.56 sat62.example.com">>/etc/hosts
@@ -179,7 +179,7 @@
         rpm -q ksh && rpm -e ksh
         yum -y install ksh-20120801-19.el7
 
-   - name: "Install puppet"
+    - name: "Install puppet"
       action:
         yum
           name=puppet
@@ -217,6 +217,26 @@
       until: "{{ deployed.rc }} == 0"
       retries: 60
       delay: 10
+
+    - name: "Make sure /root/.ssh/ exists"
+      file:
+        path=/root/.ssh
+        state=directory
+        mode=0700
+    - name: "Make sure /root/.ssh/authorized_keys exists"
+      file:
+        path=/root/.ssh/authorized_keys
+        state=file
+        mode=0600
+    - name: "Obtain remote execution SSH key"
+      action:
+        command curl --insecure "https://{{ server }}:9090/ssh/pubkey"
+      register: ssh_key
+    - name: "Deploy remote execution SSH key"
+      lineinfile:
+        dest=/root/.ssh/authorized_keys
+        regexp=" foreman-proxy@{{ server }}$"
+        line="{{ ssh_key.stdout }}"
 
     - name: "Gather lsof on Sat"
       delegate_to: "{{ sat }}"
