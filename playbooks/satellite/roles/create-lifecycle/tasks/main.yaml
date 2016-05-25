@@ -1,0 +1,15 @@
+---
+    - command:
+        hammer -u {{ admin_user }} -p {{ admin_passwd }} \
+          lifecycle-environment create \
+          --name='DEV' \
+          --prior='Library' \
+          --organization={{ org }}
+
+    - command:
+        hammer -u {{ admin_user }} -p {{ admin_passwd }} \
+          lifecycle-environment create \
+          --name='QE' \
+          --prior='DEV' \
+          --organization={{ org }}
+...

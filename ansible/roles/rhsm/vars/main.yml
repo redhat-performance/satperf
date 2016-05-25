@@ -1,6 +1,0 @@
----
-# Credentials for RHSM (for Satellite machine registration)
-rhsm_user: user
-rhsm_pass: pass
-rhsm_pools: '^(Employee SKU|Red Hat Satellite Employee Subscription)$'
-...

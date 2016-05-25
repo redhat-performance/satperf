@@ -1,0 +1,26 @@
+---
+  # Following might fail with
+  #   msg: Failed to register with 'subscription.rhn.redhat.com': 'RhsmPool' object has no attribute 'PoolId'
+  # Should be already fixed these days upstream:
+  #   https://github.com/ansible/ansible-modules-core/issues/421
+  # So I patched mine Ansible package (ansible-1.9.4-1.fc23.noarch):
+  #   # pwd
+  #   /usr/lib/python2.7/site-packages/ansible/modules/core
+  #   # curl --insecure https://patch-diff.githubusercontent.com/raw/ansible/ansible-modules-core/pull/1204.patch | patch -p 1 --merge
+  #   # vim packaging/os/redhat_subscription.py   # had one merge conflict so had to patch it manually
+  - action: redhat_subscription
+      state=present
+      username="{{ rhsm_user }}"
+      password="{{ rhsm_pass }}"
+      pool="{{ rhsm_pools }}"
+      autosubscribe=true
+    register: registration
+    until: not registration.failed
+    retries: 5
+    delay: 10
+  - shell: |
+      subscription-manager repos --disable 'rh*'
+      subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+      subscription-manager repos --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
+    when: registration.changed
+...

@@ -1,0 +1,13 @@
+---
+
+- hosts: satellite
+  remote_user: root
+  roles:
+    - common
+    - rhsm
+    - setup
+    - pbench_client
+    - satellite-populate
+  tags:
+    - setup_satellite
+

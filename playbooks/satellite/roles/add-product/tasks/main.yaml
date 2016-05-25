@@ -1,0 +1,5 @@
+---
+    - command:
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' product create --organization-id 1 --name {{item}}
+      with_indexed_items: "{{ products }}"
+...

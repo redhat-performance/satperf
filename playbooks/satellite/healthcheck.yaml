@@ -1,0 +1,12 @@
+---
+- hosts: satellite
+  remote_user: root
+  roles:
+    - add-product
+    - backup
+    - content-view
+    - create-lifecycle
+    - enable-content
+    - register
+    - restore
+    - sync

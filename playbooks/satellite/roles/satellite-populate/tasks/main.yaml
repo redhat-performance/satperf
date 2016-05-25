@@ -1,0 +1,50 @@
+---
+    - name: "Deploy manifest file"
+      copy: src=files/manifest.zip dest=/root/
+      register: manifest_copied
+    - name: "Upload manifest"
+      command:
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription upload --organization-id '{{ orgid }}' --file /root/manifest.zip
+      when: manifest_copied.changed
+
+    # FIXME: We want to be sure manifest is in the Sat before we start trying
+    # to enable repos. There have to be some better way, but for now this
+    # should suffice
+    - name: "Show manifest is there"
+      command:
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription manifest-history --organization-id '{{ orgid }}'
+      register: manifest_history
+    - name: "Check that manifest is there"
+      assert:
+        that:
+          - "'SUCCESS' in manifest_history.stdout"
+          - "'file imported successfully' in manifest_history.stdout"
+
+    - name: "List repositories we already have (not to attempt to enable what we alreaty have)"
+      command:
+        hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository list --organization-id '{{ orgid }}'
+      register: repository_list
+    - name: "Enable repositories"
+      shell: |
+        attempt=0
+        attempt_max=10
+        while ! hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ item.product }}' --name '{{ item.reposet }}' --basearch '{{ ansible_architecture }}' --releasever '{{ releasever }}' --organization-id '{{ orgid }}'; do
+            [ $attempt -ge $attempt_max ] && exit 1
+            katello-service restart
+            sleep 10
+            hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription refresh-manifest --organization-id '{{ orgid }}'
+            sleep 10
+            let attempt+=1
+        done
+      when: repository_list.stdout.find(",{{ item.repo }},") == -1
+      with_items:
+        - { product: "{{ product1 }}", reposet: "{{ reposet1 }}", repo: "{{ repo1 }}" }
+        - { product: "{{ product2 }}", reposet: "{{ reposet2 }}", repo: "{{ repo2 }}" }
+        - { product: "{{ product3 }}", reposet: "{{ reposet3 }}", repo: "{{ repo3 }}" }
+
+    - name: "Start (asynchronous) sync of repos we have just enabled"
+      shell: |
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ product1 }}' --name '{{ repo1 }}' --organization-id '{{ orgid }}' --async
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ product2 }}' --name '{{ repo2 }}' --organization-id '{{ orgid }}' --async
+        hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ product3 }}' --name '{{ repo3 }}' --organization-id '{{ orgid }}' --async
+...

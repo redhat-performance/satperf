@@ -1,0 +1,4 @@
+---
+    - shell: hostname -f
+      register: comp
+...

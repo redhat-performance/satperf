@@ -1,0 +1,22 @@
+---
+- hosts: satellite
+  remote_user: root
+  roles:
+    - { role: backup,
+      	when: backup == true or all = true }
+    - { role: upload-manifest,
+      	when: upload_manifest == true or all = true }
+    - { role: restore, when: restore == true }
+    - { role: add-product, when: add_product == true }
+    - { role: create-lifecycle, when: create_lifecycle == true }
+    - { role: enable-content,
+      	when: enable_content == true or all = true }
+    - { role: content-view-create, when: content_view_create == true  }
+    - { role: content-view-publish, when: content_view_publish == true }
+    - { role: content-view-promote, when: content_view_promote == true }
+    - { role: sync-content,
+      	when: sync_content == true or all = true }
+    - { role: sync-capsule,
+      	when: sync_capsule == true or all = true }
+    - { role: register, when: register_content_hosts == true }
+    - { role: status_check, when: katello_check == true }

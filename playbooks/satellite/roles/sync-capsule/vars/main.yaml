@@ -1,0 +1,4 @@
+---
+tname: "sample test name"
+testprefix: satelite62-{{tname}}
+...

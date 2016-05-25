@@ -1,0 +1,4 @@
+---
+    - command: katello-restore /home/backup/
+      register: restore_backup
+...

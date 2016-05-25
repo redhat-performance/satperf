@@ -1,0 +1,53 @@
+---
+- hosts: capsules
+  remote_user: root
+  roles:
+    - common
+  tasks:
+    - name: "Ensure that capsule-remove is available"
+      stat:
+        path=/usr/sbin/capsule-remove
+      register: capsule_remove
+    - name: "Ensure we have expect installed"
+      yum:
+        name=expect
+        state=present
+      when: capsule_remove.stat.exists is defined and capsule_remove.stat.exists == true
+    - name: "Deploy expect script for capsule-remove"
+      copy:
+        src=automate_capsule-remove.exp
+        dest=/root/automate_capsule-remove.exp
+        mode="u+x"
+      when: capsule_remove.stat.exists is defined and capsule_remove.stat.exists == true
+    - name: "Uninstall capsule"
+      command:
+        /root/automate_capsule-remove.exp
+      when: capsule_remove.stat.exists is defined and capsule_remove.stat.exists == true
+    - name: "Check if /etc/foreman-installer exists"
+      stat:
+        path=/etc/foreman-installer
+      register: messpath
+    - name: "Cleanup mess"
+      file:
+        path=/etc/foreman-installer
+        state=absent
+      when: messpath.stat.exists is defined and messpath.stat.exists == true
+    - name: "Clean registrations"
+      shell: |
+        subscription-manager unregister || true
+        subscription-manager clean || true
+        yum -y remove katello-ca-consumer\* || true
+    - name: "Remove Hosts from Satellite"
+      command:
+        "hammer -u {{ sat_user }} -p {{ sat_pass }} host delete --name {{ item }}"
+      delegate_to: "{{ sat_server }}"
+      run_once: true
+      with_items: "{{ groups['capsules'] }}"
+      ignore_errors: yes
+    - name: "Remove Capsules from Satellite"
+      command:
+        "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule delete --name {{ item }}"
+      delegate_to: "{{ sat_server }}"
+      run_once: true
+      with_items: "{{ groups['capsules'] }}"
+      ignore_errors: yes
