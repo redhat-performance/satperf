@@ -276,7 +276,7 @@
         copy content="{{ lsof_command.stdout }}" dest="/root/lsof-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
       run_once: true
     - name: "Gather qpid on Capsule"
-      delegate_to: "{{ sat }}"
+      delegate_to: "{{ server }}"
       command: qpid-stat --ssl-certificate=/etc/pki/katello/qpid_client_striped.crt -b amqps://localhost:5671 -g
       register: qpidstat_command
       run_once: true
@@ -285,7 +285,7 @@
         copy content="{{ qpidstat_command.stdout }}" dest="/root/qpidstat-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
       run_once: true
     - name: "Gather memory use on Capsule"
-      delegate_to: "{{ capsule }}"
+      delegate_to: "{{ server }}"
       shell: ps --no-headers -eo rss,comm>a; for comm in $( sed 's/^\s*[0-9]\+\s*\(.*\)$/\1/' a | sort -u ); do size=$( grep "\s$comm" a | sed 's/^\s*\([0-9]\+\)\s*.*$/\1/' | paste -sd+ - | bc ); echo "$size $comm"; done | sort -n | tail -n 50
       register: memory_command
       run_once: true
