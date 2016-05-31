@@ -91,20 +91,14 @@
       retries: 10
       delay: 10
     - name: "Kill journald if it is running"
-      shell: |
-        if ! pkill --full '/usr/lib/systemd/systemd-journald'; then
-          true
-        fi
-      ignore_errors: yes
+      shell:
+        pkill --full --exact '/usr/lib/systemd/systemd-journald' || true
     - name: "Start journald"
       command:
         daemonize /usr/lib/systemd/systemd-journald
     - name: "Kill goferd if it is running"
-      shell: |
-        if pkill --full '/usr/bin/goferd'; then
-          true
-        fi
-      ignore_errors: yes
+      shell:
+        pkill --full --exact 'python /usr/bin/goferd --foreground' || true
     - name: "Start goferd"
       command:
         daemonize -- /usr/bin/goferd --foreground
