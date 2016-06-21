@@ -141,7 +141,7 @@ function content_view_promote_seq()
 {
     log content view promote sequentially
     pbench_config
-    user-benchmark --config=$tname-cv-promote-seq -- "./scripts/cv_promote_seq.sh"
+    pbench-user-benchmark --config=$tname-cv-promote-seq -- "./scripts/cv_promote_seq.sh"
     pbench_postprocess
 }
 
@@ -150,7 +150,7 @@ function content_view_promote_conc()
 {
     log content view promote concurrently
     pbench_config
-    user-benchmark --config=$tname-cv-promote-concurrent -- "./scripts/cv_promote_conc.sh"
+    pbench-user-benchmark --config=$tname-cv-promote-concurrent -- "./scripts/cv_promote_conc.sh"
     pbench_postprocess
 }
 
@@ -203,7 +203,7 @@ function content_view_publish_scale()
     for numcvpublish  in `seq 1 ${NUM_CV_PUBLISH}`; do
     pbench_config
     chmod +x scripts/cv_publish_scale.sh
-    user-benchmark  --config=$tname-cv-publish-cv:$NUMCV-cvpublishno:$numcvpublish -- "./scripts/cv_publish_scale.sh"
+    pbench-user-benchmark  --config=$tname-cv-publish-cv:$NUMCV-cvpublishno:$numcvpublish -- "./scripts/cv_publish_scale.sh"
     pbench_postprocess
     sleep 10
     done
@@ -214,7 +214,7 @@ function content_view_publish()
 {
     log content view publish
     chmod +x scripts/cv_publish.sh
-    user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
+    pbench-user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
 }
 
 
@@ -222,7 +222,7 @@ function sync_content_conc()
 {
     log sync content repos concurrently
     pbench_config
-    user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
+    pbench-user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
     pbench_postprocess
 }
 
@@ -243,11 +243,11 @@ function sync_capsule_conc()
         ssh -o "${SSH_OPTS}" root@$capsule "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
     done
     #Register tools
-    register-tool-set
+    pbench-register-tool-set
     for capsule in $CAPSULES;  do
         ssh -o "${SSH_OPTS}" root@$capsule "register-tool-set"
     done
-    user-benchmark --config=${tname}-capsule-sync-concurrent -- "./scripts/sync_capsules.sh ${numcapsules} ${tname}"
+    pbench-user-benchmark --config=${tname}-capsule-sync-concurrent -- "./scripts/sync_capsules.sh ${numcapsules} ${tname}"
     for numcap in `seq 1 ${numcapsules}`; do
         capid=`expr ${numcap} + 1`
         hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" capsule content remove-lifecycle-environment --environment-id 1 --id "${capid}"
