@@ -130,7 +130,8 @@
     - name: "Configure puppet stuff on Sat for given container"
       command:
         hammer -u admin -p changeme host update --name "{{ hostvars[item]['ansible_fqdn'] }}" --puppet-proxy "{{ server }}" --puppet-ca-proxy "{{ server }}" --environment "{{ puppet_env }}" --puppet-classes qaredhattest
-      with_items: groups['all']
+      with_items: "{{ groups['all'] }}"
+      when: item != 'localhost'
       run_once: true
       delegate_to: "{{ sat }}"
     - name: "Register puppet host"
