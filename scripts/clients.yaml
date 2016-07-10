@@ -66,6 +66,8 @@
       shell:
         subscription-manager attach --pool "{{ pool_tools }}"
 
+    # TODO: Investigate and add a code that would register through "bootstrap.py"
+
     - name: "Remove katello-agent when installed"
       yum:
         name=katello-agent

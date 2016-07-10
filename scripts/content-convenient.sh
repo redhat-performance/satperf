@@ -2,6 +2,9 @@
 
 set -e
 
+echo "##### Make sure we have the daemonize package #####"
+ls /var/www/html/pub/daemonize-*.rpm || echo "ERROR: No daemonize package downloaded"
+
 echo "##### Create puppet module #####"
 PUPPET_MODULE=puppet-qaredhattest
 PUPPET_MODULE_FILE=/tmp/puppet-qaredhattest.txt
@@ -46,3 +49,5 @@ hammer -u admin -p changeme content-view puppet-module add --organization-id 1 -
 
 echo "##### Publish and promote content view #####"
 hammer -u admin -p changeme content-view publish --name "test" --organization-id 1 --async
+
+# TODO: To all capsules assign environment & organization & location and add "*" auto-sign entry
