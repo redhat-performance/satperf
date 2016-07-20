@@ -59,12 +59,24 @@
     - name: "Register"
       shell:
         subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
+      register: reg
+    #- name: "Register - timings"
+    #  debug:
+    #    msg="Register {{ reg.start }} to {{ reg.end }}"
     - name: "Attach to RHEL product"
       shell:
         subscription-manager attach --pool "{{ pool_rhel }}"
+      register: att
+    #- name: "Attach to RHEL product - timings"
+    #  debug:
+    #    msg="AttachRHEL {{ att.start }} to {{ att.end }}"
     - name: "Attach to 6.2 Tools custom product"
       shell:
         subscription-manager attach --pool "{{ pool_tools }}"
+      register: att
+    #- name: "Attach to 6.2 Tools custom product - timings"
+    #  debug:
+    #    msg="AttachTools {{ att.start }} to {{ att.end }}"
 
     # TODO: Investigate and add a code that would register through "bootstrap.py"
 
