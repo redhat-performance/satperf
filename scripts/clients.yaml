@@ -155,7 +155,7 @@
         /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
     - name: "Pickup action"
       command:
-        /usr/bin/puppet agent --onetime
+        /usr/bin/puppet agent --onetime --no-daemonize
     - name: "Check if file was created"
       action: command
         cat /tmp/puppet-qaredhattest.txt
