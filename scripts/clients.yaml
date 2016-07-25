@@ -60,6 +60,8 @@
       shell:
         subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
       register: reg
+      async: 3600
+      poll: 10
     #- name: "Register - timings"
     #  debug:
     #    msg="Register {{ reg.start }} to {{ reg.end }}"
