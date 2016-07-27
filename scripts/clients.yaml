@@ -53,14 +53,12 @@
       until: "{{ installed.rc }} == 0"
       retries: 10
       delay: 10
-    - name: "Clean yum cache"
-      shell:
-        rm -rf /var/cache/yum/*
+    ###- pause: prompt="Press Enter to start registering"
     - name: "Register"
       shell:
         subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
       register: reg
-      async: 3600
+      async: 600
       poll: 10
     #- name: "Register - timings"
     #  debug:
@@ -142,6 +140,14 @@
     - name: "Set puppet environment"
       command:
         /usr/bin/puppet config set environment "{{ puppet_env }}" --section agent
+    ###- pause: prompt="Press Enter to start registering puppet"
+    - name: "Register puppet host"
+      shell:
+        /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
+      register: reg
+    - name: "Register puppet host - timings"
+      debug:
+        msg="RegisterPuppet {{ reg.start }} to {{ reg.end }}"
     # We need to serialize these hammer calls because of https://bugzilla.redhat.com/show_bug.cgi?id=1336007
     - name: "Configure puppet stuff on Sat for given container"
       command:
@@ -150,18 +156,21 @@
       when: item != 'localhost'
       run_once: true
       delegate_to: "{{ sat }}"
-    - name: "Register puppet host"
-      shell:
-        /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
-    - name: "Pickup action"
+      ignore_errors: yes
+    ###- pause: prompt="Press Enter to start puppet pickup"
+    - name: "Pickup puppet action"
       command:
         /usr/bin/puppet agent --onetime --no-daemonize
+      register: pickup
+    - name: "Pickup puppet action - timings"
+      debug:
+        msg="PickupPuppet {{ pickup.start }} to {{ pickup.end }}"
     - name: "Check if file was created"
       action: command
         cat /tmp/puppet-qaredhattest.txt
       register: deployed
       until: "{{ deployed.rc }} == 0"
-      retries: 60
+      retries: 3
       delay: 10
 
     - name: "Make sure /root/.ssh/ exists"
@@ -211,6 +220,15 @@
       local_action:
         copy content="{{ memory_command.stdout }}" dest="/root/memory-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
       run_once: true
+    - name: "Gather passenger-status on Sat"
+      delegate_to: "{{ sat }}"
+      shell: passenger-status
+      register: passengerstatus_command
+      run_once: true
+    - name: "Save passenger-status log from Sat"
+      local_action:
+        copy content="{{ passengerstatus_command.stdout }}" dest="/root/passengerstatus-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
 
     - name: "Gather lsof on Capsule"
       delegate_to: "{{ server }}"
@@ -240,6 +258,17 @@
         copy content="{{ memory_command.stdout }}" dest="/root/memory-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
       run_once: true
 
+    - name: "Clean yum cache"
+      shell:
+        rm -rf /var/cache/yum/*
+    - name: "Restart Sat"
+      delegate_to: "{{ sat }}"
+      shell: katello-service restart
+      run_once: true
+    - name: "Drop caches on Sat"
+      delegate_to: "{{ sat }}"
+      shell: echo 3 > /proc/sys/vm/drop_caches
+      run_once: true
     - name: "Drop caches on localhost"
       local_action:
         shell echo 3 > /proc/sys/vm/drop_caches
