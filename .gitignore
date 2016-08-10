@@ -1,0 +1,12 @@
+*.pyc
+*~
+
+*.retry
+manifest.zip
+log/
+
+lextab.py
+yacctab.py
+
+__pycache__
+venv/

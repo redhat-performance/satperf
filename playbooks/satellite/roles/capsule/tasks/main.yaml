@@ -1,0 +1,112 @@
+---
+  # Cleanup previous registrations if required
+  - name: "Check registration status"
+    shell:
+      subscription-manager status || true
+    register: subscription_manager_status
+  - name: "Check Satellite hostname in rhsm.conf"
+    shell:
+      grep '^\s*hostname\s*=\s*{{ sat_server }}\s*$' /etc/rhsm/rhsm.conf || true
+    register: hostname_in_rhsmconf
+  - name: "Unregister us when registered to different Satellite"
+    command:
+      subscription-manager unregister
+    ignore_errors: yes
+    when: "subscription_manager_status.stdout.find('Overall Status: Unknown') == -1 and hostname_in_rhsmconf.stdout.find('{{ sat_server }}') == -1"
+    register: subscription_manager_unregister
+  - name: "Clean registrations when appropriate"
+    shell: |
+      subscription-manager clean
+      yum -y remove katello-ca-consumer\*
+    when: "subscription_manager_status.stdout.find('Overall Status: Unknown') != -1 or subscription_manager_unregister is defined"
+
+  # Register
+  - name: "Install katello-ca-consumer from Satellite"
+    shell:
+      rpm -qa | grep katello-ca-consumer || rpm -ivh "http://{{ sat_server }}/pub/katello-ca-consumer-latest.noarch.rpm"
+  # You need this patch to make this work:
+  #   https://github.com/ansible/ansible-modules-core/pull/3453
+  - name: "Register to Satelite"
+    redhat_subscription:
+      state=present
+      username="{{ sat_user }}"
+      password="{{ sat_pass }}"
+      autosubscribe=true
+      environment=Library
+    register: registration
+  - name: "Fix repos we consume form Satellite"
+    shell: |
+      subscription-manager repos --disable 'rh*'
+      subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+      subscription-manager repos --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
+    when: registration.changed
+  - name: "Deploy capsule repo"
+    copy: src="{{ capsule_repo_file }}" dest=/etc/yum.repos.d/
+  - name: "Install capsule package"
+    yum:
+      name="{{ capsule_installer_pkg }}"
+      state=present
+
+  # See https://access.redhat.com/solutions/1230493
+  - name: "Make sure Satellite can resolve Capsule hostname"
+    lineinfile: dest=/etc/hosts regexp='{{ ip }}\s+{{ inventory_hostname }}' line='{{ ip }} {{ inventory_hostname }}'
+    delegate_to: "{{ sat_server }}"
+
+  - name: "File /etc/hosts have correct SELinux context (had issues before)"
+    command:
+      restorecon -vR /etc/hosts
+    delegate_to: "{{ sat_server }}"
+    run_once: true
+
+  - name: "Run capsule-certs-generate on Satellite"
+    shell:
+      "capsule-certs-generate --capsule-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
+    delegate_to: "{{ sat_server }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+    # Output of this command looks like this:
+    # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
+    # Installing             Done                                               [100%] [..........]
+    #   Success!
+    # 
+    #   To finish the installation, follow these steps:
+    # 
+    #   1. Ensure that the foreman-installer-katello package is installed on the system.
+    #   2. Copy aaa.tar to the system capsule.example.com
+    #   3. Run the following commands on the capsule (possibly with the customized
+    #      parameters, see foreman-installer --scenario capsule --help and
+    #      documentation for more info on setting up additional services):
+    # 
+    #   yum -y localinstall http://sat62.example.com/pub/katello-ca-consumer-latest.noarch.rpm
+    #   subscription-manager register --org "Default_Organization"
+    #   satellite-installer --scenario capsule\
+    #                       --parent-fqdn                         "sat62.example.com"\
+    #                       --register-in-foreman                 "true"\
+    #                       --foreman-base-url                    "https://sat62.example.com"\
+    #                       --trusted-hosts                       "sat62.example.com"\
+    #                       --trusted-hosts                       "capsule62.example.com"\
+    #                       --oauth-consumer-key                  "ZpFxdhmWhArPmdV5dXn98uuZZzqEMJxc"\
+    #                       --oauth-consumer-secret               "4xaW6ZvyP8sJeHyhehEhzt7nspDq6k3W"\
+    #                       --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
+    #                       --certs-tar                           "aaa.tar"
+    #   The full log is at /var/log/capsule-certs-generate.log
+  - name: "Download tarball created by capsule-certs-generate"
+    get_url:
+      url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-certs.tar"
+      dest="/root/{{ inventory_hostname }}-certs.tar"
+      force=yes
+  - name: "Download output produced by capsule-certs-generate"
+    get_url:
+      url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-out.raw"
+      dest="/root/{{ inventory_hostname }}-out.raw"
+      force=yes
+  - name: "Get only commands we need to run"
+    shell:
+      sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" | grep -e '^\s\+satellite-installer ' -e '^\s\+foreman-installer ' -e '^\s\+capsule-installer ' -e '^\s\+--' | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' > "/root/{{ inventory_hostname }}-script.sh"
+  - name: "Fix certificate tarball path"
+    shell:
+      sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+  - name: "Run Capsule configuration"
+    command:
+      bash "/root/{{ inventory_hostname }}-script.sh"
+...

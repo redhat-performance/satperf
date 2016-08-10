@@ -1,0 +1,61 @@
+---
+
+# Login user for the remote hosts
+host_remote_user: root
+# Login user for the local/jump machine
+local_remote_user: root
+
+# The default satellite venv
+satellite_venv: /root/satellite-venv
+
+# The default PerfKit venv:
+perfkit_venv: /root/perfkit-venv
+
+# Guest images for the satellite
+images:
+  centos7:
+    url: http://cloud.centos.org/centos/7/images/CentOS-7-x86_64-GenericCloud.qcow2
+  cirros:
+    url: http://download.cirros-cloud.net/0.3.4/cirros-0.3.4-x86_64-disk.img
+
+# DNS Server to add
+dns_server: 8.8.8.8
+
+# epel7 rpm for collectd packages
+epel7_rpm: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
+########################################
+# Collectd Configuration
+########################################
+# Interval in seconds
+collectd_interval: 10
+# Run collectd on specific Satellite-6 nodes:
+collectd_undercloud: true
+collectd_controller: true
+collectd_ceph: true
+collectd_compute: false
+
+########################################
+# Graphite Configuration
+########################################
+# Graphite Server ip address (Collectd -> Graphite server)
+graphite_host: 1.1.1.1
+graphite_port: 80
+# Graphite prefix / Cloud name used both with graphite and grafana dashboards
+graphite_prefix: satellite
+# Graphite username and password for login on the dashboard
+graphite_username: root
+graphite_password: calvin
+
+########################################
+# Grafana Dashboarding Configuration
+########################################
+# Grafana Server IP Address/Port (Can be hosted on the Graphite server)
+grafana_host: 1.1.1.1
+grafana_port: 3000
+grafana_username: admin
+grafana_password: admin
+# Batch number of hosts per row for all-{cpu, memory, disk, network} Satellite-6 dashboards
+dashboards_batch: 20
+# For use with all-{cpu, memory, disk, network} Satellite-6 dashboards, uses the graphite prefix to create dashboards for specific Satellite-6 cloud
+dashboard_cloud_name: "{{graphite_prefix}}"

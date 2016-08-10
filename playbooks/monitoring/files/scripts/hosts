@@ -1,0 +1,10 @@
+[capsules]
+sample.redhat.com
+sample.redhat.com
+
+[docker-hosts]
+sample.redhat.com
+
+[satellite]
+sample.redhat.com
+

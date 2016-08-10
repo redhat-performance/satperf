@@ -1,0 +1,10 @@
+#!/usr/bin/expect -f
+
+spawn capsule-remove
+match_max 150000
+set timeout 1500
+expect "*Are you sure*"
+send -- "Y"
+expect "*Type ?remove? to continue*"
+send -- "remove\r"
+expect eof

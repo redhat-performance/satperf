@@ -1,0 +1,53 @@
+---
+    - command:
+        numcapsules=`expr {{ numcapsules }} + 1`; done
+      set_fact:
+        numcapsules: 0
+      with_indexed_items: "{{ CAPSULES }}"
+      when: sync_capsule_conc == true
+
+    - command: >
+      capid=`expr {{ item }} + 1`;
+      hammer -u {{ admin_user }} -p {{ admin_passwd }}
+        capsule content add-lifecycle-environment
+        --environment-id 1 --id "${capid}"
+      with_sequence: start=1 end={{ numcapsules }} stride=1
+      when: sync_capsule_conc == true
+
+    - command:
+        ssh -o {{ SSH_OPTS }} root@{{ item }} "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
+      with_indexed_items: "{{ CAPSULES }}"
+      when: sync_capsule_conc == true
+
+    - command:
+        pbench-register-tool-set
+      when: sync_capsule_conc == true
+
+    - command:
+        ssh -o {{ SSH_OPTS }} root@{{ item }} "register-tool-set"
+      with_indexed_items: "{{ CAPSULES }}"
+      when: sync_capsule_conc == true
+
+    - command: >
+        pbench-user-benchmark
+          --config=${tname}-capsule-sync-concurrent
+          -- "./scripts/sync_capsules.sh ${numcapsules} ${tname}"
+      when: sync_capsule_conc == true
+
+    - command: >
+        capid=`expr ${numcap} + 1`;
+        hammer -u {{ admin_user }} -p {{ admin_passwd }}
+          capsule content remove-lifecycle-environment 
+          --environment-id 1 --id "${capid}"
+      with_sequence: start=1 end={{ numcapsules }} stride=1
+      when: sync_capsule_conc == true
+
+    - command:
+         pbench-clear-tools; pbench-kill-tools
+      when: sync_capsule_conc == true
+
+    - command:
+         ssh -o {{ SSH_OPTS }} root@{{ item }} "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
+      with_indexed_items: "{{ CAPSULES }}"
+      when: sync_capsule_conc == true
+...

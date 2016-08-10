@@ -1,0 +1,9 @@
+---
+    - command:
+        rm -rf {{ backup_path }}
+      register: cleanup_backup
+    - command: 
+        katello-backup {{ backup_path }}
+      register: backup
+      when: cleanup_backup.changed
+...

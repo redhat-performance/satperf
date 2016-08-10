@@ -1,0 +1,8 @@
+
+### INSTALLATION PREREQUISITES
+
+you must have following yum packages before you install matplotlib from `pip install -r requirements.txt`
+
+```
+gcc-gfortran gcc-c++ libpng-devel freetype-devel python-devel openssl-devel
+```

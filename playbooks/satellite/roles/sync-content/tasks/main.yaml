@@ -1,0 +1,15 @@
+---
+    - command:
+        pbench_config
+        for i in {1..5}; do
+      	  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id $i --organization="${ORG}"  2>&1
+      	done
+      	pbench_postprocess
+      when: sync_content_seq == true
+
+    - command:
+        pbench_config
+        pbench-user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
+        pbench_postprocess
+      when: sync_content_conc == true
+...

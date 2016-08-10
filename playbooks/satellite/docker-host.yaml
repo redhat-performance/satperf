@@ -1,0 +1,30 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  roles:
+    - common
+    - rhsm
+  tasks:
+    - command:
+        subscription-manager repos --enable 'rhel-7-server-extras-rpms'
+    - yum:
+        name=docker
+        state=present
+    - service:
+        name=docker
+        state=running
+        enabled=yes
+    - lineinfile:
+        dest=/etc/sysconfig/docker
+        regexp="^INSECURE_REGISTRY="
+        line="INSECURE_REGISTRY='--insecure-registry registry.sample.com'"
+      register: docker_config
+    - service:
+        name=docker
+        state=restarted
+      when: docker_config.changed
+    - get_url:
+        url=/path/to/Dockerfile_pod
+        dest=/root/Dockerfile_pod
+    - shell:
+        docker build -t r7perfsat - < /root/Dockerfile_pod

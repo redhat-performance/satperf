@@ -1,0 +1,5 @@
+---
+    - name: "Check Satellite service status"
+      command: katello-service status
+      register: status_check
+...

@@ -1,0 +1,23 @@
+---
+    - command:
+        for i in '5 6 7'; do
+      	  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable \
+      	  	 --name="Red Hat Enterprise Linux $i Server (RPMs)" \
+      		 --basearch="x86_64" \
+      		 --releasever="$iServer" \
+      		 --product "Red Hat Enterprise Linux Server" \
+      		 --organization "${ORG}"
+      	done
+      register: x86_content_enable
+
+    - command:
+        for i in '5 6'; do
+      	  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable \
+      	  	 --name="Red Hat Enterprise Linux $i Server (RPMs)" \
+      		 --basearch="i386" \
+      		 --releasever="$iServer" \
+      		 --product "Red Hat Enterprise Linux Server" \
+      		 --organization "${ORG}"
+      	done
+      register: i386_content_enable
+...

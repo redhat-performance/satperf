@@ -1,0 +1,53 @@
+name: Satellite configuration schema
+type: map
+allowempty: True
+mapping:
+  satellite:
+    required: True
+    type: map
+    mapping:
+      results:
+        type: str
+        required: True
+      rerun:
+        type: int
+        required: True
+
+  ansible:
+    required: True
+    type: map
+    allowempty: True
+    mapping:
+      hosts:
+        type: str
+      grafana_snapshot:
+        type: str
+        required: True
+  grafana:
+    required: True
+    type: map
+    allowempty: True
+    mapping:
+      enabled:
+        type: bool
+        required: True
+      cloud_name:
+        type: str
+      grafana_ip:
+        type: str
+        pattern: ^([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9])(\.([a-zA-Z0-9]|[a-zA-Z0-9][a-zA-Z0-9\-]{0,61}[a-zA-Z0-9]))*$
+      grafana_port:
+        type: int
+      dashboards:
+        type: seq
+        sequence:
+        - type: str
+      snapshot:
+        type: map
+        mapping:
+          enabled:
+            type: bool
+            required: True
+          snapshot_compute:
+            type: bool
+            required: True

@@ -1,0 +1,9 @@
+---
+# Satellite install options
+###sat_repo_file: files/sat61.repo
+###sat_installer_pkg: capsule-installer
+###sat_installer_cmd: katello-installer
+sat_repo_file: files/sat62.repo
+sat_installer_pkg: satellite
+sat_installer_cmd: satellite-installer --scenario satellite
+...

@@ -1,5 +1,0 @@
-[sat62-capsule]
-name=Satellite 6.2 Capsule Packages
-baseurl=http://192.168.122.1/repos/Satellite-6.2.0-RHEL-6-20160412.0-Capsule-x86_64/
-enabled=1
-gpgcheck=0

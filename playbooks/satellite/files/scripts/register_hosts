@@ -1,0 +1,6 @@
+#!/bin/bash
+
+hosts=$1
+array=($(cat hosts))
+for h in "${array[@]}"; do ssh-copy-id root@$h; done
+

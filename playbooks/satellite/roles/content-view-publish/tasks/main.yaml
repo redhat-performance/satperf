@@ -1,0 +1,19 @@
+---
+    - command:
+        chmod +x scripts/cv_publish.sh
+        pbench-user-benchmark --tool-group=sat6 --config=$tname-cv-publish -- "./scripts/cv_publish.sh"
+      register: content_view_publish
+      when: view_publish_scale == true
+
+    - command:
+        pbench_config && \
+          chmod +x scripts/cv_publish_scale.sh && \
+          pbench-user-benchmark \
+              --config=$tname-cv-publish-cv:$NUMCV-cvpublishno:{{ item }} \
+              -- "./scripts/cv_publish_scale.sh" && \
+          pbench_postprocess && \
+          sleep 10
+      with_sequence: count={{ NUM_CV_PUBLISH }}
+      register: content_view_publish
+      when: view_publish_scale != true
+...

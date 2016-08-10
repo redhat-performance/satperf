@@ -1,0 +1,4 @@
+#!/bin/bash
+
+rm -rf *~ log/ *.pyc */*.pyc */*.pyc  __pycache__ lextab.py yacctab.py
+rm -rf */*/*.retry
