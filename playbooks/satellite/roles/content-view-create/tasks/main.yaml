@@ -1,47 +1,52 @@
 ---
-    - command: >
-        hammer -u {{ admin_user }} -p admin_passwd content-view create \
+    - shell: |
+        hammer -u {{ sat_user }} -p sat_pass content-view create \
           --name=cv{{ item }} --organization={{ org }} 2>&1;
-        hammer -u {{ admin_user }} -p admin_passwd content-view add-repository \
+
+        hammer -u {{ sat_user }} -p sat_pass content-view add-repository \
           --name=cv{{ item }} --organization={{ org }} \
           --product="Red Hat Enterprise Linux Server" \
           --repository="Red Hat Enterprise Linux 5 Server RPMs x86_64 5Server" \
           2>&1;
-        hammer -u {{ admin_user }} -p admin_passwd content-view add-repository \
+
+        hammer -u {{ sat_user }} -p sat_pass content-view add-repository \
           --name=cv{{ item }} --organization={{ org }} \
           --product="Red Hat Enterprise Linux Server" \
           --repository="Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server" \
           2>&1;
-        hammer -u {{ admin_user }} -p admin_passwd content-view add-repository \
+
+        hammer -u {{ sat_user }} -p sat_pass content-view add-repository \
           --name=cv{{ item }}  --organization={{ org }} \
           --product="Red Hat Enterprise Linux Server" \
           --repository="Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server" \
           2>&1;
-        hammer -u {{ admin_user }} -p admin_passwd content-view add-repository \
+
+        hammer -u {{ sat_user }} -p sat_pass content-view add-repository \
           --name=cv{{ item }} --organization={{ org }} \
           --product="Red Hat Enterprise Linux Server" \
           --repository="Red Hat Enterprise Linux 5 Server RPMs i386 5Server"  \
           2>&1;
-        hammer -u {{ admin_user }} -p admin_passwd content-view add-repository \
+
+        hammer -u {{ sat_user }} -p sat_pass content-view add-repository \
           --name=cv{{ item }} --organization={{ org }} \
           --product="Red Hat Enterprise Linux Server" \
           --repository="Red Hat Enterprise Linux 6 Server RPMs i386 6Server" \
           2>&1;
       with_sequence: count={{ NUMCV }}
-      register: content_view_create_scale
-      when: view_create_scale == true
+      register: content_cv_scale
+      when: cv_scale == true
 
-    - command: >
-        hammer -u {{ admin_user }} -p {{ admin_passwd }}
-              content-view create
-              --name="rhel-{{ item }}-server-x86_64-cv"
+    - shell: |
+        hammer -u {{ sat_user }} -p {{ sat_pass }} \
+              content-view create \
+              --name="rhel-{{ item }}-server-x86_64-cv" \
               --organization={{ org }} 2>&1;
       with_sequence: start=5 end=7 stride=1
       register: content_view_create_x86
-      when: view_create_scale != true
+      when: cv_scale != true
 
-    - command: >
-        hammer -u {{ admin_user }} -p {{ admin_passwd }}
+    - shell: |
+        hammer -u {{ sat_user }} -p {{ sat_pass }}
               content-view create
               --name="rhel-{{ item }}-server-i386-cv"
               --organization={{ org }} 2>&1;
@@ -49,10 +54,10 @@
         - 5
         - 6
       register: content_view_create_i386
-      when: view_create_scale != true
+      when: cv_scale != true
 
-    - command: >
-        hammer -u {{ admin_user }} -p {{ admin_passwd }}
+    - shell: |
+        hammer -u {{ sat_user }} -p {{ sat_pass }}
             content-view add-repository
             --name="rhel-{{ item }}-server-x86_64-cv"
             --organization={{ org }}
@@ -60,10 +65,10 @@
             --repository="Red Hat Enterprise Linux {{ item }} Server RPMs x86_64 {{ item }}Server" 2>&1;
       with_sequence: start=5 end=7 stride=1
       register: content_view_add_repo_x86
-      when: view_create_scale != true
+      when: cv_scale != true
 
-    - command: >
-        hammer -u {{ admin_user }} -p {{ admin_passwd }}
+    - shell: |
+        hammer -u {{ sat_user }} -p {{ sat_pass }}
             content-view add-repository
             --name="rhel-{{ item }}-server-i386-cv"
             --organization={{ org }}
@@ -73,5 +78,5 @@
         - 5
         - 6
       register: content_view_add_repo_i386
-      when: view_create_scale != true
+      when: cv_scale != true
 ...

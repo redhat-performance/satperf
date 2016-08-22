@@ -1,0 +1,18 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  roles:
+  ###  - common
+  tasks:
+    - name: "Service docker is running"
+      service:
+        name=docker
+        state=running
+    - name: "List container IDs"
+      command:
+        docker ps -qa
+      register: docker_ids
+    - name: "Containers are started"
+      shell:
+        docker start "{{ item }}"
+      with_items: "{{ docker_ids.stdout_lines }}"

@@ -24,38 +24,16 @@ dns_server: 8.8.8.8
 # epel7 rpm for collectd packages
 epel7_rpm: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
 
-########################################
-# Collectd Configuration
-########################################
-# Interval in seconds
-collectd_interval: 10
-# Run collectd on specific Satellite-6 nodes:
-collectd_undercloud: true
-collectd_controller: true
-collectd_ceph: true
-collectd_compute: false
-
-########################################
-# Graphite Configuration
-########################################
-# Graphite Server ip address (Collectd -> Graphite server)
-graphite_host: 1.1.1.1
-graphite_port: 80
-# Graphite prefix / Cloud name used both with graphite and grafana dashboards
-graphite_prefix: satellite
-# Graphite username and password for login on the dashboard
-graphite_username: root
-graphite_password: calvin
-
-########################################
-# Grafana Dashboarding Configuration
-########################################
-# Grafana Server IP Address/Port (Can be hosted on the Graphite server)
-grafana_host: 1.1.1.1
-grafana_port: 3000
-grafana_username: admin
-grafana_password: admin
-# Batch number of hosts per row for all-{cpu, memory, disk, network} Satellite-6 dashboards
-dashboards_batch: 20
-# For use with all-{cpu, memory, disk, network} Satellite-6 dashboards, uses the graphite prefix to create dashboards for specific Satellite-6 cloud
-dashboard_cloud_name: "{{graphite_prefix}}"
+org: Default Organization
+orgid: 1
+releasever: "7Server"
+product1: "Red Hat Enterprise Linux Server"
+product2: "Red Hat Enterprise Linux Server"
+product3: "Red Hat Software Collections for RHEL Server"
+reposet1: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server (RPMs)"
+reposet2: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common (RPMs)"
+reposet3: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
+repo1: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server RPMs x86_64 {{ releasever }}"
+repo2: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common RPMs x86_64 {{ releasever }}"
+repo3: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server x86_64 {{ releasever }}"
+...

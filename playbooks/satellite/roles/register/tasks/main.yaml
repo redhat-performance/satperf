@@ -1,9 +1,9 @@
 ---
     - command:
         echo
-      when: cv_startegy == conc
+      when: cv_startegy == "conc"
 
     - command:
         echo
-      when: cv_startegy == sync
+      when: cv_startegy == "sync"
 ...

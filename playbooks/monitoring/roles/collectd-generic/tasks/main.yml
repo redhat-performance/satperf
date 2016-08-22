@@ -3,21 +3,39 @@
 # Install/run collectd for satellite (Generic)
 #
 
+# - name: Import EPEL GPG Key
+#   rpm_key: key=https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+#     state=present
+
+# - name: Check for EPEL repo
+#   yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+#     state=present
+
 - name: Check for EPEL
   shell: rpm -qa | grep -q epel-release
   ignore_errors: true
   register: epel_installed
 
-#
+# TODO: to use this method, check for presence of epel.repo first
+# - name: Enable EPEL Repo
+#   ini_file: dest=/etc/yum.repos.d/epel.repo
+#     section=epel
+#     option=enabled
+#     value=1
+
+- name: Check for enabled epel-release
+  shell: yum repolist | grep -q epel
+  ignore_errors: true
+  register: epel_enabled
+
 # (akrzos) I have found the use of the yum module for installing EPEL on rhel7 to encounter issues,
 # thus using rpm to install via ansible. This does display a warning in Ansible output.
 #
 - name: Install EPEL rpm
-  command: rpm -ivh {{ epel7_rpm }}
+  command: rpm -ivh --force {{ epel7_rpm }}
   become: true
-  when: epel_installed.rc != 0
+  when: epel_installed.rc != 0 or epel_enabled.rc != 0
 
-#
 # (akrzos) yum module works at this point due to the fact the EPEL repo now exists.  EPEL rpm is
 # installed at this point in time.
 #
@@ -25,21 +43,7 @@
   yum: name={{ item }} state=present
   become: true
   with_items: "{{collectd_packages[config_type]}}"
-
-
-#
-# CFME specific configuration steps
-#
-- name: Copy cfme-http.conf for apache monitoring
-  copy:
-    src=cfme-http.conf
-    dest=/etc/httpd/conf.d/cfme-http.conf
-    owner=root
-    group=root
-    mode=0644
-  when: "'cfme' in '{{config_type}}'"
-  notify:
-    - restart httpd
+  register: install_collectd
 
 #
 # Satellite6 specific configuration steps
@@ -55,19 +59,6 @@
   when: "'{{config_type}}' == 'satellite6'"
 
 
-#
-# OSE specific configuration
-#
-# - name: Copy ose-metrics.py
-#   template:
-#     src=ose-metrics.py.j2
-#     dest=/usr/local/bin/ose-metrics.py
-#     owner=root
-#     group=root
-#     mode=0755
-#   become: true
-#   when: "'{{config_type}}' == 'ose'"
-
 # - name: Allow group read to /etc/origin/master/admin.key
 #   file: path=/etc/origin/master/admin.key mode=0640
 #   when: "'{{config_type}}' == 'ose'"
@@ -81,7 +72,6 @@
     mode=0644
   become: true
 
-#
 # Configure selinux bits
 #
 - name: Check for collectd permissive
@@ -122,14 +112,30 @@
   become: true
   when: collectd_custom.rc != 0
 
+# add collectd default group (not added with rpm -ivh)
 #
+- name: Add collectd group
+  group: name=collectd state=present
+  become: true
+
 # Start collectd service
-#
 - name: Setup collectd service
   service: name=collectd state=restarted enabled=true
   become: true
 
+# sometimes there's a stale epel package present, so rpm -e fails
+# because somebody deleted the .repo files without uninstalling
+# epel-release and rpm -e fails to remove multiple versions of the
+# package. So we need to check this and remove all one by one
 - name: Disable EPEL
-  shell: rpm -e epel-release
+  shell: |
+    count=$(rpm -q epel-release | wc -l)
+    if [[ $count -gt 1 ]]; then
+      for ver in `rpm -q epel-release`; do
+        rpm -e $ver
+      done
+    else
+      rpm -e epel-release
+    fi
   ignore_errors: true
   become: true

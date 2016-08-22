@@ -1,4 +1,4 @@
 ---
-    - command: katello-restore /home/backup/
+    - command: katello-restore {{ backup_path }}
       register: restore_backup
 ...

@@ -8,6 +8,7 @@
   #    state=present
   #  when: hostvars[item].ansible_default_ipv4.address is defined
   #  with_items: groups['all']
+
   - name: "We need localhost (IPv4) in hosts file"
     lineinfile:
       dest=/etc/hosts
@@ -51,43 +52,33 @@
     command:
       restorecon -vR /etc/hosts
 
-  - name: "We can ping download.devel.redhat.com"
+  - name: "We can ping Google.com"
     wait_for:
-      host=download.devel.redhat.com
-      port=22
+      host=google.com
+      port=443
       timeout=10
   - name: "We can ping Sat via 10GB network"
     wait_for:
-      host=172.17.50.5
+      host=10.1.1.2
       port=22
       timeout=10
+    ignore_errors: yes   # Sometimes satellite is down
 
   - name: "Command yum repolist returns"
     command:
       yum repolist
 
+  #- name: "ntpd is stopped"
+  #  service:
+  #    name=ntpd
+  #    state=stopped
+
   - name: "Time is synchronized"
     command:
-      ntpdate clock.redhat.com
+      ntpdate tak.cesnet.cz
 
-  #- command:
-  #    shutdown -h 1
-
-  #- get_url:
-  #    url=http://{{ rhn_server }}/pub/RHN-ORG-TRUSTED-SSL-CERT
-  #    dest=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
-  #- shell:
-  #    # This is a workaround for https://github.com/ansible/ansible-modules-core/pull/3288
-  #    echo 'sslCACert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}' >>/etc/sysconfig/rhn/up2date
-  #- rhn_register:
-  #    state=present
-  #    username={{ rhn_user }}
-  #    password={{ rhn_pass }}
-  #    server_url=https://{{ rhn_server }}/XMLRPC
-  #    ###sslcacert=/etc/sysconfig/rhn/RHN-ORG-TRUSTED-SSL-CERT.{{ rhn_server }}
-  #- yum:
-  #    name=libselinux-python,rsync
-  #    state=present
-  #- rhn_register:
-  #    state=absent
+  #- name: "ntpd is started"
+  #  service:
+  #    name=ntpd
+  #    state=started
 ...

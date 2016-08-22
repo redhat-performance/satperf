@@ -47,7 +47,7 @@ Playbooks for:
 
 From project root, run: `source ./setup`
 
-The above script does the following: 
+The above script does the following:
 
  - exports `ANSIBLE_CONFIG=$PWD/conf/ansible.cfg`
  - checks for RPM packages: `gcc python-devel openssl-devel libffi-devel`
@@ -173,4 +173,10 @@ audit2allow -a -M collectd_t
 semodule -i collectd_t.pp
 ```
 
-..or both.
+OR
+
+```
+semanage permissive -a httpd_t
+```
+
+..or all.
