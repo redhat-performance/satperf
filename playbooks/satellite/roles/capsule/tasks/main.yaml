@@ -1,24 +1,42 @@
 ---
-  # Cleanup previous registrations if required
-  - name: "Check registration status"
-    shell:
-      subscription-manager status || true
-    register: subscription_manager_status
-  - name: "Check Satellite hostname in rhsm.conf"
-    shell:
-      grep '^\s*hostname\s*=\s*{{ sat_server }}\s*$' /etc/rhsm/rhsm.conf || true
-    register: hostname_in_rhsmconf
-  - name: "Unregister us when registered to different Satellite"
-    command:
-      subscription-manager unregister
-    ignore_errors: yes
-    when: "subscription_manager_status.stdout.find('Overall Status: Unknown') == -1 and hostname_in_rhsmconf.stdout.find('{{ sat_server }}') == -1"
-    register: subscription_manager_unregister
-  - name: "Clean registrations when appropriate"
+  ## TODO: Cleanup previous registrations if required
+  #- name: "Check registration status"
+  #  shell:
+  #    subscription-manager status || true
+  #  register: subscription_manager_status
+  #- name: "Check Satellite hostname in rhsm.conf"
+  #  shell:
+  #    grep '^\s*hostname\s*=\s*{{ sat_server }}\s*$' /etc/rhsm/rhsm.conf || true
+  #  register: hostname_in_rhsmconf
+  #- name: "Unregister us when registered to different Satellite"
+  #  command:
+  #    subscription-manager unregister
+  #  ignore_errors: yes
+  #  when: "subscription_manager_status.stdout.find('Overall Status: Unknown') == -1 and hostname_in_rhsmconf.stdout.find('{{ sat_server }}') == -1"
+  #  register: subscription_manager_unregister
+  #- name: "Clean registrations when appropriate"
+  #  shell: |
+  #    subscription-manager clean
+  #    yum -y remove katello-ca-consumer\*
+  #  when: "subscription_manager_status.stdout.find('Overall Status: Unknown') != -1 or subscription_manager_unregister is defined"
+
+  # Get partitions for Pulp and Mongo ready
+  - name: "LVM stuff"
     shell: |
-      subscription-manager clean
-      yum -y remove katello-ca-consumer\*
-    when: "subscription_manager_status.stdout.find('Overall Status: Unknown') != -1 or subscription_manager_unregister is defined"
+      pvcreate /dev/xvdf
+      pvcreate /dev/xvdg
+      vgcreate vg_data /dev/xvdf /dev/xvdg
+      lvcreate --name lv_pulp --extents 100%FREE vg_data /dev/xvdf
+      lvcreate --name lv_mongo --extents 100%FREE vg_data /dev/xvdg
+  - name: "Filesystem stuff"
+    shell: |
+      mkfs.xfs /dev/vg_data/lv_pulp
+      mkfs.xfs /dev/vg_data/lv_mongo
+      echo "/dev/vg_data/lv_pulp /var/lib/pulp xfs defaults 0 0" >>/etc/fstab
+      echo "/dev/vg_data/lv_mongo /var/lib/mongodb xfs defaults 0 0" >>/etc/fstab
+      mkdir /var/lib/pulp /var/lib/mongodb
+      mount /var/lib/pulp
+      mount /var/lib/mongodb
 
   # Register
   - name: "Install katello-ca-consumer from Satellite"
@@ -26,22 +44,49 @@
       rpm -qa | grep katello-ca-consumer || rpm -ivh "http://{{ sat_server }}/pub/katello-ca-consumer-latest.noarch.rpm"
   # You need this patch to make this work:
   #   https://github.com/ansible/ansible-modules-core/pull/3453
+
+  # - name: "Register to Satelite"
+  #   redhat_subscription:
+  #     state=present
+  #     username="{{ sat_user }}"
+  #     password="{{ sat_pass }}"
+  #     autosubscribe=true
+  #     environment=Library
+  #   register: registration
+
   - name: "Register to Satelite"
-    redhat_subscription:
-      state=present
-      username="{{ sat_user }}"
-      password="{{ sat_pass }}"
-      autosubscribe=true
-      environment=Library
+    shell: |
+      subscription-manager register --env Library --username "{{ sat_user }}" --password "{{ sat_pass }}" --auto-attach --force
+      subscription-manager attach --pool 8a81818256547e05015655392bd002ca
     register: registration
+
   - name: "Fix repos we consume form Satellite"
     shell: |
       subscription-manager repos --disable 'rh*'
       subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-      subscription-manager repos --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
-    when: registration.changed
-  - name: "Deploy capsule repo"
-    copy: src="{{ capsule_repo_file }}" dest=/etc/yum.repos.d/
+      subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-satellite-capsule-6.2-rpms'
+  #  when: registration.changed
+  ###- name: "Deploy capsule repo"
+  ###  copy: src="{{ capsule_repo_file }}" dest=/etc/yum.repos.d/
+
+  #### TODO: After reboot, public IP is changed :-(
+  #### Upgrade system
+  ###- name: "Upgrade system"
+  ###  command:
+  ###    yum upgrade -y
+  ###- name: "Restart machine"
+  ###  shell:
+  ###    sleep 2 && shutdown -r now "Ansible updates triggered"
+  ###  async: 1
+  ###  poll: 0
+  ###  ignore_errors: true
+  ###- name: "Waiting for server to come back"
+  ###  local_action: wait_for
+  ###    host={{ inventory_hostname }}
+  ###    state=started
+  ###    delay=30
+  ###    timeout=300
+
   - name: "Install capsule package"
     yum:
       name="{{ capsule_installer_pkg }}"

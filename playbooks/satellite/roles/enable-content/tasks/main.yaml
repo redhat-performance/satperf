@@ -1,23 +1,19 @@
 ---
-    - command:
-        for i in '5 6 7'; do
-      	  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable \
-      	  	 --name="Red Hat Enterprise Linux $i Server (RPMs)" \
-      		 --basearch="x86_64" \
-      		 --releasever="$iServer" \
-      		 --product "Red Hat Enterprise Linux Server" \
-      		 --organization "${ORG}"
-      	done
+    - shell: |
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" \
+          repository-set enable \
+          --name="Red Hat Enterprise Linux {{ item }} Server (RPMs)" \
+          --basearch="x86_64" --releasever="{{ item }}Server" \
+          --product "Red Hat Enterprise Linux Server" --organization "{{ org }}"
+      with_sequence: start=5 end=7 stride=1
       register: x86_content_enable
 
-    - command:
-        for i in '5 6'; do
-      	  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository-set enable \
-      	  	 --name="Red Hat Enterprise Linux $i Server (RPMs)" \
-      		 --basearch="i386" \
-      		 --releasever="$iServer" \
-      		 --product "Red Hat Enterprise Linux Server" \
-      		 --organization "${ORG}"
-      	done
+    - shell: |
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" \
+          repository-set enable \
+          --name="Red Hat Enterprise Linux {{ item }} Server (RPMs)" \
+          --basearch="i386" --releasever="{{ item }}Server" \
+          --product "Red Hat Enterprise Linux Server" --organization "{{ org }}"
+      with_sequence: start=5 end=6 stride=1
       register: i386_content_enable
 ...

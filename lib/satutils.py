@@ -13,254 +13,250 @@
 #   http://stackoverflow.com/q/3277367/1332401
 # Python is good to you if you code wisely in it :)
 
+import time
+import os
+
+BASE_DIR = os.path.join(os.path.dirname(__file__), '..')
+
 
 class SatelliteActions(object):
-    """
+    '''
     Calls ansible playbooks under: 'playbooks/satellite'
-    """
+    '''
 
     def __init__(self):
         super(SatelliteActions, self).__init__()
 
     def add_products(self):
-        extra_vars = {'add_products': 'true'}
-        runner = self.prepare_runner('satutils.yaml',
+        extra_vars = {'add_products': 'true',
+                        'products': self.products
+        }
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def all(self):
-        extra_vars = {'all': 'true'}
-        runner = self.prepare_runner('satutils.yaml',
+        # extra_vars = {'all': 'true'}
+        # runner = self.prepare_runner(os.path.join(BASE_DIR,
+        #                              'playbooks/satellite/', 'satutils.yaml'),
+        #                             _extra_vars=extra_vars)
+        # runner.run()
+        # print("process stats result: %s" % self.process_stats(runner))
+        self.backup_satellite()
+        self.logger.info("satellite backup CHECK")
+        self.upload_manifest()
+        self.logger.info("uploaded manifest CHECK")
+        self.enable_content()
+        self.logger.info("enabled content CHECK")
+        self.logger.info("...sleeping for 10 seconds.")
+        print("...sleeping for 10 seconds.")
+        time.sleep(10)
+        self.sync_content()
+        self.logger.info("synced content CHECK")
+        self.sync_capsule()
+        self.logger.info("synced capsules CHECK")
+
+    def backup_satellite(self, _playbook_path='/home/backup'):
+        extra_vars = {'backup': 'true',
+                    'backup_path': _playbook_path }
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
-
-        # self.backup_satellite()
-        # self.logger.info("satellite backup CHECK")
-        # self.upload_manifest()
-        # self.logger.info("uploaded manifest CHECK")
-        # self.enable_content()
-        # self.logger.info("enabled content CHECK")
-        # self.logger.info("...sleeping for 10 seconds.")
-        # print("...sleeping for 10 seconds.")
-        # time.sleep(10)
-        # self.sync_content()
-        # self.logger.info("synced content CHECK")
-        # self.sync_capsule()
-        # self.logger.info("synced capsules CHECK")
-
-    def backup_satellite(self):
-        runner = self.prepare_runner('satutils.yaml')
-        runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def check_status(self):
         extra_vars = {'katello_check': 'true'}
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def content_view_create(self):
         extra_vars = {'content_view_create': 'true'}
         if self.CV_SCALE:
             extra_vars['cv_scale'] = 'true'
+            extra_vars['NUMCV'] = NUMCV
         else:
             extra_vars['cv_scale'] = 'false'
 
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def content_view_promote(self):
-        extra_vars = {'content_view_promote': 'true'}
-        if self.CONCURRENT:
-            extra_vars['cv_startegy'] = 'conc'
-        else:
-            extra_vars['cv_startegy'] = 'seq'
-
-        runner = self.prepare_runner('satutils.yaml',
-                                    _extra_vars=extra_vars)
-        runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        self.logger.debug("This functionality is currently a stub")
+    #     extra_vars = {'content_view_promote': 'true'}
+    #     if self.CONCURRENT:
+    #         extra_vars['cv_startegy'] = 'conc'
+    #         extra_vars['CONFIG_NAME'] = self.TNAME + '-promote-conc'
+    #     else:
+    #         extra_vars['cv_startegy'] = 'seq'
+    #         extra_vars['CONFIG_NAME'] = self.TNAME + '-promote-seq'
+    #
+    #     runner = self.prepare_runner(os.path.join(BASE_DIR,
+    #                                  'playbooks/satellite/', 'satutils.yaml'),
+    #                                 _extra_vars=extra_vars)
+    #     runner.run()
+    #     print("process stats result: %s" % self.process_stats(runner))
 
     def content_view_publish(self):
         extra_vars = {'content_view_publish': 'true'}
         if self.CV_SCALE:
             extra_vars['cv_scale'] = 'true'
+            extra_vars['CONFIG_NAME'] = self.TNAME + '-promote-conc'
         else:
             extra_vars['cv_scale'] = 'false'
 
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
-
+        print("process stats result: %s" % self.process_stats(runner))
 
     def create_life_cycle_env(self):
         extra_vars = {'create_lifecycle': 'true'}
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def docker_tierdown(self):
-        runner = self.prepare_runner('docker-tierdown.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'docker-tierdown.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def docker_tierup(self):
-        runner = self.prepare_runner('docker-tierup.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'docker-tierup.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def enable_content(self):
         extra_vars = {'enable_content': 'true'}
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def install_capsule(self):
-        runner = self.prepare_runner('capsules.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'capsules.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def install_satellite(self):
-        runner = self.prepare_runner('installation.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'installation.yaml'))
         if bool(runner.run()):
             print("Success")
         else:
             print("Failed")
 
     def install_on_aws(self):
-        runner = self.prepare_runner('aws.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'aws.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def prepare_docker_hosts(self):
-        runner = self.prepare_runner('docker-host.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'docker-host.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        # TODO: the last task in docker-host.yaml is to build a
+        # docker image. It displays the ansible status "changed"
+        # and hence gives out a state that apparently seems failed
+        # in the check below, but it isn't. So we need to consider that
+        # and log a message accordingly
+        # if bool(self.process_stats(runner)):
+        #     print("Success")
+        # else:
+        #     print("Failed")
 
     def register_content_host(self):
-        extra_vars = {'register_content_host': 'true'}
-        if self.CONCURRENT:
-            extra_vars['cv_startegy'] = 'conc'
-        else:
-            extra_vars['cv_startegy'] = 'seq'
-
-        runner = self.prepare_runner('satutils.yaml',
-                                    _extra_vars=extra_vars)
-        runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        self.logger.debug("This functionality is currently a stub")
+        # extra_vars = {'register_content_host': 'true'}
+        # if self.CONCURRENT:
+        #     extra_vars['cv_startegy'] = 'conc'
+        # else:
+        #     extra_vars['cv_startegy'] = 'seq'
+        # runner = self.prepare_runner(os.path.join(BASE_DIR,
+        #                              'playbooks/satellite/', 'satutils.yaml'),
+        #                             _extra_vars=extra_vars)
+        # runner.run()
+        # print("process stats result: %s" % self.process_stats(runner))
 
     def remove_capsule(self):
-        runner = self.prepare_runner('remove-capsules.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'remove-capsules.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def restore_backup(self, _playbook_path='/home/backup'):
-        extra_vars = {'backup': 'true',
+        extra_vars = {'restore': 'true',
                 'backup_path': _playbook_path }
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def sync_capsule(self):
         extra_vars = {'sync_capsule': 'true'}
         if self.CONCURRENT:
             extra_vars['cv_startegy'] = 'conc'
+            extra_vars['CAPSULES'] = self.CAPSULES
+            extra_vars['NUM_CAPSULES'] = self.NUM_CAPSULES
+            extra_vars['CONFIG_NAME'] = self.TNAME
         else:
             extra_vars['cv_startegy'] = 'seq'
 
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def sync_content(self):
         extra_vars = {'sync_content': 'true'}
         if self.CONCURRENT:
             extra_vars['cv_startegy'] = 'conc'
+            extra_vars['CONFIG_NAME'] = self.TNAME + '-sync-repos'
+            extra_vars['repo_count'] = self.SAT_REPO_COUNT
         else:
             extra_vars['cv_startegy'] = 'seq'
 
-        runner = self.prepare_runner('satutils.yaml',
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def upload_manifest(self):
-        extra_vars = {'upload_manifest': 'true'}
-        runner = self.prepare_runner('satutils.yaml',
+        extra_vars = {'upload_manifest': 'true',
+                    'REPOSERVER': self.content_repo_server,
+                    'MANIFSET': self.manifest_file
+        }
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/satellite/', 'satutils.yaml'),
                                     _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
+    def run_a_playbook(self, pb_name):
+        extra_vars = {}
+        runner = self.prepare_runner(pb_name,
+                                    _extra_vars=extra_vars)
+        runner.run()
+        print("process stats result: %s" % self.process_stats(runner))
 
 class SatelliteAPI(object):
     '''
@@ -280,81 +276,73 @@ class SatelliteAPI(object):
 
 
 class MonitoringActions(object):
-    """
-    Calls ansible playbooks under: 'monitoring/satellite'
-    """
+    '''
+    Calls ansible playbooks under: 'playbooks/monitoring/'
+    '''
 
     def __init__(self):
         super(MonitoringActions, self).__init__()
 
-    def install_collectd(self):
-        runner = self.prepare_runner('collectd-generic.yaml')
+    def install_collectd(self, tags):
+        extra_vars = { }
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                             'playbooks/monitoring/', 'collectd-generic.yaml'),
+                             tasks=tags, _extra_vars=extra_vars)
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def install_elk(self):
-        runner = self.prepare_runner('elk.yaml')
-        runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        self.logger.debug("This functionality is currently a stub")
+        # runner = self.prepare_runner(os.path.join(BASE_DIR,
+        #                              'playbooks/monitoring/', 'elk.yaml'))
+        # runner.run()
+        # print("process stats result: %s" % self.process_stats(runner))
 
     def install_grafana(self):
-        runner = self.prepare_runner('grafana.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/monitoring/', 'grafana.yaml'))
+
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def install_graphite(self):
-        runner = self.prepare_runner('graphite.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/monitoring/', 'graphite.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
     def prepare_elk_client(self):
-        # filebeat
-        runner = self.prepare_runner('elk-client.yaml')
-        runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        self.logger.debug("This functionality is currently a stub")
+        # # filebeat
+        # runner = self.prepare_runner(os.path.join(BASE_DIR,
+        #                              'playbooks/monitoring/', 'elk-client.yaml'))
+        # runner.run()
+        # print("process stats result: %s" % self.process_stats(runner))
 
     def snapshot_dashboard(self, extra_vars={}):
-        if not extra_vars:
-            # prepare stub
-            extra_vars = {
-                "grafana_ip": "1.1.1.1",
-                "grafana_port": 3000,
-                "from": 1455649200000,
-                "to": 1455656400000,
-                "results_dir": "results/",
-                "var_cloud": "satellite"
-            }
-
-        runner = self.prepare_runner('snapshot_perf_dashboard.yaml',
-                                     _extra_vars=extra_vars)
-        runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        self.logger.debug("This functionality is currently a stub")
+        # if not extra_vars:
+        #     # prepare stub
+        #     extra_vars = {
+        #         "grafana_ip": "1.1.1.1",
+        #         "grafana_port": 3000,
+        #         "from": 1455649200000,
+        #         "to": 1455656400000,
+        #         "results_dir": "results/",
+        #         "var_cloud": "satellite"
+        #     }
+        #
+        # runner = self.prepare_runner(os.path.join(BASE_DIR,
+        #                              'playbooks/monitoring/', 'snapshot_perf_dashboard.yaml'),
+        #                              _extra_vars=extra_vars)
+        # runner.run()
+        # print("process stats result: %s" % self.process_stats(runner))
 
     def upload_dashboards_grafana(self):
-        runner = self.prepare_runner('dashboards-generic.yaml')
+        runner = self.prepare_runner(os.path.join(BASE_DIR,
+                                     'playbooks/monitoring/', 'dashboards-generic.yaml'))
         runner.run()
-        if bool(self.process_stats(runner)):
-            print("Success")
-        else:
-            print("Failed")
+        print("process stats result: %s" % self.process_stats(runner))
 
 
 class PbenchActions(object):

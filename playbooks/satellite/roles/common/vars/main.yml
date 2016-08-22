@@ -1,7 +1,2 @@
 ---
-# Satellite credentials
-sat_user: admin
-sat_pass: changeme
-sat_email: root@localhost
-sat_server: sample.redhat.com
 ...

@@ -4,29 +4,14 @@
 #
 
 collectd_packages:
-  baremetal:
-    - collectd
-    - collectd-turbostat
-  guest:
-    - collectd
-  cfme:
-    - collectd
-    - collectd-apache
-  cfme-all-in-one:
-    - collectd
-    - collectd-postgresql
-    - collectd-apache
-  cfme-vmdb:
-    - collectd
-    - collectd-postgresql
-    - collectd-apache
   graphite:
-    - collectd
-    - collectd-turbostat
-  ose:
     - collectd
     - collectd-turbostat
   satellite6:
     - collectd
     - collectd-turbostat
     - collectd-postgresql
+  docker-hosts:
+    - collectd
+  capsules:
+    - collectd

@@ -8,26 +8,12 @@
 # ansible-playbook -i hosts install/collectd-generic.yml --tags="satellite6"
 # ansible-playbook -i hosts install/collectd-generic.yml --tags="baremetal,guest"
 
-- hosts: baremetal
-  remote_user: root
-  vars:
-    config_type: baremetal
-  roles:
-    - collectd-generic
-  tags: baremetal
-
-- hosts: guest
-  remote_user: root
-  vars:
-    config_type: guest
-  roles:
-    - collectd-generic
-  tags: guest
-
 - hosts: graphite
   remote_user: root
   vars:
     config_type: graphite
+  vars_files:
+    - groups_vars/generic.yaml
   roles:
     - collectd-generic
   tags: graphite
@@ -36,6 +22,28 @@
   remote_user: root
   vars:
     config_type: satellite6
+  vars_files:
+    - groups_vars/generic.yaml
   roles:
     - collectd-generic
   tags: satellite6
+
+- hosts: capsules
+  remote_user: root
+  vars:
+    config_type: capsules
+  vars_files:
+    - groups_vars/generic.yaml
+  roles:
+    - collectd-generic
+  tags: capsules
+
+- hosts: docker-hosts
+  remote_user: root
+  vars:
+    config_type: docker-hosts
+  vars_files:
+    - groups_vars/generic.yaml
+  roles:
+    - collectd-generic
+  tags: docker-hosts

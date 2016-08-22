@@ -29,14 +29,21 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
 
     SATELLITE_VERSION = 6.2
 
-    def __init__(self, _conf=None, _logger=None):
+    def __init__(self, _conf=None, _logger=None, _hosts=None):
         super(SatelliteCore, self).__init__()
         self.config = _conf
         self.logger = _logger
+        self.hosts_cfg = _hosts
+        self.hosts = [i for i in list(_hosts) if i != 'DEFAULT']
         # load other settings and modules
         self.__load_settings()
         self.PbenchController = PbenchActions()
         self.SatelliteAPIController = SatelliteAPI()
+
+    def __get_hosts_list(self, type=None):
+        if type not in self.hosts:
+            return []
+        return [i.split()[0] for i in self.hosts_cfg[type]]
 
     def __load_settings(self):
         self.HOSTS_INI_FILE = self.config.get("Settings", "hosts")
@@ -56,12 +63,17 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
         self.location = self.config.get('RHN','location')
 
     def __build_sat_metadata(self):
+        self.CAPSULES = ' '.join(self.__get_hosts_list(type='capsules'))
+        self.NUM_CAPSULES = len(self.__get_hosts_list(type='capsules'))
+        self.SAT_SERVER = self.__get_hosts_list(type='satellite6')[0]
+        self.GRAPHITE_SERVER = self.__get_hosts_list(type='satellite6')[0]
+        self.GRAFANA_SERVER = self.__get_hosts_list(type='satellite6')[0]
+        self.DOCKER_HOSTS = self.__get_hosts_list(type='docker-hosts')
         self.sat_repo = self.config.get('Satellite','repo')
         self.sat_version = self.config.get('Satellite','version')
         self.RHEL5_RELEASE = self.config.get('Satellite','rhel5')
         self.RHEL6_RELEASE = self.config.get('Satellite','rhel6')
         self.RHEL7_RELEASE = self.config.get('Satellite','rhel7')
-        self.capsule_servers = self.config.get('Satellite','capsules')
         self.content_repo_server = self.config.get('Satellite','rediscover')
         self.SAT_REPO_COUNT = self.config.get('Satellite','repo_count')
         self.CV_SCALE = bool(self.config.get('Satellite','cv_scale'))
@@ -74,7 +86,7 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
     def __build_pbench_metadata(self):
         self.pbench_enabled = self.config.get('Pbench','enabled')
         self.pbench_repo_server = self.config.get('Pbench','pbench_repo')
-        self.products = self.config.get('Pbench','products')
+        self.products = self.config.get('Pbench','products').split()
 
     def __prepare_runner_metadata(self, options, tasks):
         # # tags in the tasks section of YAML playbook
@@ -112,6 +124,18 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
             self.register_content_host()
         if nargs.remove_capsule:
             self.remove_capsule()
+        if nargs.setup_monitoring:
+            if self.record_response("Installing Collectd") == 'y':
+                tags = self.config.get('Monitoring', 'hosts').split(':')
+                self.install_collectd(tags)
+            if self.record_response("Installing Graphite") == 'y':
+                self.install_graphite()
+            if self.record_response("Installing Grafana") == 'y':
+                self.install_grafana()
+            # if self.record_response("Installing ELK") == 'y':
+            #     self.install_elk()
+            # if self.record_response("Preparing ELK client") == 'y':
+            #     self.prepare_elk_client()
         if nargs.resync_content or nargs.sync_content:
             self.sync_content()
         if nargs.sat_backup:
@@ -129,14 +153,11 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
             self.sync_capsule()
         if nargs.upload:
             self.upload_manifest()
+        if nargs.run_playbook:
+            self.run_a_playbook(nargs.run_playbook)
 
-    def prepare_runner(self, pb_name, options={}, tasks=[],
+    def prepare_runner(self, _playbook_path, options={}, tasks=None,
                         _extra_vars={}, verbosity=3):
-        # msg = "[Py Ansible API v2.1] is unstable"
-        # self.logger.warn(msg)
-        _playbook_path = os.path.join(BASE_DIR,
-                                     'playbooks/satellite/', pb_name)
-        #import pdb; pdb.set_trace()
         _OPTIONS = self.__prepare_runner_metadata(options, tasks)
         _vb = _OPTIONS['verbosity']
         _inventory = inventory.Inventory(self.HOSTS_INI_FILE)
@@ -151,6 +172,7 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
             extra_vars=_extra_vars,
             #private_key_file="/path/to/key.pem",
             #vault_password=vaultpass,
+            only_tags=tasks,
             stats=stats,
             callbacks=playbook_cb,
             runner_callbacks=runner_cb

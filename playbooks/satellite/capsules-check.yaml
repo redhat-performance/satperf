@@ -1,0 +1,14 @@
+---
+- hosts: capsules
+  remote_user: root
+  roles:
+  ###  - common
+  tasks:
+    - name: "katello-service restart"
+      command:
+        katello-service restart
+    - name: "katello-service status"
+      command:
+        katello-service status
+      register: katello_status
+    - debug: var=katello_status.stdout_lines|last

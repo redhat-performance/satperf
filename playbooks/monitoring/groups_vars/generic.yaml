@@ -8,9 +8,6 @@ local_remote_user: root
 # The default satellite venv
 satellite_venv: /root/satellite-venv
 
-# The default PerfKit venv:
-perfkit_venv: /root/perfkit-venv
-
 # Guest images for the satellite
 images:
   centos7:
@@ -30,10 +27,6 @@ epel7_rpm: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rp
 # Interval in seconds
 collectd_interval: 10
 # Run collectd on specific Satellite-6 nodes:
-collectd_undercloud: true
-collectd_controller: true
-collectd_ceph: true
-collectd_compute: false
 
 ########################################
 # Graphite Configuration
@@ -42,10 +35,10 @@ collectd_compute: false
 graphite_host: 1.1.1.1
 graphite_port: 80
 # Graphite prefix / Cloud name used both with graphite and grafana dashboards
-graphite_prefix: satellite
+graphite_prefix: satellite62
 # Graphite username and password for login on the dashboard
 graphite_username: root
-graphite_password: calvin
+graphite_password: changeme
 
 ########################################
 # Grafana Dashboarding Configuration
@@ -55,7 +48,9 @@ grafana_host: 1.1.1.1
 grafana_port: 3000
 grafana_username: admin
 grafana_password: admin
+
 # Batch number of hosts per row for all-{cpu, memory, disk, network} Satellite-6 dashboards
 dashboards_batch: 20
+
 # For use with all-{cpu, memory, disk, network} Satellite-6 dashboards, uses the graphite prefix to create dashboards for specific Satellite-6 cloud
 dashboard_cloud_name: "{{graphite_prefix}}"

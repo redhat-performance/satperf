@@ -1,0 +1,35 @@
+---
+- hosts: cleanme
+  remote_user: ec2-user
+  tasks:
+    - authorized_key:
+        user=root
+        key="{{ lookup('file', '/home/pok/Checkouts/satperf-deploy/conf/id_rsa_perf.pub') }}"
+        manage_dir=yes
+      become: true
+    - shell:
+        cat /home/ec2-user/.ssh/authorized_keys >/root/.ssh/authorized_keys
+      become: true
+    - yum:
+        name="{{ item }}"
+        state=present
+      with_items:
+        - ntpdate
+        - lvm2
+        - bc
+        - lsof
+        - screen
+        - vim-enhanced
+      become: true
+    - yum:
+        name=rh-amazon-rhui-client
+        state=absent
+      become: true
+    - shell:
+        rm -rf /etc/yum.repos.d/*
+      become: true
+    - shell: |
+        umount /dev/xvdb
+        grep -v -e /dev/xvdb -e /dev/xvdc /etc/fstab >/tmp/a
+        cat /tmp/a >/etc/fstab
+      become: true

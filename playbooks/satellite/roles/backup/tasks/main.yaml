@@ -1,9 +1,12 @@
 ---
-    - command:
-        rm -rf {{ backup_path }}
-      register: cleanup_backup
-    - command: 
-        katello-backup {{ backup_path }}
-      register: backup
-      when: cleanup_backup.changed
+  - stat: path=/home/backup
+    register: check_backup
+
+  - command: rm -rf {{ backup_path }}
+    when: check_backup.stat.exists == True
+    register: cleanup_backup
+
+  - command: katello-backup {{ backup_path }}
+    register: backup
+    when: cleanup_backup.changed
 ...
