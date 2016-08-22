@@ -30,43 +30,54 @@ def signal_handler(event, frame):
     # sys.exit(1)
 
 def _satperf_usage():
-    parser.add_argument("-d", "--add-product", action='store_true',
-                    help="Adding products")
     parser.add_argument("-a", "--all", action='store_true',
-                    help="Run all jobs in sequence")
-    parser.add_argument("-t", "--content-view-create", action='store_true',
-                    help="Create content view and add repos")
-    parser.add_argument("-p", "--content-view-publish", action='store_true',
-                    help="Publish content views")
-    parser.add_argument("-c", "--create-life-cycle", action='store_true',
-                    help="Create life cycle environments")
-    parser.add_argument("-e", "--enable-content", action='store_true',
-                    help="Enable repos")
-    parser.add_argument("-g", "--register-content-hosts", action='store_true',
-                    help="Register content hosts (concurrent or sequential)")
-    parser.add_argument("-w", "--remove-capsule", action='store_true',
-                    help="Uninstall capsule")
-    parser.add_argument("-n", "--resync-content", action='store_true',
-                    help="Resync content (concurrent or sequential) " + \
-                                "from repo server to satelitte server")
+        help="Run all jobs in sequence")
     parser.add_argument("-b", "--sat-backup", action='store_true',
-                    help="Take satelitte server backup to restore further")
-    parser.add_argument("-r", "--sat-restore", action='store_true',
-                    help="Restore from backup")
-    parser.add_argument("-s", "--setup", action='store_true',
-                    help="Setup Satellite Server, Capsules and Docker hosts")
+        help="Take satelitte server backup to restore further")
+    parser.add_argument("-c", "--create-life-cycle", action='store_true',
+        help="Create life cycle environments")
+    parser.add_argument("-d", "--add-product", action='store_true',
+        help="Adding products")
+    parser.add_argument("-e", "--enable-content", action='store_true',
+        help="Enable repos")
+    # parser.add_argument("-f", "--snapshot-dashboard", action='store_true',
+    #     help="Snapshot current Grafana Dashboard")
+    parser.add_argument("-g", "--register-content-hosts", action='store_true',
+        help="Register content hosts (concurrent or sequential)")
     parser.add_argument("-l", "--sync-capsule", action='store_true',
-                    help="Sync capsule (concurrent or sequential)")
-    parser.add_argument("-y", "--sync-content", action='store_true',
-                    help="Sync content (concurrent or sequential) " + \
+        help="Sync capsule (concurrent or sequential)")
+    parser.add_argument("-m", "--setup-monitoring", action='store_true',
+        help="Setup one/all of: Graphite, Grafana, Collectd, ELK")
+    parser.add_argument("-n", "--resync-content", action='store_true',
+        help="Resync content (concurrent or sequential) " + \
                                 "from repo server to satelitte server")
+    parser.add_argument("-p", "--content-view-publish", action='store_true',
+        help="Publish content views")
+    parser.add_argument("-r", "--sat-restore", action='store_true',
+        help="Restore from backup")
+    parser.add_argument("-s", "--setup", action='store_true',
+        help="Setup Satellite Server, Capsules and Docker hosts")
+    parser.add_argument("-t", "--content-view-create", action='store_true',
+        help="Create content view and add repos")
     parser.add_argument("-u", "--upload", action='store_true',
-                    help="Upload manifest")
+        help="Upload manifest")
+    parser.add_argument("-w", "--remove-capsule", action='store_true',
+        help="Uninstall capsule")
+    # parser.add_argument("-x", "--content-view-promote", action='store_true',
+    #     help="Promote content view")
+    parser.add_argument("-y", "--sync-content", action='store_true',
+        help="Sync content (concurrent or sequential) " + \
+                                "from repo server to satelitte server")
+    parser.add_argument("-z", "--run-playbook", action='store',
+        help="Run a playbook from playbooks/satellite/ not listed in satperf")
 
-def _load_config_general(path):
+def _load_config(path, no_val=False):
     """
     """
-    config = configparser.ConfigParser()
+    if no_val:
+        config = configparser.ConfigParser(allow_no_value=True)
+    else:
+        config = configparser.ConfigParser()
     config.read(path)
     return config
 
@@ -77,8 +88,11 @@ def main(config_general):
         if not sys.argv[1:]:
           quit("No arguments supplied. Refer to --help.")
 
+        hosts_cfg = _load_config(config_general.get("Settings", "hosts"),
+                                no_val=True)
         SatCore = SatelliteCore(_conf=config_general,
-                                _logger=_logger)
+                                _logger=_logger,
+                                _hosts=hosts_cfg)
         SatCore.init_actions(nargs)
 
     except Exception as E:
@@ -89,7 +103,7 @@ def main(config_general):
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
 
-    config_general = _load_config_general(_config_file_general)
+    config_general = _load_config(_config_file_general)
     FNAME = config_general.get("Settings", "log_file")
     FSIZE = int(config_general.get("Settings", "log_file_size"))
 

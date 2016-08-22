@@ -3,13 +3,57 @@
 # Install/run graphite-web for satellite
 #
 
-- name: Import EPEL GPG Key
-  rpm_key: key=https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-    state=present
+# - name: Import EPEL GPG Key
+#   rpm_key: key=https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7 state=present
 
-- name: Check for EPEL repo
-  yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    state=present
+# - name: Check for EPEL
+#   shell: rpm -qa | grep -q epel-release
+#   ignore_errors: true
+#   register: epel_installed
+
+# - name: Check for EPEL repo
+#   yum: name={{ epel7_rpm }}
+#     state=present
+#   register: epel_installed
+
+- stat: path=/etc/yum.repos.d/epel.repo
+  register: epel_installed
+
+- name: Enable EPEL Repo
+  ini_file: dest=/etc/yum.repos.d/epel.repo
+    section=epel
+    option=enabled
+    value=1
+  when: epel_installed.stat.exists == True
+  register: epel_enabled
+
+# - name: Check for enabled epel-release
+#   shell: yum repolist | grep -q epel
+#   ignore_errors: true
+#   register: epel_enabled
+
+# (akrzos) I have found the use of the yum module for installing EPEL on rhel7 to encounter issues,
+# thus using rpm to install via ansible. This does display a warning in Ansible output.
+#
+- name: Install EPEL rpm
+  command: rpm -ivh --force {{ epel7_rpm }}
+  become: true
+  when: epel_installed.stat.exists == false or epel_enabled.msg != 'OK'
+
+# (akrzos) yum module works at this point due to the fact the EPEL repo now exists.  EPEL rpm is
+# installed at this point in time.
+# # fails to get following deps:
+# - python-twister-core
+#   - python-zope-interface
+# EPEL for some reason, removed them again. meh!!
+
+# TODO WARNING: INSECURE method
+- name: Graphite prerequisites not in EPEL at the moment
+  yum: name={{ item }} state=present
+  become: true
+  with_items:
+    - ftp://195.220.108.108/linux/centos/7.2.1511/os/x86_64/Packages/python-zope-interface-4.0.5-4.el7.x86_64.rpm
+    - ftp://195.220.108.108/linux/centos/7.2.1511/os/x86_64/Packages/python-twisted-core-12.2.0-4.el7.x86_64.rpm
 
 - name: Install graphite rpms
   yum: name={{ item }} state=present
@@ -115,13 +159,35 @@
   become: true
   register: carbon_cache_needs_restart
 
+#TODO: graphite postinstallation settings
+# edit /etc/graphite/local_settings.py
+# and set SECRET_KEY = '<random long value>'
+# and set ALLOWED_HOSTS = ['*'] or more constrained set if you'd like
+
+# - name: Disable EPEL Repo
+#   ini_file: dest=/etc/yum.repos.d/epel.repo
+#     section=epel
+#     option=enabled
+#     value=0
+
 - name: bounce carbon cache
   service: name=carbon-cache state=restarted enabled=true
   become: true
   when: carbon_cache_needs_restart.changed
 
-- name: Disable EPEL Repo
-  ini_file: dest=/etc/yum.repos.d/epel.repo
-    section=epel
-    option=enabled
-    value=0
+# sometimes there's a stale epel package present, so rpm -e fails
+# because somebody deleted the .repo files without uninstalling
+# epel-release and rpm -e fails to remove multiple versions of the
+# package. So we need to check this and remove all one by one
+- name: Disable EPEL
+  shell: |
+    count=$(rpm -q epel-release | wc -l)
+    if [[ $count -gt 1 ]]; then
+      for ver in `rpm -q epel-release`; do
+        rpm -e $ver
+      done
+    else
+      rpm -e epel-release
+    fi
+  ignore_errors: true
+  become: true

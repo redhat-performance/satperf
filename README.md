@@ -17,11 +17,11 @@ Table of Contents
 
 # Satperf
 
-This project was started to run performance tests on Redhat Satelitte.
-satperf needs to be run from Satelitte server. It does the following activities:
+This project was started to run performance tests on Redhat Satellite.
+satperf needs to be run from Satellite server. It does the following activities:
 
-  - Satelitte installation
-  - uploads manigfest, updates repo
+  - Satellite installation
+  - uploads manifest, updates repo
   - concurrently syncs multiple Repositories from Repo Server
   - creates lifecycle environments
   - creates capsules
@@ -41,13 +41,13 @@ Playbooks for:
 * sync content
 * Puppet module update
 
-# INSTALLATION
+# INSTALLATION:
 
 ### PREREQUISITES
 
 From project root, run: `source ./setup`
 
-The above script does the following: 
+The above script does the following:
 
  - exports `ANSIBLE_CONFIG=$PWD/conf/ansible.cfg`
  - checks for RPM packages: `gcc python-devel openssl-devel libffi-devel`
@@ -173,4 +173,10 @@ audit2allow -a -M collectd_t
 semodule -i collectd_t.pp
 ```
 
-..or both.
+OR
+
+```
+semanage permissive -a httpd_t
+```
+
+..or all.

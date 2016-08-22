@@ -1,17 +1,17 @@
 ---
-    - command:
+    - shell: |
         pbench_config && \
           pbench-user-benchmark \
-                --config=$tname-cv-promote-seq \
+                --config="{{ config_name }}" \
                 -- "./scripts/cv_promote_seq.sh" && \
           pbench_postprocess
       register: content_view_promote_seq
       when: promote_seq == true
 
-    - command:
+    - shell: |
         pbench_config && \
           pbench-user-benchmark \
-                --config=$tname-cv-promote-concurrent \
+                --config="{{ config_name }}" \
                 -- "./scripts/cv_promote_conc.sh" && \
           pbench_postprocess
       register: content_view_promote_conc

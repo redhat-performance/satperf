@@ -5,5 +5,7 @@
 
 - hosts: graphite
   remote_user: root
+  vars_files:
+    - groups_vars/generic.yaml
   roles:
     - { role: graphite }

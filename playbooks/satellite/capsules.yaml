@@ -1,6 +1,9 @@
 ---
 - hosts: capsules
   remote_user: root
+  # vars:
+  #   - sat_user: admin
+  #   - sat_pass: changeme
   roles:
     - common
     - capsule

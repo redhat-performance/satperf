@@ -1,6 +1,6 @@
 ---
 # Credentials for RHSM (for Satellite machine registration)
-rhsm_user: rhn-engineering-jhutar
-rhsm_pass: redhatqa
+rhsm_user: your_username
+rhsm_pass: your_password
 rhsm_pools: '^(Employee SKU|Red Hat Satellite Employee Subscription)$'
 ...

@@ -1,7 +1,10 @@
 ---
 
-- hosts: satellite
+- hosts: satellite6
   remote_user: root
+  vars_files:
+    - groups_vars/creds.yaml
+    - groups_vars/generic.yaml
   roles:
     - common
     - rhsm
@@ -10,4 +13,3 @@
     - satellite-populate
   tags:
     - setup_satellite
-

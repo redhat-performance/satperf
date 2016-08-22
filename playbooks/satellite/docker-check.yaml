@@ -1,0 +1,31 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Workaround permission error when creating repodata on container"
+      selinux:
+        policy=targeted
+        state=permissive
+    - name: "Get containers ID"
+      command:
+        docker ps -q
+      register: docker_ids
+    - debug: var=docker_ids.stdout_lines|length
+    - name: "Get /root/container-ips"
+      command:
+        cat /root/container-ips
+      register: container_ips
+    - debug: var=container_ips.stdout_lines|length
+    - shell:
+        sort -R /root/container-ips > /root/container-ips.shuffled
+    - name: "Get /root/container-ips.shuffled"
+      command:
+        cat /root/container-ips.shuffled
+      register: container_ips
+    - debug: var=container_ips.stdout_lines|length
+    - name: "grep '^ *server' /root/clients.yaml"
+      command:
+        grep '^ *server' /root/clients.yaml
+      register: clients_server
+    - debug: var=clients_server.stdout_lines

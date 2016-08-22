@@ -1,15 +1,34 @@
 ---
-    - command:
-        pbench_config
-        for i in {1..5}; do
-      	  hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" repository synchronize --id $i --organization="${ORG}"  2>&1
-      	done
-      	pbench_postprocess
-      when: sync_content_seq == true
+    - shell: |
+        # pbench_config
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" \
+          repository synchronize --id "{{ item }}" \
+          --organization="{{ org }}"  2>&1
+        # pbench_postprocess
+      with_sequence: count=5
+      when: cv_startegy == "seq"
 
-    - command:
-        pbench_config
-        pbench-user-benchmark  --config=$tname-sync-repos -- "./scripts/sync_content.sh"
-        pbench_postprocess
-      when: sync_content_conc == true
+    - shell: |
+        # pbench_config
+        # pbench-user-benchmark  --config="{{ CONFIG_NAME }}" -- "./scripts/sync_content.sh"
+        # pbench_postprocess
+
+        numRepos="{{ repo_count }}"
+        # testname="{{ CONFIG_NAME }}"
+
+        echo "----------------------------------"
+        sleep 5
+        # Perform Sync and time results
+        for repoid in `seq 1 ${numRepos}`; do
+            echo "[$(date -R)] Starting content Synchronize: ${repoid}"
+            time \
+              hammer -u "${ADMIN_USER}" -p "${ADMIN_PASSWORD}" \
+              repository synchronize --id $repoid --organization="{{ org }}" \
+              2>&1 &
+        done
+        echo "[$(date -R)] Waiting for Sync repos"
+        wait
+        echo "[$(date -R)] Syncs finished"
+        echo "----------------------------------"
+      when: cv_startegy == "conc"
 ...

@@ -5,5 +5,7 @@
 
 - hosts: grafana
   remote_user: root
+  vars_files:
+    - groups_vars/generic.yaml
   roles:
     - { role: grafana }
