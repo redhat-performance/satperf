@@ -21,9 +21,7 @@ LoadPlugin load
 LoadPlugin memory
 LoadPlugin numa
 LoadPlugin processes
-LoadPlugin postgresql
 LoadPlugin swap
-LoadPlugin turbostat
 LoadPlugin unixsock
 LoadPlugin uptime
 
@@ -56,35 +54,6 @@ LoadPlugin uptime
 <Plugin disk>
   Disk "/^[hsv]d[a-z]+[0-9]?$/"
   IgnoreSelected false
-</Plugin>
-
-<Plugin postgresql>
-  <Database candlepin>
-    Host "localhost"
-    Port "5432"
-    User "candlepin"
-    Password "{{satellite_candlepin_password.stdout|ini_value}}"
-    # Predefined:
-    Query backends
-    Query transactions
-    Query queries
-    Query table_states
-    Query disk_io
-    Query disk_usage
-  </Database>
-  <Database foreman>
-    Host "localhost"
-    Port "5432"
-    User "foreman"
-    Password "{{satellite_foreman_password.stdout}}"
-    # Predefined:
-    Query backends
-    Query transactions
-    Query queries
-    Query table_states
-    Query disk_io
-    Query disk_usage
-  </Database>
 </Plugin>
 
 <Plugin processes>
