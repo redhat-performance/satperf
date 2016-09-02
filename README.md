@@ -20,7 +20,7 @@ Table of Contents
 This project was started to run performance tests on Redhat Satellite.
 satperf needs to be run from Satellite server. It does the following activities:
 
-  - Satelitte installation
+  - Satellite installation
   - uploads manifest, updates repo
   - concurrently syncs multiple Repositories from Repo Server
   - creates lifecycle environments
