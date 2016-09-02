@@ -41,7 +41,7 @@ Playbooks for:
 * sync content
 * Puppet module update
 
-# INSTALLATION
+# INSTALLATION:
 
 ### PREREQUISITES
 
