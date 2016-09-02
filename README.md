@@ -17,11 +17,11 @@ Table of Contents
 
 # Satperf
 
-This project was started to run performance tests on Redhat Satelitte.
-satperf needs to be run from Satelitte server. It does the following activities:
+This project was started to run performance tests on Redhat Satellite.
+satperf needs to be run from Satellite server. It does the following activities:
 
-  - Satelitte installation
-  - uploads manigfest, updates repo
+  - Satellite installation
+  - uploads manifest, updates repo
   - concurrently syncs multiple Repositories from Repo Server
   - creates lifecycle environments
   - creates capsules
@@ -41,7 +41,7 @@ Playbooks for:
 * sync content
 * Puppet module update
 
-# INSTALLATION
+# INSTALLATION:
 
 ### PREREQUISITES
 
