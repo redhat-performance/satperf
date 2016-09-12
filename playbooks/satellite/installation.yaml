@@ -1,6 +1,6 @@
 ---
 
-- hosts: satellite
+- hosts: satellite6
   remote_user: root
   vars_files:
     - groups_vars/creds.yaml
