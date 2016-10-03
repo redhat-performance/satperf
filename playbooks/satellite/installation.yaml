@@ -1,15 +1,16 @@
 ---
-
 - hosts: satellite6
   remote_user: root
+  ###gather_facts: no
   vars_files:
-    - groups_vars/creds.yaml
-    - groups_vars/generic.yaml
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
     - common
     - rhsm
+    ###- upgrade-restart
+    ###- satellite-ec2-partitioning
     - setup
     - pbench_client
     - satellite-populate
-  tags:
-    - setup_satellite
+...

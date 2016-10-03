@@ -1,12 +1,55 @@
 ---
-    - copy:
-        src="{{ sat_repo_file }}"
-        dest=/etc/yum.repos.d/
-    - yum:
-        name="{{ sat_installer_pkg }}"
-        state=present
-      register: installation
-    - command:
-        "{{ sat_installer_cmd }} --foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
-      when: installation.changed
+  # Check variables
+  - assert:
+      that: "sat_install_source == 'repo' or sat_install_source == 'cdn'"
+      msg: "Satellite install source (sat_install_source) have to be either 'repo' or 'cdn' (current value is '{{ sat_install_source }}')"
+
+  # We will need base RHEL and Software Collections for sure,
+  # repo with Satellite packages (either custom repo or CDN repo
+  # will be configured lower)
+  - name: "Determine pool we are going to attach to"
+    command:
+      subscription-manager list --available --all --matches "{{ sat_install_pool }}" --pool-only
+    register: querying
+    until: "{{ querying.rc }} == 0"
+    retries: 5
+    delay: 10
+  - debug:
+      var: querying
+      verbosity: 2
+  - name: "Attach to the pool"
+    command:
+      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+    register: attaching
+    until: "{{ attaching.rc }} == 0"
+    retries: 5
+    delay: 10
+  - name: "Disable all RHSM repos and only enable base RHEL and SCL repos"
+    shell:
+      subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms' --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
+
+  # Setup repo when installing from custom repository
+  - name: "Custom Satellite repo configured"
+    copy:
+      src="{{ sat_repo_file }}"
+      dest=/etc/yum.repos.d/
+      force=yes
+    when: "sat_install_source == 'repo'"
+
+  # Setup repos when installing from CDN
+  - name: "CDN Satellite repo configured"
+    shell: |
+      subscription-manager repos --enable "{{ sat_cdn_reponame }}"
+    when: "sat_install_source == 'cdn'"
+
+  # Now, finally install required packages and install the Satellite
+  - name: "Package satellite installed"
+    yum:
+      name="{{ sat_installer_pkg }}"
+      state=present
+    register: installing
+  - name: "Satellite configured"
+    command:
+      "{{ sat_installer_cmd }} --foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
+    when: installing.changed
 ...

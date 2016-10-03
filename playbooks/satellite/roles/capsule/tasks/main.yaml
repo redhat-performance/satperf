@@ -1,112 +1,58 @@
 ---
-  ## TODO: Cleanup previous registrations if required
-  #- name: "Check registration status"
-  #  shell:
-  #    subscription-manager status || true
-  #  register: subscription_manager_status
-  #- name: "Check Satellite hostname in rhsm.conf"
-  #  shell:
-  #    grep '^\s*hostname\s*=\s*{{ sat_server }}\s*$' /etc/rhsm/rhsm.conf || true
-  #  register: hostname_in_rhsmconf
-  #- name: "Unregister us when registered to different Satellite"
-  #  command:
-  #    subscription-manager unregister
-  #  ignore_errors: yes
-  #  when: "subscription_manager_status.stdout.find('Overall Status: Unknown') == -1 and hostname_in_rhsmconf.stdout.find('{{ sat_server }}') == -1"
-  #  register: subscription_manager_unregister
-  #- name: "Clean registrations when appropriate"
-  #  shell: |
-  #    subscription-manager clean
-  #    yum -y remove katello-ca-consumer\*
-  #  when: "subscription_manager_status.stdout.find('Overall Status: Unknown') != -1 or subscription_manager_unregister is defined"
+  # Check variables
+  - assert:
+      that: "capsule_install_source == 'repo' or capsule_install_source == 'cdn'"
+      msg: "Capsule install source (capsule_install_source) have to be either 'repo' or 'cdn' (current value is '{{ capsule_install_source }}')"
 
-  # Get partitions for Pulp and Mongo ready
-  - name: "LVM stuff"
-    shell: |
-      pvcreate /dev/xvdf
-      pvcreate /dev/xvdg
-      vgcreate vg_data /dev/xvdf /dev/xvdg
-      lvcreate --name lv_pulp --extents 100%FREE vg_data /dev/xvdf
-      lvcreate --name lv_mongo --extents 100%FREE vg_data /dev/xvdg
-  - name: "Filesystem stuff"
-    shell: |
-      mkfs.xfs /dev/vg_data/lv_pulp
-      mkfs.xfs /dev/vg_data/lv_mongo
-      echo "/dev/vg_data/lv_pulp /var/lib/pulp xfs defaults 0 0" >>/etc/fstab
-      echo "/dev/vg_data/lv_mongo /var/lib/mongodb xfs defaults 0 0" >>/etc/fstab
-      mkdir /var/lib/pulp /var/lib/mongodb
-      mount /var/lib/pulp
-      mount /var/lib/mongodb
+  # Check Satellite sees Capsule
+  # See https://access.redhat.com/solutions/1230493
+  - name: "Make sure Satellite can ping Capsule"
+    ###lineinfile: dest=/etc/hosts regexp='{{ ip }}\s+{{ inventory_hostname }}' line='{{ ip }} {{ inventory_hostname }}'   # TODO make this fully automated
+    command:
+      ping -c 3 "{{ inventory_hostname }}"
+    delegate_to: "{{ groups['satellite6']|first }}"
+  - name: "Make sure Satellite can resolve Capsule hostname"
+    lineinfile:
+      dest=/etc/hosts
+      regexp="{{ ip }}\s+{{ inventory_hostname }}"
+      line="{{ ip }} {{ inventory_hostname }}"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    when: "ip is defined"
 
-  # Register
-  - name: "Install katello-ca-consumer from Satellite"
-    shell:
-      rpm -qa | grep katello-ca-consumer || rpm -ivh "http://{{ sat_server }}/pub/katello-ca-consumer-latest.noarch.rpm"
-  # You need this patch to make this work:
-  #   https://github.com/ansible/ansible-modules-core/pull/3453
+  # We have ran into issues when we have mistakenly broken context on the satellite, so make sure it is OK
+  - name: "File /etc/hosts on Satellite have correct SELinux context (had issues before)"
+    command:
+      restorecon -vR /etc/hosts
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
 
-  # - name: "Register to Satelite"
-  #   redhat_subscription:
-  #     state=present
-  #     username="{{ sat_user }}"
-  #     password="{{ sat_pass }}"
-  #     autosubscribe=true
-  #     environment=Library
-  #   register: registration
+  - name: "Custom capsule repo configured"
+    copy:
+      src="{{ capsule_repo_file }}"
+      dest=/etc/yum.repos.d/
+      force=yes
+    when: "capsule_install_source == 'repo'"
 
-  - name: "Register to Satelite"
-    shell: |
-      subscription-manager register --env Library --username "{{ sat_user }}" --password "{{ sat_pass }}" --auto-attach --force
-      subscription-manager attach --pool 8a81818256547e05015655392bd002ca
-    register: registration
+  - name: "Satellite Capsule repository enabled"
+    command:
+      subscription-manager repos --enable '{{ capsule_cdn_reponame }}'
+    when: "sat_install_source == 'cdn'"
+    register: enabling
+    until: "{{ enabling.rc }} == 0"
+    retries: 5
+    delay: 10
 
-  - name: "Fix repos we consume form Satellite"
-    shell: |
-      subscription-manager repos --disable 'rh*'
-      subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-      subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-satellite-capsule-6.2-rpms'
-  #  when: registration.changed
-  ###- name: "Deploy capsule repo"
-  ###  copy: src="{{ capsule_repo_file }}" dest=/etc/yum.repos.d/
-
-  #### TODO: After reboot, public IP is changed :-(
-  #### Upgrade system
-  ###- name: "Upgrade system"
-  ###  command:
-  ###    yum upgrade -y
-  ###- name: "Restart machine"
-  ###  shell:
-  ###    sleep 2 && shutdown -r now "Ansible updates triggered"
-  ###  async: 1
-  ###  poll: 0
-  ###  ignore_errors: true
-  ###- name: "Waiting for server to come back"
-  ###  local_action: wait_for
-  ###    host={{ inventory_hostname }}
-  ###    state=started
-  ###    delay=30
-  ###    timeout=300
-
+  # Install packages required for capsule
   - name: "Install capsule package"
     yum:
       name="{{ capsule_installer_pkg }}"
       state=present
 
-  # See https://access.redhat.com/solutions/1230493
-  - name: "Make sure Satellite can resolve Capsule hostname"
-    lineinfile: dest=/etc/hosts regexp='{{ ip }}\s+{{ inventory_hostname }}' line='{{ ip }} {{ inventory_hostname }}'
-    delegate_to: "{{ sat_server }}"
-
-  - name: "File /etc/hosts have correct SELinux context (had issues before)"
-    command:
-      restorecon -vR /etc/hosts
-    delegate_to: "{{ sat_server }}"
-    run_once: true
-
+  # Prepare for capsule installation
   - name: "Run capsule-certs-generate on Satellite"
     shell:
       "capsule-certs-generate --capsule-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
-    delegate_to: "{{ sat_server }}"
+    delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
     # Output of this command looks like this:
@@ -137,12 +83,12 @@
     #   The full log is at /var/log/capsule-certs-generate.log
   - name: "Download tarball created by capsule-certs-generate"
     get_url:
-      url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-certs.tar"
+      url="http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-certs.tar"
       dest="/root/{{ inventory_hostname }}-certs.tar"
       force=yes
   - name: "Download output produced by capsule-certs-generate"
     get_url:
-      url="http://{{ sat_server }}/pub/{{ inventory_hostname }}-out.raw"
+      url="http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-out.raw"
       dest="/root/{{ inventory_hostname }}-out.raw"
       force=yes
   - name: "Get only commands we need to run"
@@ -151,7 +97,13 @@
   - name: "Fix certificate tarball path"
     shell:
       sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+
+  # Finally install capsule
   - name: "Run Capsule configuration"
     command:
       bash "/root/{{ inventory_hostname }}-script.sh"
+    register: configuration
+    until: "{{ configuration.rc }} == 0"
+    retries: 5
+    delay: 10
 ...

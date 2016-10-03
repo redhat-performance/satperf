@@ -29,64 +29,18 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
 
     SATELLITE_VERSION = 6.2
 
-    def __init__(self, _conf=None, _logger=None, _hosts=None):
+    def __init__(self, _conf=None, _logger=None):
         super(SatelliteCore, self).__init__()
         self.config = _conf
         self.logger = _logger
-        self.hosts_cfg = _hosts
-        self.hosts = [i for i in list(_hosts) if i != 'DEFAULT']
         # load other settings and modules
         self.__load_settings()
         self.PbenchController = PbenchActions()
         self.SatelliteAPIController = SatelliteAPI()
 
-    def __get_hosts_list(self, type=None):
-        if type not in self.hosts:
-            return []
-        return [i.split()[0] for i in self.hosts_cfg[type]]
-
     def __load_settings(self):
-        self.HOSTS_INI_FILE = self.config.get("Settings", "hosts")
-        self.TNAME = self.config.get("Settings", "tname")
-        self.TEST_PREFIX = "satellite-%s" % self.TNAME
-        self.__build_rhn_metadata()
-        self.__build_sat_metadata()
-        self.__build_pbench_metadata()
-
-    def __build_rhn_metadata(self):
-        self.user = self.config.get('RHN','user')
-        self.passwd = self.config.get('RHN','passwd')
-        self.pool_id = self.config.get('RHN','pool_id')
-        self.admin_user = self.config.get('RHN','admin_user')
-        self.admin_pass = self.config.get('RHN','admin_pass')
-        self.org = self.config.get('RHN','org')
-        self.location = self.config.get('RHN','location')
-
-    def __build_sat_metadata(self):
-        self.CAPSULES = ' '.join(self.__get_hosts_list(type='capsules'))
-        self.NUM_CAPSULES = len(self.__get_hosts_list(type='capsules'))
-        self.SAT_SERVER = self.__get_hosts_list(type='satellite6')[0]
-        self.GRAPHITE_SERVER = self.__get_hosts_list(type='satellite6')[0]
-        self.GRAFANA_SERVER = self.__get_hosts_list(type='satellite6')[0]
-        self.DOCKER_HOSTS = self.__get_hosts_list(type='docker-hosts')
-        self.sat_repo = self.config.get('Satellite','repo')
-        self.sat_version = self.config.get('Satellite','version')
-        self.RHEL5_RELEASE = self.config.get('Satellite','rhel5')
-        self.RHEL6_RELEASE = self.config.get('Satellite','rhel6')
-        self.RHEL7_RELEASE = self.config.get('Satellite','rhel7')
-        self.content_repo_server = self.config.get('Satellite','rediscover')
-        self.SAT_REPO_COUNT = self.config.get('Satellite','repo_count')
-        self.CV_SCALE = bool(self.config.get('Satellite','cv_scale'))
-        self.CV_SCALE_COUNT = self.config.get('Satellite','cv_count')
-        self.CV_PUB_COUNT = self.config.get('Satellite','cv_pub')
-        self.CONCURRENT = bool(self.config.get("Satellite", "concurrent"))
-        self.manifest_file = self.config.get('Satellite','manifest')
-        self.backup_path = self.config.get('Satellite','backup_path')
-
-    def __build_pbench_metadata(self):
-        self.pbench_enabled = self.config.get('Pbench','enabled')
-        self.pbench_repo_server = self.config.get('Pbench','pbench_repo')
-        self.products = self.config.get('Pbench','products').split()
+        self.HOSTS_INI_FILE = self.config["satperf_hosts"]
+        self.PRIVATE_KEY = self.config["satperf_private_key"]
 
     def __prepare_runner_metadata(self, options, tasks):
         # # tags in the tasks section of YAML playbook
@@ -120,6 +74,8 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
             self.create_life_cycle()
         if nargs.enable_content:
             self.enable_content()
+        if nargs.upload_dashboard_grafana:
+            self.upload_dashboard_grafana()
         if nargs.register_content_hosts:
             self.register_content_host()
         if nargs.remove_capsule:
@@ -139,7 +95,7 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
         if nargs.resync_content or nargs.sync_content:
             self.sync_content()
         if nargs.sat_backup:
-            self.backup_satellite(_path='/home/backup')
+            self.backup_satellite()
         if nargs.sat_restore:
             self.store_backup()
         if nargs.setup:
@@ -170,7 +126,7 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
             playbook=_playbook_path,
             inventory=_inventory,
             extra_vars=_extra_vars,
-            #private_key_file="/path/to/key.pem",
+            private_key_file=self.PRIVATE_KEY,
             #vault_password=vaultpass,
             only_tags=tasks,
             stats=stats,

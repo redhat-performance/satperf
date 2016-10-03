@@ -1,82 +1,103 @@
 ---
     # - shell: |
-    #     y=("{{ CAPSULES }}"); g=("${!y[@]}"); res=`expr ${g[-1]} + 1`; echo $res
+    #     y=("{{ capsules }}"); g=("${!y[@]}"); res=`expr ${g[-1]} + 1`; echo $res
     #   register: numcapsules
 
     # - shell: |
     #     capid=`expr {{ item }} + 1`
     #     hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" capsule content \
     #       add-lifecycle-environment --environment-id 1 --id "$capid"
-    #   with_sequence: start=1 end={{ numcapsules.stdout }} stride=1
-    #   when: sync_capsule_conc == true
-
-    - shell: |
-        capid=`expr {{ item }} + 1`
-        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" capsule content \
-          add-lifecycle-environment --environment-id 1 --id "$capid"
-      with_sequence: start=1 end={{ NUM_CAPSULES }} stride=1
-      when: sync_capsule_conc == true
-
-    # - shell: |
-    #     ssh -o {{ SSH_OPTS }} root@{{ item }} "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
-    #   with_indexed_items: "{{ CAPSULES }}"
-    #   when: sync_capsule_conc == true
-
-    # - shell: |
-    #     pbench-register-tool-set
-    #   when: sync_capsule_conc == true
-
-    # - shell: |
-    #     ssh -o {{ SSH_OPTS }} root@{{ item }} "register-tool-set"
-    #   with_indexed_items: "{{ CAPSULES }}"
-    #   when: sync_capsule_conc == true
-
-    - shell: |
-        pbench-user-benchmark
-          --config={{ CONFIG_NAME }}-capsule-sync-concurrent
-          -- "./scripts/sync_capsules.sh {{ NUM_CAPSULES }} {{ CONFIG_NAME }}"
-      when: sync_capsule_conc == true
-
-    # - shell: |
-    #     pbench-user-benchmark
-    #       --config={{ CONFIG_NAME }}-capsule-sync-concurrent
-    #       -- "./scripts/sync_capsules.sh {{ NUM_CAPSULES }} {{ CONFIG_NAME }}"
-    #   when: sync_capsule_conc == true
-    - shell: |
-        echo "----------------------------------"
-        sleep 5
-        # Perform Sync and time results
-        for numcap in `seq 1 {{ NUM_CAPSULES }}`; do
-          capid=`expr ${numcap} + 1`
-          echo "[$(date -R)] Starting Capsule Synchronize: ${numcap}"
-          time hammer -u admin -p changeme capsule content synchronize --id ${capid} >> "{{ CONFIG_NAME }}".${capid} 2>&1  &
-        done
-        echo "[$(date -R)] Waiting for Sync to finish on Capsules"
-        wait
-        echo "[$(date -R)] Syncs finished on Capsules"
-        sleep 5
-        for numcap in `seq 1 {{ NUM_CAPSULES }}`; do
-          capid=`expr ${numcap} + 1`
-          echo "[$(date -R)] SCP sync latency to ."
-          echo "[$(date -R)] Real Timing:"
-          tail -n 3 "{{ CONFIG_NAME }}".${capid}  | awk '{split($2, mtos,"m");split(mtos[2], seconds, "s");  total = (mtos[1] * 60) + seconds[1]; if (total != 0) {print $1 ", " total }}'
-        done
-        echo "----------------------------------"
-      when: sync_capsule_conc == true
+    #   with_sequence: "start=1 end={{ numcapsules.stdout }} stride=1"
+    #   when: cv_startegy == 'conc'
 
     - shell: |
         capid=`expr {{ item }} + 1`;
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" capsule content \
           remove-lifecycle-environment --environment-id 1 --id "${capid}"
-      with_sequence: start=1 end={{ NUM_CAPSULES }} stride=1
-      when: sync_capsule_conc == true
+      with_sequence: "start=1 end={{ num_capsules }} stride=1"
+      when: cv_startegy == 'conc'
+
+    - shell: |
+        capid=`expr {{ item }} + 1`
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" capsule content \
+          add-lifecycle-environment --environment-id 1 --id "$capid"
+      with_sequence: "start=1 end={{ num_capsules }} stride=1"
+      when: cv_startegy == 'conc'
+    #
+    # - shell: |
+    #     ssh -o {{ SSH_OPTS }} root@{{ item }} "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
+    #   with_indexed_items: "{{ capsules }}"
+    #   when: cv_startegy == 'conc'
+
+    # - shell: |
+    #     pbench-register-tool-set
+    #   when: cv_startegy == 'conc'
+
+    # - shell: |
+    #     ssh -o {{ SSH_OPTS }} root@{{ item }} "register-tool-set"
+    #   with_indexed_items: "{{ capsules }}"
+    #   when: cv_startegy == 'conc'
+
+    # - shell: |
+    #     pbench-user-benchmark
+    #       --config={{ config_name }}-capsule-sync-concurrent
+    #       -- "./scripts/sync_capsules.sh {{ num_capsules }} {{ config_name }}"
+    #   when: cv_startegy == 'conc'
+
+    # - shell: |
+    #     pbench-user-benchmark
+    #       --config={{ config_name }}-capsule-sync-concurrent
+    #       -- "./scripts/sync_capsules.sh {{ num_capsules }} {{ config_name }}"
+    #   when: cv_startegy == 'conc'
+
+    - name: copy sync script
+      copy:
+          src=files/scripts/sync_capsules.sh
+          dest=/root/sync_capsules.sh
+          owner=root
+          group=root
+          mode=755
+
+    - name: trigger capsule sync script
+      shell: |
+        /root/sync_capsules.sh {{ num_capsules }} {{ config_name }} {{ sat_user }} {{ sat_pass }}
+      when: cv_startegy == 'conc'
+
+    # - shell: |
+    #     echo "----------------------------------"
+    #     sleep 5
+    #     # Perform Sync and time results
+    #     for numcap in `seq 1 {{ num_capsules }}`; do
+    #       capid=`expr ${numcap} + 1`
+    #       echo "[$(date -R)] Starting Capsule Synchronize: ${numcap}"
+    #       time hammer -u admin -p changeme capsule content synchronize --id ${capid} >> "{{ config_name }}".${capid} 2>&1  &
+    #     done
+    #     echo "[$(date -R)] Waiting for Sync to finish on Capsules"
+    #     wait
+    #     echo "[$(date -R)] Syncs finished on Capsules"
+    #     sleep 5
+    #     for numcap in `seq 1 {{ num_capsules }}`; do
+    #       capid=`expr ${numcap} + 1`
+    #       echo "[$(date -R)] SCP sync latency to ."
+    #       echo "[$(date -R)] Real Timing:"
+    #       tail -n 3 "{{ config_name }}".${capid}  | awk '{split($2, mtos,"m");split(mtos[2], seconds, "s");  total = (mtos[1] * 60) + seconds[1]; if (total != 0) {print $1 ", " total }}'
+    #     done
+    #     echo "----------------------------------"
+    #   when: cv_startegy == 'conc'
+
+    - shell: |
+        capid=`expr {{ item }} + 1`;
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" capsule content \
+          remove-lifecycle-environment --environment-id 1 --id "${capid}"
+      with_sequence: "start=1 end={{ num_capsules }} stride=1"
+      when: cv_startegy == 'conc'
 
     # - shell: |
     #      pbench-clear-tools; pbench-kill-tools
-    #   when: sync_capsule_conc == true
+    #   when: cv_startegy == 'conc'
 
     # - shell: |
     #     ssh -o {{ SSH_OPTS }} root@{{ item }} "pbench-clear-results; pbench-clear-tools; pbench-kill-tools"
-    #   with_indexed_items: "{{ CAPSULES }}"
-    #   when: sync_capsule_conc == true
+    #   with_indexed_items: "{{ capsules }}"
+    #   when: cv_startegy == 'conc'
 ...

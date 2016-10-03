@@ -1,12 +1,11 @@
 ---
-  - stat: path=/home/backup
+  - stat: path="{{ tests_backup_path }}"
     register: check_backup
 
-  - command: rm -rf {{ backup_path }}
+  - command:
+      rm -rf "{{ tests_backup_path }}"
     when: check_backup.stat.exists == True
-    register: cleanup_backup
 
-  - command: katello-backup {{ backup_path }}
-    register: backup
-    when: cleanup_backup.changed
+  - command:
+      katello-backup "{{ tests_backup_path }}"
 ...

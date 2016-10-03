@@ -1,10 +1,15 @@
 ---
 - hosts: capsules
   remote_user: root
-  # vars:
-  #   - sat_user: admin
-  #   - sat_pass: changeme
+  ###gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
     - common
+    - rhsm-satellite
+    ###- upgrade-restart
+    ###- capsule-ec2-partitioning
     - capsule
+    - capsule-populate
     - pbench_client

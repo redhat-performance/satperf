@@ -19,16 +19,44 @@
   #   retries: 5
   #   delay: 10
 
-  - shell: |
-      subscription-manager register --username "{{ rhsm_user }}" --password "{{ rhsm_pass }}" --auto-attach --force
-    register: registration
-    until: not registration.failed
+  # Make sure configuration matches hosted servers.
+  # Maybe we had the system registered to some satellite before? Clenup
+  - name: "Make sure configuration matches hosted servers"
+    command:
+      subscription-manager config --server.hostname=subscription.rhsm.redhat.com --server.port=443 --server.prefix=/subscription --rhsm.baseurl=https://cdn.redhat.com --rhsm.ca_cert_dir=/etc/rhsm/ca/ --rhsm.repo_ca_cert=/etc/rhsm/ca/redhat-uep.pem
+
+  # Register and attach to given pool
+  - name: "Register with RHSM"
+    command:
+      subscription-manager register --username "{{ rhsm_user }}" --password "{{ rhsm_pass }}" --force
+    register: registering
+    until: "{{ registering.rc }} == 0"
+    retries: 5
+    delay: 10
+  - debug:
+      var: registering
+      verbosity: 2
+  - name: "Determine pool we are going to attach to"
+    command:
+      subscription-manager list --available --all --matches "{{ rhsm_pool }}" --pool-only
+    register: querying
+    until: "{{ querying.rc }} == 0"
+    retries: 5
+    delay: 10
+  - debug:
+      var: querying
+      verbosity: 2
+  - name: "Attach to the pool"
+    command:
+      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+    register: attaching
+    until: "{{ attaching.rc }} == 0"
     retries: 5
     delay: 10
 
-  - shell: |
-      subscription-manager repos --disable 'rh*'
-      subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-      #subscription-manager repos --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
-    when: registration.changed
+  # Make sure only base RHEL repo is attached
+  - name: "Disable all RHSM repos and only enable base RHEL repo"
+    command:
+      subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+    when: registering.changed
 ...

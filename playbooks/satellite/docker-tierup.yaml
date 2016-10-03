@@ -5,15 +5,15 @@
   ###  - common
   tasks:
     - name: "Containes started"
-      shell:
-        docker run -h "{{ ansible_hostname }}container{{ item }}.example.com" -d r7perfsat
-      with_sequence:
-        count=500
-    - name: "List container IDs"
-      command:
-        docker ps -q
-      register: docker_ids
-    - debug: var=docker_ids
+      shell: |
+        for i in $( seq "{{ containers | default(250) }}" ); do
+          docker run -h "{{ ansible_hostname }}container$i.example.com" -d r7perfsat
+        done
+    #- name: "List container IDs"
+    #  command:
+    #    docker ps -q
+    #  register: docker_ids
+    #- debug: var=docker_ids
     - name: "Cleanup containers IP list"
       file:
         path=/root/container-ips
@@ -21,10 +21,10 @@
       ###delegate_to: 127.0.0.1
       ###run_once: true
     - name: "Get IPs of containers"
-      shell:
-        docker inspect "{{ item }}" | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0]['Id'], obj[0]['NetworkSettings']['IPAddress']" >>/root/container-ips
-      with_items: "{{ docker_ids.stdout_lines }}"
-      register: docker_ips
+      shell: |
+        for c in $(docker ps -q); do
+          docker inspect $c | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0][\"Id\"], obj[0][\"NetworkSettings\"][\"IPAddress\"]"
+        done >/root/container-ips
     # TODO: rewrite this into inventory - would shuffling work?
     - name: "Shuffle container IPs"
       shell:

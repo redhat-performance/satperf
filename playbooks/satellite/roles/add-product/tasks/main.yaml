@@ -1,6 +1,6 @@
 ---
   - shell: |
       hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' \
-        product create --organization-id {{ orgid }} --name {{item}}
-    with_indexed_items: "{{ products }}"
+        product create --organization '{{ sat_org }}' --name '{{ item }}'
+    with_items: "{{ tests_products }}"
 ...

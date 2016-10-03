@@ -2,6 +2,12 @@
 *~
 
 *.retry
+
+*.swp
+
+conf/*local.yaml
+conf/id_rsa*
+conf/*.zip
 manifest.zip
 log/
 
@@ -10,3 +16,4 @@ yacctab.py
 
 __pycache__
 venv/
+env/

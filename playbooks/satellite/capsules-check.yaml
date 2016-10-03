@@ -4,11 +4,25 @@
   roles:
   ###  - common
   tasks:
-    - name: "katello-service restart"
-      command:
-        katello-service restart
+    #- name: "katello-service restart"
+    #  command:
+    #    katello-service restart
+
+    #- name: "katello-service stop"
+    #  command:
+    #    katello-service stop
+
+    #- command:
+    #    systemctl restart qdrouterd
+
     - name: "katello-service status"
       command:
         katello-service status
       register: katello_status
+      ignore_errors: true
     - debug: var=katello_status.stdout_lines|last
+    - name: "df -h"
+      command:
+        df -h
+      register: df_h
+    - debug: var=df_h.stdout_lines

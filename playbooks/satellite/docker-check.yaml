@@ -3,10 +3,10 @@
   remote_user: root
   gather_facts: no
   tasks:
-    - name: "Workaround permission error when creating repodata on container"
-      selinux:
-        policy=targeted
-        state=permissive
+    ###- name: "Workaround permission error when creating repodata on container"
+    ###  selinux:
+    ###    policy=targeted
+    ###    state=permissive
     - name: "Get containers ID"
       command:
         docker ps -q
@@ -24,8 +24,18 @@
         cat /root/container-ips.shuffled
       register: container_ips
     - debug: var=container_ips.stdout_lines|length
+    - name: "Show disk usage"
+      command:
+        df -h
+      register: df_h
+    - debug: var=df_h.stdout_lines
     - name: "grep '^ *server' /root/clients.yaml"
       command:
         grep '^ *server' /root/clients.yaml
       register: clients_server
     - debug: var=clients_server.stdout_lines
+    - name: "lvdisplay | grep -e 'LV Name' -e 'Allocated pool data'"
+      shell:
+        lvdisplay | grep -e 'LV Name' -e 'Allocated pool data'
+      register: lv_docker_pool
+    - debug: var=lv_docker_pool.stdout_lines

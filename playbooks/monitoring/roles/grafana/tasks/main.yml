@@ -3,13 +3,24 @@
 # Install/run grafana-server for satellite
 #
 
-- name: Import EPEL GPG Key
-  rpm_key: key=https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
-    state=present
+#
+# Check variables
+#
+- assert:
+    that: "groups['graphite']|length == 1"
+    msg: "Graphite server not specified or too many of them specified"
+- assert:
+    that: "groups['grafana']|length == 1"
+    msg: "Grafana server not specified or too many of them specified"
 
-- name: Check for EPEL repo
-  yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    state=present
+
+# - name: Import EPEL GPG Key
+#   rpm_key: key=https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-7
+#     state=present
+
+# - name: Check for EPEL repo
+#   yum: name=https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+#     state=present
 
 - name: Install grafana rpms
   yum: name={{ item }} state=present
@@ -47,7 +58,7 @@
   ignore_errors: true
 
 - name: Wait for grafana to be ready
-  wait_for: host={{grafana_host}} port={{grafana_port}} delay=5 timeout=30
+  wait_for: host=localhost port={{grafana_port}} delay=5 timeout=30
 
 #
 # Add graphite server as a default datasource
@@ -63,7 +74,7 @@
   connection: local
 
 - name: Create Data Source on grafana server
-  command: "curl -X POST -H 'Content-Type: application/json' -d @{{role_path}}/files/data_source.json http://{{grafana_username}}:{{grafana_password}}@{{grafana_host}}:{{grafana_port}}/api/datasources"
+  command: "curl -X POST -H 'Content-Type: application/json' -d @{{role_path}}/files/data_source.json http://{{grafana_username}}:{{grafana_password}}@{{groups['grafana']|first}}:{{grafana_port}}/api/datasources"
   connection: local
 
 - name: Remove leftover json file

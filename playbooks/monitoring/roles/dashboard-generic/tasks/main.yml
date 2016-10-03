@@ -1,26 +1,44 @@
 ---
 #
+# Check variables
+#
+- assert:
+    that: "groups['grafana']|length == 1"
+    msg: "Grafana server not specified or too many of them specified"
+
+#
 # Upload Generic Machine Dashboards to Grafana
 #
 
-- name: Remove existing dashboards
-  command: "curl -X DELETE -H 'Content-Type: application/json' http://{{grafana_username}}:{{grafana_password}}@{{grafana_host}}:{{grafana_port}}/api/dashboards/db/{{item.process_list_name|lower}}-general-system-performance"
-  when: overwrite_existing
+# TODO replace with "uri" module some day?
+- name: "Remove existing dashboards"
+  command:
+    "curl -X DELETE -H 'Content-Type: application/json' http://{{grafana_username}}:{{grafana_password}}@{{groups['grafana']|first}}:{{grafana_port}}/api/dashboards/db/{{item.process_list_name|lower}}-general-system-performance"
   with_items: "{{dashboards}}"
+  when: overwrite_existing
+  register: delete
+- assert:
+    that: "'Invalid username or password' not in item.stdout"
+  with_items: "{{ delete.results }}"
 
-- name: Ensure {{role_path}}/files directory exists
-  file: path={{role_path}}/files state=directory
-
-- name: Generate dashboards
+- name: "Generate dashboards"
   template:
     src: "{{item.template_name}}_general_system_performance.json.j2"
-    dest: "{{role_path}}/files/{{item.process_list_name}}_general_system_performance.json"
+    dest: "/root/{{item.process_list_name}}_general_system_performance.json"
   with_items: "{{dashboards}}"
 
-- name: Upload dashboards to grafana
-  command: "curl -X POST -H 'Content-Type: application/json' -d @{{role_path}}/files/{{item.process_list_name}}_general_system_performance.json http://{{grafana_username}}:{{grafana_password}}@{{grafana_host}}:{{grafana_port}}/api/dashboards/db"
+# TODO replace with "uri" module some day?
+- name: "Upload dashboards to grafana"
+  command:
+    "curl -X POST -H 'Content-Type: application/json' -d @/root/{{item.process_list_name}}_general_system_performance.json http://{{grafana_username}}:{{grafana_password}}@{{groups['grafana']|first}}:{{grafana_port}}/api/dashboards/db"
   with_items: "{{dashboards}}"
+  register: upload
+- assert:
+    that: "'Invalid username or password' not in item.stdout"
+  with_items: "{{ upload.results }}"
 
-- name: Remove leftover json file(s)
-  file: path={{role_path}}/files/{{item.process_list_name}}_general_system_performance.json state=absent
+- name: "Remove leftover json file(s)"
+  file:
+    path: "/root/{{item.process_list_name}}_general_system_performance.json"
+    state: absent
   with_items: "{{dashboards}}"

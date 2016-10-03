@@ -4,12 +4,12 @@
           lifecycle-environment create \
           --name='DEV' \
           --prior='Library' \
-          --organization={{ org }}
+          --organization='{{ sat_org }}'
 
     - shell: |
         hammer -u {{ sat_user }} -p {{ sat_pass }} \
           lifecycle-environment create \
           --name='QE' \
           --prior='DEV' \
-          --organization={{ org }}
+          --organization='{{ sat_org }}'
 ...

@@ -38,7 +38,7 @@ LoadPlugin uptime
 # Graphite Host Configuration
 <Plugin write_graphite>
   <Carbon>
-    Host "{{graphite_host}}"
+    Host "{{groups['graphite']|first}}"
     Port "2003"
     Prefix "{{graphite_prefix}}."
     Protocol "tcp"

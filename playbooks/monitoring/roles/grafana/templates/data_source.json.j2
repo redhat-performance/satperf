@@ -1,7 +1,7 @@
 {
   "name":"graphite",
   "type":"graphite",
-  "url":"http://{{graphite_host}}:{{graphite_port}}/",
+  "url":"http://{{groups['graphite']|first}}:{{graphite_port}}/",
   "access":"proxy",
   "isDefault":true,
   "basicAuth":true,

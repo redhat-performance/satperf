@@ -32,7 +32,8 @@
 ### Priority
 
 - [ ] connect generic.yaml and cred.yaml to variables loaded from conf/satperf.conf
-- [ ] sort capsules var set in satperf.conf and hosts.ini
+  - [ ] sort attach pool id, RHN registration creds etc with content hosts
+  - [x] sort capsules var set in satperf.conf and hosts.ini
 - [ ] handle Dockerpod_file
 - [ ] connect scripts/ to satellite playbooks
 - [ ] create vms from satperf

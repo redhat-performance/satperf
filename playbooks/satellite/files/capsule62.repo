@@ -1,5 +1,0 @@
-[sat62-capsule]
-name=Satellite 6.2 Capsule Packages
-baseurl=http://sat.server.com/pulp/repos/Sat6-CI/QA/Capsule_RHEL7/custom/Red_Hat_Capsule_6_2_Composes/RHEL7_Capsule_x86_64_os/
-enabled=1
-gpgcheck=0

@@ -4,7 +4,7 @@
           repository-set enable \
           --name="Red Hat Enterprise Linux {{ item }} Server (RPMs)" \
           --basearch="x86_64" --releasever="{{ item }}Server" \
-          --product "Red Hat Enterprise Linux Server" --organization "{{ org }}"
+          --product "Red Hat Enterprise Linux Server" --organization "{{ sat_org }}"
       with_sequence: start=5 end=7 stride=1
       register: x86_content_enable
 
@@ -13,7 +13,7 @@
           repository-set enable \
           --name="Red Hat Enterprise Linux {{ item }} Server (RPMs)" \
           --basearch="i386" --releasever="{{ item }}Server" \
-          --product "Red Hat Enterprise Linux Server" --organization "{{ org }}"
+          --product "Red Hat Enterprise Linux Server" --organization "{{ sat_org }}"
       with_sequence: start=5 end=6 stride=1
       register: i386_content_enable
 ...

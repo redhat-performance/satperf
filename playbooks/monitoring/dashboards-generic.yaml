@@ -3,10 +3,13 @@
 # Builds and uploads dashboards to your grafana server for several host types
 #
 
-- hosts: localhost
+- hosts: grafana
+  remote_user: root
   gather_facts: false
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   vars:
-    ansible_connection: local
     overwrite_existing: true
     dashboards:
       - template_name: satellite6

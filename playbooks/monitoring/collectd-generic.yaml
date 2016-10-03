@@ -13,7 +13,8 @@
   vars:
     config_type: graphite
   vars_files:
-    - groups_vars/generic.yaml
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
     - collectd-generic
   tags: graphite
@@ -23,7 +24,8 @@
   vars:
     config_type: satellite6
   vars_files:
-    - groups_vars/generic.yaml
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
     - collectd-generic
   tags: satellite6
@@ -33,7 +35,8 @@
   vars:
     config_type: capsules
   vars_files:
-    - groups_vars/generic.yaml
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
     - collectd-generic
   tags: capsules
@@ -43,7 +46,8 @@
   vars:
     config_type: docker-hosts
   vars_files:
-    - groups_vars/generic.yaml
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
     - collectd-generic
   tags: docker-hosts

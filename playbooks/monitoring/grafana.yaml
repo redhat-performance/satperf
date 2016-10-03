@@ -5,7 +5,10 @@
 
 - hosts: grafana
   remote_user: root
+  ###gather_facts: no
   vars_files:
-    - groups_vars/generic.yaml
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
-    - { role: grafana }
+    - { role: ../satellite/roles/rhsm, when: "groups['graphite']|first != groups['grafana']|first" }
+    - { role: graphite }

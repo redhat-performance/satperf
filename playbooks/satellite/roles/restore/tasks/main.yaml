@@ -1,4 +1,4 @@
 ---
-    - command: katello-restore {{ backup_path }}
+    - command: katello-restore {{ tests_backup_path }}
       register: restore_backup
 ...

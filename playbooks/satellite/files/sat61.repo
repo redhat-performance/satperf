@@ -1,5 +1,0 @@
-[sat61]
-name=Satellite 6.1
-baseurl=http://192.168.122.1/repos/Satellite-6.1.0-RHEL-6-20160321.0-Satellite-x86_64/
-enabled=1
-gpgcheck=0

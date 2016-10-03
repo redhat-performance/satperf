@@ -1,12 +1,13 @@
 ---
-  - get_url:
+  - name: "Setup pbench repo"
+    get_url:
       url="{{ pbench_repo_file }}"
       dest=/etc/yum.repos.d/pbench.repo
-
-  - yum:
+      force=yes
+  - name: "Install pbench-agent"
+    yum:
       name=pbench-agent
       state=present
-
   ## TODO: I assume we can delete this?
   #- shell:
   #    source /opt/pbench-agent/config
