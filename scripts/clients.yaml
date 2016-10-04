@@ -1,0 +1,227 @@
+# For some documentation on what is this and how to use this please see clients-README file
+
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  vars:
+    #sat: sat61.example.com
+    #server: capsule61.example.com
+    #pool_rhel: 4028fa25545bed6101545c14bbf10063
+    #pool_tools: 4028fa25545bed6101547f49f12602e7
+    sat: perf56.perf.lab.eng.bos.redhat.com
+    server: capsule01.perf.lab.eng.bos.redhat.com
+    pool_rhel: 4028fab8545c099a01545c14c84d0063
+    pool_tools: 4028fab85461d5df01547f4c73e4005c
+    puppet_env: KT_Default_Organization_Library_test_2
+  tasks:
+    # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
+    - name: "Wait for machine to be available"
+      local_action: wait_for
+        host="{{ inventory_hostname }}"
+        port=22
+        delay=5
+        timeout=300
+        state=started
+    - name: "Gather facts"
+      setup:
+    - name: "Rename /etc/rhsm-host and /etc/pki/entitlement-host"
+      shell: |
+        if [ -d /etc/rhsm-host ]; then mv /etc/rhsm-host{,.ORIG}; else true; fi
+        if [ -d /etc/pki/entitlement-host ]; then mv /etc/pki/entitlement-host{,.ORIG}; else true; fi
+    - name: "Make sure /etc/hosts contains all capsules"
+      shell: |
+        grep sat62 /etc/hosts || echo "172.17.50.34 perf56.perf.lab.eng.bos.redhat.com">>/etc/hosts
+        grep capsule01 /etc/hosts || echo "172.73.0.0 capsule01.perf.lab.eng.bos.redhat.com">>/etc/hosts
+    - name: "Clean subscription-manager stuff"
+      shell:
+        subscription-manager clean
+    - name: "Remove katello-ca-consumer package"
+      shell: |
+        if rpm -qa | grep katello-ca-consumer; then
+          yum --disablerepo=\* -y remove katello-ca-consumer-\*
+        fi
+    - name: "Remove other repos which might be broken"
+      shell:
+        rm -f /etc/yum.repos.d/*.repo
+    - name: "Install katello-ca-consumer"
+      action:
+        shell
+          rpm -Uvh "http://{{ server }}/pub/katello-ca-consumer-latest.noarch.rpm"
+      register: installed
+      until: "{{ installed.rc }} == 0"
+      retries: 10
+      delay: 10
+    - name: "Clean yum cache"
+      shell:
+        rm -rf /var/cache/yum/*
+    - name: "Register"
+      shell:
+        subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
+    - name: "Attach to RHEL product"
+      shell:
+        subscription-manager attach --pool "{{ pool_rhel }}"
+    - name: "Attach to 6.2 Tools custom product"
+      shell:
+        subscription-manager attach --pool "{{ pool_tools }}"
+
+    - name: "Remove katello-agent when installed"
+      yum:
+        name=katello-agent
+        state=absent
+    - name: "Remove gofer when installed"
+      yum:
+        name=gofer
+        state=absent
+    - name: "Make sure daemonize is installed"
+      shell: |
+        if ! rpm -q daemonize; then
+          rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
+            || rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
+            || rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm"
+        fi
+    - name: "Install katello-agent"
+      action:
+        yum
+          name=katello-agent
+          state=latest
+      register: installed
+      until: "{{ installed.rc }} == 0"
+      retries: 10
+      delay: 10
+    - name: "Kill journald if it is running"
+      shell:
+        pkill --full --exact '/usr/lib/systemd/systemd-journald' || true
+    - name: "Start journald"
+      command:
+        daemonize /usr/lib/systemd/systemd-journald
+    - name: "Kill goferd if it is running"
+      shell:
+        pkill --full --exact 'python /usr/bin/goferd --foreground' || true
+    - name: "Start goferd"
+      command:
+        daemonize -- /usr/bin/goferd --foreground
+
+    - name: "Downgrade ksh package so we have some applicable errata"
+      shell: |
+        rpm -q ksh && rpm -e ksh
+        yum -y install ksh-20120801-19.el7
+
+    - name: "Install puppet"
+      action:
+        yum
+          name=puppet
+          state=latest
+      register: installed
+      until: "{{ installed.rc }} == 0"
+      retries: 10
+      delay: 10
+    - name: "Set puppet server"
+      command:
+        /usr/bin/puppet config set server "{{ server }}" --section agent
+    - name: "Set puppet ca_server"
+      command:
+        /usr/bin/puppet config set ca_server "{{ server }}" --section agent
+    - name: "Set puppet environment"
+      command:
+        /usr/bin/puppet config set environment "{{ puppet_env }}" --section agent
+    # We need to serialize these hammer calls because of https://bugzilla.redhat.com/show_bug.cgi?id=1336007
+    - name: "Configure puppet stuff on Sat for given container"
+      command:
+        hammer -u admin -p changeme host update --name "{{ hostvars[item]['ansible_fqdn'] }}" --puppet-proxy "{{ server }}" --puppet-ca-proxy "{{ server }}" --environment "{{ puppet_env }}" --puppet-classes qaredhattest
+      with_items: groups['all']
+      run_once: true
+      delegate_to: "{{ sat }}"
+    - name: "Register puppet host"
+      shell:
+        /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
+    - name: "Pickup action"
+      command:
+        /usr/bin/puppet agent --onetime
+    - name: "Check if file was created"
+      action: command
+        cat /tmp/puppet-qaredhattest.txt
+      register: deployed
+      until: "{{ deployed.rc }} == 0"
+      retries: 60
+      delay: 10
+
+    - name: "Make sure /root/.ssh/ exists"
+      file:
+        path=/root/.ssh
+        state=directory
+        mode=0700
+    - name: "Make sure /root/.ssh/authorized_keys exists"
+      file:
+        path=/root/.ssh/authorized_keys
+        state=file
+        mode=0600
+    - name: "Obtain remote execution SSH key"
+      action:
+        command curl --insecure "https://{{ server }}:9090/ssh/pubkey"
+      register: ssh_key
+    - name: "Deploy remote execution SSH key"
+      lineinfile:
+        dest=/root/.ssh/authorized_keys
+        regexp=" foreman-proxy@{{ server }}$"
+        line="{{ ssh_key.stdout }}"
+
+    - name: "Gather lsof on Sat"
+      delegate_to: "{{ sat }}"
+      shell: lsof | cut -d ' ' -f 1 | sort | uniq -c | sort -n | tail -n 50
+      register: lsof_command
+      run_once: true
+    - name: "Save lsof log from Sat"
+      local_action:
+        copy content="{{ lsof_command.stdout }}" dest="/root/lsof-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+    - name: "Gather qpid on Sat"
+      delegate_to: "{{ sat }}"
+      command: qpid-stat --ssl-certificate=/etc/pki/katello/qpid_client_striped.crt -b amqps://localhost:5671 -g
+      register: qpidstat_command
+      run_once: true
+    - name: "Save qpid log from Sat"
+      local_action:
+        copy content="{{ qpidstat_command.stdout }}" dest="/root/qpidstat-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+    - name: "Gather memory use on Sat"
+      delegate_to: "{{ sat }}"
+      shell: ps --no-headers -eo rss,comm>a; for comm in $( sed 's/^\s*[0-9]\+\s*\(.*\)$/\1/' a | sort -u ); do size=$( grep "\s$comm" a | sed 's/^\s*\([0-9]\+\)\s*.*$/\1/' | paste -sd+ - | bc ); echo "$size $comm"; done | sort -n | tail -n 50
+      register: memory_command
+      run_once: true
+    - name: "Save memory use log from Sat"
+      local_action:
+        copy content="{{ memory_command.stdout }}" dest="/root/memory-sat-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+
+    - name: "Gather lsof on Capsule"
+      delegate_to: "{{ server }}"
+      shell: lsof | cut -d ' ' -f 1 | sort | uniq -c | sort -n | tail -n 50
+      register: lsof_command
+      run_once: true
+    - name: "Save lsof log from Capsule"
+      local_action:
+        copy content="{{ lsof_command.stdout }}" dest="/root/lsof-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+    - name: "Gather qpid on Capsule"
+      delegate_to: "{{ server }}"
+      command: qpid-stat --ssl-certificate=/etc/pki/katello/qpid_client_striped.crt -b amqps://localhost:5671 -g
+      register: qpidstat_command
+      run_once: true
+    - name: "Save qpid log from Capsule"
+      local_action:
+        copy content="{{ qpidstat_command.stdout }}" dest="/root/qpidstat-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+    - name: "Gather memory use on Capsule"
+      delegate_to: "{{ server }}"
+      shell: ps --no-headers -eo rss,comm>a; for comm in $( sed 's/^\s*[0-9]\+\s*\(.*\)$/\1/' a | sort -u ); do size=$( grep "\s$comm" a | sed 's/^\s*\([0-9]\+\)\s*.*$/\1/' | paste -sd+ - | bc ); echo "$size $comm"; done | sort -n | tail -n 50
+      register: memory_command
+      run_once: true
+    - name: "Save memory use log from Capsule"
+      local_action:
+        copy content="{{ memory_command.stdout }}" dest="/root/memory-capsule-{{ ansible_date_time.date }}-{{ ansible_date_time.time }}-{{ ansible_date_time.tz }}.log"
+      run_once: true
+
+    - name: "Drop caches on localhost"
+      local_action:
+        shell echo 3 > /proc/sys/vm/drop_caches
+      run_once: true

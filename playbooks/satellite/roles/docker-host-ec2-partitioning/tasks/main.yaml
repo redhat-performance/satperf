@@ -1,0 +1,10 @@
+---
+  - name: "Volume group on ephemeral drives exists"
+    shell: |
+      pvcreate --yes /dev/xvdb
+      [ -e /dev/xvdc ] \
+          && pvcreate --yes /dev/xvdc
+      [ -e /dev/xvdc ] \
+          && vgcreate docker /dev/xvdb /dev/xvdc \
+          || vgcreate docker /dev/xvdb
+...

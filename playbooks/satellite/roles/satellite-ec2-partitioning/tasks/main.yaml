@@ -1,0 +1,28 @@
+---
+  - name: "LVM stuff"
+    shell: |
+      pvcreate /dev/xvdf
+      pvcreate /dev/xvdg
+      pvcreate /dev/xvdh
+      pvcreate /dev/xvdi
+      vgcreate vg_data /dev/xvdf /dev/xvdg /dev/xvdh /dev/xvdi
+      lvcreate --name lv_pulp --extents 100%FREE vg_data /dev/xvdf
+      lvcreate --name lv_pgsql --extents 100%FREE vg_data /dev/xvdg
+      lvcreate --name lv_mongodb --extents 100%FREE vg_data /dev/xvdh
+      lvcreate --name lv_qpidd --extents 100%FREE vg_data /dev/xvdi
+  - name: "Filesystem stuff"
+    shell: |
+      mkfs.xfs /dev/vg_data/lv_pulp
+      mkfs.xfs /dev/vg_data/lv_pgsql
+      mkfs.xfs /dev/vg_data/lv_mongodb
+      mkfs.xfs /dev/vg_data/lv_qpidd
+      echo "/dev/vg_data/lv_pulp /var/lib/pulp xfs defaults 0 0" >>/etc/fstab
+      echo "/dev/vg_data/lv_pgsql /var/lib/pgsql xfs defaults 0 0" >>/etc/fstab
+      echo "/dev/vg_data/lv_mongodb /var/lib/mongodb xfs defaults 0 0" >>/etc/fstab
+      echo "/dev/vg_data/lv_qpidd /var/lib/qpidd xfs defaults 0 0" >>/etc/fstab
+      mkdir -p /var/lib/pulp /var/lib/mongodb /var/lib/pgsql /var/lib/qpidd
+      mount /var/lib/pulp
+      mount /var/lib/pgsql
+      mount /var/lib/mongodb
+      mount /var/lib/qpidd
+...

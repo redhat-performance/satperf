@@ -1,0 +1,6 @@
+---
+  - name: "Volume group on empty drive exists"
+    shell: |
+      pvcreate --yes /dev/vda3
+      vgcreate docker /dev/vda3
+...

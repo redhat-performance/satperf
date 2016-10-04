@@ -1,0 +1,26 @@
+---
+  - name: "Set organization and location"
+    command:
+      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ item }} --organizations '{{ sat_org }}' --locations '{{ sat_location }}'"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+  - name: "Add '*' autosign entry"
+    command:
+      "true"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+  - name: "Assign Library"
+    command:
+      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name {{ item }} --organization '{{ sat_org }}' --environment Library"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+  - name: "Sync"
+    command:
+      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library --async"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+...

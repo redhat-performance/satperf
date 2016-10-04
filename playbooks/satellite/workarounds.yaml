@@ -1,0 +1,115 @@
+---
+- hosts: capsules satellite
+  remote_user: root
+  roles:
+  ###  - common
+  tasks:
+    - blockinfile:
+        dest: /etc/httpd/conf.d/passenger.conf
+        block: |
+          <IfModule mod_passenger.c>
+            PassengerRoot /usr/lib/ruby/gems/1.8/gems/passenger-4.0.18/lib/phusion_passenger/locations.ini
+            PassengerRuby /usr/bin/ruby
+            PassengerMaxPoolSize 24
+            PassengerMaxRequestQueueSize 200
+            PassengerStatThrottleRate 120
+          </IfModule>
+    #### Sat only
+    ###- blockinfile:
+    ###    dest: /etc/httpd/conf.d/05-foreman.conf
+    ###    insertbefore: "</VirtualHost>"
+    ###    block: |
+    ###      PassengerAppRoot /usr/share/foreman
+    ###      PassengerRuby /usr/bin/tfm-ruby
+    ###      PassengerMinInstances 6
+    ###      PassengerStartTimeout 90
+    ###      PassengerMaxPreloaderIdleTime 0
+    ###      PassengerMaxRequests 10000
+    ###      PassengerPreStart https://ip-10-1-10-1.us-west-2.compute.internal
+    - blockinfile:
+        dest: /etc/httpd/conf.d/25-puppet.conf
+        insertbefore: "</VirtualHost>"
+        block: |
+          PassengerMinInstances 6
+          PassengerStartTimeout 90
+          PassengerMaxPreloaderIdleTime 0
+          PassengerMaxRequests 10000
+          PassengerPreStart https://ip-10-1-10-1.us-west-2.compute.internal:8140
+    - name: "qdrouterd lots of clients"
+      shell:
+        echo 1000000 > /proc/sys/fs/aio-max-nr
+
+    - name: "qdrouterd service directory"
+      file:
+        path=/etc/systemd/system/qdrouterd.service.d
+        state=directory
+        owner=root
+        group=root
+        mode=0755
+    - name: "qdrouterd limits.conf"
+      copy:
+        src=limits.conf
+        dest=/etc/systemd/system/qdrouterd.service.d/limits.conf
+        owner=root
+        group=root
+        mode=0644
+    #- file:
+    #    path=/etc/systemd/system/qdrouterd.service.d/limits.conf
+    #    state=absent
+    - name: "qdrouterd tweak fix selinux"
+      command:
+        restorecon -vR /etc/systemd/system/qdrouterd.service.d
+
+    - name: "qpidd service directory"
+      file:
+        path=/etc/systemd/system/qpidd.service.d
+        state=directory
+        owner=root
+        group=root
+        mode=0755
+    - name: "qpidd limits.conf"
+      copy:
+        src=limits.conf
+        dest=/etc/systemd/system/qpidd.service.d/limits.conf
+        owner=root
+        group=root
+        mode=0644
+    - name: "qpidd tweak fix selinux"
+      command:
+        restorecon -vR /etc/systemd/system/qpidd.service.d
+
+    - name: "httpd service directory"
+      file:
+        path=/etc/systemd/system/httpd.service.d
+        state=directory
+        owner=root
+        group=root
+        mode=0755
+    - name: "httpd limits.conf"
+      copy:
+        src=limits.conf
+        dest=/etc/systemd/system/httpd.service.d/limits.conf
+        owner=root
+        group=root
+        mode=0644
+    - name: "httpd tweak fix selinux"
+      command:
+        restorecon -vR /etc/systemd/system/httpd.service.d
+
+    - name: "SystemD reload"
+      command:
+        systemctl daemon-reload
+    - name: "katello-service restart"
+      command:
+        katello-service restart
+
+    - name: "katello-service status"
+      command:
+        katello-service status
+      register: katello_status
+    - debug: var=katello_status.stdout_lines|last
+    - name: "df -h"
+      command:
+        df -h
+      register: df_h
+    - debug: var=df_h.stdout_lines

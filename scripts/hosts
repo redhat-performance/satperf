@@ -1,0 +1,10 @@
+[capsules]
+perf10.perf.lab.eng.bos.redhat.com
+perf56.perf.lab.eng.bos.redhat.com
+
+[docker-hosts]
+perf14.perf.lab.eng.bos.redhat.com
+
+[satellite]
+perf54.perf.lab.eng.bos.redhat.com
+

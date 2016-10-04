@@ -1,0 +1,6 @@
+[2016-07-27 03:30:32,042] [WARNING ] [satellite.py:112:install_satellite()] - [Py Ansible API v2.1] is unstable
+[2016-07-27 03:30:32,762] [INFO ] [satellite.py:118:install_satellite()] - satellite.sample.com : {'failures': 1}
+[2016-07-27 03:30:33,356] [INFO ] [satellite.py:126:install_capsule()] - capsule.sample.com : {'failures': 1}
+[2016-07-27 03:30:34,097] [INFO ] [satellite.py:134:prepare_docker_hosts()] - docker1.sample.com : {'failures': 1}
+[2016-07-27 03:30:34,097] [INFO ] [satellite.py:134:prepare_docker_hosts()] - docker2.sample.com : {'failures': 1}
+[2016-07-27 03:30:34,097] [INFO ] [satellite.py:134:prepare_docker_hosts()] - docker3.sample.com : {'failures': 1}

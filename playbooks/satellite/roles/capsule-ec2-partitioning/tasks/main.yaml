@@ -1,0 +1,19 @@
+---
+  # Get partitions for Pulp and Mongo ready
+  - name: "LVM stuff"
+    shell: |
+      pvcreate /dev/xvdf
+      pvcreate /dev/xvdg
+      vgcreate vg_data /dev/xvdf /dev/xvdg
+      lvcreate --name lv_pulp --extents 100%FREE vg_data /dev/xvdf
+      lvcreate --name lv_mongo --extents 100%FREE vg_data /dev/xvdg
+  - name: "Filesystem stuff"
+    shell: |
+      mkfs.xfs /dev/vg_data/lv_pulp
+      mkfs.xfs /dev/vg_data/lv_mongo
+      echo "/dev/vg_data/lv_pulp /var/lib/pulp xfs defaults 0 0" >>/etc/fstab
+      echo "/dev/vg_data/lv_mongo /var/lib/mongodb xfs defaults 0 0" >>/etc/fstab
+      mkdir /var/lib/pulp /var/lib/mongodb
+      mount /var/lib/pulp
+      mount /var/lib/mongodb
+...

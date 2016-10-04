@@ -1,0 +1,49 @@
+---
+- hosts: satellite6
+  remote_user: root
+  roles:
+    - common
+  tasks:
+    - name: "Ensure that katello-remove is available"
+      stat:
+        path=/usr/bin/katello-remove
+      register: remover
+    - name: "Ensure we have expect installed"
+      yum:
+        name=expect
+        state=present
+      when: remover.stat.exists is defined and remover.stat.exists == true
+    - name: "Deploy expect script for katello-remove"
+      copy:
+        src=automate_capsule-remove.exp
+        dest=/root/automate_capsule-remove.exp
+        mode="u+x"
+      when: remover.stat.exists is defined and remover.stat.exists == true
+    - name: "Uninstall capsule"
+      command:
+        /root/automate_capsule-remove.exp
+      when: remover.stat.exists is defined and remover.stat.exists == true
+
+    - name: "Check if /etc/foreman-installer exists"
+      stat:
+        path=/etc/foreman-installer
+      register: messpath
+    - name: "Cleanup mess"
+      file:
+        path=/etc/foreman-installer
+        state=absent
+      when: messpath.stat.exists is defined and messpath.stat.exists == true
+
+    - name: "Clean registrations"
+      shell: |
+        subscription-manager unregister || true
+        subscription-manager clean || true
+        yum -y remove katello-ca-consumer\* || true
+    - name: "No repos on the system"
+      command:
+        yum-config-manager --disable '*'
+
+    - name: "Delete manifest"
+      command:
+        rm -rf /root/manifest.zip
+...

@@ -33,9 +33,9 @@ hammer --username admin --password changeme repository upload-content --name $PU
 
 echo "##### Create package repos #####"
 hammer -u admin -p changeme product create --organization-id 1 --name "RHEL7 x86_64 Base"
-hammer --username admin --password changeme repository create --content-type yum --label "rhel7-x86_64-base" --name "RHEL7 x86_64 Base" --organization-id 1 --product "RHEL7 x86_64 Base" --url "file:///var/lib/pulp/jhutar-7Server-x86_64"
+hammer --username admin --password changeme repository create --content-type yum --label "rhel7-x86_64-base" --name "RHEL7 x86_64 Base" --organization-id 1 --product "RHEL7 x86_64 Base" --url "..."
 hammer -u admin -p changeme product create --organization-id 1 --name "Sat6.2 Tools Beta"
-hammer --username admin --password changeme repository create --content-type yum --label "sat62-tools-beta" --name "Sat6.2 Tools Beta" --organization-id 1 --product "Sat6.2 Tools Beta" --url "file:///var/lib/pulp/jhutar-SatTools-6.2-GA-Server-x86_64"
+hammer --username admin --password changeme repository create --content-type yum --label "sat62-tools-beta" --name "Sat6.2 Tools Beta" --organization-id 1 --product "Sat6.2 Tools Beta" --url "..."
 
 echo "##### Synchronize in background #####"
 hammer -u admin -p changeme repository synchronize --organization-id 1 --product "RHEL7 x86_64 Base" --name "RHEL7 x86_64 Base" --async
@@ -49,5 +49,3 @@ hammer -u admin -p changeme content-view puppet-module add --organization-id 1 -
 
 echo "##### Publish and promote content view #####"
 hammer -u admin -p changeme content-view publish --name "test" --organization-id 1 --async
-
-# TODO: To all capsules assign environment & organization & location and add "*" auto-sign entry

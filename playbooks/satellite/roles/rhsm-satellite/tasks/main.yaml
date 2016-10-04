@@ -1,0 +1,63 @@
+---
+  - name: "Check registration status"
+    shell:
+      subscription-manager status || true
+    register: subscription_manager_status
+  - name: "Unregister us when registered"
+    command:
+      subscription-manager unregister
+    ignore_errors: yes
+    when: "subscription_manager_status.stdout.find('Overall Status: Unknown') == -1"
+    register: subscription_manager_unregister
+  - name: "Clean registrations when appropriate"
+    command:
+      subscription-manager clean
+    when: "subscription_manager_status.stdout.find('Overall Status: Unknown') != -1 or subscription_manager_unregister is defined"
+  - name: "Remove katello-ca-consumer* package when installed"
+    shell:
+      rpm -qa | grep katello-ca-consumer && yum -y remove katello-ca-consumer* || true
+
+  # Register
+  - name: "Install katello-ca-consumer from Satellite"
+    command:
+      rpm -ivh "http://{{ groups['satellite6']|first }}/pub/katello-ca-consumer-latest.noarch.rpm"
+  # You need this patch to make this work:
+  #   https://github.com/ansible/ansible-modules-core/pull/3453
+  # - name: "Register to Satelite"
+  #   redhat_subscription:
+  #     state=present
+  #     username="{{ sat_user }}"
+  #     password="{{ sat_pass }}"
+  #     autosubscribe=true
+  #     environment=Library
+  #   register: registration
+  - name: "Register to Satelite"
+    shell: |
+      subscription-manager register --env Library --username "{{ sat_user }}" --password "{{ sat_pass }}" --force
+    register: registration
+    until: "{{ registration.rc }} == 0"
+    retries: 5
+    delay: 10
+  - name: "Determine pool we are going to attach to"
+    command:
+      subscription-manager list --available --all --matches "{{ sat_capsule_pool }}" --pool-only
+    register: querying
+    until: "{{ querying.rc }} == 0"
+    retries: 5
+    delay: 10
+  - debug:
+      var: querying
+      verbosity: 2
+  - name: "Attach to the pool"
+    command:
+      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+    register: attaching
+    until: "{{ attaching.rc }} == 0"
+    retries: 5
+    delay: 10
+
+  # Make sure only base RHEL repo is attached
+  - name: "Disable all RHSM repos and only enable base RHEL repo"
+    command:
+      subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+...

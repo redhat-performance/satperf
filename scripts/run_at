@@ -1,0 +1,69 @@
+#!/bin/bash
+
+# This script is supposed to live on docker container where it can be used
+# to run certain action at specified time.
+#
+# Usage: /run_at timestamp command
+#
+#   timestamp   Unix timestamp of time when command should be lunched
+#   command     Command to execute
+#   label       Label of the previously scheduled command
+#
+# Script runs specified command in specified time and returns action ID.
+# Later you can check these files for results:
+#
+#   /run_at.ID.pid   Contains PID of a waiting command
+#   /run_at.ID.rc    Contains exit code for the command
+#   /run_at.ID.out   Contains stdout
+#   /run_at.ID.err   Contains stderr
+#
+# If *.rc file do not exist yet, command is still waiting to be executed
+# or is being executed.
+
+###set -x
+TIMESTAMP="$1"
+COMMAND="$2"
+
+
+# Check if parameters are sane
+if ! [[ $TIMESTAMP =~ ^[0-9]+$ ]]; then
+    echo "ERROR: Timestamp is not a positive integer" >&2
+    exit 1
+fi
+if [[ $TIMESTAMP -lt $( date +%s ) ]]; then
+    echo "WARNING: Provided timestamp is in the past, going on though"
+fi
+if [[ -z $COMMAND ]]; then
+    echo "ERROR: No command provided" >&2
+    exit 2
+fi
+
+
+# Determine ID of the command
+ID=$( echo "$COMMAND" | md5sum | cut -d ' ' -f 1 )
+if [[ -z $ID ]]; then
+    echo "ERROR: Was not able to determine ID" >&2
+    exit 3
+fi
+rm -f /run_at.$ID.rc
+
+
+# Start in background
+(
+
+    # Wait for the time of choice
+    while [[ $( date +%s ) -lt $TIMESTAMP ]]; do
+        sleep 1
+    done
+
+
+    # Execute the command
+    eval "$COMMAND"
+    echo $? >/run_at.$ID.rc
+
+) >/run_at.$ID.out 2>/run_at.$ID.err &
+echo $! >/run_at.$ID.pid
+
+
+# Now report the ID of the command we have just scheduled
+echo "$ID"

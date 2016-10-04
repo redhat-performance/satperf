@@ -1,0 +1,81 @@
+Playbook clients.yaml is supposed to:
+
+ * register container via subscription-manager as a fake real system
+ * makes sure there is applicable errata (so it can be applied from Satellite's webUI)
+ * setup katello-agent on registered container
+ * register via puppet and do initial run
+ * deploy remote execution ssh key
+ * it also gathers lsof info from Satellite and Capsule after each run
+
+Here comes some useful copy&paste ready commands when starting containers on multiple docker hosts:
+
+  # dockers="dockerhost1.example.com dockerhost2.example.com dockerhost3.example.com"
+  # for h in $dockers; do
+      echo "=== $h ==="
+      ssh root@$h 'for i in `seq 250`; do [ -d /tmp/yum-cache-$i/ ] || mkdir /tmp/yum-cache-$i/; rm -rf /tmp/yum-cache-$i/*; docker run -h `hostname -s`container$i.example.com -d -v /tmp/yum-cache-$i/:/var/cache/yum/ r7perfsat; done' &
+  done
+  # for h in $dockers; do
+      ssh root@$h 'for c in $(docker ps -q); do docker inspect $c | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0][\"Id\"], obj[0][\"NetworkSettings\"][\"IPAddress\"]"; done'
+  done >/root/container-ips
+  # sort -R /root/container-ips >/root/container-ips.shuffled
+
+Now some commands to prepare inventory file and actually start the playbook:
+
+  # cut -d ' ' -f 2 /root/container-ips.shuffled | head -n 150 | tail -n 25 >clients.ini
+  # ansible-playbook -f25 -i clients.ini clients.yaml
+
+But first of all, you will need some config on the Satellite and changes in this playbook:
+
+ * create product "RHEL7 x86_64"
+     create yum repo "RHEL7 x86_64" with RHEL 7.2 content (newer should be good as well)
+       Sync Now
+ * create product "Satellite Tools 6.2 Beta"
+     create yum repo "Satellite Tools 6.2 Beta"
+ * make sure there is "daemonize-1.7.7-1.el7.x86_64.rpm" on http://<satellite>/pub/
+ * create puppet product + module:
+     # PUPPET_MODULE=puppet-qaredhattest
+     # PUPPET_MODULE_FILE=/tmp/puppet-qaredhattest.txt
+     # PUPPET_MODULE_FILE_CONTENT="Some important sentence."
+     # puppet module generate "$PUPPET_MODULE" --skip-interview
+     # cat <<EOF > $PUPPET_MODULE/manifests/init.pp
+     # class qaredhattest {
+     #   file { "$PUPPET_MODULE_FILE":
+     #     ensure => file,
+     #     mode   => 755,
+     #     owner  => root,
+     #     group  => root,
+     #     content => "$PUPPET_MODULE_FILE_CONTENT",
+     #   }
+     # }
+     # EOF
+     # puppet module build $PUPPET_MODULE
+     # PUPPET_PRODUCT='MyPuppetProduct'
+     # PUPPET_REPO='MyPuppetRepo'
+     # hammer --username admin --password changeme product create --label $PUPPET_PRODUCT --name $PUPPET_PRODUCT --organization-id 1
+     # hammer --username admin --password changeme repository create --content-type puppet --label $PUPPET_REPO --name $PUPPET_REPO --organization-id 1 --product $PUPPET_PRODUCT
+     # hammer --username admin --password changeme repository upload-content --name $PUPPET_REPO --path $PUPPET_MODULE/pkg/$PUPPET_MODULE-0.1.0.tar.gz --product $PUPPET_PRODUCT --organization-id 1
+ * create content view "test"
+     add "qaredhattest" puppet module to it, select latest version
+     "Publish New Version" of the content view
+     check that there is "KT_Default_Organization_Library_test_2" in Configure -> Environments
+ * when installing capsules, make sure to enable remote execution plugin.
+   Satellite's integrated cansule should have it by default.
+     you might hit https://bugzilla.redhat.com/show_bug.cgi?id=1339336
+ * once you have installed capsule
+     move it to "Default Organization" in Infrastructure -> Capsules
+     now for all capsules (including Satellite capsule):
+       add Autosign -> New -> "*"
+       assign "Library" to the capsule
+       let the capsule "Synchronize" the content
+         maybe you will need patch from https://bugzilla.redhat.com/show_bug.cgi?id=1337306 on Sat
+
+ * Command to cleanup docker hosts and content hosts:
+
+   ```
+   dockers="docker60 docker61 docker62"
+   for h in $dockers; do virsh destroy $h & done
+   for h in $dockers; do virsh start $h & done
+   for h in $dockers; do ssh root@$h 'systemctl restart docker' & done
+   for h in $dockers; do ssh root@$h 'docker rm -f $( docker ps -aq )' & done
+   ```
+   

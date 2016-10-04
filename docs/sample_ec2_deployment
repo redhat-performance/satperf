@@ -1,0 +1,1 @@
+aws ec2 run-instances --image-id ami-f2b17f92 --key-name id_rsa_perf  --instance-type m3.large --placement AvailabilityZone=us-west-2c --security-group-ids sg-b0e2b1d6 --subnet-id subnet-808a2fd8  --associate-public-ip-address
