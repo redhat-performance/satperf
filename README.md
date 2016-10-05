@@ -46,7 +46,7 @@ Ansible is used to perform most of the work. There are playbooks for:
 
 ### PREREQUISITES
 
-From project root, run: `source ./setup`
+This is a Python 2 based project. From project root, run: `source ./setup`
 
 The above script does the following:
 
@@ -56,9 +56,8 @@ The above script does the following:
 
 ### Note
 
-1. Before running satperf, check `conf/satperf.conf`, create `conf/satperf.local.yaml`
-   and configure any owerrides there (e.g. RHN credentials, Satellite setup details
-   and pbench settings).
+1. Before running satperf, check `conf/satperf.yaml`, and create `conf/satperf.local.yaml`
+   and configure any owerrides there (e.g. RHN credentials, Satellite setup details etc).
 
 2. Make sure that all hosts you are going to use have SSH certificate deployed for
    user root and private certificate is configured in your `conf/satperf.local.yaml`.

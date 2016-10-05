@@ -29,7 +29,7 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
 
     SATELLITE_VERSION = 6.2
 
-    def __init__(self, _conf=None, _logger=None):
+    def __init__(self, _conf=None, _logger=None, _hosts=None):
         super(SatelliteCore, self).__init__()
         self.config = _conf
         self.logger = _logger
@@ -82,7 +82,7 @@ class SatelliteCore(SatelliteActions, MonitoringActions):
             self.remove_capsule()
         if nargs.setup_monitoring:
             if self.record_response("Installing Collectd") == 'y':
-                tags = self.config.get('Monitoring', 'hosts').split(':')
+                tags = self.config['Monitoring']['hosts'].split(':')
                 self.install_collectd(tags)
             if self.record_response("Installing Graphite") == 'y':
                 self.install_graphite()

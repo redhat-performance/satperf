@@ -19,3 +19,4 @@ six==1.10.0
 urllib3==1.16
 py==1.4.31
 yaycl==0.2.0
+configparser==3.5.0

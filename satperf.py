@@ -1,10 +1,14 @@
 #!/usr/bin/env python
 
+# Main file for satperf
+# A Python 2 based module
+
 import os
 import sys
 import yaml
 import signal
 import logging
+import configparser
 from utils.conf import satperf as config_general
 from argparse import RawTextHelpFormatter, \
                 ArgumentParser
@@ -12,8 +16,6 @@ from lib.satellite import SatelliteCore, time
 from pykwalify import core as pykwalify_core
 from pykwalify import errors as pykwalify_errors
 from logging.handlers import RotatingFileHandler
-
-# _config_file_general = 'conf/satperf.conf'
 
 _logger = logging.getLogger(__name__)
 
@@ -73,6 +75,16 @@ def _satperf_usage():
     parser.add_argument("-z", "--run-playbook", action='store',
         help="Run a playbook from playbooks/satellite/ not listed in satperf")
 
+def _load_config(path, no_val=False):
+    """
+    """
+    if no_val:
+        config = configparser.ConfigParser(allow_no_value=True)
+    else:
+        config = configparser.ConfigParser()
+    config.read(path)
+    return config
+
 def main(config_general):
     try:
         nargs = parser.parse_args()
@@ -80,8 +92,15 @@ def main(config_general):
         if not sys.argv[1:]:
           quit("No arguments supplied. Refer to --help.")
 
-        SatCore = SatelliteCore(_conf=config_general,
-                                _logger=_logger)
+        hosts_cfg = _load_config(
+            config_general["satperf_hosts"],
+            no_val=True
+        )
+        SatCore = SatelliteCore(
+            _conf=config_general,
+            _logger=_logger,
+            _hosts=hosts_cfg
+        )
         SatCore.init_actions(nargs)
 
     except Exception as E:
@@ -91,7 +110,6 @@ def main(config_general):
 
 if __name__ == '__main__':
     signal.signal(signal.SIGINT, signal_handler)
-    # config_general = _load_config(_config_file_general)
     FNAME = config_general["satperf_log_file"]
     FSIZE = int(config_general["satperf_log_file_size"])
 

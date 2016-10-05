@@ -1,7 +1,7 @@
 #!/bin/bash
 
-export ANSIBLE_CONFIG=$PWD/conf/ansible.cfg
-echo "..exported env var: ANSIBLE_CONFIG."
+# export ANSIBLE_CONFIG=$PWD/conf/ansible.cfg
+# echo "..exported env var: ANSIBLE_CONFIG."
 deps=(gcc python-devel openssl-devel libffi-devel)
 
 if [[ -f /etc/redhat-release ]]; then
@@ -17,7 +17,7 @@ if [[ -f /etc/redhat-release ]]; then
         if [[ ! -d venv/ ]]; then
             echo "default venv/ folder not found."
             echo -e "\nFirst, Run:"
-            echo "1) virtualenv venv"
+            echo "1) virtualenv venv -p python2"
         fi
 
         echo -e "\nNext, run:"

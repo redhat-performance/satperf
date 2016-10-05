@@ -88,8 +88,8 @@ methods:
 Monitoring:
   # for collectd multi/single-host installations
   # one/all of satellite6:docker-hosts:capsules
-  # hosts: docker-hosts:capsules
-  hosts: capsules
+  # hosts: satellite6:capsules
+  hosts: satellite6
 
 ########################################
 # Collectd Configuration
