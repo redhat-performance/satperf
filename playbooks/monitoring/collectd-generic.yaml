@@ -2,11 +2,11 @@
 #
 # Generic Playbook to install collectd on generic machine types, use tags to seperate machine type:
 #
-# ansible-playbook -i hosts install/collectd-generic.yml --tags="baremetal"
-# ansible-playbook -i hosts install/collectd-generic.yml --tags="guest"
-# ansible-playbook -i hosts install/collectd-generic.yml --tags="graphite"
-# ansible-playbook -i hosts install/collectd-generic.yml --tags="satellite6"
-# ansible-playbook -i hosts install/collectd-generic.yml --tags="baremetal,guest"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="graphite"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="satellite6"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="capsules"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="docker-hosts"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="satellite6,capsules"
 
 - hosts: graphite
   remote_user: root
