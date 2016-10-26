@@ -35,7 +35,6 @@
     delay: 10
   - debug:
       var: registering
-      verbosity: 2
   - name: "Determine pool we are going to attach to"
     command:
       subscription-manager list --available --all --matches "{{ rhsm_pool }}" --pool-only
@@ -45,7 +44,6 @@
     delay: 10
   - debug:
       var: querying
-      verbosity: 2
   - name: "Attach to the pool"
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"

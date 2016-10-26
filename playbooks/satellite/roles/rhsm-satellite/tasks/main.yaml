@@ -47,7 +47,6 @@
     delay: 10
   - debug:
       var: querying
-      verbosity: 2
   - name: "Attach to the pool"
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"

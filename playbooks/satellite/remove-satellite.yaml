@@ -1,5 +1,8 @@
 ---
 - hosts: satellite6
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   remote_user: root
   roles:
     - common
@@ -15,13 +18,13 @@
       when: remover.stat.exists is defined and remover.stat.exists == true
     - name: "Deploy expect script for katello-remove"
       copy:
-        src=automate_capsule-remove.exp
-        dest=/root/automate_capsule-remove.exp
+        src=automate_katello-remove.exp
+        dest=/root/automate_katello-remove.exp
         mode="u+x"
       when: remover.stat.exists is defined and remover.stat.exists == true
-    - name: "Uninstall capsule"
+    - name: "Uninstall Satellite"
       command:
-        /root/automate_capsule-remove.exp
+        /root/automate_katello-remove.exp
       when: remover.stat.exists is defined and remover.stat.exists == true
 
     - name: "Check if /etc/foreman-installer exists"
