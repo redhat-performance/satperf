@@ -1,0 +1,26 @@
+---
+- hosts: kvm-hosts
+  remote_user: root
+  ###gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    ###- ../satellite/roles/common
+  tasks:
+    - name: "Show repos we have"
+      command:
+        yum repolist
+      register: yum_repolist
+    - debug: var=yum_repolist.stdout_lines
+    - name: "Show network config we have"
+      command:
+        ip a
+      register: ip_a
+    - debug: var=ip_a.stdout_lines
+    - name: "Show VMs if any"
+      command:
+        virsh list -a
+      register: virsh_list_a
+    - debug: var=virsh_list_a.stdout_lines
+...

@@ -1,0 +1,96 @@
+---
+- hosts: kvm-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    ###- ../satellite/roles/common
+  tasks:
+    ## Repos
+    #- name: "Unregister RHN"
+    #  file:
+    #    path: /etc/sysconfig/rhn/systemid
+    #    state: absent
+    #- name: "Unregister RHSM"
+    #  command:
+    #    subscription-manager unregister
+    #  ignore_errors: yes
+    #- name: "Clean RHSM"
+    #  command:
+    #    subscription-manager clean
+    #- name: "Remove katello-ca-consumer-* if any"
+    #  yum:
+    #    name: katello-ca-consumer-*
+    #    state: absent
+    #- name: "Ensure RHSM config is OK"
+    #  lineinfile:
+    #    dest: /etc/rhsm/rhsm.conf
+    #    line: "{{ item }}"
+    #  with_items:
+    #    - "hostname = subscription.rhsm.redhat.com"
+    #    - "baseurl = https://cdn.redhat.com"
+    #    - "repo_ca_cert = /etc/rhsm/ca/redhat-uep.pem"
+    #- name: "No yum repo now"
+    #  command:
+    #    yum-config-manager --disable *
+
+    # RHSM registration
+    # TODO
+
+    ## KVM guests
+    #- name: "Ensure libvirtd service is running"
+    #  service:
+    #    name: libvirtd
+    #    state: started
+    #    enabled: yes
+    #- name: "We have requirements installed"
+    #  yum:
+    #    name: libvirt-python
+    #    state: present
+    #- name: "List VMs"
+    #  virt:
+    #    command: list_vms
+    #  register: vms_list
+    #- name: "Status of VMs"
+    #  virt:
+    #    name: "{{ item }}"
+    #    command: status
+    #  with_items: "{{ vms_list.list_vms }}"
+    #  register: vms_status
+    #- name: "All VMs stopped"
+    #  virt:
+    #    name: "{{ item.item }}"
+    #    command: destroy
+    #  when: "{{ item.status != 'shutdown' }}"
+    #  with_items: "{{ vms_status.results }}"
+    #- name: "All VMs removed"
+    #  virt:
+    #    name: "{{ item }}"
+    #    command: undefine
+    #  with_items: "{{ vms_list.list_vms }}"
+
+    - name: "Deploy KS files"
+      template:
+        src: "files/{{ item.ks }}.j2"
+        dest: "/root/{{ item.name }}-{{ item.ks }}"
+      with_items: "{{ vms[inventory_hostname] }}"
+    - name: "Install VM"
+      command:
+        virt-install
+          --name "{{ item.name }}"
+          --vcpus "{{ item.cpu_count }}"
+          --ram "{{ item.mem_size }}"
+          --disk format=qcow2,path="/var/lib/libvirt/images/{{ item.name }}-1.dsk",size="{{ item.disk_size }}"
+          --network bridge="{{ item.nic_1g_bridge }}"
+          --network bridge="{{ item.nic_10g_bridge }}"
+          --virt-type kvm
+          --os-type linux
+          --os-variant rhel7
+          --graphics spice
+          --location "{{ vms_kss_os }}"
+          --initrd-inject "/root/{{ item.name }}-{{ item.ks }}"
+          --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=ttyS0,115200"
+          --noautoconsole
+      with_items: "{{ vms[inventory_hostname] }}"

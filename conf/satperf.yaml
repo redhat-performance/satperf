@@ -119,4 +119,20 @@ grafana_port: 3000
 # Grafana username and password
 grafana_username: admin
 grafana_password: password
+
+# VMs provisioning
+vms:
+  kvm1.example.com:
+    - name: kvm1-vm1
+      cpu_count: 4
+      mem_size: 16000
+      disk_size: 50
+      nic_10g_bridge: br0
+      nic_1g_bridge: br1
+      ks: rhel72-vm.ks
+      ip: 172.1.1.2
+      netmask: 255.0.0.0
+      rootpw: password
+vms_kss_os: http://repos.example.com/RHEL-7/7.2/Server/x86_64/os/
+vms_ssh_key: "{{ lookup('file', '../../conf/id_rsa.pub') }}"
 ...
