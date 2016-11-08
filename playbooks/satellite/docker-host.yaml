@@ -7,8 +7,8 @@
     - ../../conf/satperf.local.yaml
   roles:
     - common
-    - docker-host-kvm-partitioning
-    ###- docker-host-ec2-partitioning
+    - { role: docker-host-kvm-partitioning, when: docker_host_partitioning == 'kvm' }
+    - { role: docker-host-ec2-partitioning, when: docker_host_partitioning == 'ec2' }
     - rhsm
     ###- upgrade-restart
     - docker-host

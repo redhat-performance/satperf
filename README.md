@@ -66,12 +66,13 @@ The above script does the following:
    in your `conf/satperf.local.yaml`.
 
 4. If you are going to use sateperf to setup your docker hosts, pay special
-   attention to partitioning these. In setup satperf uses, we need empty disk
+   attention to their partitioning. In setup satperf uses, we need empty disk
    partition (`/dev/vda3` by default) where LVM logical group "docker" will
    be created and docker will be configured to use that. There are two very
    simple pre-created roles for that: `playbooks/satellite/roles/docker-host-kvm-partitioning`
    and `.../docker-host-ec2-partitioning`. Please choose one or create new
-   one and comment/uncomment it in `playbooks/satellite/docker-host.yaml`
+   one byt setting `docker_host_partitioning` in config to "kvm" or "ec2" or
+   add new one and alter `playbooks/satellite/docker-host.yaml`
 
 # Execution
 

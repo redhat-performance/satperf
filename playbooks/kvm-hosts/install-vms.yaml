@@ -1,0 +1,53 @@
+---
+- hosts: kvm-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    ###- ../satellite/roles/common
+  tasks:
+    - name: "List VMs"
+      virt:
+        command: list_vms
+      register: vms_list
+    - debug: var=vms_list
+    - name: "Deploy KS files"
+      template:
+        src: "files/{{ item.ks }}.j2"
+        dest: "/root/{{ item.name }}-{{ item.ks }}"
+      when: "item.name not in vms_list.list_vms"
+      with_items: "{{ vms[inventory_hostname] }}"
+    - name: "Install VM"
+      command:
+        virt-install
+          --name "{{ item.name }}"
+          --vcpus "{{ item.cpu_count }}"
+          --ram "{{ item.mem_size }}"
+          --disk format=qcow2,path="/var/lib/libvirt/images/{{ item.name }}-1.dsk",size="{{ item.disk_size }}"
+          --network bridge="{{ item.nic_1g_bridge }}"
+          --network bridge="{{ item.nic_10g_bridge }}"
+          --virt-type kvm
+          --os-type linux
+          --os-variant rhel7
+          --graphics spice
+          --location "{{ vms_kss_os }}"
+          --initrd-inject "/root/{{ item.name }}-{{ item.ks }}"
+          --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=tty0 console=ttyS0,115200"
+          --noautoconsole
+      when: "item.name not in vms_list.list_vms"
+      with_items: "{{ vms[inventory_hostname] }}"
+    - name: "Get MAC adresses of 1Gb NIC"
+      shell:
+        virsh dumpxml "{{ item.name }}" | grep -B 1 "source bridge='{{ item.nic_1g_bridge }}'" | grep 'mac\s\+address=' | cut -d "'" -f 2
+      with_items: "{{ vms[inventory_hostname] }}"
+      register: macs
+    - name: "Get IP adresses for given MAC"
+      shell:
+        arp -n | grep -i "{{ item.stdout }}" | cut -d " " -f 1
+      with_items: "{{ macs.results }}"
+      register: ips
+    - debug: msg="{{ item.stdout }} {{ item.item.item.name }}"
+      with_items: "{{ ips.results }}"
+...

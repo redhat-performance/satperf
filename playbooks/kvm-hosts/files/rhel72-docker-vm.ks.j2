@@ -21,12 +21,18 @@ skipx
 # System timezone
 timezone US/Eastern --isUtc --ntpservers={{ ntp_server }}
 # Partitioning
-clearpart --all --initlabel
-bootloader --location=mbr
-autopart --type=plain
+clearpart --all
+part swap --size=8000
+part /boot --fstype=xfs --size=500
+part pv.01 --fstype=lvmpv --size=10000
+part pv.02 --fstype=lvmpv --grow
+volgroup rhel --pesize=4096 pv.01
+volgroup docker --pesize=4096 pv.02
+logvol / --fstype=xfs --size=5000 --grow --name=root --vgname=rhel
 
 %packages
 vim-enhanced
+bridge-utils
 ntp
 %end
 

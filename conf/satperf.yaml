@@ -62,6 +62,7 @@ capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2
 
 # Docker hosts
 docker_host_containers: 50
+docker_host_partitioning: kvm
 
 # Environment
 ntp_server: clock.redhat.com
