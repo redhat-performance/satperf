@@ -33,7 +33,7 @@
   #   register: registration
   - name: "Register to Satelite"
     shell: |
-      subscription-manager register --env Library --org "{{ sat_org }}" --username "{{ sat_user }}" --password "{{ sat_pass }}" --force
+      subscription-manager register --env Library --org "{{ sat_orglabel }}" --username "{{ sat_user }}" --password "{{ sat_pass }}" --force
     register: registration
     until: "{{ registration.rc }} == 0"
     retries: 5

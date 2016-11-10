@@ -15,7 +15,7 @@ function doit() {
     opts="$opts -e 's/###$part###//g'"
   done
   echo "sed $opts"
-  eval sed $opts clients-source.yaml >$out/clients.yaml
+  eval sed $opts scripts/clients-source.yaml >$out/clients.yaml
   scp -i conf/id_rsa_perf conf/id_rsa_perf $out/clients.yaml root@$host:/root/ &
 }
 

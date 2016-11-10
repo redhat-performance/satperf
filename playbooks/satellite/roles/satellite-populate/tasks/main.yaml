@@ -38,20 +38,7 @@
     command:
       hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository list --organization '{{ sat_org }}'
     register: repository_list
-  - name: "Enable repositories"   # TODO Use ansible while loop instead this if possible
-    shell: |
-      opt="--releasever {{ sat_releasever }}"
-      hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set available-repositories --product '{{ item.product }}' --name '{{ item.reposet }}' --organization '{{ sat_org }}' | grep '^[^,]\+,[^,]\+,,.*$' && opt=""
-      attempt=0
-      attempt_max=0
-      while ! hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ item.product }}' --name '{{ item.reposet }}' --basearch '{{ ansible_architecture }}' $opt --organization '{{ sat_org }}'; do
-          [ $attempt -ge $attempt_max ] && exit 1
-          katello-service restart
-          sleep 10
-          hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription refresh-manifest --organization '{{ sat_org }}'
-          sleep 10
-          let attempt+=1
-      done
+  - include: try_enable_repo.yaml
     when: repository_list.stdout.find(",{{ item.repo }},") == -1
     with_items:
       "{{ sat_repos }}"
@@ -59,7 +46,7 @@
   # Start sync of the repos
   - name: "Start (asynchronous) sync of repos we have just enabled"
     command:
-      echo hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}' --async
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}' --async
     with_items:
       "{{ sat_repos }}"
 ...

@@ -1,0 +1,12 @@
+---
+  - name: "Enable {{ item.product }} -> {{ item.reposet }} ({{ ansible_architecture }})"
+    shell: |
+      opt='--releasever {{ sat_releasever }}'
+      hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set available-repositories --product '{{ item.product }}' --name '{{ item.reposet }}' --organization '{{ sat_org }}' | grep '^[^,]\+,[^,]\+,,.*$' && opt=""
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ item.product }}' --name '{{ item.reposet }}' --basearch '{{ ansible_architecture }}' $opt --organization '{{ sat_org }}'
+    when: "repository_list.stdout.find(',{{ item.repo }},') == -1"
+    ignore_errors: True
+    register: enable_repo
+  - debug: var=enable_repo
+    when: enable_repo.rc is not defined or enable_repo.rc != 0
+...

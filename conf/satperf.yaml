@@ -16,6 +16,7 @@ sat_user: admin
 sat_pass: changeme
 sat_email: root@localhost
 sat_org: Default Organization
+sat_orglabel: Default_Organization
 sat_orgid: 1
 sat_location: Default Location
 sat_releasever: "7Server"

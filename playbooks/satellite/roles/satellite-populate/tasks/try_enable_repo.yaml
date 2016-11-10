@@ -1,0 +1,9 @@
+---
+  - include: enable_repo.yaml
+
+  # If it fails, restart Satellite, refresh manifest and try again
+  - include: restart_and_refresh.yaml
+    when: enable_repo.rc is not defined or enable_repo.rc != 0
+  - include: enable_repo.yaml
+    when: enable_repo.rc is not defined or enable_repo.rc != 0
+...

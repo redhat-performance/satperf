@@ -1,0 +1,8 @@
+---
+  - name: "Restart Satellite"
+    command:
+      katello-service restart
+  - name: "Refresh manifest"
+    command:
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription refresh-manifest --organization '{{ sat_org }}'
+...
