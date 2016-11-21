@@ -48,6 +48,12 @@ sat_installer_pkg: satellite   # Satellite 6.2
 sat_installer_cmd: satellite-installer --scenario satellite   # Satellite 6.2
 sat_manifest: ../../../../../conf/manifest.zip
 
+# Content for client testing (RHEL repo with erratas and Satellite tools repo)
+content_rhel_name: RHEL7 x86_64 Base
+content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
+content_sattools_name: Sat6.2 Tools
+content_sattools_url: http://repos.example.com/released/SatTools-6.2/7.2/Server/x86_64/os
+
 # Capsule install options
 sat_capsule_pool: 'Pool you want to consume'   # Needs to contain Capsule
 capsule_install_source: cdn   # either 'cdn' or 'repo'

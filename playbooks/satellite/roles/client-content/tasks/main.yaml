@@ -1,0 +1,11 @@
+---
+  - name: "Do we have daemonize package downloaded?"
+    stat:
+      path: /var/www/html/pub/daemonize-1.7.7-1.el7.x86_64.rpm
+    register: daemonize_stat
+  - name: "Download daemonize package"
+    get_url:
+      url: http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
+      dest: /var/www/html/pub/daemonize-1.7.7-1.el7.x86_64.rpm
+    when: "{{ daemonize_stat.exists }}"
+...
