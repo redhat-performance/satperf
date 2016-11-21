@@ -1,11 +1,73 @@
 ---
   - name: "Do we have daemonize package downloaded?"
     stat:
-      path: /var/www/html/pub/daemonize-1.7.7-1.el7.x86_64.rpm
+      path: "/var/www/html/pub/{{ content_daemonize }}"
     register: daemonize_stat
   - name: "Download daemonize package"
     get_url:
-      url: http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
-      dest: /var/www/html/pub/daemonize-1.7.7-1.el7.x86_64.rpm
-    when: "{{ daemonize_stat.exists }}"
+      url: "http://dl.fedoraproject.org/pub/epel/7/x86_64/d/{{ content_daemonize }}"
+      dest: "/var/www/html/pub/{{ content_daemonize }}"
+    when: "{{ daemonize_stat.stat.exists }}"
+
+  - name: "Make sure puppet module build dir is empty"
+    file:
+      path: "/root/{{ content_puppet_module }}"
+      state: absent
+  - name: "Generate puppet module template"
+    command:
+      puppet module generate "{{ content_puppet_module }}" --skip-interview
+  - name: "Create puppet module content"
+    template:
+      src: files/init.pp
+      dest: "/root/{{ content_puppet_module }}/manifests/init.pp"
+  - name: "Build our puppet module"
+    command:
+      puppet module build "/root/{{ content_puppet_module }}"
+
+  - name: "Create puppet product"
+    command:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" product create --label "{{ content_puppet_product }}" --name "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+  - name: "Create puppet repository"
+    command:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type puppet --label "{{ content_puppet_repo }}" --name "{{ content_puppet_repo }}" --organization-id "{{ sat_orgid }}" --product "{{ content_puppet_product }}"
+  - name: "Upload our puppet module to the repository"
+    command:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module }}/pkg/{{ content_puppet_module }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+
+  - name: "Create RHEL product"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ content_rhel_name }}"
+  - name: "Create RHEL repo in the product"
+    command:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type yum --label "{{ content_rhel_label }}" --name "{{ content_rhel_name }}" --organization-id "{{ sat_orgid }}" --product "{{ content_rhel_name }}" --url "{{ content_rhel_url }}"
+  - name: "Create Sat Tools product"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ content_sattools_name }}"
+  - name: "Create Sat Tools repo in the product"
+    command:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type yum --label "{{ content_sattools_label }}" --name "{{ content_sattools_name }}" --organization-id "{{ sat_orgid }}" --product "{{ content_sattools_name }}" --url "{{ content_sattools_url }}"
+
+  - name: "Sync RHEL in background"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}" --async
+  - name: "Sync Sat Tools in background"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}" --async
+
+  - name: "Create content view"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view create --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}"
+  - name: "Add RHEL repo to the content view"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view add-repository --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --product "{{ content_rhel_name }}" --repository "{{ content_rhel_name }}"
+  - name: "Add Sat Tools repo to the content view"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view add-repository --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --product "{{ content_sattools_name }}" --repository "{{ content_sattools_name }}"
+  - name: "Add Puppet module to the content view"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module add --organization-id 1 --content-view "{{ content_content_view_name }}" --name "{{ content_puppet_module_name }}" --author "{{ content_puppet_module_author }}"
+
+  - name: "Publish and promote content view"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --async
 ...
