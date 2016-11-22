@@ -25,7 +25,7 @@
       line="{{ hostvars[item].ip }} {{ item }}"
       state=present
     when: "hostvars[item].ip is defined"
-    with_items: "groups['all']"
+    with_items: "{{ groups['all'] }}"
   - name: "File /etc/hosts have correct SELinux context (had issues before)"
     command:
       restorecon -vR /etc/hosts
