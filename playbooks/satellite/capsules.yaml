@@ -8,6 +8,7 @@
   roles:
     - common
     - rhsm-satellite
+    - ntp
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
     - capsule

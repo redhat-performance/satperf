@@ -1,0 +1,17 @@
+---
+  - name: "ntp is installed"
+    yum:
+      name=ntp
+      state=present
+  - name: "ntpd is stopped"
+    service:
+     name=ntpd
+     state=stopped
+  - name: "Time is synchronized"
+    command:
+      ntpdate "{{ ntp_server }}"
+  - name: "ntpd is started"
+    service:
+     name=ntpd
+     state=started
+...
