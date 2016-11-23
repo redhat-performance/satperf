@@ -13,6 +13,16 @@
       name=docker
       state=present
 
+  # Configure docker networking
+  # TODO When ran multiple times, it is added again and again
+  - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/22' in docker config"
+    lineinfile:
+      dest: /etc/sysconfig/docker
+      regexp: "^OPTIONS=['\"]([^'\"]*)['\"]$"
+      line: 'OPTIONS="\1 --fixed-cidr={{ ip }}/22"'
+      backrefs: yes
+    when: "ip is defined"
+
   # Configure docker storage
   - name: "Check '{{ docker_host_vg }}' volume group is present (check 'docker-host-kvm-partitioning' or 'docker-host-ec2-partitioning' roles and alter as per your needs and enable in docker-host.yaml)"
     command:

@@ -8,10 +8,10 @@
     #server: capsule61.example.com
     #pool_rhel: 4028fa25545bed6101545c14bbf10063
     #pool_tools: 4028fa25545bed6101547f49f12602e7
-    sat: ip-10-1-10-1.us-west-2.compute.internal
+    sat: pman05.perf.lab.eng.bos.redhat.com
     server: ###CAPSULE###
-    pool_rhel: 8a818a8156b4478a0156b4527fb60260
-    pool_tools: 8a818a8156b4478a0156b452934d0267
+    pool_rhel: 2c818181584acb9101584cfbd786085b
+    pool_tools: 2c818181584acb9101584cfbf2150861
     puppet_env: KT_Default_Organization_Library_test_2
   tasks:
     # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
@@ -28,15 +28,8 @@
     #    ###gather_timeout: 60   # available in Ansible 2.2
     - name: "Make sure /etc/hosts contains all capsules"
       shell: |
-        grep ip-10-1-10-1.us-west-2.compute.internal /etc/hosts || echo "10.1.10.1 ip-10-1-10-1.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-2.us-west-2.compute.internal /etc/hosts || echo "10.1.10.2 ip-10-1-10-2.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-3.us-west-2.compute.internal /etc/hosts || echo "10.1.10.3 ip-10-1-10-3.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-4.us-west-2.compute.internal /etc/hosts || echo "10.1.10.4 ip-10-1-10-4.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-5.us-west-2.compute.internal /etc/hosts || echo "10.1.10.5 ip-10-1-10-5.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-6.us-west-2.compute.internal /etc/hosts || echo "10.1.10.6 ip-10-1-10-6.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-7.us-west-2.compute.internal /etc/hosts || echo "10.1.10.7 ip-10-1-10-7.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-8.us-west-2.compute.internal /etc/hosts || echo "10.1.10.8 ip-10-1-10-8.us-west-2.compute.internal">>/etc/hosts
-        grep ip-10-1-10-9.us-west-2.compute.internal /etc/hosts || echo "10.1.10.9 ip-10-1-10-9.us-west-2.compute.internal">>/etc/hosts
+        grep pman05.perf.lab.eng.bos.redhat.com /etc/hosts || echo "172.1.1.1 pman05.perf.lab.eng.bos.redhat.com">>/etc/hosts
+        grep perf112-vm1-capsule.example.com /etc/hosts || echo "172.1.1.2 perf112-vm1-capsule.example.com">>/etc/hosts
 
     ###FIXRPM###- name: "Fix RPM cache"
     ###FIXRPM###  shell: |
@@ -108,8 +101,7 @@
     ###KAT###  shell: |
     ###KAT###    if ! rpm -q daemonize; then
     ###KAT###      rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
-    ###KAT###        || rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
-    ###KAT###        || rpm -ivh "http://{{ sat }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm"
+    ###KAT###        || rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
     ###KAT###    fi
     ###KAT###- name: "Install katello-agent"
     ###KAT###  action:
@@ -136,7 +128,7 @@
     ###KAT###- name: "Downgrade ksh package so we have some applicable errata"
     ###KAT###  shell: |
     ###KAT###    rpm -q ksh && rpm -e ksh
-    ###KAT###    yum -y install ksh-20120801-19.el7
+    ###KAT###    yum -y install ksh-20120801-22.el7_1.2
 
     ###KATSTOP###- name: "Kill journald if it is running"
     ###KATSTOP###  shell:

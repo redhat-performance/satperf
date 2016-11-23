@@ -20,5 +20,6 @@ function doit() {
 }
 
 #doit <hostname> server PUPDEPLOY
+doit perf112-vm2-docker.example.com root@perf112-vm1-capsule.example.com REG KAT
 
 wait
