@@ -21,7 +21,7 @@
     service:
       name=docker
       state=stopped
-      enabled=no
+      enabled=yes
   - name: "Docker storage related config ready to be recreated"
     shell: |
       rm -rf /var/lib/docker
@@ -39,7 +39,7 @@
     service:
       name=docker
       state=restarted
-      enabled=no
+      enabled=yes
 
   # Build container we will use
   - name: "Dockerfile for base container present"
