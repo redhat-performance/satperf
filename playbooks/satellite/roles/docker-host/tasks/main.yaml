@@ -14,9 +14,9 @@
       state=present
 
   # Configure docker storage
-  - name: "Check 'docker' volume group is present (check 'docker-host-kvm-partitioning' or 'docker-host-ec2-partitioning' roles and alter as per your needs and enable in docker-host.yaml)"
+  - name: "Check '{{ docker_host_vg }}' volume group is present (check 'docker-host-kvm-partitioning' or 'docker-host-ec2-partitioning' roles and alter as per your needs and enable in docker-host.yaml)"
     command:
-      vgdisplay docker
+      vgdisplay "{{ docker_host_vg }}"
   - name: "docker service not running"
     service:
       name=docker
@@ -30,7 +30,7 @@
     lineinfile:
       dest=/etc/sysconfig/docker-storage-setup
       regexp="^VG="
-      line="VG='docker'"
+      line="VG='{{ docker_host_vg }}'"
   - name: "docker-storage-setup"
     command:
       docker-storage-setup
