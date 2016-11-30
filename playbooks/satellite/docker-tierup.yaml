@@ -2,6 +2,9 @@
 - hosts: docker-hosts
   remote_user: root
   gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   roles:
   ###  - common
   tasks:
@@ -34,4 +37,9 @@
         sort -R /root/container-ips >/root/container-ips.shuffled
       ###delegate_to: 127.0.0.1
       ###run_once: true
+    - name: "Flush ebtables on Sat"
+      command:
+        ebtables -t nat --flush
+      delegate_to: "{{ groups['satellite6']|first }}"
+      run_once: true
 ...
