@@ -9,6 +9,7 @@
     - common
     - { role: docker-host-kvm-partitioning, when: docker_host_partitioning == 'kvm' }
     - { role: docker-host-ec2-partitioning, when: docker_host_partitioning == 'ec2' }
+    - { role: docker-host-myrhev_cleanup-partitioning, when: docker_host_partitioning == 'myrhev_cleanup' }
     - rhsm
     ###- upgrade-restart
     - docker-host

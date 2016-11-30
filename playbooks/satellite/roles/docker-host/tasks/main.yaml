@@ -13,13 +13,80 @@
       name=docker
       state=present
 
+  # Configure bridge we are going to use
+  # https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-networkscripts-interfaces_network-bridge.html
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^NM_CONTROLLED="
+      line: "NM_CONTROLLED=no"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^DEVICE="
+      line: "DEVICE=eth1"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=none"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^TYPE="
+      line: "TYPE=Ethernet"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^BRIDGE="
+      line: "BRIDGE=docker0"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+      create: yes
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^TYPE="
+      line: "TYPE=Bridge"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^DELAY="
+      line: "DELAY=0"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^NM_CONTROLLED="
+      line: "NM_CONTROLLED=no"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^DEVICE="
+      line: "DEVICE=docker0"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=static"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^IPADDR="
+      line: "IPADDR={{ ip }}"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^NETMASK="
+      line: "NETMASK=255.0.0.0"
+  - name: "Kill all dhclients (network service was not restarting)"
+    command:
+      killall dhclient
+  - name: "Restart network"
+    command:
+      service network restart
+
   # Configure docker networking
   # TODO When ran multiple times, it is added again and again
-  - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/22' in docker config"
+  # TODO Bridge still needs to be reconfigured manually
+  - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/24' in docker config"
     lineinfile:
       dest: /etc/sysconfig/docker
       regexp: "^OPTIONS=['\"]([^'\"]*)['\"]$"
-      line: 'OPTIONS="\1 --fixed-cidr={{ ip }}/22"'
+      line: 'OPTIONS="\1 --fixed-cidr={{ ip }}/24"'
       backrefs: yes
     when: "ip is defined"
 

@@ -1,0 +1,8 @@
+---
+  - name: "Cleanup some mess on image we are using in RHEV"
+    shell: |
+      :>/etc/sysconfig/docker-storage
+      rm -rf /var/lib/docker/*
+      lvremove /dev/docker_vg/docker-pool
+      true
+...
