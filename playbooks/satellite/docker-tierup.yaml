@@ -1,9 +1,12 @@
 ---
 - hosts: docker-hosts
   remote_user: root
+  gather_facts: no
   roles:
   ###  - common
   tasks:
+    - setup:
+        gather_subset: "!all"
     - name: "Containes started"
       shell: |
         for i in $( seq "{{ containers | default(250) }}" ); do

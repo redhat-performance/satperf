@@ -53,6 +53,11 @@
       policy=targeted
       state=enforcing
 
+  # Make sure hostname is set
+  - name: "Set hostname"
+    hostname:
+      name: "{{ inventory_hostname }}"
+
   # Check our networking setup
   - name: "We can ping 127.0.0.1"
     wait_for:
@@ -79,8 +84,7 @@
       host="{{ hostvars[groups['satellite6']|first].ip }}"
       port=22
       timeout=10
-    when:
-      "{{ hostvars[groups['satellite6']|first].ip is defined }}"
+    when: "hostvars[groups['satellite6']|first].ip is defined"
   - name: "We can ping NTP server"
     command:
       ping -c 3 "{{ ntp_server }}"
