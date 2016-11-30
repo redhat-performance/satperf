@@ -7,23 +7,23 @@
   # Check /etc/hosts file
   - name: "We need localhost (IPv4) in hosts file"
     lineinfile:
-      dest=/etc/hosts
-      regexp="^127\.0\.0\.1\s+localhost localhost\.localdomain localhost4 localhost4\.localdomain4$"
-      line="127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"
-      state=present
+      dest: /etc/hosts
+      regexp: "^127\.0\.0\.1\s+localhost localhost\.localdomain localhost4 localhost4\.localdomain4$"
+      line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"
+      state: present
   - name: "We might need localhost (IPv6) in hosts file"
     lineinfile:
-      dest=/etc/hosts
-      regexp="^::1\s+localhost localhost\.localdomain localhost6 localhost6\.localdomain6$"
-      line="::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
-      state=present
+      dest: /etc/hosts
+      regexp: "^::1\s+localhost localhost\.localdomain localhost6 localhost6\.localdomain6$"
+      line: "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
+      state: present
   # Taken from https://gist.github.com/rothgar/8793800
   - name: "Build hosts file"
     lineinfile:
-      dest=/etc/hosts
-      regexp=".*{{ item }}$"
-      line="{{ hostvars[item].ip }} {{ item }}"
-      state=present
+      dest: /etc/hosts
+      regexp: ".*{{ item }}$"
+      line: "{{ hostvars[item].ip }} {{ item }}"
+      state: present
     when: "hostvars[item].ip is defined"
     with_items: "{{ groups['all'] }}"
   - name: "File /etc/hosts have correct SELinux context (had issues before)"
@@ -42,16 +42,16 @@
     changed_when: no
   - name: "Disable firewalld"
     service:
-      name=firewalld
-      state=stopped
-      enabled=no
+      name: firewalld
+      state: stopped
+      enabled: no
     when: firewalld_is_installed.rc == 0
 
   # Check SELinux
   - name: "SELinux is in Enforcing with Tragetted policy"
     selinux:
-      policy=targeted
-      state=enforcing
+      policy: targeted
+      state: enforcing
 
   # Make sure hostname is set
   - name: "Set hostname"
@@ -61,29 +61,29 @@
   # Check our networking setup
   - name: "We can ping 127.0.0.1"
     wait_for:
-      host=127.0.0.1
-      port=22
-      timeout=3
+      host: 127.0.0.1
+      port: 22
+      timeout: 3
   - name: "We can ping localhost"
     wait_for:
-      host=localhost
-      port=22
-      timeout=3
+      host: localhost
+      port: 22
+      timeout: 3
   - name: "We can ping redhat.com"
     wait_for:
-      host=redhat.com
-      port=443
-      timeout=10
+      host: redhat.com
+      port: 443
+      timeout: 10
   - name: "We can ping Satellite"
     wait_for:
-      host="{{ groups['satellite6']|first }}"
-      port=22
-      timeout=10
+      host: "{{ groups['satellite6']|first }}"
+      port: 22
+      timeout: 10
   - name: "We can ping Satellite via special network"
     wait_for:
-      host="{{ hostvars[groups['satellite6']|first].ip }}"
-      port=22
-      timeout=10
+      host: "{{ hostvars[groups['satellite6']|first].ip }}"
+      port: 22
+      timeout: 10
     when: "hostvars[groups['satellite6']|first].ip is defined"
   - name: "We can ping NTP server"
     command:
