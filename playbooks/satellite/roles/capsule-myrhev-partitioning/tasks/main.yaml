@@ -1,0 +1,40 @@
+---
+  - name: "Stop capsule"
+    command:
+      katello-service stop
+  - name: "Remove thin pool"
+    command:
+      lvremove --force /dev/docker_vg/docker-pool
+  - name: "Create new LV"
+    command:
+      lvcreate --name pulp --extents +100%FREE docker_vg
+  - name: "Format new LV"
+    command:
+      mkfs.xfs /dev/mapper/docker_vg-pulp
+  - name: "Mount point"
+    command:
+      mkdir -p /mnt/tmp
+  - name: "Mount"
+    command:
+      mount /dev/mapper/docker_vg-pulp /mnt/tmp
+  - name: "Move content"
+    shell:
+      mv /var/lib/pulp/* /mnt/tmp/
+  - name: "Umount"
+    command:
+      umount /mnt/tmp
+  - name: "Add to fstab"
+    lineinfile:
+      dest: /etc/fstab
+      regexp: '^/dev/mapper/docker_vg-pulp'
+      line: '/dev/mapper/docker_vg-pulp /var/lib/pulp/ xfs defaults 0 0'
+  - name: "Mount"
+    command:
+      mount /var/lib/pulp/
+  - name: "Fix SELinux context"
+    command:
+      restorecon -vR /var/lib/pulp/
+  - name: "Start capsule"
+    command:
+      katello-service start
+...

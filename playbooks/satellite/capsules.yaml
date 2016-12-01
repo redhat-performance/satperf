@@ -13,5 +13,6 @@
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
     - capsule
+    ###- capsule-myrhev-partitioning
     - capsule-populate
     - pbench_client
