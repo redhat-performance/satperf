@@ -6,6 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
+    ###- common-eth1
     - common
     - rhsm-satellite
     - ntp

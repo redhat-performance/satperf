@@ -1,0 +1,34 @@
+---
+  # Configure bridge we are going to use
+  # https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-networkscripts-interfaces_network-bridge.html
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^DEVICE="
+      line: "DEVICE=eth1"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^TYPE="
+      line: "TYPE=Ethernet"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=static"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^IPADDR="
+      line: "IPADDR={{ ip }}"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-eth1
+      regexp: "^NETMASK="
+      line: "NETMASK=255.0.0.0"
+  - name: "Kill all dhclients (network service was not restarting)"
+    command:
+      killall dhclient
+  - name: "Restart network"
+    command:
+      service network restart
+...
