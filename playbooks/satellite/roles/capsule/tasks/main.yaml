@@ -6,8 +6,16 @@
 
   # Check Satellite sees Capsule
   # See https://access.redhat.com/solutions/1230493
+  - name: "Make sure Satellite have Capsule in /etc/hosts"
+    lineinfile:
+      dest: /etc/hosts
+      regexp: '{{ hostvars[item].ip }}\s+{{ item }}'
+      line: '{{ hostvars[item].ip }} {{ item }}'
+    when: "hostvars[item].ip is defined"
+    with_items: "{{ groups['capsules'] }}"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
   - name: "Make sure Satellite can ping Capsule"
-    ###lineinfile: dest=/etc/hosts regexp='{{ ip }}\s+{{ inventory_hostname }}' line='{{ ip }} {{ inventory_hostname }}'   # TODO make this fully automated
     command:
       ping -c 3 "{{ inventory_hostname }}"
     delegate_to: "{{ groups['satellite6']|first }}"
