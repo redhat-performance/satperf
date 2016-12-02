@@ -2,6 +2,9 @@
 - hosts: docker-hosts
   remote_user: root
   gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   tasks:
     ###- name: "Workaround permission error when creating repodata on container"
     ###  selinux:

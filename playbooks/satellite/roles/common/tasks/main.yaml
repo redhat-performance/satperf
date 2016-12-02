@@ -4,6 +4,13 @@
       that: "groups['satellite6']|length == 1"
       msg: "Satellite not specified or too many of them specified"
 
+  # Make sure we have key deployed
+  - name: "Deploy key"
+    authorized_key:
+      user: root
+      key: "{{ lookup('file', '../../../../../'+satperf_private_key+'.pub') }}"
+      manage_dir: yes
+
   # Check /etc/hosts file
   - name: "We need localhost (IPv4) in hosts file"
     lineinfile:

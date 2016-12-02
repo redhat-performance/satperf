@@ -136,6 +136,15 @@
       name=ansible
       state=installed
   - name: "Ansible should not check host keys"
-    command:
-      sed -i 's|^.*host_key_checking.*$|host_key_checking = False|' /etc/ansible/ansible.cfg
+    lineinfile:
+      dest: /etc/ansible/ansible.cfg
+      regexp: '^.*host_key_checking'
+      line: 'host_key_checking = False'
+      state: present
+
+  # Screen is also very useful
+  - name: "Install screen"
+    yum:
+      name: screen
+      state: installed
 ...
