@@ -54,3 +54,6 @@
       run_once: true
       with_items: "{{ groups['capsules'] }}"
       ignore_errors: yes
+    - name: "Remove custom repos if any"
+      shell:
+        rm -rf /etc/yum.repos.d/*.repo
