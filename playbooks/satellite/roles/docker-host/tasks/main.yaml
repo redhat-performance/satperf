@@ -13,6 +13,12 @@
       name=docker
       state=present
 
+  # Abrt causing load when something fails and we do not care
+  - name: "abrt package not present"
+    yum:
+      name=abrt
+      state=absent
+
   # Configure bridge we are going to use
   # https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-networkscripts-interfaces_network-bridge.html
   - lineinfile:
@@ -96,45 +102,46 @@
       vgdisplay "{{ docker_host_vg }}"
   - name: "docker service not running"
     service:
-      name=docker
-      state=stopped
-      enabled=yes
+      name: docker
+      state: stopped
+      enabled: yes
   - name: "Docker storage related config ready to be recreated"
     shell: |
       rm -rf /var/lib/docker
       rm -f /etc/sysconfig/docker-storage
   - name: "docker-storage-setup configured to use our new volume group"
     lineinfile:
-      dest=/etc/sysconfig/docker-storage-setup
-      regexp="^VG="
-      line="VG='{{ docker_host_vg }}'"
+      dest: /etc/sysconfig/docker-storage-setup
+      regexp: "^VG="
+      line: "VG='{{ docker_host_vg }}'"
   - name: "docker-storage-setup"
     command:
       docker-storage-setup
 
   - name: "docker service restarted to use new settings"
     service:
-      name=docker
-      state=restarted
-      enabled=yes
+      name: docker
+      state: restarted
+      enabled: yes
 
   # Build container we will use
   - name: "Dockerfile for base container present"
     copy:
-      src=Dockerfile
-      dest=/root/Dockerfile
+      src: Dockerfile
+      dest: /root/Dockerfile
   - name: "Base container built"
     shell:
       docker build -t r7perfsat - < /root/Dockerfile
 
   # Install and preconfigure Ansible
   - name: "EPEL enabled"
-    command:
-      rpm -ivh "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+    yum:
+      name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
+      state: present
   - name: "Package ansible installed"
     yum:
-      name=ansible
-      state=installed
+      name: ansible
+      state: installed
   - name: "Ansible should not check host keys"
     lineinfile:
       dest: /etc/ansible/ansible.cfg

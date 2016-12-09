@@ -6,12 +6,10 @@
   vars:
     #sat: sat61.example.com
     #server: capsule61.example.com
-    #pool_rhel: 4028fa25545bed6101545c14bbf10063
-    #pool_tools: 4028fa25545bed6101547f49f12602e7
     sat: pman05.perf.lab.eng.bos.redhat.com
     server: ###CAPSULE###
-    pool_rhel: 2c91818158bc179f0158bc1fee180009
-    pool_tools: 2c91818158bc179f0158bc2031530010
+    pool_name_rhel: RHEL7 x86_64 Base
+    pool_name_tools: Sat6.2 Tools
     puppet_env: KT_Default_Organization_Library_test_2
   tasks:
     # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
@@ -33,6 +31,8 @@
         grep capsule2.example.com /etc/hosts || echo "172.17.3.2 capsule2.example.com">>/etc/hosts
         grep capsule3.example.com /etc/hosts || echo "172.17.3.3 capsule3.example.com">>/etc/hosts
         grep capsule4.example.com /etc/hosts || echo "172.17.3.4 capsule4.example.com">>/etc/hosts
+        grep capsule5.example.com /etc/hosts || echo "172.17.3.5 capsule5.example.com">>/etc/hosts
+        grep capsule6.example.com /etc/hosts || echo "172.17.3.6 capsule6.example.com">>/etc/hosts
 
     ###FIXRPM###- name: "Fix RPM cache"
     ###FIXRPM###  shell: |
@@ -41,6 +41,9 @@
     ###FIXRPM###- name: "Cleanup yum cache"
     ###FIXRPM###  command:
     ###FIXRPM###    yum clean all
+    ###FIXRPM###- name: "Cleanup incomplete yum transactions"
+    ###FIXRPM###  command:
+    ###FIXRPM###    yum-complete-transaction --cleanup-only
 
     ###REG###- name: "Rename /etc/rhsm-host and /etc/pki/entitlement-host"
     ###REG###  shell: |
@@ -75,16 +78,24 @@
     ###REG###- name: "Register - timings"
     ###REG###  debug:
     ###REG###    msg="Register {{ reg.start }} to {{ reg.end }}"
+    ###REG###- name: "Determine RHEL pool ID"
+    ###REG###  command:
+    ###REG###    subscription-manager list --available --all --matches "{{ pool_name_rhel }}" --pool-only
+    ###REG###  register: pool_id_rhel
+    ###REG###- name: "Determine Satellite Tools pool ID"
+    ###REG###  command:
+    ###REG###    subscription-manager list --available --all --matches "{{ pool_name_tools }}" --pool-only
+    ###REG###  register: pool_id_tools
     ###REG###- name: "Attach to RHEL product"
     ###REG###  shell:
-    ###REG###    subscription-manager attach --pool "{{ pool_rhel }}"
+    ###REG###    subscription-manager attach --pool "{{ pool_id_rhel.stdout }}"
     ###REG###  register: att
     ###REG####- name: "Attach to RHEL product - timings"
     ###REG####  debug:
     ###REG####    msg="AttachRHEL {{ att.start }} to {{ att.end }}"
     ###REG###- name: "Attach to 6.2 Tools custom product"
     ###REG###  shell:
-    ###REG###    subscription-manager attach --pool "{{ pool_tools }}"
+    ###REG###    subscription-manager attach --pool "{{ pool_id_tools.stdout }}"
     ###REG###  register: att
     ###REG####- name: "Attach to 6.2 Tools custom product - timings"
     ###REG####  debug:
@@ -128,10 +139,12 @@
     ###KAT###  command:
     ###KAT###    daemonize -- /usr/bin/goferd --foreground
 
-    ###KAT###- name: "Downgrade ksh package so we have some applicable errata"
-    ###KAT###  shell: |
-    ###KAT###    rpm -q ksh && rpm -e ksh
-    ###KAT###    yum -y install ksh-20120801-22.el7_1.2
+    ###DOWNGRADE###- name: "Downgrade more packages to have applicable errata, needs katello-agent running"
+    ###DOWNGRADE###  command:
+    ###DOWNGRADE###    yum -y downgrade ksh-20120801-22.el7_1.2 mailx-12.5-11.el7 tcpdump-4.5.1-2.el7 parted-3.1-23.el7 psmisc-22.20-8.el7 screen-4.1.0-0.22.20120314git3c2946.el7
+    ###DOWNGRADE###- name: "Install outdated ksh package so it adds to applicable errata, needs katello-agent runninng"
+    ###DOWNGRADE###  command:
+    ###DOWNGRADE###    yum -y install ksh-20120801-22.el7_1.2
 
     ###KATSTOP###- name: "Kill journald if it is running"
     ###KATSTOP###  shell:

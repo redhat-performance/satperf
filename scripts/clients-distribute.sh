@@ -20,26 +20,5 @@ function doit() {
 }
 
 #doit <hostname> server PUPDEPLOY
-###doit docker1.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker2.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker3.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker4.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-###doit docker5.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker6.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker7.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker8.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker9.example.com  pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker10.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker11.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker12.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker13.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker14.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker15.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker16.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-doit docker17.example.com pman05.perf.lab.eng.bos.redhat.com REG KAT REM
-#doit docker18.example.com pman05.perf.lab.eng.bos.redhat.com
-#doit docker19.example.com pman05.perf.lab.eng.bos.redhat.com
-#doit docker20.example.com pman05.perf.lab.eng.bos.redhat.com
-#doit docker21.example.com pman05.perf.lab.eng.bos.redhat.com
 
 wait
