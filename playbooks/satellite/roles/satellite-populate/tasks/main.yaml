@@ -43,7 +43,7 @@
       hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository list --organization '{{ sat_org }}'
     register: repository_list
   - include: try_enable_repo.yaml
-    when: repository_list.stdout.find(",{{ item.repo }},") == -1
+    when: 'repository_list.stdout.find(",{{ item.repo }},") == -1'
     with_items:
       "{{ sat_repos }}"
 
