@@ -19,6 +19,12 @@
       name=abrt
       state=absent
 
+  # We are using killall below and generally this is nice to have
+  - name: "psmisc package installed"
+    yum:
+      name: psmisc
+      state: present
+
   # Configure bridge we are going to use
   # https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-networkscripts-interfaces_network-bridge.html
   - lineinfile:
