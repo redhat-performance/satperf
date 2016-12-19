@@ -46,7 +46,8 @@ Ansible is used to perform most of the work. There are playbooks for:
 
 ### PREREQUISITES
 
-This is a Python 2 based project. From project root, run: `source ./setup`
+This is a Python 2 based project. 
+Install pip, virtualenv and run `source ./setup` from root. 
 
 The above script does the following:
 
