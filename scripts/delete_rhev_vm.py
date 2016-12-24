@@ -14,9 +14,10 @@ parser.add_argument("--rhevcafile", help="Path to RHEV ca file, default is /etc/
 parser.add_argument("--vmprefix", help="virtual machine name prefix, this prefix will be used to select machines agaist "
 									   "selected action will be executed")
 parser.add_argument("--action", help="What action to execute. Action can be:"
-									 "start - start machines"
-									 "stop - stop machines "
-									 "collect - collect ips/fqdn of machines")
+									 "start - start machine"
+									 "stop - stop machine "
+                                                                         "delete - Delete machine"
+									 "collect - collect ips/fqdn of machine")
 args = parser.parse_args()
 
 url = args.url
