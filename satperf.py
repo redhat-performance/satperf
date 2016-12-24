@@ -61,7 +61,7 @@ def _satperf_usage():
         help="Restore from backup")
     parser.add_argument("-s", "--setup", action='store_true',
         help="Setup Satellite Server, Capsules and Docker hosts")
-    parser.add_argument("-t", "--content-view-create", action='store_true',
+    parser.add_argument("-v", "--content-view-create", action='store_true',
         help="Create content view and add repos")
     parser.add_argument("-u", "--upload", action='store_true',
         help="Upload manifest")
@@ -72,6 +72,10 @@ def _satperf_usage():
     parser.add_argument("-y", "--sync-content", action='store_true',
         help="Sync content (concurrent or sequential) " + \
                                 "from repo server to satelitte server")
+    parser.add_argument("-gt", "--gather-tuning", action='store_true',
+        help="Gather present satellite/capsule tunings")
+    parser.add_argument("-ts", "--tune-settings", action='store_true',
+        help="Tune as per performance recommendations")
     parser.add_argument("-z", "--run-playbook", action='store',
         help="Run a playbook from playbooks/satellite/ not listed in satperf")
 
