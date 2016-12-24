@@ -92,8 +92,9 @@
       service network restart
 
   # Configure docker networking
-  # TODO When ran multiple times, it is added again and again
-  # TODO Bridge still needs to be reconfigured manually
+  - name: "Remove --fixed cidr if any"
+    command:
+      sed -i "s/ --fixed-cidr=[^ '\"]*//g" /etc/sysconfig/docker
   - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/24' in docker config"
     lineinfile:
       dest: /etc/sysconfig/docker
