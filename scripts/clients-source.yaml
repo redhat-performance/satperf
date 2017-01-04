@@ -210,20 +210,15 @@
     ###REM###    path=/root/.ssh
     ###REM###    state=directory
     ###REM###    mode=0700
-    ###REM###- name: "Make sure /root/.ssh/authorized_keys exists"
-    ###REM###  file:
-    ###REM###    path=/root/.ssh/authorized_keys
-    ###REM###    state=file
-    ###REM###    mode=0600
     ###REM###- name: "Obtain remote execution SSH key"
     ###REM###  action:
     ###REM###    command curl --insecure "https://{{ server }}:9090/ssh/pubkey"
     ###REM###  register: ssh_key
     ###REM###- name: "Deploy remote execution SSH key"
-    ###REM###  lineinfile:
-    ###REM###    dest=/root/.ssh/authorized_keys
-    ###REM###    regexp=" foreman-proxy@{{ server }}$"
-    ###REM###    line="{{ ssh_key.stdout }}"
+    ###REM###  authorized_key:
+    ###REM###    user: root
+    ###REM###    state: present
+    ###REM###    key: "{{ ssh_key.stdout }}"
 
     ###STATS###- name: "Gather lsof on Sat"
     ###STATS###  delegate_to: "{{ sat }}"
