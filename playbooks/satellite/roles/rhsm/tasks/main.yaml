@@ -33,8 +33,6 @@
     until: "{{ registering.rc }} == 0"
     retries: 5
     delay: 10
-  - debug:
-      var: registering
   - name: "Determine pool we are going to attach to"
     command:
       subscription-manager list --available --all --matches "{{ rhsm_pool }}" --pool-only
@@ -42,8 +40,6 @@
     until: "{{ querying.rc }} == 0"
     retries: 5
     delay: 10
-  - debug:
-      var: querying
   - name: "Attach to the pool"
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"

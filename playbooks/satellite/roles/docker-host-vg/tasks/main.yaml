@@ -1,0 +1,18 @@
+---
+  # Check VG we are going to use for docker storage
+  - name: "Autodetect docker storage VG name"
+    shell:
+      vgdisplay --colon | head -n 1 | cut -d ':' -f 1 | sed 's/\s//g'
+    when: "docker_host_vg is undefined or docker_host_vg is none or docker_host_vg == ''"
+    register: docker_host_vg_auto
+  - name: "When docker_host_vg is empty, set it to autodetected value"
+    set_fact:
+      docker_host_vg: "{{ docker_host_vg_auto.stdout }}"
+    when: "docker_host_vg is undefined or docker_host_vg is none or docker_host_vg == ''"
+  - name: "Check '{{ docker_host_vg }}' volume group is present (check 'docker-host-kvm-partitioning' or 'docker-host-ec2-partitioning' roles and alter as per your needs and enable in docker-host.yaml)"
+    command:
+      vgdisplay "{{ docker_host_vg }}"
+    register: docker_host_vg_info
+  - debug:
+      var: docker_host_vg_info.stdout_lines
+...

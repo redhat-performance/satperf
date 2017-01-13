@@ -21,9 +21,9 @@
     delegate_to: "{{ groups['satellite6']|first }}"
   - name: "Make sure Satellite can resolve Capsule hostname"
     lineinfile:
-      dest=/etc/hosts
-      regexp="{{ ip }}\s+{{ inventory_hostname }}"
-      line="{{ ip }} {{ inventory_hostname }}"
+      dest: /etc/hosts
+      regexp: '{{ ip }}\s+{{ inventory_hostname }}'
+      line: '{{ ip }} {{ inventory_hostname }}'
     delegate_to: "{{ groups['satellite6']|first }}"
     when: "ip is defined"
 
@@ -36,9 +36,9 @@
 
   - name: "Custom capsule repo configured"
     copy:
-      src="{{ capsule_repo_file }}"
-      dest=/etc/yum.repos.d/
-      force=yes
+      src: "{{ capsule_repo_file }}"
+      dest: /etc/yum.repos.d/
+      force: yes
     when: "capsule_install_source == 'repo'"
 
   - name: "Satellite Capsule repository enabled"
@@ -111,8 +111,15 @@
   - name: "Make sure remote execution plugin is enabled"
     lineinfile:
       dest: "/root/{{ inventory_hostname }}-script.sh"
-      line: '                   --enable-foreman-proxy-plugin-remote-execution-ssh\'
+      line: '                    --enable-foreman-proxy-plugin-remote-execution-ssh\'
       insertafter: '.*-installer .*'
+  - name: "We need SCL for remote execution"
+    command:
+      subscription-manager repos --enable rhel-server-rhscl-7-rpms
+    register: enabling_scl
+    until: "{{ enabling_scl.rc }} == 0"
+    retries: 5
+    delay: 10
 
   # Finally install capsule
   - name: "Run Capsule configuration"
