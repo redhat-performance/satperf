@@ -1,0 +1,10 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - client-scripts
+...

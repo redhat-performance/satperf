@@ -63,7 +63,9 @@ content_puppet_module_file: /tmp/puppet-qaredhattest.txt
 content_puppet_module_file_content: Some important sentence
 content_puppet_product: MyPuppetProduct
 content_puppet_repo: MyPuppetRepo
+content_puppet_env: KT_Default_Organization_Library_test_2
 content_content_view_name: test
+client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
 
 # Capsule install options
 sat_capsule_pool: 'Pool you want to consume'   # Needs to contain Capsule
