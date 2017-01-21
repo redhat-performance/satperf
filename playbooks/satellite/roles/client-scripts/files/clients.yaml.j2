@@ -78,7 +78,7 @@
         shell
           rpm -Uvh "http://{% raw %}{{ server }}{% endraw %}/pub/katello-ca-consumer-latest.noarch.rpm"
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is not defined or installed.rc == 0"
       retries: 10
       delay: 10
       tags: REG
@@ -89,6 +89,9 @@
       register: reg
       async: 600
       poll: 10
+      until: "reg.rc is not defined or reg.rc != 0"
+      retries: 5
+      delay: 10
       tags: REG
     - name: "Register - timings"
       debug:

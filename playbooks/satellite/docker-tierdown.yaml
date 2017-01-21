@@ -5,6 +5,10 @@
   roles:
   ###  - common
   tasks:
+    - name: "Restart docker daemon what kills all containers"
+      service:
+        name: docker
+        state: restarted
     - name: "Count running containers"
       shell:
         docker ps -q | wc -l

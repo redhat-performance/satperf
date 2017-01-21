@@ -1,0 +1,34 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - docker-host-vg   # when docker_host_vg is empty, this autodetects it
+  tasks:
+    - name: "Docker stopped"
+      service:
+        name: docker
+        state: stopped
+    - name: "Remove docker-pool"
+      command:
+        lvremove -f "/dev/mapper/{{ docker_host_vg }}-docker--pool"
+    - name: "Remove /var/lib/docker/*"
+      shell:
+        rm -rf /var/lib/docker/*
+    - name: "Cleanup /etc/sysconfig/docker-storage"
+      shell:
+        true >/etc/sysconfig/docker-storage
+    - name: "Reconfigure docker storage"
+      command:
+        docker-storage-setup
+    - name: "Docker stopped"
+      service:
+        name: docker
+        state: started
+    - name: "Rebuild our base docker image"
+      shell:
+        docker build -t r7perfsat - < /root/Dockerfile
+...
