@@ -1,0 +1,9 @@
+---
+  - name: "Configure larger ARP table"
+    copy:
+      src: 50-enlarge-arp-table.conf
+      dest: /etc/sysctl.d/50-enlarge-arp-table.conf
+  - name: "Reload sysctl config"
+    command:
+      sysctl -p
+...

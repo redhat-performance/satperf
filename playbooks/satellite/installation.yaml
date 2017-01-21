@@ -12,6 +12,7 @@
     ###- upgrade-restart
     ###- satellite-ec2-partitioning
     - setup
+    - enlarge-arp-table
     - pbench_client
     - satellite-populate
 ...
