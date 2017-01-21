@@ -1,0 +1,20 @@
+---
+ansible_become: true
+tuned_profile: throughput-performance
+
+checks :
+    bz1333630 :
+        url: "https://bugzilla.redhat.com/show_bug.cgi?id=1333630"
+        description: " Apache has 7x number of open files on capsule with satellite 6.2 compare to satellite 6.1"
+        severity: "Suggestion"
+        impact: "Scale of content hosts would be concern"
+    bz1329566:
+        url: "https://bugzilla.redhat.com/show_bug.cgi?id=1329566"
+        description: "hammer host list" takes long time at scale"
+        severity: "Suggestion"
+        impact: "Scale of content hosts would be concern"
+    bz1312680:
+        url: "https://bugzilla.redhat.com/show_bug.cgi?id=1312680"
+        description: " increase shared_buffers in postgresql.conf to 256MB"
+        severity: "Suggestion"
+        impact: "Scale of content hosts would be concern"

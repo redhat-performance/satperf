@@ -1,0 +1,48 @@
+---
+#
+# Performance checks specific to satellite hosts
+#
+
+- name : File descriptors for the qpidd process
+  shell: cat /proc/$(pgrep qpidd)/limits | grep "open files" | awk '{print $4}'
+  register: qpidd_def_fd
+  failed_when: qpidd_def_fd.stdout|int < qpidd_fd
+  changed_when: bz1333630
+  ignore_errors: yes
+
+- name : File descriptors for the qdrouterd process
+  shell: cat /proc/$(pgrep qdrouterd)/limits | grep "open files" | awk '{print $4}'
+  register: qdrouterd_def_fd
+  failed_when: qdrouterd_def_fd.stdout|int < qdrouterd_fd
+  changed_when: bz1333630
+  ignore_errors: yes
+
+- name : File descriptors for the mongodb process
+  shell: cat /proc/$(pgrep mongod)/limits | grep "open files" | awk '{print $4}'
+  register: mongod_def_fd
+  failed_when: mongod_def_fd.stdout|int < mongod_fd
+  changed_when: no
+  ignore_errors: yes
+
+- name : Hammer timeout 
+  shell: cat /etc/hammer/cli.modules.d/foreman.yml | grep request_timeout |awk '{print $2}'
+  register: hammer_def_timeout
+  failed_when: hammer_def_timeout.stdout|int < hammer_timeout
+  changed_when: bz1329566
+  ignore_errors: yes
+
+- name : postgresql shared_buffers  
+  shell: cat /var/lib/pgsql/data/postgresql.conf | grep shared_buffers | awk 'NR==1' | awk '{print $3}'
+  register: shared_def_buffers
+  failed_when: shared_def_buffers.stdout|int < pgsql_shared_buffers
+  changed_when: bz1312680
+  ignore_errors: yes
+
+- name : postgresql max_connections        
+  shell: cat /var/lib/pgsql/data/postgresql.conf | grep max_connections | awk 'NR==1' | awk '{print $3}'
+  register: max_def_connections
+  failed_when: max_def_connections.stdout|int < pgsql_max_connections
+  changed_when: no
+  ignore_errors: yes
+
+
