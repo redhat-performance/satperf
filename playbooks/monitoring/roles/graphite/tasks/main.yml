@@ -42,19 +42,10 @@
 
 # (akrzos) yum module works at this point due to the fact the EPEL repo now exists.  EPEL rpm is
 # installed at this point in time.
-# # fails to get following deps:
-# - python-twister-core
-#   - python-zope-interface
-# EPEL for some reason, removed them again. meh!!
 
-# NOTE: Present in rhel-7-server-optional-rpms
-## TODO WARNING: INSECURE method
-#- name: Graphite prerequisites not in EPEL at the moment
-#  yum: name={{ item }} state=present
-#  become: true
-#  with_items:
-#    - ftp://195.220.108.108/linux/centos/7.2.1511/os/x86_64/Packages/python-zope-interface-4.0.5-4.el7.x86_64.rpm
-#    - ftp://195.220.108.108/linux/centos/7.2.1511/os/x86_64/Packages/python-twisted-core-12.2.0-4.el7.x86_64.rpm
+- name: "Enable RHEL Optional repo where some of our deps live"
+  command:
+    subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-optional-rpms'
 
 - name: Install graphite rpms
   yum: name={{ item }} state=present
