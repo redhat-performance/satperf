@@ -58,11 +58,6 @@
 # moved to grafana specific playbook
 #    - https://grafanarel.s3.amazonaws.com/builds/grafana-2.6.0-1.x86_64.rpm
 
-- name: Check for graphite.db sqlite
-  stat:
-    path=/var/lib/graphite-web/graphite.db
-  register: graphite_db_installed
-
 - name: Copy setup-graphite-db.exp
   copy:
     src=setup-graphite-db.exp
@@ -82,8 +77,9 @@
 
 - name: Create initial graphite db
   shell: /root/setup-graphite-db.exp {{ graphite_username }} {{ graphite_password }} && chown apache:apache /var/lib/graphite-web/graphite.db
+  args:
+    creates: /var/lib/graphite-web/graphite.db
   become: true
-  when: "graphite_db_installed.stat.exists is defined and graphite_db_installed.stat.exists == true"
   register: apache_needs_restart
 
 - name: Setup httpd graphite-web config
