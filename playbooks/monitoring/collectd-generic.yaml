@@ -2,11 +2,11 @@
 #
 # Generic Playbook to install collectd on generic machine types, use tags to seperate machine type:
 #
-# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="graphite"
-# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="satellite6"
-# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="capsules"
-# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="docker-hosts"
-# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags="satellite6,capsules"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags="graphite"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags="satellite6"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags="capsules"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags="docker-hosts"
+# ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags="satellite6,capsules"
 
 - hosts: graphite
   remote_user: root
