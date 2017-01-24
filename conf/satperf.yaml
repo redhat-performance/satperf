@@ -140,7 +140,7 @@ graphite_password: password
 grafana_port: 3000
 # Grafana username and password
 grafana_username: admin
-grafana_password: password
+grafana_password: admin
 
 # VMs provisioning
 vms:
