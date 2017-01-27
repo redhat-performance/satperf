@@ -18,13 +18,16 @@
 
 - stat: path=/etc/yum.repos.d/epel.repo
   register: epel_installed
+  when: offline_install is undefined
 
 - name: Enable EPEL Repo
   ini_file: dest=/etc/yum.repos.d/epel.repo
     section=epel
     option=enabled
     value=1
-  when: epel_installed.stat.exists == True
+  when:
+    - offline_install is undefined
+    - epel_installed.stat.exists == True
   register: epel_enabled
 
 # - name: Check for enabled epel-release
@@ -38,7 +41,9 @@
 - name: Install EPEL rpm
   command: rpm -ivh --force {{ epel_release_rpm }}
   become: true
-  when: epel_installed.stat.exists == false or epel_enabled.msg != 'OK'
+  when:
+    - offline_install is undefined
+    - epel_installed.stat.exists == false or epel_enabled.msg != 'OK'
 
 # (akrzos) yum module works at this point due to the fact the EPEL repo now exists.  EPEL rpm is
 # installed at this point in time.
@@ -46,6 +51,7 @@
 - name: "Enable RHEL Optional repo where some of our deps live"
   command:
     subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-optional-rpms'
+  when: offline_install is undefined
 
 - name: Install graphite rpms
   yum: name={{ item }} state=present
@@ -182,3 +188,4 @@
     fi
   ignore_errors: true
   become: true
+  when: offline_install is undefined

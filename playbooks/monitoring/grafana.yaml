@@ -10,5 +10,8 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - { role: ../satellite/roles/rhsm, when: "groups['graphite']|first != groups['grafana']|first" }
+    - role: ../satellite/roles/rhsm
+      when:
+        - offline_install is undefined
+        - "groups['graphite']|first != groups['grafana']|first"
     - { role: grafana }
