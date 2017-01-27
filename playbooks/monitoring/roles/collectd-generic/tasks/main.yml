@@ -34,7 +34,9 @@
 - name: Install EPEL rpm
   command: rpm -ivh --force {{ epel_release_rpm }}
   become: true
-  when: epel_installed.rc != 0 or epel_enabled.rc != 0
+  when:
+    - offline_install is undefined
+    - epel_installed.rc != 0 or epel_enabled.rc != 0
 
 # (akrzos) yum module works at this point due to the fact the EPEL repo now exists.  EPEL rpm is
 # installed at this point in time.
@@ -139,3 +141,4 @@
     fi
   ignore_errors: true
   become: true
+  when: offline_install is undefined

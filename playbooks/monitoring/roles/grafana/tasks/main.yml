@@ -27,6 +27,14 @@
   become: true
   with_items:
     - https://grafanarel.s3.amazonaws.com/builds/grafana-2.6.0-1.x86_64.rpm
+  when: offline_install is undefined
+
+- name: Install grafana rpms
+  yum: name={{ item }} state=present
+  become: true
+  with_items:
+    - grafana
+  when: offline_install is defined
 
 - name: Set grafana server port
   ini_file:

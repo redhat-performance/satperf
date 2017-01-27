@@ -10,5 +10,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - { role: ../satellite/roles/rhsm }
+    - role: ../satellite/roles/rhsm
+      when:
+        - offline_install is undefined
     - { role: graphite }
