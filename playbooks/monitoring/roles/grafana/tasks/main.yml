@@ -48,6 +48,7 @@
 - name: disable firewalld
   service: name=firewalld state=stopped enabled=false
   become: true
+  ignore_errors: true
 
 #
 # setup the grafana-server service
