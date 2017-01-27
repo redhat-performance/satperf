@@ -12,6 +12,11 @@
     ###  selinux:
     ###    policy=targeted
     ###    state=permissive
+    - name: "Get docker version"
+      command:
+        rpm -q docker
+      register: docker_version
+    - debug: var=docker_version.stdout_lines
     - name: "Base image available"
       shell:
         docker images | grep r7perfsat
