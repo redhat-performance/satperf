@@ -1,21 +1,21 @@
-# satperf
+# satellite-performance
 
 Table of Contents
 =================
 
-- [Satperf: What does it have?](#satperf)
+- [Satellite-performance: What does it have?](#satellite-performance)
 - [Installation](#installation)
   - [Installation Prerequisites](#installation-prerequisites)
   - [Installation Steps](#installation-steps)
 - [Execution](#execution)
-- [Ansible for satperf](#ansible-for-satperf)
+- [Ansible for satellite-performance](#ansible-for-satellite-performance)
     - [Getting Started](#install-systems-on-aws)
     - [sync repos](#sync-repos-to-satellite)
     - [Performance Check](#performance-check)
     - [Performance Tune](#performance-tune)
     - [Adjust your overcloud](#adjust-your-overcloud)
 
-# Satperf
+# Satellite-performance
 
 This project was started to run performance tests on Red Hat Satelitte.
 It does the following activities:
@@ -31,7 +31,7 @@ It does the following activities:
 It also provides a way to measure time for tests while capturing resources
 using [pbench](https://github.com/distributed-system-analysis/pbench)
 
-# Ansible for satperf
+# Ansible for satellite-performance
 
 Ansible is used to perform most of the work. There are playbooks for:
 
@@ -57,7 +57,7 @@ The above script does the following:
 
 ### Note
 
-1. Before running satperf, check `conf/satperf.yaml`, and create `conf/satperf.local.yaml`
+1. Before running satellite-performance, check `conf/satperf.yaml`, and create `conf/satperf.local.yaml`
    and configure any owerrides there (e.g. RHN credentials, Satellite setup details etc).
 
 2. Make sure that all hosts you are going to use have SSH certificate deployed for
