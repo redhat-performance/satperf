@@ -10,7 +10,7 @@
 
   - name: "docker package installed"
     yum:
-      name=docker
+      name=docker-1.10.3-59.el7
       state=present
 
   # Abrt causing load when something fails and we do not care

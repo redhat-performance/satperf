@@ -15,6 +15,7 @@
     - name: "Remove docker-pool"
       command:
         lvremove -f "/dev/mapper/{{ docker_host_vg }}-docker--pool"
+      ignore_errors: true
     - name: "Remove /var/lib/docker/*"
       shell:
         rm -rf /var/lib/docker/*
@@ -24,7 +25,7 @@
     - name: "Reconfigure docker storage"
       command:
         docker-storage-setup
-    - name: "Docker stopped"
+    - name: "Docker started"
       service:
         name: docker
         state: started

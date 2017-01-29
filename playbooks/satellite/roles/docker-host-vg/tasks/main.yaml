@@ -13,6 +13,6 @@
     command:
       vgdisplay "{{ docker_host_vg }}"
     register: docker_host_vg_info
-  - debug:
-      var: docker_host_vg_info.stdout_lines
+  #- debug:
+  #    var: docker_host_vg_info.stdout_lines
 ...

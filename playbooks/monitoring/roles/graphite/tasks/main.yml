@@ -18,13 +18,16 @@
 
 - stat: path=/etc/yum.repos.d/epel.repo
   register: epel_installed
+  when: offline_install is undefined
 
 - name: Enable EPEL Repo
   ini_file: dest=/etc/yum.repos.d/epel.repo
     section=epel
     option=enabled
     value=1
-  when: epel_installed.stat.exists == True
+  when:
+    - offline_install is undefined
+    - epel_installed.stat.exists == True
   register: epel_enabled
 
 # - name: Check for enabled epel-release
@@ -38,23 +41,17 @@
 - name: Install EPEL rpm
   command: rpm -ivh --force {{ epel_release_rpm }}
   become: true
-  when: epel_installed.stat.exists == false or epel_enabled.msg != 'OK'
+  when:
+    - offline_install is undefined
+    - epel_installed.stat.exists == false or epel_enabled.msg != 'OK'
 
 # (akrzos) yum module works at this point due to the fact the EPEL repo now exists.  EPEL rpm is
 # installed at this point in time.
-# # fails to get following deps:
-# - python-twister-core
-#   - python-zope-interface
-# EPEL for some reason, removed them again. meh!!
 
-# NOTE: Present in rhel-7-server-optional-rpms
-## TODO WARNING: INSECURE method
-#- name: Graphite prerequisites not in EPEL at the moment
-#  yum: name={{ item }} state=present
-#  become: true
-#  with_items:
-#    - ftp://195.220.108.108/linux/centos/7.2.1511/os/x86_64/Packages/python-zope-interface-4.0.5-4.el7.x86_64.rpm
-#    - ftp://195.220.108.108/linux/centos/7.2.1511/os/x86_64/Packages/python-twisted-core-12.2.0-4.el7.x86_64.rpm
+- name: "Enable RHEL Optional repo where some of our deps live"
+  command:
+    subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-optional-rpms'
+  when: offline_install is undefined
 
 - name: Install graphite rpms
   yum: name={{ item }} state=present
@@ -66,11 +63,6 @@
 
 # moved to grafana specific playbook
 #    - https://grafanarel.s3.amazonaws.com/builds/grafana-2.6.0-1.x86_64.rpm
-
-- name: Check for graphite.db sqlite
-  stat:
-    path=/var/lib/graphite-web/graphite.db
-  register: graphite_db_installed
 
 - name: Copy setup-graphite-db.exp
   copy:
@@ -91,8 +83,9 @@
 
 - name: Create initial graphite db
   shell: /root/setup-graphite-db.exp {{ graphite_username }} {{ graphite_password }} && chown apache:apache /var/lib/graphite-web/graphite.db
+  args:
+    creates: /var/lib/graphite-web/graphite.db
   become: true
-  when: "graphite_db_installed.stat.exists is defined and graphite_db_installed.stat.exists == true"
   register: apache_needs_restart
 
 - name: Setup httpd graphite-web config
@@ -195,3 +188,4 @@
     fi
   ignore_errors: true
   become: true
+  when: offline_install is undefined

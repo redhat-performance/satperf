@@ -115,7 +115,7 @@ $ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satelli
 ###  To install Collectd:
 
 ```
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yml --tags "sattelite6"
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags "satellite6"
 ```
 ...Replace "satellite6" with whatever machines you intend to install collectd on.
 
