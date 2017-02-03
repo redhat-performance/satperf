@@ -1,0 +1,18 @@
+
+rmance checks specific to satellite hosts
+#
+
+- name : File descriptors for the qpidd process
+  shell: cat /proc/$(pgrep qpidd)/limits | grep "open files" | awk '{print $4}'
+  register: qpidd_def_fd
+  failed_when: qpidd_def_fd.stdout|int < qpidd_fd
+  changed_when: bz1333630
+  ignore_errors: yes
+
+- name : File descriptors for the qdrouterd process
+  shell: cat /proc/$(pgrep qdrouterd)/limits | grep "open files" | awk '{print $4}'
+  register: qdrouterd_def_fd
+  failed_when: qdrouterd_def_fd.stdout|int < qdrouterd_fd
+  changed_when: bz1333630
+  ignore_errors: yes
+
