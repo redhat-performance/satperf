@@ -1,0 +1,118 @@
+- name: apply tunings to the Satellite host
+  hosts: satellite6
+  tasks:
+    - name: tune passenger for foreman - PassengerMinInstances
+      lineinfile:
+        dest: /etc/httpd/conf.d/05-foreman-ssl.conf
+        regexp: PassengerMinInstances
+        line: PassengerMinInstances 6
+      notify: bounce httpd
+    - name: tune passenger for foreman - PassengerStartTimeout
+      lineinfile:
+        dest: /etc/httpd/conf.d/05-foreman-ssl.conf
+        regexp: PassengerStartTimeout
+        line: PassengerStartTimeout 90
+      notify: bounce httpd
+    - name: tune passenger for foreman - Max
+      blockinfile:
+        dest: /etc/httpd/conf.d/05-foreman-ssl.conf
+        block: |
+          PassengerMaxPreloaderIdleTime 0
+          PassengerMaxRequests 10000
+        insertafter: PassengerRuby
+      notify: bounce httpd
+    - name: set PostgreSQL shared_buffers
+      lineinfile:
+        dest: /var/lib/pgsql/data/postgresql.conf
+        line: shared_buffers = 512MB
+        regexp: "^shared_buffers"
+        state: present
+      notify: bounce postgresql
+    - name: set PostgreSQL work_mem
+      lineinfile:
+        dest: /var/lib/pgsql/data/postgresql.conf
+        line: work_mem = 4MB
+        regexp: "^work_mem"
+        state: present
+      notify: bounce postgresql
+    - name: set PostgreSQL max_connections
+      lineinfile:
+        dest: /var/lib/pgsql/data/postgresql.conf
+        line: max_connections = 400
+        regexp: "^max_connections"
+        state: present
+      notify: bounce postgresql
+  handlers:
+    - name: bounce httpd
+      service:
+        name: httpd
+        state: restarted
+    - name: bounce postgresql
+      service:
+        name: postgresql
+        state: restarted
+
+- name: apply tunings to the Satellite and Capsule hosts
+  hosts: satellite6:capsules
+  vars:
+    filelimit_services:
+      - httpd
+      - qpidd
+      - qdrouterd
+      - smart_proxy_dynflow_core
+  tasks:
+    - name: create systemd folders
+      file:
+        name: "/etc/systemd/system/{{ item }}.service.d/"
+        state: directory
+      with_items:
+        "{{ filelimit_services }}"
+    - name: deploy limits file
+      copy:
+        src: limits.conf
+        dest: "/etc/systemd/system/{{ item }}.service.d/limits.conf"
+      with_items:
+        "{{ filelimit_services }}"
+      notify:
+        - bounce systemd
+        - bounce services
+    - name: tune passenger globally
+      blockinfile:
+        dest: /etc/httpd/conf.d/passenger.conf
+        block: |
+          PassengerMaxPoolSize 48
+          PassengerMaxRequestQueueSize 400
+          PassengerStatThrottleRate 120
+        insertafter: PassengerRuby
+      notify: bounce httpd softly
+    - name: change fs.aio-max-nr
+      sysctl:
+        name: fs.aio-max-nr
+        value: 1000000
+        state: present
+        sysctl_file: /etc/sysctl.d/satellite.conf
+    - name: set smart_proxy_dynflow_core to in-memory database
+      lineinfile:
+        dest: /etc/smart_proxy_dynflow_core/settings.yml
+        line: ':database: ""'
+        regexp: "^:database:"
+        state: present
+      notify: bounce smart_proxy_dynflow_core
+  handlers:
+    - name: bounce systemd
+      command: systemctl daemon-reload
+    - name: bounce smart_proxy_dynflow_core
+      service:
+        name: smart_proxy_dynflow_core
+        state: restarted
+    - name: bounce httpd softly
+      service:
+        name: httpd
+        state: reloaded
+    - name: bounce services
+      service:
+        name: "{{ item }}"
+        state: restarted
+      with_items:
+        "{{ filelimit_services }}"
+
