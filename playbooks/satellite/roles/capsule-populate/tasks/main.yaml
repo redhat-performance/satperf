@@ -1,4 +1,8 @@
 ---
+  # TODO Would be great if we would create one location per capsule and add
+  # capsule to it. It is important for Remote Execution because if client
+  # system is in default location, it should have ssh key of all capsules in
+  # that location
   - name: "Set organization and location"
     command:
       "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ item }} --organizations '{{ sat_org }}' --locations '{{ sat_location }}'"
@@ -23,4 +27,6 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
+  #- name: "Set autosign"
+  #  ### TODO https://bugzilla.redhat.com/show_bug.cgi?id=1140671
 ...

@@ -49,4 +49,9 @@
     - name: "Delete manifest"
       command:
         rm -rf /root/manifest.zip
+
+    - name: "Remove ReX tmp files"
+      file:
+        path: /var/tmp/foreman-proxy
+        state: absent
 ...

@@ -11,7 +11,9 @@ collectd_packages:
     - collectd
     - collectd-turbostat
     - collectd-postgresql
+    - collectd-apache
   docker-hosts:
     - collectd
   capsules:
     - collectd
+    - collectd-apache

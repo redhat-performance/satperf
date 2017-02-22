@@ -33,6 +33,16 @@ LoadPlugin uptime
   DeleteSocket true
 </Plugin>
 
+LoadPlugin apache
+<Plugin apache>
+    # Leave "Instance" blank unless you have multiple
+    # Apache instances, in which case you can provide
+    # a name to identify each instance
+   <Instance "">
+       URL "http://127.0.0.1/server-status?auto"
+   </Instance>
+</Plugin>
+
 # Graphite Host Configuration
 <Plugin write_graphite>
   <Carbon>

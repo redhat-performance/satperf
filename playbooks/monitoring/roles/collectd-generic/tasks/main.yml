@@ -48,6 +48,15 @@
   register: install_collectd
 
 #
+# Enable mod_status
+#
+- name: Enable mod_status
+  copy:
+    src: status.conf
+    dest: /etc/httpd/conf.d/status.conf
+  notify: restart httpd
+
+#
 # Satellite6 specific configuration steps
 #
 - name: Get Candlepin PostgresDB Password

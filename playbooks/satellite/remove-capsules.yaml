@@ -57,3 +57,7 @@
     - name: "Remove custom repos if any"
       shell:
         rm -rf /etc/yum.repos.d/*.repo
+    - name: "Remove ReX tmp files"
+      file:
+        path: /var/tmp/foreman-proxy
+        state: absent
