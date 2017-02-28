@@ -83,7 +83,8 @@ capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2
 # Docker hosts
 docker_host_containers: 50
 docker_host_partitioning: kvm
-docker_host_vg: docker   # when empty, use first VG you find
+docker_host_storage_driver: devicemapper   # which storage driver should Docker use, "devicemapper" or "overlay"
+docker_host_vg: docker   # name of the VG to be used when using Devicemapper direct LVM; when empty, use first VG you find
 
 # Environment
 ntp_server: clock.redhat.com
