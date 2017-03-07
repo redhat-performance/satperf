@@ -125,7 +125,31 @@
     shell: |
       lvs --separator ':' "/dev/mapper/{{ docker_host_vg }}" | grep '^\s*docker-pool:' \
         && lvremove --force "/dev/mapper/{{ docker_host_vg }}-docker--pool" || true
-  ###-name: "No docker overlay FS present"   # TODO
+  
+  # Cleanup Overlay FS configuration if present
+  - name: "Check if we have an Overlay configured"
+    command:
+      grep "/dev/{{ docker_host_vg }}/docker" /etc/fstab
+    register: overlay_present
+    always_run: True
+    ignore_errors: True
+  - name: "Unmount the partition"
+    mount:
+      src: "/dev/{{ docker_host_vg }}/docker"
+      name: /var/lib/docker
+      state: unmounted
+    when: overlay_present.rc == 0
+  - name: "Cleanup /etc/fstab"
+    lineinfile:
+      name: /etc/fstab
+      regexp: '^/dev/{{ docker_host_vg }}/docker'
+      state: absent
+    when: overlay_present.rc == 0
+  - name: "Remove overlay device"
+    command:
+      lvremove -f "{{ docker_host_vg }}"
+    when: overlay_present.rc == 0
+
   - name: "Docker storage related config ready to be recreated"
     shell: |
       rm -rf /var/lib/docker/*
