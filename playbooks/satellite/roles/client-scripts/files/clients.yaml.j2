@@ -12,7 +12,7 @@
         that: "server is defined"
 
     ##################################################
-    # General tasks
+    # Wait for our host to be available
     ##################################################
     # Taken from http://stackoverflow.com/questions/32896877/is-it-possible-to-catch-and-handle-ssh-connection-errors-in-ansible
     - name: "Wait for machine to be available"
@@ -35,7 +35,7 @@
         {% endfor %}
 
     ##################################################
-    # General tasks
+    # Cleanup yum caches
     ##################################################
     - name: "Fix RPM cache"
       shell: |
@@ -52,7 +52,9 @@
       tags: FIXRPM
 
     ##################################################
-    # General tasks
+    # Clean up subscription-manager, clean up the 
+    # katello-ca-consumer package and make sure
+    # we don't have any broken packages
     ##################################################
     - name: "Rename /etc/rhsm-host and /etc/pki/entitlement-host"
       shell: |
@@ -83,6 +85,10 @@
       delay: 10
       tags: REG
     ###- pause: prompt="Press Enter to start registering"
+    #################################################
+    # Start registering with RHSM and attach to the
+    # pool
+    #################################################
     - name: "Register"
       shell:
         subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
@@ -129,7 +135,8 @@
     # TODO: Investigate and add a code that would register through "bootstrap.py"
 
     ##################################################
-    # General tasks
+    # Make sure katello-agent is clean installed
+    # and not already present.
     ##################################################
     - name: "Remove katello-agent when installed"
       yum:
@@ -176,7 +183,9 @@
       tags: KAT
 
     ##################################################
-    # General tasks
+    # Start downgrading some packages so that we
+    # can have some errata applicable to our
+    # clients.
     ##################################################
     - name: "Downgrade more packages to have applicable errata, needs katello-agent running"
       command:
@@ -188,7 +197,7 @@
       tags: DOWNGRADE
 
     ##################################################
-    # General tasks
+    # Make sure journald is not running
     ##################################################
     - name: "Kill journald if it is running"
       shell:
@@ -200,7 +209,7 @@
       tags: KATSTOP
 
     ##################################################
-    # General tasks
+    # Clean up puppet and register puppet host
     ##################################################
     - name: "Remove puppet certs if any"
       shell:
@@ -239,7 +248,8 @@
       tags: PUP
 
     ##################################################
-    # General tasks
+    # Configure puppet on satellite for given 
+    # containers
     ##################################################
     # We need to serialize these hammer calls because of https://bugzilla.redhat.com/show_bug.cgi?id=1336007
     - name: "Configure puppet stuff on Sat for given container"
@@ -255,7 +265,7 @@
     ###  tags: PUPDEPLOYSETUP
 
     ##################################################
-    # General tasks
+    # Deploy puppet
     ##################################################
     - name: "Pickup puppet action"
       command:
@@ -276,7 +286,8 @@
       tags: PUPDEPLOY
 
     ##################################################
-    # General tasks
+    # We need to have some place for storing our
+    # ssh data
     ##################################################
     - name: "Make sure /root/.ssh/ exists"
       file:
@@ -297,7 +308,7 @@
       tags: REM
 
     ##################################################
-    # General tasks
+    # Gather some system data on Satellite
     ##################################################
     - name: "Gather lsof on Sat"
       delegate_to: "{{ groups['satellite6']|first }}"
@@ -345,7 +356,7 @@
     #  tags: STATS
 
     ##################################################
-    # General tasks
+    # Gather some system data on capsule
     ##################################################
     - name: "Gather lsof on Capsule"
       delegate_to: "{% raw %}{{ server }}{% endraw %}"
@@ -382,7 +393,7 @@
     #  tags: STATC
 
     ##################################################
-    # General tasks
+    # Restart the satellite
     ##################################################
     - name: "Restart Sat"
       delegate_to: "{{ groups['satellite6']|first }}"
@@ -396,7 +407,7 @@
       tags: RESTART
 
     ##################################################
-    # General tasks
+    # Clean up the yum cache
     ##################################################
     - name: "Clean yum cache"
       shell:
