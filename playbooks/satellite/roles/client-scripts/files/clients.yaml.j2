@@ -190,6 +190,7 @@
     - name: "Downgrade more packages to have applicable errata, needs katello-agent running"
       command:
         yum -y downgrade ksh-20120801-22.el7_1.2 mailx-12.5-11.el7 tcpdump-4.5.1-2.el7 parted-3.1-23.el7 psmisc-22.20-8.el7 screen-4.1.0-0.22.20120314git3c2946.el7
+      ignore_errors: True
       tags: DOWNGRADE
     - name: "Install outdated ksh package so it adds to applicable errata, needs katello-agent runninng"
       command:
