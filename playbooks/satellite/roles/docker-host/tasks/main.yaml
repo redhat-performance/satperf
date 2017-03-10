@@ -1,7 +1,18 @@
 ---
   - name: "If docker is installed, maybe we are running this playbook on a server where it already ran?"
     shell:
-      "! rpm -q docker"
+      "rpm -q docker"
+    register: docker_installed
+
+  # If docker is already installed, we should remove it
+  - name: "Removing previously installed version of docker"
+    yum: pkg={{item}} state=absent
+    with_items:
+     - docker-selinux
+     - docker-common
+     - docker-engine
+    ignore_errors: True
+    when: docker_installed.rc == 0
 
   # TODO Do we need to add possibility to attach to specific pool here?
   - name: "Enable RHEL Extras repo where docker package lives"
