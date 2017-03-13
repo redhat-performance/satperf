@@ -5,6 +5,17 @@
   roles:
   ###  - common
   tasks:
+    - name: "Get docker container ips to clear up known_hosts file"
+      shell: |
+        for c in $(docker ps -q); do
+          docker inspect $c | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0][\"NetworkSettings\"][\"IPAddress\"]"
+        done > /root/docker-ips.txt
+    - name: "Clear up ssh known_hosts before killing containers"
+      shell:
+        grep -vwF -f /root/docker-ips.txt /root/.ssh/known_hosts > /root/.ssh/known_hosts_new
+    - name: "Keep cleaned up known hosts only"
+      shell:
+        rm -f /root/.ssh/known_hosts && mv /root/.ssh/known_hosts_new /root/.ssh/known_hosts
     - name: "Restart docker daemon what kills all containers"
       service:
         name: docker
