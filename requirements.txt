@@ -1,22 +1,30 @@
-ansible==1.9.6
-cffi==1.7.0
-cryptography==1.4
-docopt==0.6.2
-elasticsearch==2.3.0
-enum34==1.1.6
-idna==2.1
-ipaddress==1.0.16
-Jinja2==2.8
-MarkupSafe==0.23
-paramiko==2.0.2
-pyasn1==0.1.9
-pycparser==2.14
-pycrypto==2.6.1
-pykwalify==1.5.1
-python-dateutil==2.4.2
-PyYAML==3.11
-six==1.10.0
-urllib3==1.16
-py==1.4.31
-yaycl==0.2.0
-configparser==3.5.0
+ansible (2.2.1.0)
+appdirs (1.4.2)
+cffi (1.9.1)
+configparser (3.5.0)
+cryptography (1.7.2)
+docopt (0.6.2)
+elasticsearch (2.3.0)
+enum34 (1.1.6)
+idna (2.4)
+ipaddress (1.0.18)
+Jinja2 (2.8.1)
+layered-yaml-attrdict-config (16.1.0)
+MarkupSafe (0.23)
+packaging (16.8)
+paramiko (2.1.2)
+pip (9.0.1)
+py (1.4.31)
+pyasn1 (0.2.3)
+pycparser (2.17)
+pycrypto (2.6.1)
+pykwalify (1.5.1)
+pyparsing (2.1.10)
+python-dateutil (2.4.2)
+PyYAML (3.12)
+setuptools (34.3.1)
+six (1.10.0)
+urllib3 (1.16)
+wheel (0.30.0a0)
+yaycl (0.2.0)
+
