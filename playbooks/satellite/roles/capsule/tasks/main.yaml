@@ -129,4 +129,74 @@
     until: "{{ configuration.rc }} == 0"
     retries: 5
     delay: 10
+
+  # Create location for this capsule if it does not exist yet and move the location there
+  - name: "Get list of locations"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
+      method: GET
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+    register: locations
+    run_once: true
+  - name: "Create location for our capsule if it is not already there"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/locations"
+      method: POST
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+      HEADER_Content-Type: application/json
+      HEADER_Accept: application/json,version=2
+      body: >
+        {"location":{"name":"Location for {{ inventory_hostname }}"}}
+      status_code: 201
+    # Only create the location when it is not already in the list of dicts gathered by previous task
+    # http://docs.ansible.com/ansible/playbooks_conditionals.html#loops-and-conditionals
+    with_items: "{{ locations.json.results|default([]) }}"
+    when: "item.name != 'Location for {{ inventory_hostname }}'"
+  - name: "Get updated list of locations if needed"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
+      method: GET
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+    register: locations
+    run_once: true
+  - name: "Determine location ID"
+    set_fact:
+      location_id: "{{ item.id }}"
+    with_items: locations.json.results
+    when: "item.name == 'Location for {{ inventory_hostname }}''"
+  - name: "Move capsule's host to the location"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/hosts/{{ inventory_hostname }}"
+      method: PUT
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+      HEADER_Content-Type: application/json
+      HEADER_Accept: application/json,version=2
+      body: >
+        {"host":{"location_id":"{{ location_id }}"}}
+    ignore_errors: true   # not confident this all will work
+  - name: "Move capsule to the location"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/smart_proxies/{{ inventory_hostname }}"
+      method: PUT
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+      HEADER_Content-Type: application/json
+      HEADER_Accept: application/json,version=2
+      body: >
+        {"smart_proxy":{"location_ids":["{{ location_id }}"]}}
+    ignore_errors: true   # not confident this all will work
 ...
