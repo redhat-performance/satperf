@@ -1,0 +1,20 @@
+---
+  #Get the names of the NICs we have
+  - name: "Retrieving Network Interfaces"
+    find:
+      path: /sys/class/net
+      file_type: directory
+    register: nic_set
+  #Store our connected NICs in some temporary location
+  - name: "Get file contents"
+    shell:
+      cat "{{ item }}/speed" && echo -n "{{ item }} " >> /root/links.txt && cat "{{ item }}/speed" >> /root/links.txt
+    with_items: "{{ nic_set.files | map(attribute='path') | list }}"
+    register: speeds
+    ignore_errors: True
+  #Select which NIC is 10g
+  - name: "Select 10G NICs"
+    shell:
+      cat /root/links.txt | grep "10000" | cut -d' ' -f1 | cut -d'/' -f5
+    register: nic 
+...
