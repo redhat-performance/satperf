@@ -18,7 +18,7 @@
     until: "{{ uploading.rc }} == 0"
     retries: 5
     delay: 10
-    when: "manifesting.stat.exists is defined or manifesting.stat.exists == "true" or copying.changed"
+    when: "manifesting.stat.exists is defined or manifesting.stat.exists == true or copying.changed"
 
   # TODO: We want to be sure manifest is in the Sat before we start trying
   # to enable repos. There have to be some better way, but for now this
