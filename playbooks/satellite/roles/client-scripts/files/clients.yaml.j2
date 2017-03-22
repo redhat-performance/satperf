@@ -147,7 +147,7 @@
       set_fact:
         location_id: "{% raw %}{{ item.id }}{% endraw %}"
       with_items: locations.json.results
-      when: "item.name == 'Location for {% raw %}{{ server }}{% endraw %}''"
+      when: "item.name == 'Location for {% raw %}{{ server }}{% endraw %}'"
       tags: REG
     - name: "Determine hostname"
       command:
