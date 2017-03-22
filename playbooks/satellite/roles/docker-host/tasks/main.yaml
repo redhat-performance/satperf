@@ -3,6 +3,7 @@
     shell:
       "rpm -q docker"
     register: docker_installed
+    ignore_errors: true
 
   # If docker is already installed, we should remove it
   - name: "Removing previously installed version of docker"
@@ -11,7 +12,6 @@
      - docker-selinux
      - docker-common
      - docker-engine
-    ignore_errors: True
     when: docker_installed.rc == 0
 
   # TODO Do we need to add possibility to attach to specific pool here?
