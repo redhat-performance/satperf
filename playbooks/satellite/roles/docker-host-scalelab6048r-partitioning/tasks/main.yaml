@@ -1,0 +1,16 @@
+---
+  - name: "Check '{{ docker_host_vg }}' volume group is present"
+    command:
+      vgdisplay "{{ docker_host_vg }}"
+    register: vg_info
+    ignore_errors: true
+  - name: "pvcreate"
+    shell: |
+      pvcreate --yes /dev/nvme0n1
+      pvcreate --yes /dev/nvme1n1
+    when: "vg_info.rc != 0"
+  - name: "vgcreate"
+    command:
+      vgcreate "{{ docker_host_vg }}" /dev/nvme0n1 /dev/nvme1n1
+    when: "vg_info.rc != 0"
+...

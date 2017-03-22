@@ -1,0 +1,11 @@
+---
+  - name: "Remove /home to make some space"
+    shell: |
+      mount | grep home && umount /home
+      sed -i '/\s\/home\s/d' /etc/fstab
+      lvremove --force /dev/mapper/*-home
+      true
+    register: cleanup_out
+  - debug:
+      var: cleanup_out
+...
