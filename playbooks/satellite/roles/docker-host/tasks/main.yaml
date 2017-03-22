@@ -106,6 +106,7 @@
   - name: "Kill all dhclients (network service was not restarting)"
     command:
       killall dhclient
+    ignore_errors: true
   - name: "Restart network"
     command:
       service network restart
@@ -185,7 +186,7 @@
     when: "docker_host_storage_driver == 'overlay'"
   - name: "Create filesystem which will host OverlayFS"
     command:
-      mkfs -t xfs -n ftype=1 "/dev/{{ docker_host_vg }}/docker"
+      mkfs -t xfs -f -n ftype=1 "/dev/{{ docker_host_vg }}/docker"
     when: "docker_host_storage_driver == 'overlay'"
   - name: "OverlayFS in /etc/fstab"
     lineinfile:
