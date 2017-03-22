@@ -11,6 +11,9 @@
     - { role: docker-host-ec2-partitioning, when: docker_host_partitioning == 'ec2' }
     - { role: docker-host-myrhev_cleanup-partitioning, when: docker_host_partitioning == 'myrhev_cleanup' }
     - { role: docker-host-try10klab-partitioning, when: docker_host_partitioning == 'try10klab' }
+    - { role: docker-host-scalelab6048r-partitioning, when: "'-6048r.' in inventory_hostname" }
+    - { role: docker-host-scalelabr930-partitioning, when: "'-r930.' in inventory_hostname" }
+    - { role: docker-host-scalelabr630-partitioning, when: "'-r630.' in inventory_hostname" }
     - rhsm
     ###- upgrade-restart
     - docker-host-vg   # when docker_host_vg is empty, this autodetects it
