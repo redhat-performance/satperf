@@ -132,44 +132,45 @@
     #    msg="AttachTools {% raw %}{{ att.start }}{% endraw %} to {% raw %}{{ att.end }}{% endraw %}"
     #  tags: REG
 
-    - name: "Get list of locations"
-      uri:
-        url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
-        method: GET
-        user: "{{ sat_user }}"
-        password: "{{ sat_pass }}"
-        force_basic_auth: yes
-        validate_certs: no
-      register: locations
-      run_once: true
-      tags: REG
-    - name: "Determine location ID"
-      set_fact:
-        location_id: "{% raw %}{{ item.id }}{% endraw %}"
-      with_items: locations.json.results
-      when: "item.name == 'Location for {% raw %}{{ server }}{% endraw %}'"
-      tags: REG
-    - name: "Determine hostname"
-      command:
-        hostname
-      register: hostname
-      when: "{{ groups['satellite6']|first }} != {% raw %}{{ server }}{% endraw %}"
-      tags: REG
-    - name: "Move us to correct location"
-      uri:
-        url: "https://{{ groups['satellite6']|first }}/api/hosts/{% raw %}{{ hostname.stdout }}{% endraw %}"
-        method: PUT
-        user: "{{ sat_user }}"
-        password: "{{ sat_pass }}"
-        force_basic_auth: yes
-        validate_certs: no
-        HEADER_Content-Type: application/json
-        HEADER_Accept: application/json,version=2
-        body: >
-          {"host":{"location_id":"{% raw %}{{ location_id }}{% endraw %}"}}
-      when: "{{ groups['satellite6']|first }} != {% raw %}{{ server }}{% endraw %}"
-      ignore_errors: true   # not confident this all will work
-      tags: REG
+    ###- name: "Get list of locations"
+    ###  uri:
+    ###    url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
+    ###    method: GET
+    ###    user: "{{ sat_user }}"
+    ###    password: "{{ sat_pass }}"
+    ###    force_basic_auth: yes
+    ###    validate_certs: no
+    ###  register: locations
+    ###  run_once: true
+    ###  tags: REG
+    ###- debug: var=locations.json.results
+    ###- name: "Determine location ID"
+    ###  set_fact:
+    ###    location_id: "{% raw %}{{ item.id }}{% endraw %}"
+    ###  with_items: locations.json.results
+    ###  when: "item.name == 'Location for {% raw %}{{ server }}{% endraw %}'"
+    ###  tags: REG
+    ###- name: "Determine hostname"
+    ###  command:
+    ###    hostname
+    ###  register: hostname
+    ###  when: "{{ groups['satellite6']|first }} != {% raw %}{{ server }}{% endraw %}"
+    ###  tags: REG
+    ###- name: "Move us to correct location"
+    ###  uri:
+    ###    url: "https://{{ groups['satellite6']|first }}/api/hosts/{% raw %}{{ hostname.stdout }}{% endraw %}"
+    ###    method: PUT
+    ###    user: "{{ sat_user }}"
+    ###    password: "{{ sat_pass }}"
+    ###    force_basic_auth: yes
+    ###    validate_certs: no
+    ###    HEADER_Content-Type: application/json
+    ###    HEADER_Accept: application/json,version=2
+    ###    body: >
+    ###      {"host":{"location_id":"{% raw %}{{ location_id }}{% endraw %}"}}
+    ###  when: "{{ groups['satellite6']|first }} != {% raw %}{{ server }}{% endraw %}"
+    ###  ignore_errors: true   # not confident this all will work
+    ###  tags: REG
 
     # TODO: Investigate and add a code that would register through "bootstrap.py"
 
