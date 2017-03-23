@@ -5,5 +5,5 @@
       dest: /etc/sysctl.d/50-enlarge-arp-table.conf
   - name: "Reload sysctl config"
     command:
-      sysctl -p
+      sysctl -p /etc/sysctl.d/50-enlarge-arp-table.conf
 ...
