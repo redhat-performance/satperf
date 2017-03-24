@@ -8,6 +8,7 @@
   roles:
     ###- common-eth1
     - common
+    - epel-not-present
     - rhsm-satellite
     - ntp
     ###- upgrade-restart

@@ -1,0 +1,18 @@
+---
+  - name: "epel-release package should not be installed"
+    yum:
+      name: epel-release
+      state: absent
+  - name: "EPEL repo file should not be there"
+    file:
+      path: "{{ item }}"
+      state: absent
+    with_items:
+      - /etc/yum.repos.d/epel.repo
+      - /etc/yum.repos.d/epel-testing.repo
+  - name: "EPEL should not be in the yum repolist output"
+    shell:
+      yum repolist | grep -i 'EPEL'
+    register: epel_repo_check
+    failed_when: "epel_repo_check.rc == 0"
+...

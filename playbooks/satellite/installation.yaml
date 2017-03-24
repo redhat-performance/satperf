@@ -7,6 +7,7 @@
     - ../../conf/satperf.local.yaml
   roles:
     - common
+    - epel-not-present
     - rhsm
     - ntp
     ###- upgrade-restart
