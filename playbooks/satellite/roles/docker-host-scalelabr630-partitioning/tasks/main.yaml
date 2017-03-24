@@ -1,11 +1,15 @@
 ---
-  - name: "Remove /home to make some space"
+  - name: "Check '{{ docker_host_vg }}' volume group is present"
+    command:
+      vgdisplay "{{ docker_host_vg }}"
+    register: vg_info
+    ignore_errors: true
+  - name: "pvcreate"
     shell: |
-      mount | grep home && umount /home
-      sed -i '/\s\/home\s/d' /etc/fstab
-      lvremove --force /dev/mapper/*-home
-      true
-    register: cleanup_out
-  - debug:
-      var: cleanup_out
+      pvcreate --yes /dev/sdb
+    when: "vg_info.rc != 0"
+  - name: "vgcreate"
+    command:
+      vgcreate "{{ docker_host_vg }}" /dev/sdb
+    when: "vg_info.rc != 0"
 ...
