@@ -23,7 +23,7 @@ timezone US/Eastern --isUtc --ntpservers={{ ntp_server }}
 # Partitioning
 clearpart --all --initlabel
 bootloader --location=mbr
-autopart --type=plain
+autopart
 
 %packages
 vim-enhanced
