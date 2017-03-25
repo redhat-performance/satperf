@@ -37,15 +37,6 @@
         state=absent
       when: messpath.stat.exists is defined and messpath.stat.exists == true
 
-    - name: "Clean registrations"
-      shell: |
-        subscription-manager unregister || true
-        subscription-manager clean || true
-        yum -y remove katello-ca-consumer\* || true
-    - name: "No repos on the system"
-      command:
-        yum-config-manager --disable '*'
-
     - name: "Delete manifest"
       command:
         rm -rf /root/manifest.zip
@@ -54,4 +45,13 @@
       file:
         path: /var/tmp/foreman-proxy
         state: absent
+
+    - name: "Clean registrations"
+      shell: |
+        subscription-manager unregister || true
+        subscription-manager clean || true
+        yum -y remove katello-ca-consumer\* || true
+    - name: "No repos on the system"
+      command:
+        yum-config-manager --disable '*'
 ...

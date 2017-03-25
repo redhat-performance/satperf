@@ -6,13 +6,13 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    ###- common-eth1
-    - common
+    ######- common-eth1
+    ###- common
     - epel-not-present
-    - rhsm-satellite
-    - ntp
-    ###- upgrade-restart
-    ###- capsule-ec2-partitioning
+    ###- rhsm-satellite
+    ###- ntp
+    ######- upgrade-restart
+    ######- capsule-ec2-partitioning
     - capsule
     - enlarge-arp-table
     ###- capsule-myrhev-partitioning
