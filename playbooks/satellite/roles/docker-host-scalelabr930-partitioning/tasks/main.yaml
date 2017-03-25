@@ -14,10 +14,9 @@
       pvcreate --yes /dev/sdg
       pvcreate --yes /dev/sdh
       pvcreate --yes /dev/sdi
-      pvcreate --yes /dev/sdj
     when: "vg_info.rc != 0"
   - name: "vgcreate"
     command:
-      vgcreate "{{ docker_host_vg }}" /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi /dev/sdj
+      vgcreate "{{ docker_host_vg }}" /dev/sdb /dev/sdc /dev/sdd /dev/sde /dev/sdf /dev/sdg /dev/sdh /dev/sdi
     when: "vg_info.rc != 0"
 ...
