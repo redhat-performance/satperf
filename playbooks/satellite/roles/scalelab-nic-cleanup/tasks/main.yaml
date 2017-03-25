@@ -1,4 +1,5 @@
 ---
+  # Systems ...-6048r....
   - shell: |
       for nic in ens3f1 enp5s0f1 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
@@ -9,16 +10,30 @@
         ip link delete dev $nic || true
       done
     when: "'-6048r.' in inventory_hostname"
+
+  # Systems ...-r930....
+  - shell: |
+      for nic in em2 p1p1 p1p2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
+        ip link set $nic down
+        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+          ip addr del $addr dev $nic
+        done
+        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
+        ip link delete dev $nic || true
+      done
+    when: "'-r930.' in inventory_hostname"
+
+  # Make sure 10G NIC have correct IP
   - lineinfile:
-      dest: /etc/sysconfig/network-scripts/ifcfg-ens3f0
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}
       regexp: "^IPADDR="
       line: "IPADDR={{ ip }}"
-    when: "'-6048r.' in inventory_hostname"
   - lineinfile:
-      dest: /etc/sysconfig/network-scripts/ifcfg-ens3f0
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}
       regexp: "^NETMASK="
       line: "NETMASK=255.0.0.0"
-    when: "'-6048r.' in inventory_hostname"
+
+  # Restart network
   - name: "Kill all dhclients (network service was not restarting)"
     command:
       killall dhclient
