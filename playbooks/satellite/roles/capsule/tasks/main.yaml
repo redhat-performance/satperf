@@ -141,6 +141,7 @@
       validate_certs: no
     register: locations
     run_once: true
+  - debug: var=locations.json.results
   - name: "Create location for our capsule if it is not already there"
     uri:
       url: "https://{{ groups['satellite6']|first }}/api/locations"
