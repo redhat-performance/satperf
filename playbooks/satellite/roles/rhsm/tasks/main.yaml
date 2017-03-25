@@ -40,6 +40,16 @@
     until: "{{ querying.rc }} == 0"
     retries: 5
     delay: 10
+  - name: "List pools we already consume"
+    command:
+      subscription-manager list --consumed --pool-only
+    register: attached
+  - name: "Show pool ID we are going to attach"
+    debug:
+      var: "querying.stdout_lines|first"
+  - name: "Show pool IDs we are consuming already"
+    debug:
+      var: "attached.stdout_lines"
   - name: "Attach to the pool"
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
@@ -47,6 +57,7 @@
     until: "{{ attaching.rc }} == 0"
     retries: 5
     delay: 10
+    when: "querying.stdout_lines|first not in attached.stdout_lines"
 
   # Make sure only base RHEL repo is attached
   - name: "Disable all RHSM repos and only enable base RHEL repo"
