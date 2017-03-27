@@ -13,7 +13,9 @@
     - ntp
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
+    - { role: capsule-stalelabkvm-partitioning, when: "'.openstack.engineering.' in inventory_hostname"}
     - capsule
+    - capsule-location
     - enlarge-arp-table
     ###- capsule-myrhev-partitioning
     - capsule-populate
