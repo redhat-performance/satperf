@@ -23,6 +23,18 @@
       done
     when: "'-r930.' in inventory_hostname"
 
+  # Systems ...-r630....
+  - shell: |
+      for nic in p2p2 em2 em3 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
+        ip link set $nic down
+        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+          ip addr del $addr dev $nic
+        done
+        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
+        ip link delete dev $nic || true
+      done
+    when: "'-r630.' in inventory_hostname"
+
   # Make sure 10G NIC have correct IP
   - lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}
