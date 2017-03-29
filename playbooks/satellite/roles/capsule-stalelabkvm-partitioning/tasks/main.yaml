@@ -1,0 +1,26 @@
+---
+  - name: "Get rid of /home"
+    mount:
+      name: /home
+      state: unmounted
+  - name: "Get rid of /home from /etc/fstab"
+    mount:
+      name: /home
+      state: absent
+  - name: "Remove /home LV"
+    lvol:
+      vg: "rhel_{{ inventory_hostname_short }}"
+      lv: home
+      state: absent
+      force: yes
+  - name: "Extend root LV to all available VG space"
+    lvol:
+      vg: "rhel_{{ inventory_hostname_short }}"
+      lv: root
+      size: +100%FREE
+  - name: "Extenr root filesystem to whole LV"
+    filesystem:
+      dev: "/dev/rhel_{{ inventory_hostname_short }}/root"
+      fstype: xfs
+      resizefs: yes
+...
