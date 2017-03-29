@@ -4,6 +4,23 @@
       that: "capsule_install_source == 'repo' or capsule_install_source == 'cdn'"
       msg: "Capsule install source (capsule_install_source) have to be either 'repo' or 'cdn' (current value is '{{ capsule_install_source }}')"
 
+  - name: "Determine pool we are going to attach to"
+    command:
+      subscription-manager list --available --all --matches "{{ sat_capsule_pool }}" --pool-only
+    register: querying
+    until: "{{ querying.rc }} == 0"
+    retries: 5
+    delay: 10
+  - debug:
+      var: querying
+  - name: "Attach to the pool"
+    command:
+      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+    register: attaching
+    until: "{{ attaching.rc }} == 0"
+    retries: 5
+    delay: 10
+
   # Check Satellite sees Capsule
   # See https://access.redhat.com/solutions/1230493
   - name: "Make sure Satellite have Capsule in /etc/hosts"

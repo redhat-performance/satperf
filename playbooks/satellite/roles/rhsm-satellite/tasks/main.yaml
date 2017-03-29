@@ -40,7 +40,7 @@
     delay: 10
   - name: "Determine pool we are going to attach to"
     command:
-      subscription-manager list --available --all --matches "{{ sat_capsule_pool }}" --pool-only
+      subscription-manager list --available --all --matches "{{ rhsm_pool }}" --pool-only
     register: querying
     until: "{{ querying.rc }} == 0"
     retries: 5
