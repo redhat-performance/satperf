@@ -11,6 +11,7 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
+    ignore_errors: true
   - name: "Sync"
     command:
       "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library --async"
