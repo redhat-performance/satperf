@@ -142,22 +142,26 @@
         validate_certs: no
       register: locations
       run_once: true
+      ignore_errors: true
       tags: REG
     - name: "Determine location name when registering directly to Satellite"
       set_fact:
         location_name: "Default Location"
       when: "'{{ groups['satellite6']|first }}' == server"
+      ignore_errors: true
       tags: REG
     - name: "Determine location name when registering to Capsule"
       set_fact:
         location_name: "Location for {% raw %}{{ server }}{% endraw %}"
       when: "'{{ groups['satellite6']|first }}' != server"
+      ignore_errors: true
       tags: REG
     - name: "Determine location ID"
       set_fact:
         location_id: "{% raw %}{{ item.id }}{% endraw %}"
       with_items: "{% raw %}{{ locations.json.results }}{% endraw %}"
       when: "item.name == location_name"
+      ignore_errors: true
       tags: REG
     - name: "Determine hostname"
       command:
@@ -179,6 +183,7 @@
           {"host":{"location_id":"{% raw %}{{ location_id }}{% endraw %}"}}
         body_format: json
       when: "'{{ groups['satellite6']|first }}' != server"
+      ignore_errors: true
       tags: REG
 
     # TODO: Investigate and add a code that would register through "bootstrap.py"
