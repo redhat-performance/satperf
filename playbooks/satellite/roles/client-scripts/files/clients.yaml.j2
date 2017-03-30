@@ -203,6 +203,10 @@
           rpm -ivh "http://{{ groups['satellite6']|first }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
             || rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
         fi
+      register: installed
+      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      retries: 3
+      delay: 10
       tags: KAT
     - name: "Install katello-agent"
       action:
