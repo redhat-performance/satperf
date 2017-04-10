@@ -4,9 +4,9 @@
   roles:
   ###  - common
   tasks:
-    - name: "katello-service restart"
-      command:
-        katello-service restart
+    #- name: "katello-service restart"
+    #  command:
+    #    katello-service restart
 
     #- name: "katello-service stop"
     #  command:
