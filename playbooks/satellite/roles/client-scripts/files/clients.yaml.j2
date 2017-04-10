@@ -5,9 +5,10 @@
   remote_user: root
   gather_facts: no
   vars:
-    ###server: ...   # this is supposed to be supplied on command line when executing this playbook
+    {% if client_reg_server is defined %}server: {{ client_reg_server }}{% endif %}
+
   tasks:
-    - name: "Make sure server was set (on command line with '-e server=...'"
+    - name: "Make sure server was set (on command line with '-e server=...' or in 'vars:' section here)"
       assert:
         that: "server is defined"
 
@@ -143,32 +144,42 @@
       register: locations
       run_once: true
       ignore_errors: true
-      tags: REG
-    - name: "Determine location name when registering directly to Satellite"
+      tags:
+        - REG
+        - LOC
+    - name: "Set location name when registering directly to Satellite"
       set_fact:
         location_name: "Default Location"
       when: "'{{ groups['satellite6']|first }}' == server"
       ignore_errors: true
-      tags: REG
+      tags:
+        - REG
+        - LOC
     - name: "Determine location name when registering to Capsule"
       set_fact:
         location_name: "Location for {% raw %}{{ server }}{% endraw %}"
       when: "'{{ groups['satellite6']|first }}' != server"
       ignore_errors: true
-      tags: REG
+      tags:
+        - REG
+        - LOC
     - name: "Determine location ID"
       set_fact:
         location_id: "{% raw %}{{ item.id }}{% endraw %}"
       with_items: "{% raw %}{{ locations.json.results }}{% endraw %}"
       when: "item.name == location_name"
       ignore_errors: true
-      tags: REG
+      tags:
+        - REG
+        - LOC
     - name: "Determine hostname"
       command:
         hostname
       register: hostname
       when: "'{{ groups['satellite6']|first }}' != server"
-      tags: REG
+      tags:
+        - REG
+        - LOC
     - name: "Move us to correct location"
       uri:
         url: "https://{{ groups['satellite6']|first }}/api/hosts/{% raw %}{{ hostname.stdout }}{% endraw %}"
@@ -184,7 +195,9 @@
         body_format: json
       when: "'{{ groups['satellite6']|first }}' != server"
       ignore_errors: true
-      tags: REG
+      tags:
+        - REG
+        - LOC
 
     # TODO: Investigate and add a code that would register through "bootstrap.py"
 

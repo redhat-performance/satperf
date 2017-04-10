@@ -17,6 +17,11 @@
         rpm -q docker
       register: docker_version
     - debug: var=docker_version.stdout_lines
+    - name: "Get system uptime (includes load)"
+      command:
+        uptime
+      register: uptime_load
+    - debug: var=uptime_load.stdout_lines
     - name: "Base image available"
       shell:
         docker images | grep r7perfsat
