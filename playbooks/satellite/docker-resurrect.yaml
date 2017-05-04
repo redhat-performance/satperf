@@ -1,6 +1,7 @@
 ---
 - hosts: docker-hosts
   remote_user: root
+  gather_facts: no
   tasks:
     - name: "Service docker is running"
       service:
