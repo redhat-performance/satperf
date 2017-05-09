@@ -8,6 +8,9 @@
     - name: "Clear up ssh known_hosts before killing containers"
       shell:
         truncate -s 0 /root/.ssh/known_hosts
+    - name: "Clear docker active network connections(sometimes prevents docker from restarting)"
+      shell:
+        rm -rf /var/lib/docker/network/files/
     - name: "Restart docker daemon what kills all containers"
       service:
         name: docker
