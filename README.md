@@ -17,10 +17,10 @@ Table of Contents
 
 # Satellite-performance
 
-This project was started to run performance tests on Red Hat Satelitte.
+This project was started to run performance tests on Red Hat Satellite.
 It does the following activities:
 
- - Satelitte installation
+ - Satellite installation
  - Uploads manigfest, updates repo
  - Concurrently syncs multiple repositories from repo server
  - Creates lifecycle environments
