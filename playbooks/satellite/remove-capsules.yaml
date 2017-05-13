@@ -1,6 +1,6 @@
 ---
 - hosts: capsules
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml

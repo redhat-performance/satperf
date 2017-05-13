@@ -4,7 +4,7 @@
 #
 
 - hosts: elk
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   roles:
     - { role: elasticsearch }
     - { role: logstash }
