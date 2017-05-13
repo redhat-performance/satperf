@@ -3,7 +3,7 @@
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   roles:
     - common
   tasks:

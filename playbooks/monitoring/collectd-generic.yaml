@@ -9,7 +9,7 @@
 # ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/monitoring/collectd-generic.yaml --tags="satellite6,capsules"
 
 - hosts: graphite
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars:
     config_type: graphite
   vars_files:
@@ -20,7 +20,7 @@
   tags: graphite
 
 - hosts: satellite6
-  remote_user: root
+  #  remote_user: "{{ satperf_remote_user }}"
   vars:
     config_type: satellite6
   vars_files:
@@ -31,7 +31,7 @@
   tags: satellite6
 
 - hosts: capsules
-  remote_user: root
+  #  remote_user: "{{ satperf_remote_user }}"
   vars:
     config_type: capsules
   vars_files:
@@ -42,7 +42,7 @@
   tags: capsules
 
 - hosts: docker-hosts
-  remote_user: root
+  # remote_user: "{{ satperf_remote_user }}"
   vars:
     config_type: docker-hosts
   vars_files:

@@ -2,7 +2,7 @@
 # For some documentation on what is this and how to use this please see clients-README file
 
 - hosts: all
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   gather_facts: no
   vars:
     {% if client_reg_server is defined %}server: {{ client_reg_server }}{% endif %}

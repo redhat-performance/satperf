@@ -1,7 +1,7 @@
 ---
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -10,7 +10,7 @@
   tags: backup
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -19,7 +19,7 @@
   tags: upload_manifest
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -28,7 +28,7 @@
   tags: restore
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -37,7 +37,7 @@
   tags: add_product
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars:
   vars_files:
     - ../../conf/satperf.yaml
@@ -47,7 +47,7 @@
   tags: create_lifecycle
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -56,7 +56,7 @@
   tags: enable_content
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -65,7 +65,7 @@
   tags: content_view_create
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -74,7 +74,7 @@
   tags: content_view_publish
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -83,7 +83,7 @@
   tags: content_view_promote
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -92,7 +92,7 @@
   tags: sync_content
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -101,7 +101,7 @@
   tags: sync_capsule
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -110,7 +110,7 @@
   tags: register_content_host
 
 - hosts: satellite6
-  remote_user: root
+  remote_user: "{{ satperf_remote_user }}"
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
