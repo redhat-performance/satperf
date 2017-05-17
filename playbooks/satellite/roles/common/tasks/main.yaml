@@ -3,6 +3,7 @@
   - assert:
       that: "groups['satellite6']|length == 1"
       msg: "Satellite not specified or too many of them specified"
+    when: "ignore_satellite is not defined or ignore_satellite != 'true'"
 
   # Make sure we have key deployed
   - name: "Deploy key"
@@ -86,13 +87,13 @@
       host: "{{ groups['satellite6']|first }}"
       port: 22
       timeout: 10
-    when: "not_yet_10g_nic is not defined or not_yet_10g_nic != 'true'"
+    when: "( ignore_satellite is not defined or ignore_satellite != 'true' ) and ( not_yet_10g_nic is not defined or not_yet_10g_nic != 'true' )"
   - name: "We can ping Satellite via special network"
     wait_for:
       host: "{{ hostvars[groups['satellite6']|first].ip }}"
       port: 22
       timeout: 10
-    when: "hostvars[groups['satellite6']|first].ip is defined and ( not_yet_10g_nic is not defined or not_yet_10g_nic != 'true' )"
+    when: "( ignore_satellite is not defined or ignore_satellite != 'true' ) and ( hostvars[groups['satellite6']|first].ip is defined and ( not_yet_10g_nic is not defined or not_yet_10g_nic != 'true' ) )"
   - name: "We can ping NTP server"
     command:
       ping -c 3 "{{ ntp_server }}"
