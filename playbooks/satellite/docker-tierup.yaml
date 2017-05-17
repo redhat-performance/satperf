@@ -47,4 +47,5 @@
         ebtables -t nat --flush
       delegate_to: "{{ groups['satellite6']|first }}"
       run_once: true
+      when: ignore_satellite is not defined or ignore_satellite != 'true'
 ...
