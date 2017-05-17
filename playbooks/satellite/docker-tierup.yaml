@@ -34,7 +34,7 @@
     - name: "Get IPs of containers"
       shell: |
         for c in $(docker ps -q); do
-          docker inspect $c | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0][\"Id\"], obj[0][\"NetworkSettings\"][\"IPAddress\"]"
+          docker inspect $c | python -c "import json,sys;obj=json.load(sys.stdin);print obj[0][\"Id\"], obj[0][\"NetworkSettings\"][\"IPAddress\"], obj[0][\"Config\"][\"Hostname\"]"
         done >/root/container-ips
     # TODO: rewrite this into inventory - would shuffling work?
     - name: "Shuffle container IPs"
