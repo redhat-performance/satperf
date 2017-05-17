@@ -16,7 +16,8 @@
     - { role: docker-host-scalelab6018r-partitioning, when: "'-6018r.' in inventory_hostname" }
     - { role: docker-host-scalelabr930-partitioning, when: "'-r930.' in inventory_hostname" }
     - { role: docker-host-scalelabr630-partitioning, when: "'-r630.' in inventory_hostname" }
-    - rhsm-satellite
+    - { role: rhsm-satellite, when: docker_host_register_to == 'satellite' }
+    - { role: rhsm, when: docker_host_register_to != 'satellite' }
     ###- upgrade-restart
     - docker-host-vg   # when docker_host_vg is empty, this autodetects it
     - docker-host

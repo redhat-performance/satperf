@@ -86,6 +86,7 @@ capsule_installer_pkg: satellite-capsule   # Satellite 6.2
 capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2
 
 # Docker hosts
+docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
 docker_host_containers: 50
 docker_host_partitioning: kvm
 docker_host_storage_driver: devicemapper   # which storage driver should Docker use, "devicemapper" or "overlay"
