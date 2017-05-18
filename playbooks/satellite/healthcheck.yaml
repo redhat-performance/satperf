@@ -1,6 +1,6 @@
 ---
 - hosts: satellite
-  remote_user: "{{ satperf_remote_user }}"
+  remote_user: root
   roles:
     - add-product
     - backup

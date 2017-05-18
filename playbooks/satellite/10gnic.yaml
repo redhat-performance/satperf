@@ -1,5 +1,5 @@
 ---
 - hosts: satellite6
-  remote_user: "{{ satperf_remote_user }}"
+  remote_user: root
   roles:
     - check-10g

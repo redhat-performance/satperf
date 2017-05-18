@@ -1,6 +1,6 @@
 ---
 - hosts: kvm-hosts
-  remote_user: "{{ satperf_remote_user }}"
+  remote_user: root
   ###gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml

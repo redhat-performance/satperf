@@ -1,9 +1,4 @@
 ---
-# User to connect to systems
-satperf_remote_user: root
-# for cloud instances can be changed to i.e.
-# satperf_remote_user: cloud-user
-
 # satperf project settings
 satperf_hosts: conf/hosts.ini
 satperf_private_key: conf/id_rsa

@@ -1,6 +1,6 @@
 ---
 - hosts: capsules
-  remote_user: "{{ satperf_remote_user }}"
+  remote_user: root
   roles:
   ###  - common
   tasks:
