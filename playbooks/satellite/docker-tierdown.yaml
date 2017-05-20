@@ -35,14 +35,6 @@
       service:
         name=docker
         state=restarted
-    - name: "Container's yum caches are removed"
-      file:
-        name=/tmp/yum-cache
-        state=absent
-    - name: "Empty contailer's yum cache created"
-      file:
-        name=/tmp/yum-cache
-        state=directory
     - name: "Caches are dropped"
       shell:
         echo 3 > /proc/sys/vm/drop_caches
