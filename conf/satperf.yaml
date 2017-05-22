@@ -49,20 +49,20 @@ sat_installer_cmd: satellite-installer --scenario satellite   # Satellite 6.2
 sat_manifest: ../../../../../conf/manifest.zip
 
 # Content for client testing (RHEL repo with erratas and Satellite tools repo)
-content_rhel_name: RHEL7 x86_64 Base
-content_rhel_label: rhel7-x86_64-base
+content_rhel_name: RHEL7 x86_64 Base2
+content_rhel_label: rhel7-x86_64-base2
 content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
-content_sattools_name: Sat6.2 Tools
-content_sattools_label: sat62-x86_64-tools
+content_sattools_name: Sat6.2 Tools2
+content_sattools_label: sat62-x86_64-tools2
 content_sattools_url: http://repos.example.com/released/SatTools-6.2/7.2/Server/x86_64/os/
 content_daemonize: daemonize-1.7.7-1.el7.x86_64.rpm
-content_puppet_module_author: puppet
-content_puppet_module_name: qaredhattest
+content_puppet_module_author: puppet2
+content_puppet_module_name: qaredhattest2
 content_puppet_module: "{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
 content_puppet_module_file: /tmp/puppet-qaredhattest.txt
 content_puppet_module_file_content: Some important sentence
-content_puppet_product: MyPuppetProduct
-content_puppet_repo: MyPuppetRepo
+content_puppet_product: MyPuppetProduct2
+content_puppet_repo: MyPuppetRepo2
 content_puppet_env: KT_Default_Organization_Library_test_2
 content_content_view_name: test
 client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
