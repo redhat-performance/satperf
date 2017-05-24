@@ -11,7 +11,10 @@
     - name: "Clear docker active network connections(sometimes prevents docker from restarting)"
       shell:
         rm -rf /var/lib/docker/network/files/
-    - name: "Restart docker daemon what kills all containers"
+    - name: "Gracefully kill containers(Restart causes orphaned bridged interfaces)"
+      shell:
+        docker kill $(docker ps -q)
+    - name: "Restart docker daemon"
       service:
         name: docker
         state: restarted
@@ -19,10 +22,6 @@
       shell:
         docker ps -q | wc -l
       register: docker_ps_wc
-    - name: "There are no runing containers"
-      shell:
-        docker kill $( docker ps -q )
-      when: docker_ps_wc.stdout|int > 0
     - name: "Count stopped containers"
       shell:
         docker ps -qa | wc -l
