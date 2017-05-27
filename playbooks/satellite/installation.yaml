@@ -15,4 +15,5 @@
     - setup
     - enlarge-arp-table
     - satellite-populate
+    - client-content
 ...
