@@ -47,7 +47,7 @@
           --name "{{ item.name }}"
           --vcpus "{{ item.cpu_count }}"
           --ram "{{ item.mem_size }}"
-          --disk pool=nvme,size="{{ item.disk_size }}"
+          --disk pool=libvirt,size="{{ item.disk_size }}"
           --network bridge="{{ item.nic_1g_bridge }}",mac="{{ item.nic_1g_mac }}"
           --network bridge="{{ item.nic_10g_bridge }}",mac="{{ item.nic_10g_mac }}"
           --virt-type kvm
