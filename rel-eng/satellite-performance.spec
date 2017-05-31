@@ -1,5 +1,5 @@
 Name:          satellite-performance
-Version:       master
+Version:       1.1
 Release:       1%{?dist}
 Summary:       Red Hat Satellite 6 Performance testing framework and tests
 License:       GPLv2
