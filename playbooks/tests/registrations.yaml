@@ -8,7 +8,7 @@
   vars:
     # TODO: Move these variables into conf/satperf.yaml
     tags: "untagged,REG"
-    size: 5   # TODO: would be nice to provide total expected number and that would be divided by number of hocker hosts
+    size: 5   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
     use_only_fresh: true   # should we use only containers which were not registered yet? FIXME: not implemented yet setting to false
     resting: 60
   tasks:
@@ -34,8 +34,8 @@
       shell:
         head -n "{{ containers_used_count|int + size }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
     - name: "Run clients.yaml"
-      command:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }}" --tags "{{ tags }}" clients.yaml
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }}" --tags "{{ tags }}" clients.yaml &>/root/reg-$( date --iso-8601=seconds ).log
       register: clients_yaml_cmd
       ignore_errors: true
 
@@ -52,7 +52,7 @@
         msg: "{{ clients_yaml_cmd.stderr_lines }}"
     - name: "DEBUG: result"
       debug:
-        msg: "rc:{{ clients_yaml_cmd.rc }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
+        msg: "rc:{{ clients_yaml_cmd.rc }} size:{{ size }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
 
     - name: "Increment number of already registered containers"
       shell:   # FIXME: Use lineinfile or so
@@ -64,19 +64,16 @@
 
     - set_fact:
         filename_base: "/tmp/{{ 1000000|random }}"
-    - name: "Save Grafana load graf"
+    - name: "Save Grafana load graf to {{ filename_base }}-load.png"
       get_url:
-        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?panelId=27&from={{ start_time|int - 10 }}000&to={{ end_time|int + resting + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019_sbu_lab_eng_bos_redhat_com&var-Interface=interface-em1&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&width=1500&height=500&tz=UTC%2B00%3A00"
+        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?panelId=27&from={{ start_time|int - 10 }}000&to={{ end_time|int + resting + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019_sbu_lab_eng_bos_redhat_com&var-Interface=interface-em1&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&fullscreen&width=1500&height=500&tz=UTC%2B00%3A00"
         dest: "{{ filename_base }}-load.png"
       run_once: true
       delegate_to: 127.0.0.1
-    - name: "Save Grafana memory graph"
+    - name: "Save Grafana memory graph to {{ filename_base }}-mem.png"
       get_url:
-        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?panelId=56&from={{ start_time|int - 10 }}000&to={{ end_time|int + resting + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019_sbu_lab_eng_bos_redhat_com&var-Interface=interface-em1&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&width=1500&height=500&tz=UTC%2B00%3A00"
+        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?panelId=56&from={{ start_time|int - 10 }}000&to={{ end_time|int + resting + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019_sbu_lab_eng_bos_redhat_com&var-Interface=interface-em1&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&fullscreen&width=1500&height=500&tz=UTC%2B00%3A00"
         dest: "{{ filename_base }}-mem.png"
       run_once: true
       delegate_to: 127.0.0.1
-    - debug:
-        msg: "Grafana graphs saved to {{ filename_base }}-load.png and {{ filename_base }}-mem.png"
-      run_once: true
 ...
