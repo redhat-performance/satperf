@@ -5,7 +5,7 @@ Summary:       Red Hat Satellite 6 Performance testing framework and tests
 License:       GPLv2
 Group:         Development/Tools
 URL:           https://github.com/redhat-performance/satellite-performance
-Source0:       https://github.com/redhat-performance/satellite-performance/archive/release-%{version}.tar.gz
+Source0:       https://github.com/redhat-performance/satellite-performance/archive/%{name}-%{version}.tar.gz
 BuildRoot:     %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildArch:     noarch
 Requires:      ansible
@@ -22,16 +22,19 @@ ls -al
 
 
 %build
-pushd %{name}-%{version}
-rm -rf rel-eng/
-popd
 
 
 %install
 rm -rf %{buildroot}
 pushd %{name}-%{version}
 mkdir -p %{buildroot}/usr/%{name}
-cp -r . %{buildroot}/usr/%{name}
+cp README.md %{buildroot}/usr/%{name}
+cp LICENSE %{buildroot}/usr/%{name}
+cp cleanup %{buildroot}/usr/%{name}
+cp -r playbooks %{buildroot}/usr/%{name}
+mkdir %{buildroot}/usr/%{name}/conf
+cp conf/hosts.ini %{buildroot}/usr/%{name}/conf
+cp conf/satperf.yaml %{buildroot}/usr/%{name}/conf
 popd
 
 
