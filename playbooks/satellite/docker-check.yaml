@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - docker-host-vg   # when docker_host_vg is empty, this autodetects it
+    ###- docker-host-vg   # when docker_host_vg is empty, this autodetects it
   tasks:
     ###- name: "Workaround permission error when creating repodata on container"
     ###  selinux:
