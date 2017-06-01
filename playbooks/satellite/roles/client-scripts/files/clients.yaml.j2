@@ -87,6 +87,13 @@
       retries: 10
       delay: 10
       tags: REG
+    - name: Increase the RHSM timeout
+      lineinfile:
+        dest: /usr/lib64/python2.7/site-packages/rhsm/config.py
+        regexp: "^DEFAULT_SERVER_TIMEOUT"
+        line: 'DEFAULT_SERVER_TIMEOUT = "380"'
+        state: present
+      tags: REGTIMEOUTTWEAK
     ###- pause: prompt="Press Enter to start registering"
     #################################################
     # Start registering with RHSM and attach to the
