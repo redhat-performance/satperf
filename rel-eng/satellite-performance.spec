@@ -27,15 +27,15 @@ ls -al
 %install
 rm -rf %{buildroot}
 pushd %{name}-%{version}
-mkdir -p %{buildroot}/usr/%{name}
-cp README.md %{buildroot}/usr/%{name}
-cp LICENSE %{buildroot}/usr/%{name}
-cp cleanup %{buildroot}/usr/%{name}
-cp ansible.cfg %{buildroot}/usr/%{name}
-cp -r playbooks %{buildroot}/usr/%{name}
-mkdir %{buildroot}/usr/%{name}/conf
-cp conf/hosts.ini %{buildroot}/usr/%{name}/conf
-cp conf/satperf.yaml %{buildroot}/usr/%{name}/conf
+mkdir -p %{buildroot}/%{_datadir}/%{name}
+cp README.md %{buildroot}/%{_datadir}/%{name}
+cp LICENSE %{buildroot}/%{_datadir}/%{name}
+cp cleanup %{buildroot}/%{_datadir}/%{name}
+cp ansible.cfg %{buildroot}/%{_datadir}/%{name}
+cp -r playbooks %{buildroot}/%{_datadir}/%{name}
+mkdir %{buildroot}/%{_datadir}/%{name}/conf
+cp conf/hosts.ini %{buildroot}/%{_datadir}/%{name}/conf
+cp conf/satperf.yaml %{buildroot}/%{_datadir}/%{name}/conf
 popd
 
 
@@ -45,7 +45,7 @@ rm -rf %{buildroot}
 
 %files
 %defattr(-,root,root,-)
-/usr/%{name}
+%{_datadir}/%{name}
 
 
 %changelog
