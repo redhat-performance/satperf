@@ -31,6 +31,7 @@ mkdir -p %{buildroot}/usr/%{name}
 cp README.md %{buildroot}/usr/%{name}
 cp LICENSE %{buildroot}/usr/%{name}
 cp cleanup %{buildroot}/usr/%{name}
+cp ansible.cfg %{buildroot}/usr/%{name}
 cp -r playbooks %{buildroot}/usr/%{name}
 mkdir %{buildroot}/usr/%{name}/conf
 cp conf/hosts.ini %{buildroot}/usr/%{name}/conf
