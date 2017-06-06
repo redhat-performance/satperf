@@ -1,5 +1,5 @@
 Name:          satellite-performance
-Version:       master
+Version:       1.2
 Release:       1%{?dist}
 Summary:       Red Hat Satellite 6 Performance testing framework and tests
 License:       GPLv2
@@ -49,5 +49,10 @@ rm -rf %{buildroot}
 
 
 %changelog
+* Tue Jun 6 2017 Jan Hutar <jhutar@redhat.com> 1.2-1
+- Way to increase subscription-manager timeout
+- Add customizations to ansible behaviour
+- Install to /usr/share/
+
 * Wed May 31 2017 Jan Hutar <jhutar@redhat.com> 1.1-1
 - Init
