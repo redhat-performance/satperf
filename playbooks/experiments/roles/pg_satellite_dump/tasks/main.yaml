@@ -1,0 +1,18 @@
+---
+  - name: "Try logging into Satellite DB"
+    shell:
+            psql -c "SELECT * FROM pg_stat_database"
+    become: True
+    become_user: postgres
+    register: pg_test
+  - name: "Dump Satellite Database contents(foreman)"
+    shell:
+            pg_dump -U postgres foreman -f foreman_sat_perf.sql
+    become: True
+    become_user: postgres
+  - name: "Dump Satellite Database contents(candlepin)"
+    shell:
+            pg_dump -U postgres candlepin -f candlepin_sat_perf.sql
+    become: True
+    become_user: postgres  
+...

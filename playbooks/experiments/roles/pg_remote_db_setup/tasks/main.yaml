@@ -1,0 +1,104 @@
+---
+  - name: "Install postgres and its required dependencies"
+    yum:
+      name: "{{ item }}"
+      state: present
+    with_items:
+        - postgresql
+        - postgresql-server
+        - postgresql-contrib
+    delegate_to: "{{ pgsql_host }}"
+  - name: "Initialize the postgresql"
+    shell:
+            service postgresql initdb
+    delegate_to: "{{ pgsql_host }}"
+  - name: "Configure pgsql"
+    lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#listen_address"
+          line: "listen_address: '0.0.0.0'"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^shared_preload_libraries"
+          line: "shared_preload_libraries = 'pg_stat_statements'"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          line: "pg_stat_statements.max = 10000"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile: 
+          dest: /var/lib/pgsql/data/postgresql.conf
+          line: "pg_stat_statements.track = all"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#log_min_duration_statement"
+          line: "log_min_duration_statement = 1000"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#track_activities"
+          line: "track_actitivies = on"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#track_counts"
+          line: "track_counts = on"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#track_io_timing"
+          line: "track_io_timing = on"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#track_functions"
+          line: "track_functions = all"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#track_activity_query_size"
+          line: "track_activity_query_size = 1024"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#update_process_title"
+          line: "update_process_title = on"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - lineinfile:
+          dest: /var/lib/pgsql/data/postgresql.conf
+          regexp: "^#stats_temp_directory"
+          line: "stats_temp_directory = pg_stat_temp"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - name: "Assure that postgresql restarts correctly"
+    service:
+       name: postgresql
+       state: restarted
+    delegate_to: "{{ pgsql_host }}"
+  - set_fact:
+          satellite_ip: "{{ ansible_eth0.ipv4.address }}"
+  - name: "Authorize Satellite to access pgsql remotely"
+    lineinfile:
+          dest: /var/lib/pgsql/data/pg_hba.conf
+          line: "host   all     all     {{ satellite_ip }}/22   md5"
+          state: present
+    delegate_to: "{{ pgsql_host }}"
+  - name: "Restart pgsql for changes to take affect"
+    service:
+       name: postgresql
+       state: restarted    
+    delegate_to: "{{ pgsql_host }}"
+...

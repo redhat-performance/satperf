@@ -1,0 +1,6 @@
+---
+- hosts: satellite6
+  remote_user: root
+  roles:
+          - pg_satellite_dump
+          - pg_remote_db_setup
