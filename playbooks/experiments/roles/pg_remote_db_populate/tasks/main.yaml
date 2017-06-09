@@ -1,13 +1,13 @@
 ---
   - name: "Create foreman user"
     shell:
-            psql -U postgres -c "CREATE USER \"foreman\" WITH PASSWORD 'foreman'"
+            psql -U postgres -c "CREATE USER \"foreman\" WITH PASSWORD '{{ foreman_password }}'"
     become: True
     become_user: postgres
     delegate_to: "{{ pgsql_host }}"
   - name: "Create candlepin user"
     shell:
-            psql -U postgres -c "CREATE USER \"candlepin\" WITH PASSWORD 'candlepin'"
+            psql -U postgres -c "CREATE USER \"candlepin\" WITH PASSWORD '{{ candlepin_password }}'"
     become: True
     become_user: postgres
     delegate_to: "{{ pgsql_host }}"
@@ -55,5 +55,11 @@
     with_items:
          - foreman
          - candlepin
+    delegate_to: "{{ pgsql_host }}"
+  - name: "Enable pg_stat_statements"
+    shell:
+            psql -U postgres -c "CREATE EXTENSION pg_stat_statements"
+    become: True
+    become_user: postgres
     delegate_to: "{{ pgsql_host }}"
 ...

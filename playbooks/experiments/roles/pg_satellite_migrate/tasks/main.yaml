@@ -1,0 +1,41 @@
+---
+  - name: "Update satellite to use remote db"
+    lineinfile:
+          dest: /etc/foreman/database.yml
+          line: "host: {{ pgsql_host }}"
+          insertafter: "^adapter: postgresql"
+          state: present
+  - lineinfile:
+          dest: /etc/foreman/database.yml
+          regexp: "^password"
+          line: "password: {{ foreman_password }}"
+          state: present
+  - lineinfile:
+          dest: /etc/candlepin/candlepin.conf
+          regexp: "^jpa.config.hibernate.connection.url"
+          line: "jpa.config.hibernate.connection.url=jdbc:postgresql://{{ pgsql_host }}:5432/candlepin"
+          state: present
+  - lineinfile:
+          dest: /etc/candlepin/candlepin.conf
+          regexp: "^jpa.config.hibernate.connection.password"
+          line: "jpa.config.hibernate.connection.password={{ candlepin_password }}"
+          state: present
+  - lineinfile:
+          dest: /etc/candlepin/candlepin.conf
+          regexp: "^org.quartz.dataSource.myDS.URL"
+          line: "org.quartz.dataSource.myDS.URL=jdbc:postgresql://{{ pgsql_host }}:5432/candlepin"
+          state: present
+   - lineinfile:
+           dest: /etc/candlepin/candlepin.conf
+           regexp: "^org.quartz.dataSource.myDS.password"
+           line: "org.quartz.dataSource.myDS.password={{ candlepin_password }}"
+           state: present
+   - name: "Stop and disable postgresql service"
+     service:
+        name: postgresql
+        state: stopped
+        enabled: no
+   - name: "Restart katello"
+     shell:
+             katello-service restart
+...
