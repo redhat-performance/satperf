@@ -4,3 +4,4 @@
   roles:
           - pg_satellite_dump
           - pg_remote_db_setup
+          - pg_remote_db_populate
