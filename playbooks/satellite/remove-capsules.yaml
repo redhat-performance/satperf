@@ -43,14 +43,14 @@
     - name: "Remove Hosts from Satellite"
       command:
         "hammer -u {{ sat_user }} -p {{ sat_pass }} host delete --name {{ item }}"
-      delegate_to: "{{ sat_server }}"
+      delegate_to: "{{ groups['satellite6']|first }}"
       run_once: true
       with_items: "{{ groups['capsules'] }}"
       ignore_errors: yes
     - name: "Remove Capsules from Satellite"
       command:
         "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule delete --name {{ item }}"
-      delegate_to: "{{ sat_server }}"
+      delegate_to: "{{ groups['satellite6']|first }}"
       run_once: true
       with_items: "{{ groups['capsules'] }}"
       ignore_errors: yes
