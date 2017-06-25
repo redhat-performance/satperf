@@ -38,6 +38,14 @@
   # Make sure 10G NIC have correct IP
   - lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=static"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}
       regexp: "^IPADDR="
       line: "IPADDR={{ ip }}"
   - lineinfile:
