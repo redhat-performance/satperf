@@ -29,7 +29,7 @@
     - name: "Make sure libvirtd is running"
       service:
         name: libvirtd
-        state: running
+        state: started
     - name: "List VMs"
       virt:
         command: list_vms
