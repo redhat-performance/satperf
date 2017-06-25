@@ -13,7 +13,7 @@
     - ntp
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
-    - { role: capsule-stalelabkvm-partitioning, when: "'.openstack.engineering.' in inventory_hostname"}
+    - remove-home-extend-root
     - capsule
     - capsule-location
     - enlarge-arp-table
