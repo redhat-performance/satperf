@@ -11,9 +11,10 @@
     - name: "Clear docker active network connections(sometimes prevents docker from restarting)"
       shell:
         rm -rf /var/lib/docker/network/files/
-    - name: "Gracefully kill containers(Restart causes orphaned bridged interfaces)"
+    - name: "Gracefully kill containers (restart causes orphaned bridged interfaces)"
       shell:
-        docker kill $(docker ps -q)
+        docker ps -q | wc -l | grep --quiet '^0\>' \
+          || docker kill $( docker ps -q )
     - name: "Restart docker daemon"
       service:
         name: docker
