@@ -7,10 +7,12 @@
     - ../../conf/satperf.local.yaml
   vars:
     # TODO: Move these variables into conf/satperf.yaml
-    tags: "untagged,REG"
+    tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM"   # Register systems and setup ReX
+    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,KAT..."   # Register systems and setup katello-agent
+    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,PUP..."   # Register systems and setup Puppet
     size: 5   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
-    use_only_fresh: true   # should we use only containers which were not registered yet? FIXME: not implemented yet setting to false
-    resting: 60
+    use_only_fresh: true   # should we use only containers which were not registered yet?
+    resting: 0
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
       command:   # FIXME: Use lineinfile
@@ -21,14 +23,15 @@
         cat /root/container-used-count
       register: containers_used_count_cmd
       ignore_errors: true
+      when: "use_only_fresh"
     - name: "Set number of used containers to 0"
       set_fact:
         containers_used_count: 0
-      when: "containers_used_count_cmd.rc != 0"
+      when: "not use_only_fresh or containers_used_count_cmd.rc != 0"
     - name: "Set number of used containers based on file"
       set_fact:
         containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
-      when: "containers_used_count_cmd.rc == 0"
+      when: "use_only_fresh and containers_used_count_cmd.rc == 0"
 
     - name: "Generate list of containers we are going to use"
       shell:
