@@ -10,7 +10,7 @@
     tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM"   # Register systems and setup ReX
     ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,KAT..."   # Register systems and setup katello-agent
     ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,PUP..."   # Register systems and setup Puppet
-    size: 5   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
+    size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
     use_only_fresh: true   # should we use only containers which were not registered yet?
     resting: 0
   tasks:
@@ -35,7 +35,7 @@
 
     - name: "Generate list of containers we are going to use"
       shell:
-        head -n "{{ containers_used_count|int + size }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
+        head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
     - name: "Run clients.yaml"
       shell:
         ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }}" --tags "{{ tags }}" clients.yaml &>/root/reg-$( date --iso-8601=seconds ).log
@@ -59,7 +59,7 @@
 
     - name: "Increment number of already registered containers"
       shell:   # FIXME: Use lineinfile or so
-        echo "{{ containers_used_count|int + size }}" >/root/container-used-count
+        echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
 
     - name: "Give server some time to rest"
       pause:
