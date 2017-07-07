@@ -15,10 +15,23 @@
       shell:
         docker ps -q | wc -l | grep --quiet '^0\>' \
           || docker kill $( docker ps -q )
-    - name: "Restart docker daemon"
+    - name: "Stop docker daemon"
       service:
         name: docker
-        state: restarted
+        state: stopped
+    - name: "Purge docker network configs (causes problems on incorrect shutdown)"
+      file:
+        name=/var/lib/docker/network
+        state=absent
+    - name: "Purge interfaces in docker0 bridge if fome left"
+      shell: |
+        for iface in $( brctl show docker0 | grep '^\s*veth' ); do
+            brctl delif docker0 $iface
+        done
+    - name: "Start docker daemon"
+      service:
+        name: docker
+        state: stopped
     - name: "Count running containers"
       shell:
         docker ps -q | wc -l
