@@ -42,6 +42,12 @@
         sort -R /root/container-ips >/root/container-ips.shuffled
       ###delegate_to: 127.0.0.1
       ###run_once: true
+    - name: "Initialize file we use to count used containers"
+      lineinfile:
+        name: /root/container-used-count
+        state: present
+        line: "0"
+        create: yes
     - name: "Flush ebtables on Sat"
       command:
         ebtables -t nat --flush
