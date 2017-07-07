@@ -33,6 +33,9 @@ sat_repos:
   - product: "Red Hat Software Collections for RHEL Server"
     reposet: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
     repo: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server x86_64 {{ sat_releasever }}"
+  - product: "Red Hat Enterprise Linux Server"
+    reposet: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - Optional (RPMs)"
+    repo: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - Optional RPMs x86_64 {{ sat_releasever }}"
 
 # Satellite install options
 sat_install_source: cdn   # either 'cdn' or 'repo'
