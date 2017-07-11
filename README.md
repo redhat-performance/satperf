@@ -23,7 +23,7 @@ Ansible is used to perform most of the work. There are playbooks for:
  - Installing satellite
  - Installing capsule
  - Registering containers as hosts to capsule
- - Install ketello-agent and run errata
+ - Install katello-agent and run errata
  - Sync content
  - Puppet module update
 
@@ -36,7 +36,7 @@ You need Ansible installed.
 ### Configuration
 
 1. Before running satellite-performance, check `conf/satperf.yaml`, and create `conf/satperf.local.yaml`
-   and configure any owerrides there (e.g. RHSM credentials, Satellite setup details etc).
+   and configure any overrides there (e.g. RHSM credentials, Satellite setup details etc).
 
 2. Make sure that all hosts you are going to use have SSH certificate deployed for
    user root and private certificate is configured in your `conf/satperf.local.yaml`.
