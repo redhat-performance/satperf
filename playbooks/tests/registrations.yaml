@@ -45,10 +45,12 @@
       register: clients_yaml_cmd
       ignore_errors: true
 
-    - shell: |
+    - name: "Get how long registration took"
+      shell:
         grep '"msg". "Register ' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_reg_timings
-    - debug:
+    - name: "Show how long registration took"
+      debug:
         var: clients_yaml_reg_timings.stdout_lines
 
     ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
@@ -83,4 +85,28 @@
         msg: "Graphs: http://10.16.31.25:11202/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
       run_once: true
       ignore_errors: true
+    - set_fact:
+        filename_base: "graph-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
+      run_once: true
+      delegate_to: 127.0.0.1
+    - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
+      get_url:
+        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
+        dest: "{{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-{{ item.name }}.png"
+      run_once: true
+      delegate_to: 127.0.0.1
+      ignore_errors: yes
+      with_items:
+        - name: load
+          panelId: 27
+        - name: mem
+          panelId: 5
+        - name: swap
+          panelId: 7
+        - name: swap_io
+          panelId: 8
+        - name: sat6_proc_mem_sum
+          panelId: 56
+        - name: sat6_proc_cpu_sum
+          panelId: 43
 ...
