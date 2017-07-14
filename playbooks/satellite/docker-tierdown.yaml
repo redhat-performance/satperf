@@ -23,10 +23,15 @@
       file:
         name=/var/lib/docker/network
         state=absent
-    - name: "Purge interfaces in docker0 bridge if fome left"
+    - name: "Purge interfaces in docker0 bridge if some left"
       shell: |
         for iface in $( brctl show docker0 | grep '^\s*veth' ); do
             brctl delif docker0 $iface
+        done
+    - name: "Purge devices from system if some left"
+      shell: |
+        for dev in $( ip a | grep "^[0-9]\+: veth" | sed 's/^[0-9]\+: \(veth[^@]\+\)@.*$/\1/' | less ); do
+            ip link delete dev "$dev"
         done
     - name: "Start docker daemon"
       service:
