@@ -142,6 +142,7 @@ graphite_password: password
 ########################################
 # Grafana Server gathered as groups['grafana']|first (Can be hosted on the Graphite server)
 # Port Grafite is listening on
+grafana_host: 127.0.0.1
 grafana_port: 3000
 # Grafana username and password
 grafana_username: admin

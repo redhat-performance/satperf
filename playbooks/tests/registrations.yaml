@@ -82,7 +82,7 @@
 
     # FIXME: Takes into account start/end time from only one (random) docker host (should from min(start) to max(end))
     - debug:
-        msg: "Graphs: http://10.16.31.25:11202/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
+        msg: "Graphs: http://{{ grafana_host }}:{{ grafana_port }}/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
       run_once: true
       ignore_errors: true
     - set_fact:
@@ -91,7 +91,7 @@
       delegate_to: 127.0.0.1
     - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
       get_url:
-        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
+        url: "http://{{ grafana_host }}:{{ grafana_port }}/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
         dest: "{{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-{{ item.name }}.png"
       run_once: true
       delegate_to: 127.0.0.1
