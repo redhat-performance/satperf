@@ -9,7 +9,7 @@
     # TODO: Move these variables into conf/satperf.yaml
     tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM"   # Register systems with client timeout tweak and setup ReX
     ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,KAT..."   # Register systems and setup katello-agent
-    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,PUP..."   # Register systems and setup Puppet
+    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,PUP,PUPDEPLOYSETUP,PUPDEPLOY"   # Register systems and setup Puppet
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
     use_only_fresh: true   # should we use only containers which were not registered yet?
     resting: 0
