@@ -9,4 +9,6 @@ RUN echo "root:redhat" | chpasswd
 WORKDIR /root
 EXPOSE 22
 USER root
-CMD /usr/sbin/sshd-keygen; exec /usr/sbin/sshd -D
+RUN /usr/sbin/sshd-keygen
+RUN exec /usr/sbin/sshd -D
+CMD ["/lib/systemd/systemd"]
