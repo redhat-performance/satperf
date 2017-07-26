@@ -86,7 +86,7 @@
       run_once: true
       ignore_errors: true
     - set_fact:
-        filename_base: "graph-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
+        filename_base: "graph-reg-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
       run_once: true
       delegate_to: 127.0.0.1
     - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
