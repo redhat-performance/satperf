@@ -1,0 +1,29 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: "Remove hosts"
+      shell: |
+        for i in $( hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" host list | grep "container[0-9]" | cut -d "," -f 1 ); do
+            attempt=0
+            while ! hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host delete --id "$i"; do
+                if [ $attempt -gt 3 ]; then
+                    echo "ERROR: Fiving up with $i" >&2
+                    break
+                fi
+                let attempt+=1
+                sleep 3
+            done
+        done
+      register: remove_hosts
+    - name: "Show stdout"
+      debug:
+        var: remove_hosts.stdout_lines
+    - name: "Show stderr"
+      debug:
+        var: remove_hosts.stderr_lines
+...

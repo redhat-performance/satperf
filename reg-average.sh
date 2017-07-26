@@ -1,0 +1,23 @@
+#!/bin/sh
+
+# When you capture playbooks/tests/registrations.yaml ouput into log file,
+# this then counts aferage registration duration form the log
+#
+# sleep 120; ansible-playbook --forks 100 -i conf/20170625-gprfc019.ini playbooks/tests/registrations.yaml -e size=5 >reg-05.log; sleep 100; ansible-playbook --forks 100 -i conf/20170625-gprfc019.ini playbooks/tests/registrations.yaml -e size=10 >reg-10.log; sleep 100; ansible-playbook --forks 100 -i conf/20170625-gprfc019.ini playbooks/tests/registrations.yaml -e size=15 >reg-15.log ; sleep 100; ansible-playbook --forks 100 -i conf/20170625-gprfc019.ini playbooks/tests/registrations.yaml -e size=20 >reg-20.log
+
+set -e
+
+export IFS=$'\n'
+for f in $@; do
+    duration=0
+    count=0
+    for row in $( grep '"Register ' $f | cut -d '"' -f 2 ); do
+        begin=$( date -d "$( echo "$row" | cut -d ' ' -f 2,3 )" +%s )
+        end=$( date -d "$( echo "$row" | cut -d ' ' -f 5,6 )" +%s )
+        [ "$( expr $end - $begin )" -lt 50 ] \
+          && echo "WARNING: On '$row', it took suspiciously little ($( expr $end - $begin ) seconds)"
+        let duration+=$( expr $end - $begin )
+        let count+=1
+    done
+    echo "$f: $duration / $count = $( echo "$duration / $count" | bc )"
+done
