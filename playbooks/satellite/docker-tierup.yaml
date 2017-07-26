@@ -18,6 +18,7 @@
       shell: |
         for i in $( seq "{{ containers|default(250) - docker_ids.stdout_lines|length }}" ); do
           docker run -h "{{ ansible_hostname }}container$i.example.com" -d r7perfsat
+          ###docker run -h "{{ ansible_hostname }}container$i.example.com" -d --tmpfs /tmp --tmpfs /run -v /sys/fs/cgroup:/sys/fs/cgroup:ro r7perfsat-systemd
         done
       when: "docker_ids.stdout_lines|length < containers|default(250)"
     #- name: "List container IDs"

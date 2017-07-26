@@ -33,6 +33,7 @@
         for dev in $( ip a | grep "^[0-9]\+: veth" | sed 's/^[0-9]\+: \(veth[^@]\+\)@.*$/\1/' | less ); do
             ip link delete dev "$dev"
         done
+      ignore_errors: yes
     - name: "Start docker daemon"
       service:
         name: docker
