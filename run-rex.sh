@@ -71,7 +71,7 @@ function measure() {
     ap $1-remove-hosts-post.log playbooks/satellite/satellite-remove-hosts.yaml
 
     log "Showing average registration time"
-    grep 'RESULT passed' $1/rex-*.log
+    grep 'RESULT' $1/rex-*.log || true
 
     log "Finish scenario $1"
 }
