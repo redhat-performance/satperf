@@ -13,6 +13,7 @@
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
     use_only_fresh: true   # should we use only containers which were not registered yet?
     resting: 0
+    save_graphs: true
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
       command:   # FIXME: Use lineinfile
@@ -89,6 +90,7 @@
         filename_base: "graph-reg-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
       run_once: true
       delegate_to: 127.0.0.1
+      when: "save_graphs == 'true'"
     - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
       get_url:
         url: "http://{{ grafana_host }}:{{ grafana_port }}/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
@@ -109,4 +111,5 @@
           panelId: 56
         - name: sat6_proc_cpu_sum
           panelId: 43
+      when: "save_graphs == 'true'"
 ...

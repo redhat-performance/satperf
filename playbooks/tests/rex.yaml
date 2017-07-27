@@ -7,6 +7,7 @@
     - ../../conf/satperf.local.yaml
   vars:
     resting: 0
+    save_graphs: true
   tasks:
     - name: "Determine job description"
       set_fact:
@@ -59,6 +60,7 @@
         filename_base: "graph-rex-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
       run_once: true
       delegate_to: 127.0.0.1
+      when: "save_graphs == 'true'"
     - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
       get_url:
         url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
@@ -79,4 +81,5 @@
           panelId: 56
         - name: sat6_proc_cpu_sum
           panelId: 43
+      when: "save_graphs == 'true'"
 ...

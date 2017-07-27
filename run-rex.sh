@@ -44,27 +44,27 @@ function measure() {
     a $1/restart.log -m "shell" -a "katello-service stop; swapoff -a; echo 3 > /proc/sys/vm/drop_caches; swapon -a; katello-service start" satellite6
     s 120
 
-    ap $1/reg-1st-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-2nd-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-3rd-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
+    ap $1/reg-1st-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-2nd-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-3rd-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
     s 100
     ap $1/rex-120.log playbooks/tests/rex.yaml
     s 100
-    ap $1/reg-4th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-5th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-6th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
+    ap $1/reg-4th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-5th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-6th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
     s 100
     ap $1/rex-240.log playbooks/tests/rex.yaml
     s 100
-    ap $1/reg-7th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-8th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-9th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
+    ap $1/reg-7th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-8th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-9th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
     s 100
     ap $1/rex-360.log playbooks/tests/rex.yaml
     s 100
-    ap $1/reg-10th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-11th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
-    ap $1/reg-12th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"
+    ap $1/reg-10th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-11th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
+    ap $1/reg-12th-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT' save_graphs=false"
     s 100
     ap $1/rex-480.log playbooks/tests/rex.yaml
 
