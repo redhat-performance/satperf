@@ -130,7 +130,7 @@ for page in range(job_info['total'] / PER_PAGE + 1):
     for r in sub_tasks['results']:
         if r['result'] == 'success':
             r_ended = datetime.datetime.strptime(r['ended_at'], STARTED_AT_FMT)
-            if last_ended is None or last_ended > r_ended:
+            if last_ended is None or last_ended < r_ended:
                 last_ended = r_ended
             r_duration = r_ended - start_at
             pass_count += 1
