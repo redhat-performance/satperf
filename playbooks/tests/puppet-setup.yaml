@@ -1,0 +1,152 @@
+---
+# This playbook assumes registration ran on the docker host
+# and now we are going to reuse /root/container-used-count
+# and /root/container-ips.shuffled to get list of containers
+
+# Get list of containers to use
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+  tasks:
+    - name: "Gather facts"
+      setup:
+        gather_subset: '!hardware'
+        ###gather_timeout: 60   # available in Ansible 2.2
+
+    - name: "Load number of already registered containers"
+      command:
+        cat /root/container-used-count
+      register: containers_used_count_cmd
+    - name: "Set number of used containers based on file"
+      set_fact:
+        containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
+    - name: "Make sure we have non-0 containers"
+      assert:
+        that: "containers_used_count|int > 0"
+
+    - name: "Generate list of containers we are going to use"
+      shell:
+        head -n "{{ containers_used_count|int }}" /root/container-ips.shuffled | cut -d ' ' -f 2 | tee /root/clients.ini
+      register: containers_used_cmd
+    - name: "Get hostnames for the containers"   # FIXME: Very ineffective
+      command: "ssh -i /root/id_rsa_key root@{{ item }} hostname"
+      with_items: "{{ containers_used_cmd.stdout_lines }}"
+      register: container_hostnames_cmd
+
+    - name: "Add these hosts into in-memory inventory group"
+      add_host:
+        name: "{{ item.item }}"
+        group: "inmemory-puppet-clients"
+        ansible_host: "{{ item.stdout }}"
+      with_items: "{{ container_hostnames_cmd.results }}"
+
+
+
+# Configure containers on satellite side
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    puppet_class_clases:
+      - acl
+      - apache
+      - apache::php
+      - apache::ssl
+      - apache::vhosts
+      - gcc
+      - limits
+      - motd
+      - mysql::client
+      - mysql::server
+      - ntp
+      - postgresql::client
+      - postgresql::server
+  tasks:
+    - name: "Configure containers on Satellite side"
+      command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host update --name "{{ hostvars[item]['ansible_host'] }}" --puppet-proxy "{{ groups['satellite6']|first }}" --puppet-ca-proxy "{{ groups['satellite6']|first }}" --environment "{{ content_puppet_env }}" --puppet-classes "{{ puppet_class_clases|join(',') }}"
+      with_items: "{{ groups['inmemory-puppet-clients'] }}"
+
+    - name: "Clean puppet certificates on satellite"
+      file:
+        name: "/var/lib/puppet/ssl/{{ hostvars[item]['ansible_host'] }}.pem"
+        state: absent
+      with_items: "{{ groups['inmemory-puppet-clients'] }}"
+
+
+
+# Cleanup containers
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    puppet_class_pkgs:
+      - apr
+      - apr-util
+      - autogen-libopts
+      - gcc
+      - gcc-c++
+      - httpd
+      - httpd-tools
+      - libstdc++-devel
+      - libzip
+      - mariadb
+      - mariadb-server
+      - mod_ssl
+      - ntp
+      - ntpdate
+      - php
+      - php-cli
+      - php-common
+      - postgresql
+      - postgresql-server
+      - redhat-logos
+    puppet_class_files:
+      - /etc/motd
+      - /usr/local/bin/validate_postgresql_connection.sh
+      - /etc/ntp.conf
+      - /etc/httpd/
+      - /var/lib/pgsql/
+      - /var/lib/mysql/
+  tasks:
+    - name: "Create script to cleanp containers for puppet run"
+      copy:
+        content: |
+          - hosts: all
+            remote_user: root
+            gather_facts: no
+            tasks:
+              - name: "Remove packages"
+                yum:
+                  name: "{% raw %}{{ item }}{% endraw %}"
+                  state: absent
+                with_items:
+                {% for i in puppet_class_pkgs %}
+                  - "{{ i }}"
+                {% endfor %}
+
+              - name: "Remove files"
+                file:
+                  path: "{% raw %}{{ item }}{% endraw %}"
+                  state: absent
+                with_items:
+                {% for i in puppet_class_files %}
+                  - "{{ i }}"
+                {% endfor %}
+
+              - name: "Clean puppet certificate"
+                shell: "rm -rf /var/lib/puppet/ssl/$( hostname ).pem"
+        dest: /root/clients-puppet-cleanup.yaml
+    - name: "Cleanup containers for puppet run"
+      command: ansible-playbook -i clients.ini --forks 1000 /root/clients-puppet-cleanup.yaml
+...

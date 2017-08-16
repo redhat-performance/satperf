@@ -7,11 +7,15 @@
 
 set -e
 
+# What to grep for
+matcher=$1
+shift
+
 export IFS=$'\n'
 for f in $@; do
     duration=0
     count=0
-    for row in $( grep '"Register ' $f | cut -d '"' -f 2 ); do
+    for row in $( grep "\"$matcher " $f | cut -d '"' -f 2 ); do
         begin=$( date -d "$( echo "$row" | cut -d ' ' -f 2,3 )" +%s )
         end=$( date -d "$( echo "$row" | cut -d ' ' -f 5,6 )" +%s )
         [ "$( expr $end - $begin )" -lt 50 ] \

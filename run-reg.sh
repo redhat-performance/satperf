@@ -51,7 +51,7 @@ function measure() {
     ap $1/reg-20.log playbooks/tests/registrations.yaml -e "size=20 resting=0"
 
     log "Showing average registration time"
-    ./reg-average.sh $1/reg-*.log
+    ./reg-average.sh 'Register' $1/reg-*.log
 
     log "Finish scenario $1"
 }
@@ -61,7 +61,7 @@ function doit() {
     # $2 ... VM name
     log "START RUN"
 
-    a $1-boot.log               -m "shell" -a "for d in \$( virsh list --name ); do virsh shutdown \"\$d\"; done; while [ \$( virsh list --name | grep -v '^\s*$' | wc -l | cut -d ' ' -f 1 ) -gt 0 ]; do sleep 1; done; virsh start '$2'" gprfc019.sbu.lab.eng.bos.redhat.com
+    a $1-boot.log               -m "shell" -a "for vm in \$( virsh list --name ); do virsh shutdown \"\$vm\"; done; while [ \$( virsh list --name | grep -v '^\s*$' | wc -l | cut -d ' ' -f 1 ) -gt 0 ]; do sleep 1; done; virsh start '$2'" gprfc019.sbu.lab.eng.bos.redhat.com
     ap $1-docker-tierdown.log   playbooks/satellite/docker-tierdown.yaml
     ap $1-docker-tierup.log     playbooks/satellite/docker-tierup.yaml
     ap $1-remove-hosts-pre.log  playbooks/satellite/satellite-remove-hosts.yaml
