@@ -74,8 +74,8 @@ function measure() {
     d="$1/$2"
     mkdir $d
 
-    ###a $d/boot.log -m "shell" -a "for vm in \$( virsh list --name ); do virsh shutdown \"\$vm\"; done; while [ \$( virsh list --name | grep -v '^\s*$' | wc -l | cut -d ' ' -f 1 ) -gt 0 ]; do sleep 1; done; virsh start '$2'" gprfc019.sbu.lab.eng.bos.redhat.com
-    ###a $d/set-cleanup.log -m "lineinfile" -a "path=/etc/httpd/conf.d/passenger.conf regexp=\"PassengerMaxPoolSize\" state=\"absent\"" satellite6
+    a $d/boot.log -m "shell" -a "for vm in \$( virsh list --name ); do virsh shutdown \"\$vm\"; done; while [ \$( virsh list --name | grep -v '^\s*$' | wc -l | cut -d ' ' -f 1 ) -gt 0 ]; do sleep 1; done; virsh start '$2'" gprfc019.sbu.lab.eng.bos.redhat.com
+    a $d/set-cleanup.log -m "lineinfile" -a "path=/etc/httpd/conf.d/passenger.conf regexp=\"PassengerMaxPoolSize\" state=\"absent\"" satellite6
 
     # Measure for different PassengerMaxPoolSize settings
     measure_pmps $d 3
@@ -115,13 +115,12 @@ function setup() {
 
 
 
+world="results-puppet-$( date +%Y%m%d )-gprfc019"
+
 # Recreate clients, remove them from Satellite
-setup results-puppet-$( date +%Y%m%d )-gprfc019
+setup "$world"
 
 # Each time 'doit' is started, 80 more clients is created
-scenario="results-puppet-$( date +%Y%m%d )-gprfc019-80clients"
-doit "$scenario" 2>&1 | tee $scenario.log
-scenario="results-puppet-$( date +%Y%m%d )-gprfc019-160clients"
-doit "$scenario" 2>&1 | tee $scenario.log
-scenario="results-puppet-$( date +%Y%m%d )-gprfc019-240clients"
-doit "$scenario" 2>&1 | tee $scenario.log
+doit "$world-80clients" 2>&1 | tee $scenario.log
+doit "$world-160clients" 2>&1 tee $scenario.log
+doit "$world-240clients" 2>&1 | tee $scenario.log
