@@ -15,4 +15,13 @@
   - name: Get the atomic filesystem reflect our ansible install
     shell:
       rpm-ostree ex livefs
+  - name: Get the bridge-utils package
+    shell:
+      atomic host install bridge-utils
+  - name: Get the psmisc package
+    shell:
+      atomic host install psmisc
+  - name: Live update the filesystem for the installed packages
+    shell:
+      rpm-ostree ex livefs
 ...
