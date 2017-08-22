@@ -1,0 +1,9 @@
+---
+  - name: Deploy the Dockerfile
+    copy:
+      src: Dockerfile
+      dest: /root/Dockerfile
+  - name: Build the docker image
+    shell:
+      docker build -t rhatomicsat - < /root/Dockerfile
+...
