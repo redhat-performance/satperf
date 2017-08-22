@@ -1,30 +1,30 @@
 ---
-  - name: "When docker_host_10gnic is empty, set it to default 'eth1'"
+  - name: "When atomic_host_10gnic is empty, set it to default 'eth1'"
     set_fact:
       docker_host_10gnic: eth1
-    when: "docker_host_10gnic is undefined or docker_host_10gnic is none or docker_host_10gnic == ''"
+    when: "atomic_host_10gnic is undefined or atomic_host_10gnic is none or atomic_host_10gnic == ''"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ atomic_host_10gnic }}"
       regexp: "^ONBOOT="
       line: "ONBOOT=yes"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ atomic_host_10gnic }}"
       regexp: "^NM_CONTROLLED="
       line: "NM_CONTROLLED=no"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ atomic_host_10gnic }}"
       regexp: "^DEVICE="
-      line: "DEVICE={{ docker_host_10gnic }}"
+      line: "DEVICE={{ atomic_host_10gnic }}"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ atomic_host_10gnic }}"
       regexp: "^BOOTPROTO="
       line: "BOOTPROTO=none"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ atomic_host_10gnic }}"
       regexp: "^TYPE="
       line: "TYPE=Ethernet"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ atomic_host_10gnic }}"
       regexp: "^BRIDGE="
       line: "BRIDGE=docker0"
   - lineinfile:
@@ -68,18 +68,18 @@
     command:
       systemctl restart network
   # Configure docker networking
-  - name: "When docker_host_cidr_range is empty, set it to default '24'"
+  - name: "When atomic_host_cidr_range is empty, set it to default '24'"
     set_fact:
-      docker_host_cidr_range: 24
-    when: "docker_host_cidr_range is undefined or docker_host_cidr_range is none or docker_host_cidr_range == ''"
+      atomic_host_cidr_range: 24
+    when: "atomic_host_cidr_range is undefined or atomic_host_cidr_range is none or atomic_host_cidr_range == ''"
   - name: "Remove --fixed cidr if any"
     command:
       sed -i "s/ --fixed-cidr=[^ '\"]*//g" /etc/sysconfig/docker
-  - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/{{ docker_host_cidr_range }}' in docker config"
+  - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/{{ atomic_host_cidr_range }}' in docker config"
     lineinfile:
       dest: /etc/sysconfig/docker
       regexp: "^OPTIONS=['\"]([^'\"]*)['\"]$"
-      line: 'OPTIONS="\1 --fixed-cidr={{ ip }}/{{ docker_host_cidr_range }}"'
+      line: 'OPTIONS="\1 --fixed-cidr={{ ip }}/{{ atomic_host_cidr_range }}"'
       backrefs: yes
     when: "ip is defined"
   - name: Stop docker service

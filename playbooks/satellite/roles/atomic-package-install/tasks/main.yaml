@@ -1,7 +1,10 @@
 ---
+  - name: Do a atomic host upgrade
+    shell:
+      atomic host upgrade
   - name: Get the epel release (We require it for getting ansible)
     get_url:
-      url: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rp
+      url: http://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
       dest: /root/epel-release.rpm
   - name: Install epel
     shell:
