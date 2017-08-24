@@ -1,0 +1,17 @@
+---
+  - name: Remove --selinux-enabled from docker config
+    command:
+         sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+  - name: Enable overlayfs in docker
+    lineinfile:
+            dest: /etc/sysconfig/docker-storage-setup
+            create: yes
+            line: "STORAGE_DRIVER='overlay'"
+  - name: docker storage setup
+    command:
+            docker-storage-setup
+  - name: Restart docker
+    service:
+            name: docker
+            state: restarted
+...
