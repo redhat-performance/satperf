@@ -6,7 +6,18 @@
   gather_facts: no
   vars:
     {% if client_reg_server is defined %}server: {{ client_reg_server }}{% endif %}
-
+    bootstrap_foreman_fqdn: {% raw %}{{ server }}{% endraw %}
+    bootstrap_download_method: http
+    bootstrap_org: "Default_Organization"
+    #when not passing username/password, org has to be the label, otherwise the name:
+    #bootstrap_org: "Default Organization"
+    bootstrap_location: "World"
+    bootstrap_activationkey: "ActivationKey"
+    bootstrap_login: ""
+    bootstrap_password: ""
+    bootstrap_hostgroup: "HostGroup"
+    bootstrap_additional_args: "--force"
+    bootstrap_target_path: /root/bootstrap.py
   tasks:
     - name: "Make sure server was set (on command line with '-e server=...' or in 'vars:' section here)"
       assert:
@@ -65,28 +76,9 @@
       tags:
         - REG
         - FIXREG
-    - name: "Clean subscription-manager stuff"
-      shell:
-        subscription-manager clean
-      tags: REG
-    - name: "Remove katello-ca-consumer package"
-      shell: |
-        if rpm -qa | grep katello-ca-consumer; then
-          yum --disablerepo=\* -y remove katello-ca-consumer-\*
-        fi
-      tags: REG
     - name: "Remove other repos which might be broken"
       shell:
         rm -f /etc/yum.repos.d/*.repo
-      tags: REG
-    - name: "Install katello-ca-consumer"
-      action:
-        shell
-          rpm -Uvh "http://{% raw %}{{ server }}{% endraw %}/pub/katello-ca-consumer-latest.noarch.rpm"
-      register: installed
-      until: "installed.rc is not defined or installed.rc == 0"
-      retries: 10
-      delay: 10
       tags: REG
     - name: Increase the RHSM timeout
       lineinfile:
@@ -100,9 +92,20 @@
     # Start registering with RHSM and attach to the
     # pool
     #################################################
-    - name: "Register"
-      shell:
-        subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
+    - name: download bootstrap.py from {{ bootstrap_foreman_fqdn }}
+      get_url:
+        dest: "{% raw %}{{ bootstrap_target_path }}{% endraw %}"
+        url: "{% raw %}{{ bootstrap_download_method }}://{{ bootstrap_foreman_fqdn }}/pub/bootstrap.py{% endraw %}"
+      tags: REG
+
+    - name: generate bootstrap.py arguments
+      set_fact:
+        bootstrap_args: "{% raw %}--server {{ bootstrap_foreman_fqdn }} --organization '{{ bootstrap_org }}' --location '{{ bootstrap_location }}' --activationkey '{{ bootstrap_activationkey }}' --download-method {{ bootstrap_download_method }}{% endraw %}"
+        bootstrap_foreman_args: "{% raw %}{% if bootstrap_password != '' %}--login '{{ bootstrap_login }}' --password '{{ bootstrap_password }}' --hostgroup '{{ bootstrap_hostgroup }}'{% else %}--skip foreman{% endif %}{% endraw %}"
+      tags: REG
+
+    - name: run bootstrap.py
+      command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_additional_args }}{% endraw %}"
       register: reg
       async: 600
       poll: 10
@@ -114,34 +117,6 @@
       debug:
         msg="Register {% raw %}{{ reg.start }}{% endraw %} to {% raw %}{{ reg.end }}{% endraw %}"
       tags: REG
-    - name: "Determine RHEL pool ID"
-      command:
-        subscription-manager list --available --all --matches "{{ content_rhel_name }}" --pool-only
-      register: pool_id_rhel
-      tags: REG
-    - name: "Determine Satellite Tools pool ID"
-      command:
-        subscription-manager list --available --all --matches "{{ content_sattools_name }}" --pool-only
-      register: pool_id_tools
-      tags: REG
-    - name: "Attach to RHEL product"
-      shell:
-        subscription-manager attach --pool "{% raw %}{{ pool_id_rhel.stdout }}{% endraw %}"
-      register: att
-      tags: REG
-    #- name: "Attach to RHEL product - timings"
-    #  debug:
-    #    msg="AttachRHEL {% raw %}{{ att.start }}{% endraw %} to {% raw %}{{ att.end }}{% endraw %}"
-    #  tags: REG
-    - name: "Attach to 6.2 Tools custom product"
-      shell:
-        subscription-manager attach --pool "{% raw %}{{ pool_id_tools.stdout }}{% endraw %}"
-      register: att
-      tags: REG
-    #- name: "Attach to 6.2 Tools custom product - timings"
-    #  debug:
-    #    msg="AttachTools {% raw %}{{ att.start }}{% endraw %} to {% raw %}{{ att.end }}{% endraw %}"
-    #  tags: REG
 
     ##################################################
     # Fix registration if needed
