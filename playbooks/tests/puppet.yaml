@@ -1,0 +1,113 @@
+---
+# This playbook assumes registration ran on the docker host
+# and now we are going to reuse /root/container-used-count
+# and /root/container-ips.shuffled to get list of containers
+
+# Finally run the puppet!
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    resting: 10
+    save_graphs: true
+  tasks:
+    - name: "Ansible on docker host configured to ignore host keys"
+      command:   # FIXME: Use lineinfile
+        sed -i 's|^.*host_key_checking.*$|host_key_checking = False|' /etc/ansible/ansible.cfg
+
+    - name: "Create script to cleanp containers for puppet run"
+      copy:
+        content: |
+          - hosts: all
+            remote_user: root
+            gather_facts: no
+            tasks:
+              - name: "Puppet agent run"
+                shell: |
+                  score=0
+                  for i in $( seq 10 ); do
+                    puppet agent --onetime --verbose --ignorecache --no-daemonize --no-usecacheonfailure --no-splay
+                    let score+=$?
+                  done
+                  exit $score
+                register: run
+                async: 600
+                poll: 10
+                until: "run.rc is not defined or run.rc != 0"
+                retries: 5
+                delay: 10
+              - name: "Puppet agent run - timings"
+                debug:
+                  msg: "Puppet agent run {% raw %}{{ run.start }}{% endraw %} to {% raw %}{{ run.end }}{% endraw %}"
+        dest: /root/clients-puppet.yaml
+    - name: "Determine log name"
+      set_fact:
+        yaml_cmd_log: "/root/out-puppet-{{ lookup('pipe', 'date --iso-8601=seconds') }}.log"
+    - name: "Run puppet agent on containers"
+      shell:
+        ansible-playbook -i /root/clients.ini --forks 1000 /root/clients-puppet.yaml &> "{{ yaml_cmd_log }}"
+      ignore_errors: true
+      register: yaml_cmd
+    - name: "Get how long puppet agent runs took"
+      shell:
+        grep "\"msg\": \"Puppet agent run " "{{ yaml_cmd_log }}" | cut -d '"' -f 4
+      register: yaml_cmd_timings
+    - name: "Show how long puppet agent runs took"
+      debug:
+        var: yaml_cmd_timings.stdout_lines
+
+    - name: "Give server some time to rest"
+      pause:
+        seconds: "{{ resting }}"
+
+    - name: "Determine timezone"
+      command:
+        date +%z
+      register: date_z_cmd
+    - set_fact:
+        start_time: "{{ lookup('pipe', 'date --utc -d \"{{ yaml_cmd.start }} {{ date_z_cmd.stdout }}\" +%s') }}"
+    - set_fact:
+        end_time: "{{ lookup('pipe', 'date --utc -d \"{{ yaml_cmd.end }} {{ date_z_cmd.stdout }}\" +%s') }}"
+
+    - name: "DEBUG: stderr"
+      debug:
+        msg: "{{ yaml_cmd.stderr_lines }}"
+    - name: "DEBUG: result"
+      debug:
+        msg: "rc:{{ yaml_cmd.rc }} start:{{ yaml_cmd.start }} end:{{ yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
+
+    # FIXME: Takes into account start/end time from only one (random) docker host (should from min(start) to max(end))
+    - debug:
+        msg: "Graphs: http://{{ grafana_host }}:{{ grafana_port }}/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
+      run_once: true
+      ignore_errors: true
+    - set_fact:
+        filename_base: "graph-puppet-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
+      run_once: true
+      delegate_to: 127.0.0.1
+      when: "save_graphs == 'true'"
+    - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
+      get_url:
+        url: "http://{{ grafana_host }}:{{ grafana_port }}/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
+        dest: "{{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-{{ item.name }}.png"
+      run_once: true
+      delegate_to: 127.0.0.1
+      ignore_errors: true
+      with_items:
+        - name: load
+          panelId: 27
+        - name: mem
+          panelId: 5
+        - name: swap
+          panelId: 7
+        - name: swap_io
+          panelId: 8
+        - name: sat6_proc_mem_sum
+          panelId: 56
+        - name: sat6_proc_cpu_sum
+          panelId: 43
+      when: "save_graphs == 'true'"
+...

@@ -1,0 +1,27 @@
+---
+  - name: Get the epel release (We require it for getting ansible)
+    get_url:
+      url: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rp
+      dest: /root/epel-release.rpm
+  - name: Install epel
+    shell:
+      rpm-ostree pkg-add /root/epel-release.rpm
+  - name: Live update the atomic filesystem
+    shell:
+      rpm-ostree ex livefs
+  - name: Install ansible on our atomic host
+    shell:
+      rpm-ostree pkg-add ansible
+  - name: Get the atomic filesystem reflect our ansible install
+    shell:
+      rpm-ostree ex livefs
+  - name: Get the bridge-utils package
+    shell:
+      atomic host install bridge-utils
+  - name: Get the psmisc package
+    shell:
+      atomic host install psmisc
+  - name: Live update the filesystem for the installed packages
+    shell:
+      rpm-ostree ex livefs
+...

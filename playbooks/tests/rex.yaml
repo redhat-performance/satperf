@@ -1,0 +1,85 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    resting: 0
+    save_graphs: true
+  tasks:
+    - name: "Determine job description"
+      set_fact:
+        job_desc: "Date with 40 ({{ lookup('pipe', 'date --utc --iso-8601=seconds') }})"
+    - name: "Start the 'date' job '{{ job_desc }}'"
+      shell: |
+        # Looks like even with "--async", hammer still waits, so this FIXME way
+        # we are trying to make sure it started, but we are not going to block
+        # script execution
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='date'" --async &
+        sleep 15
+    - name: "Get last job ID"
+      shell:
+        hammer --csv -u admin -p changeme job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
+      register: last_job_id_cmd
+    - debug: var=last_job_id_cmd
+    - name: "Set last job ID"
+      set_fact:
+        last_job_id: "{{ last_job_id_cmd.stdout_lines[0]|int }}"
+    - name: "Distribute private key"
+      copy:
+        src: files/wait-for-job.py
+        dest: /root/wait-for-job.py
+        mode: "u=rwx,g=rx,o=rx"
+        force: yes
+    - name: "Wait for job {{ last_job_id }} to finish"
+      shell:
+        /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}/" "{{ last_job_id }}"
+      register: wait_for_job_cmd
+    - name: "Parse script result"
+      set_fact:
+        pass_count:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[2]|int }}"
+        total_count:  "{{ ((wait_for_job_cmd.stdout_lines|last).split())[4]|int }}"
+        start_time:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[6]|int }}"
+        end_time:     "{{ ((wait_for_job_cmd.stdout_lines|last).split())[8]|int }}"
+        avg_duration: "{{ ((wait_for_job_cmd.stdout_lines|last).split())[10]|int }}"
+    - name: "Show what we have parsed"
+      debug:
+        msg: "RESULT: pass_count: {{ pass_count }}; total_count: {{ total_count }}; start_time: {{ start_time }}; end_time: {{ end_time }}; avg_duration: {{ avg_duration }}"
+
+    - name: "Give server some time to rest"
+      pause:
+        seconds: "{{ resting }}"
+
+    - debug:
+        msg: "Graphs: http://10.16.31.25:11202/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
+      run_once: true
+      ignore_errors: true
+    - set_fact:
+        filename_base: "graph-rex-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
+      run_once: true
+      delegate_to: 127.0.0.1
+      when: "save_graphs == 'true'"
+    - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
+      get_url:
+        url: "http://10.16.31.25:11202/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
+        dest: "{{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-{{ item.name }}.png"
+      run_once: true
+      delegate_to: 127.0.0.1
+      ignore_errors: yes
+      with_items:
+        - name: load
+          panelId: 27
+        - name: mem
+          panelId: 5
+        - name: swap
+          panelId: 7
+        - name: swap_io
+          panelId: 8
+        - name: sat6_proc_mem_sum
+          panelId: 56
+        - name: sat6_proc_cpu_sum
+          panelId: 43
+      when: "save_graphs == 'true'"
+...

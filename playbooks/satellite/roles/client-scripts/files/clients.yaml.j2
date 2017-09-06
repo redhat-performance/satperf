@@ -23,10 +23,11 @@
         delay=5
         timeout=300
         state=started
-    #- name: "Gather facts"
-    #  setup:
-    #    gather_subset: '!hardware'
-    #    ###gather_timeout: 60   # available in Ansible 2.2
+    - name: "Gather facts"
+      setup:
+        gather_subset: '!hardware'
+        ###gather_timeout: 60   # available in Ansible 2.2
+      tags: PUPDEPLOYSETUP
     - name: "Make sure /etc/hosts contains all capsules"
       shell: |
         {% for item in groups['satellite6'] + groups['capsules'] %}
@@ -270,6 +271,7 @@
       tags:
         - KAT
         - FIXKAT
+        - INSTKAT
     - name: "Kill journald if it is running"
       shell:
         pkill --full --exact '/usr/lib/systemd/systemd-journald' || true

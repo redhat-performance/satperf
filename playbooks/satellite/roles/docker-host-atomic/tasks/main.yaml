@@ -1,0 +1,127 @@
+---
+  - name: "When docker_host_10gnic is empty, set it to default 'eth1'"
+    set_fact:
+      docker_host_10gnic: eth1
+    when: "docker_host_10gnic is undefined or docker_host_10gnic is none or docker_host_10gnic == ''"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      regexp: "^NM_CONTROLLED="
+      line: "NM_CONTROLLED=no"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      regexp: "^DEVICE="
+      line: "DEVICE={{ docker_host_10gnic }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=none"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      regexp: "^TYPE="
+      line: "TYPE=Ethernet"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      regexp: "^BRIDGE="
+      line: "BRIDGE=docker0"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+      create: yes
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^TYPE="
+      line: "TYPE=Bridge"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^DELAY="
+      line: "DELAY=0"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^NM_CONTROLLED="
+      line: "NM_CONTROLLED=no"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^DEVICE="
+      line: "DEVICE=docker0"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=static"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^IPADDR="
+      line: "IPADDR={{ ip }}"
+  - lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-docker0
+      regexp: "^NETMASK="
+      line: "NETMASK=255.0.0.0"
+  - name: "Kill all dhclients (network service was not restarting)"
+    command:
+      killall dhclient
+    ignore_errors: true
+  - name: "Restart network"
+    command:
+      systemctl restart network
+  # Configure docker networking
+  - name: "When docker_host_cidr_range is empty, set it to default '24'"
+    set_fact:
+      docker_host_cidr_range: 24
+    when: "docker_host_cidr_range is undefined or docker_host_cidr_range is none or docker_host_cidr_range == ''"
+  - name: "Remove --fixed cidr if any"
+    command:
+      sed -i "s/ --fixed-cidr=[^ '\"]*//g" /etc/sysconfig/docker
+  - name: "If we have static ip specified, add '--fixed-cidr={{ ip }}/{{ docker_host_cidr_range }}' in docker config"
+    lineinfile:
+      dest: /etc/sysconfig/docker
+      regexp: "^OPTIONS=['\"]([^'\"]*)['\"]$"
+      line: 'OPTIONS="\1 --fixed-cidr={{ ip }}/{{ docker_host_cidr_range }}"'
+      backrefs: yes
+    when: "ip is defined"
+  - name: Stop docker service
+    service:
+      name: docker
+      state: stopped
+  # Cleanup Overlay FS configuration if present
+  - name: "Check if we have an Overlay configured"
+    command:
+      grep "/dev/{{ docker_host_vg }}/docker" /etc/fstab
+    register: overlay_present
+    always_run: True
+    ignore_errors: True
+  - name: "Unmount the partition"
+    mount:
+      src: "/dev/{{ docker_host_vg }}/docker"
+      name: /var/lib/docker
+      state: unmounted
+    when: overlay_present.rc == 0
+  - name: "Cleanup /etc/fstab"
+    lineinfile:
+      name: /etc/fstab
+      regexp: '^/dev/{{ docker_host_vg }}/docker'
+      state: absent
+    when: overlay_present.rc == 0
+  - name: "Remove overlay device"
+    command:
+      lvremove -f "{{ docker_host_vg }}"
+    when: overlay_present.rc == 0
+
+  - name: "Docker storage related config ready to be recreated"
+    shell: |
+      rm -rf /var/lib/docker/*
+      rm -f /etc/sysconfig/docker-storage
+  # Configure docker storage - generate /etc/sysconfig/docker-storage
+  - name: "docker-storage-setup"
+    command:
+      docker-storage-setup
+
+  - name: "docker service restarted to use new settings"
+    service:
+      name: docker
+      state: restarted
+      enabled: yes
+...
