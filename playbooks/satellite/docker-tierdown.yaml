@@ -12,6 +12,10 @@
       shell:
         docker ps -q | wc -l | grep --quiet '^0\>' \
           || docker kill $( docker ps -q )
+    - name: "Gracefully remove container images"
+      shell:
+        docker ps -qa | wc -l | grep --quiet '^0\>' \
+          || docker rm $( docker ps -qa )
     - name: "Stop docker daemon"
       service:
         name: docker
