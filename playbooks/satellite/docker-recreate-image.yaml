@@ -9,12 +9,13 @@
     - name: "Remove current image"
       command:
         docker rmi r7perfsat
+      ignore_errors: yes
     - name: "Dockerfile for base container present"
       copy:
         src: roles/docker-host/files/Dockerfile
         dest: /root/Dockerfile
         force: yes
-    - name: "Rebuild our base docker image"
-      shell:
-        docker build -t r7perfsat - < /root/Dockerfile
+    #- name: "Rebuild our base docker image"
+    #  shell:
+    #    docker build -t r7perfsat - < /root/Dockerfile
 ...
