@@ -1,5 +1,5 @@
 ---
-- hosts: docker-hosts
+- hosts: atomic-hosts
   remote_user: root
   gather_facts: no
   roles:

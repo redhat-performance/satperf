@@ -1,0 +1,9 @@
+---
+  - hosts: atomic-hosts
+    remote_user: root
+    vars_files:
+            - ../../conf/satperf.yaml
+            - ../../conf/satperf.local.yaml
+    roles:
+            - atomic-host-overlayfs
+...
