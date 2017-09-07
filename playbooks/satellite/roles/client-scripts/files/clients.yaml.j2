@@ -6,6 +6,7 @@
   gather_facts: no
   vars:
     {% if client_reg_server is defined %}server: {{ client_reg_server }}{% endif %}
+    marker: {% raw %}{{ marker }}{% endraw %}
     recorder_server: {{ recorder_server }}
 
   tasks:
@@ -145,9 +146,9 @@
     #  tags: REG
     - name: "If recorder is defined, upload timings we just measured"
       shell: |
-        curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_register/ABC/$( hostname )/{{ reg.start|urlencode() }}/{{ reg.end|urlencode() }}/{{ reg.rc|urlencode() }}{% endraw %}"
-        curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_RHEL/ABC/$( hostname )/{{ att_rhel.start|urlencode() }}/{{ att_rhel.end|urlencode() }}/{{ att_rhel.rc|urlencode() }}{% endraw %}"
-        curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_Tools/ABC/$( hostname )/{{ att_tools.start|urlencode() }}/{{ att_tools.end|urlencode() }}/{{ att_tools.rc|urlencode() }}{% endraw %}"
+        curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_register/{{ marker|urlencode() }}/$( hostname )/{{ reg.start|urlencode() }}/{{ reg.end|urlencode() }}/{{ reg.rc|urlencode() }}{% endraw %}"
+        curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_RHEL/{{ marker|urlencode() }}/$( hostname )/{{ att_rhel.start|urlencode() }}/{{ att_rhel.end|urlencode() }}/{{ att_rhel.rc|urlencode() }}{% endraw %}"
+        curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_Tools/{{ marker|urlencode() }}/$( hostname )/{{ att_tools.start|urlencode() }}/{{ att_tools.end|urlencode() }}/{{ att_tools.rc|urlencode() }}{% endraw %}"
       when: recorder_server != ''
       tags: REG
 
