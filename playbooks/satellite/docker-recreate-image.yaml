@@ -15,7 +15,7 @@
         src: roles/docker-host/files/Dockerfile
         dest: /root/Dockerfile
         force: yes
-    #- name: "Rebuild our base docker image"
-    #  shell:
-    #    docker build -t r7perfsat - < /root/Dockerfile
+    - name: "Rebuild our base docker image"
+      shell:
+        docker build -t r7perfsat - < /root/Dockerfile
 ...
