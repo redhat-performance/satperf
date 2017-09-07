@@ -146,7 +146,7 @@
     ##################################################
     # Fix registration if needed
     ##################################################
-    - name: "Rename /etc/rhsm-host and /etc/pki/entitlement-host"
+    - name: "Fix registration if said so"
       shell: |
         if ! yum repolist | grep 'Default_Organization_RHEL7_x86_64_Base_rhel7-x86_64-base'; then
           subscription-manager clean
