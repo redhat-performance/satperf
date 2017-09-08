@@ -17,7 +17,7 @@
     - name: "Containes started"
       shell: |
         for i in $( seq "{{ containers|default(250) - docker_ids.stdout_lines|length }}" ); do
-          docker run -h "{{ ansible_hostname }}container$i.example.com" -d --tmpfs /tmp --tmpfs /run -v /sys/fs/cgroup:/sys/fs/cgroup:ro --ulimit nofile=98304:98304 r7perfsat
+          docker run -h "{{ ansible_hostname }}container$i.example.com" -d --tmpfs /tmp --tmpfs /run -v /sys/fs/cgroup:/sys/fs/cgroup:ro --ulimit nofile=10000:10000 r7perfsat
         done
       when: "docker_ids.stdout_lines|length < containers|default(250)"
     #- name: "List container IDs"
