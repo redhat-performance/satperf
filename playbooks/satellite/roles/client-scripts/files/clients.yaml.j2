@@ -5,11 +5,11 @@
   remote_user: root
   gather_facts: no
   vars:
-    {% if client_reg_server is defined %}server: {{ client_reg_server }}{% endif %}
+    {% if client_reg_server is defined %}server: "{{ client_reg_server }}"{% endif %}
 
-    marker: {% raw %}{{ marker }}{% endraw %}
+    marker: "{% raw %}{{ marker }}{% endraw %}"
 
-    recorder_server: {{ recorder_server }}
+    recorder_server: "{{ recorder_server }}"
 
   tasks:
     - name: "Make sure server was set (on command line with '-e server=...' or in 'vars:' section here)"

@@ -37,10 +37,14 @@
     - name: "Generate list of containers we are going to use"
       shell:
         head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
+    - name: "Determine marker for recorder"
+      set_fact:
+        marker: "{{ lookup('pipe', 'date --iso-8601=seconds') }}"
+      run_once: yes
     - name: "Determine log name"
       set_fact:
-        clients_yaml_cmd_log: "/root/out-{{ lookup('pipe', 'date --iso-8601=seconds') }}.log"
-    - name: "Run clients.yaml"
+        clients_yaml_cmd_log: "/root/out-{{ marker }}.log"
+    - name: "Run clients.yaml (marker = {{ marker }})"
       shell:
         ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
