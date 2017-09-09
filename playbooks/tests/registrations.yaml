@@ -39,7 +39,7 @@
         head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
     - name: "Determine marker for recorder"
       set_fact:
-        marker: "{{ lookup('pipe', 'date --iso-8601=seconds') }}"
+        marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
       run_once: yes
     - name: "Determine log name"
       set_fact:
@@ -50,13 +50,27 @@
       register: clients_yaml_cmd
       ignore_errors: true
 
+    - name: "Initialize an empty list for registration times"
+      set_fact:
+        register_times: []
+      run_once: true
     - name: "Get how long registration took"
       shell:
         grep '"msg". "Register ' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_reg_timings
+    - name: "Append registration timings to central list"
+      set_fact:
+        register_times: "{{ register_times }} + {{ hostvars[item]['clients_yaml_reg_timings']['stdout_lines'] }}"
+      with_items: "{{ ansible_play_batch }}"
+      run_once: true
     - name: "Show how long registration took"
       debug:
-        var: clients_yaml_reg_timings.stdout_lines
+        var: register_times
+      run_once: true
+    - name: "Show number of successful registrations"
+      debug:
+        var: register_times|length
+      run_once: true
 
     ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
     ###  delegate_to: 127.0.0.1
