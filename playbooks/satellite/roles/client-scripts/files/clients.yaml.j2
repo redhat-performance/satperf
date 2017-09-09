@@ -88,7 +88,7 @@
         shell
           rpm -Uvh "http://{% raw %}{{ server }}{% endraw %}/pub/katello-ca-consumer-latest.noarch.rpm"
       register: installed
-      until: "installed.rc is not defined or installed.rc == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 10
       delay: 10
       tags: REG
@@ -108,9 +108,7 @@
       shell:
         subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
       register: reg
-      async: 600
-      poll: 10
-      until: "reg.rc is not defined or reg.rc != 0"
+      until: "reg.rc is defined and reg.rc == 0"
       retries: 5
       delay: 10
       tags: REG
@@ -264,7 +262,7 @@
             || rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
         fi
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 3
       delay: 10
       tags:
@@ -276,7 +274,7 @@
           name=katello-agent
           state=latest
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 10
       delay: 10
       tags:
@@ -347,7 +345,7 @@
           name=puppet
           state=latest
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 10
       delay: 10
       tags: PUP
@@ -407,7 +405,7 @@
       action: command
         cat /tmp/puppet-qaredhattest.txt
       register: deployed
-      until: "{% raw %}{{ deployed.rc }}{% endraw %} == 0"
+      until: "deployed.rc is defined and installed.rc == 0"
       retries: 3
       delay: 10
       tags: PUPDEPLOY
