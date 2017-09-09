@@ -118,16 +118,27 @@
       command:
         subscription-manager list --available --all --matches "{{ content_rhel_name }}" --pool-only
       register: pool_id_rhel
+      until: "pool_id_rhel.rc is defined and pool_id_rhel.rc == 0"
+      retries: 10
+      delay: 10
+      run_once: yes
       tags: REG
     - name: "Determine Satellite Tools pool ID"
       command:
         subscription-manager list --available --all --matches "{{ content_sattools_name }}" --pool-only
       register: pool_id_tools
+      until: "pool_id_tools.rc is defined and pool_id_tools.rc == 0"
+      retries: 10
+      delay: 10
+      run_once: yes
       tags: REG
     - name: "Attach to RHEL product"
       shell:
         subscription-manager attach --pool "{% raw %}{{ pool_id_rhel.stdout }}{% endraw %}"
       register: att_rhel
+      until: "att_rhel.rc is defined and att_rhel.rc == 0"
+      retries: 10
+      delay: 10
       tags: REG
     #- name: "Attach to RHEL product - timings"
     #  debug:
@@ -137,6 +148,9 @@
       shell:
         subscription-manager attach --pool "{% raw %}{{ pool_id_tools.stdout }}{% endraw %}"
       register: att_tools
+      until: "att_tools.rc is defined and att_tools.rc == 0"
+      retries: 10
+      delay: 10
       tags: REG
     #- name: "Attach to 6.2 Tools custom product - timings"
     #  debug:
@@ -180,6 +194,9 @@
         force_basic_auth: yes
         validate_certs: no
       register: locations
+      until: "locations.rc is defined and locations.rc == 0"
+      retries: 10
+      delay: 10
       run_once: true
       ignore_errors: true
       tags:
@@ -232,6 +249,10 @@
           {"host":{"location_id":"{% raw %}{{ location_id }}{% endraw %}"}}
         body_format: json
       when: "'{{ groups['satellite6']|first }}' != server"
+      register: set_location
+      until: "set_location.rc is defined and set_location.rc == 0"
+      retries: 10
+      delay: 10
       ignore_errors: true
       tags:
         - REG
