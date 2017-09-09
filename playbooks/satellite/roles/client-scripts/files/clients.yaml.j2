@@ -5,8 +5,6 @@
   remote_user: root
   gather_facts: no
   vars:
-    {% if client_reg_server is defined %}server: "{{ client_reg_server }}"{% endif %}
-
     marker: "{% raw %}{{ marker }}{% endraw %}"
 
     recorder_server: "{{ recorder_server }}"
