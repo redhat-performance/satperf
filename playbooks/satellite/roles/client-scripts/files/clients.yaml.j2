@@ -194,7 +194,7 @@
         force_basic_auth: yes
         validate_certs: no
       register: locations
-      until: "locations.rc is defined and locations.rc == 0"
+      until: "locations.status is defined and locations.status == 200"
       retries: 10
       delay: 10
       run_once: true
