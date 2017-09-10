@@ -107,7 +107,7 @@
         subscription-manager register --org Default_Organization --environment Library --username admin --password changeme --force
       register: reg
       until: "reg.rc is defined and reg.rc == 0"
-      retries: 40
+      retries: 50
       delay: 10
       tags: REG
     - name: "Register - timings"
