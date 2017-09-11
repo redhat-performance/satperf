@@ -250,7 +250,7 @@
         body_format: json
       when: "'{{ groups['satellite6']|first }}' != server"
       register: set_location
-      until: "set_location.rc is defined and set_location.rc == 0"
+      until: "set_location.status is defined and set_location.status == 200"
       retries: 10
       delay: 10
       ignore_errors: true
