@@ -162,6 +162,7 @@
         curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_RHEL/{{ marker|urlencode() }}/$( hostname )/{{ att_rhel.start|urlencode() }}/{{ att_rhel.end|urlencode() }}/{{ att_rhel.rc|urlencode() }}{% endraw %}"
         curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_Tools/{{ marker|urlencode() }}/$( hostname )/{{ att_tools.start|urlencode() }}/{{ att_tools.end|urlencode() }}/{{ att_tools.rc|urlencode() }}{% endraw %}"
       when: recorder_server != ''
+      ignore_errors: yes
       tags: REG
 
     ##################################################
