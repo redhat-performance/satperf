@@ -162,7 +162,7 @@
         curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_RHEL/{{ marker|urlencode() }}/$( hostname )/{{ att_rhel.start|urlencode() }}/{{ att_rhel.end|urlencode() }}/{{ att_rhel.rc|urlencode() }}{% endraw %}"
         curl -X PUT "{% raw %}http://{{ recorder_server }}/Sat6ScaleLabExperiments/1/1/subscription-manager_attach_Tools/{{ marker|urlencode() }}/$( hostname )/{{ att_tools.start|urlencode() }}/{{ att_tools.end|urlencode() }}/{{ att_tools.rc|urlencode() }}{% endraw %}"
       when: recorder_server != ''
-      ignore_errors: yes
+      ignore_errors: true
       tags: REG
 
     ##################################################
@@ -334,7 +334,7 @@
     - name: "Downgrade more packages to have applicable errata, needs katello-agent running"
       command:
         yum -y downgrade ksh-20120801-22.el7_1.2 mailx-12.5-11.el7 tcpdump-4.5.1-2.el7 parted-3.1-23.el7 psmisc-22.20-8.el7 screen-4.1.0-0.22.20120314git3c2946.el7
-      ignore_errors: True
+      ignore_errors: true
       tags: DOWNGRADE
     - name: "Install outdated ksh package so it adds to applicable errata, needs katello-agent runninng"
       command:
@@ -404,7 +404,7 @@
       when: item != 'localhost'
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
-      ignore_errors: yes
+      ignore_errors: true
       tags: PUPDEPLOYSETUP
     ###- pause: prompt="Press Enter to start puppet pickup"
     ###  tags: PUPDEPLOYSETUP
