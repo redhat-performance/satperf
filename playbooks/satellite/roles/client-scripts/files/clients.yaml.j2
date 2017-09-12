@@ -244,8 +244,9 @@
         password: "{{ sat_pass }}"
         force_basic_auth: yes
         validate_certs: no
-        HEADER_Content-Type: application/json
-        HEADER_Accept: application/json
+        headers:
+            Content-Type: application/json
+            Accept: application/json
         body: >
           {"host":{"location_id":"{% raw %}{{ location_id }}{% endraw %}"}}
         body_format: json
