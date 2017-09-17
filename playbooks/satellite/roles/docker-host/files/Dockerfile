@@ -6,7 +6,9 @@ RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so
 RUN mkdir /root/.ssh && chmod 700 /root/.ssh && touch /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys
 RUN echo 'ssh-rsa AAAAB3NzaC1yc2EAAAABIwAAAQEA57NxnEo8KnrBYRrWjgS8eSZBKiUFBbP4GGbC1M1Kxo+494T2+y3uuihK0Ey5n824ch2OafK7m/TnByIC9pQ3VuAi/ggiOfja2gvZ/GtTedE3ct0jVbGbM/98MS0GV1NoIZRqX6e44JMDqID+ngwQutPyTgxbJ/PL2jVUrjP6sOMEJqgSEbQ9a3s+oM3O0vMTLp7E0PtgKQo0bKRoKFEn5mUxiQ2gmwg/dPqOb2/VpBAKCozsE2illszzyP/KC1gq0VkgMqIZspUsXRqvDDbnaSkCc8/AwA0yBAPBMAjtuk5UZvpioHSh2X0ShcgHtYocZiQIxiSvDzvxdYkFBztu6w== perf-team-shared-key' >>/root/.ssh/authorized_keys
 RUN echo "root:redhat" | chpasswd
+RUN systemctl enable sshd.service; systemctl disable pmcd.service pmlogger.service postfix.service abrtd.service crond.service polkit.service lvm2-lvmetad.socket
 WORKDIR /root
 EXPOSE 22
 USER root
-CMD /usr/sbin/sshd-keygen; exec /usr/sbin/sshd -D
+STOPSIGNAL SIGRTMIN+3
+CMD [ "/sbin/init" ]

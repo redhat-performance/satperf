@@ -209,6 +209,36 @@
     command:
       docker-storage-setup
 
+  # Make sure Docker have sufficent open files limit. Default is:
+  #   # grep LimitNOFILE /usr/lib/systemd/system/docker.service
+  #   LimitNOFILE=1048576
+  # so give it 4 times that. One new systemd container in idle
+  # state with sshd consumes 300. System wide maximum is:
+  #   # sysctl fs.file-max
+  #   fs.file-max = 6516531
+  - name: "Docker service directory created"
+    file:
+      path: /etc/systemd/system/docker.service.d
+      state: directory
+      owner: root
+      group: root
+      mode: 0755
+  - name: "Deploy limits.conf"
+    copy:
+      content: |
+        [Service]
+        LimitNOFILE=unlimited
+      dest: /etc/systemd/system/docker.service.d/limits.conf
+      owner: root
+      group: root
+      mode: 0644
+  - name: "Service directory have correct SELinux context"
+    command:
+      restorecon -vR /etc/systemd/system/docker.service.d
+  - name: "SystemD reloaded"
+    command:
+      systemctl daemon-reload
+
   - name: "docker service restarted to use new settings"
     service:
       name: docker

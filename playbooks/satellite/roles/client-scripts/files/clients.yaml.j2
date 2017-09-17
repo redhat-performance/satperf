@@ -6,6 +6,7 @@
   gather_facts: no
   vars:
     {% if client_reg_server is defined %}server: {{ client_reg_server }}{% endif %}
+
     bootstrap_foreman_fqdn: {% raw %}{{ server }}{% endraw %}
     bootstrap_download_method: http
     bootstrap_org: "Default_Organization"
@@ -18,6 +19,11 @@
     bootstrap_hostgroup: "HostGroup"
     bootstrap_additional_args: "--force"
     bootstrap_target_path: /root/bootstrap.py
+    
+    marker: "{% raw %}{{ marker }}{% endraw %}"
+
+    recorder_server: "{{ recorder_server }}"
+
   tasks:
     - name: "Make sure server was set (on command line with '-e server=...' or in 'vars:' section here)"
       assert:
@@ -107,10 +113,8 @@
     - name: run bootstrap.py
       command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_additional_args }}{% endraw %}"
       register: reg
-      async: 600
-      poll: 10
-      until: "reg.rc is not defined or reg.rc != 0"
-      retries: 5
+      until: "reg.rc is defined and reg.rc == 0"
+      retries: 50
       delay: 10
       tags: REG
     - name: "Register - timings"
@@ -121,7 +125,7 @@
     ##################################################
     # Fix registration if needed
     ##################################################
-    - name: "Rename /etc/rhsm-host and /etc/pki/entitlement-host"
+    - name: "Fix registration if said so"
       shell: |
         if ! yum repolist | grep 'Default_Organization_RHEL7_x86_64_Base_rhel7-x86_64-base'; then
           subscription-manager clean
@@ -148,6 +152,9 @@
         force_basic_auth: yes
         validate_certs: no
       register: locations
+      until: "locations.status is defined and locations.status == 200"
+      retries: 10
+      delay: 10
       run_once: true
       ignore_errors: true
       tags:
@@ -194,12 +201,17 @@
         password: "{{ sat_pass }}"
         force_basic_auth: yes
         validate_certs: no
-        HEADER_Content-Type: application/json
-        HEADER_Accept: application/json
+        headers:
+            Content-Type: application/json
+            Accept: application/json
         body: >
           {"host":{"location_id":"{% raw %}{{ location_id }}{% endraw %}"}}
         body_format: json
       when: "'{{ groups['satellite6']|first }}' != server"
+      register: set_location
+      until: "set_location.status is defined and set_location.status == 200"
+      retries: 10
+      delay: 10
       ignore_errors: true
       tags:
         - REG
@@ -228,7 +240,7 @@
             || rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
         fi
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 3
       delay: 10
       tags:
@@ -240,7 +252,7 @@
           name=katello-agent
           state=latest
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 10
       delay: 10
       tags:
@@ -280,7 +292,7 @@
     - name: "Downgrade more packages to have applicable errata, needs katello-agent running"
       command:
         yum -y downgrade ksh-20120801-22.el7_1.2 mailx-12.5-11.el7 tcpdump-4.5.1-2.el7 parted-3.1-23.el7 psmisc-22.20-8.el7 screen-4.1.0-0.22.20120314git3c2946.el7
-      ignore_errors: True
+      ignore_errors: true
       tags: DOWNGRADE
     - name: "Install outdated ksh package so it adds to applicable errata, needs katello-agent runninng"
       command:
@@ -311,7 +323,7 @@
           name=puppet
           state=latest
       register: installed
-      until: "{% raw %}{{ installed.rc }}{% endraw %} == 0"
+      until: "installed.rc is defined and installed.rc == 0"
       retries: 10
       delay: 10
       tags: PUP
@@ -350,7 +362,7 @@
       when: item != 'localhost'
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
-      ignore_errors: yes
+      ignore_errors: true
       tags: PUPDEPLOYSETUP
     ###- pause: prompt="Press Enter to start puppet pickup"
     ###  tags: PUPDEPLOYSETUP
@@ -371,7 +383,7 @@
       action: command
         cat /tmp/puppet-qaredhattest.txt
       register: deployed
-      until: "{% raw %}{{ deployed.rc }}{% endraw %} == 0"
+      until: "deployed.rc is defined and installed.rc == 0"
       retries: 3
       delay: 10
       tags: PUPDEPLOY

@@ -8,13 +8,14 @@
     - name: "Clear up ssh known_hosts before killing containers"
       shell:
         truncate -s 0 /root/.ssh/known_hosts
-    - name: "Clear docker active network connections(sometimes prevents docker from restarting)"
-      shell:
-        rm -rf /var/lib/docker/network/files/
     - name: "Gracefully kill containers (restart causes orphaned bridged interfaces)"
       shell:
         docker ps -q | wc -l | grep --quiet '^0\>' \
           || docker kill $( docker ps -q )
+    - name: "Gracefully remove container images"
+      shell:
+        docker ps -qa | wc -l | grep --quiet '^0\>' \
+          || docker rm $( docker ps -qa )
     - name: "Stop docker daemon"
       service:
         name: docker

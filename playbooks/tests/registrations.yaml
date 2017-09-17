@@ -37,22 +37,45 @@
     - name: "Generate list of containers we are going to use"
       shell:
         head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
+    - name: "Determine marker for recorder"
+      set_fact:
+        marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
+      run_once: yes
     - name: "Determine log name"
       set_fact:
-        clients_yaml_cmd_log: "/root/out-{{ lookup('pipe', 'date --iso-8601=seconds') }}.log"
-    - name: "Run clients.yaml"
+        clients_yaml_cmd_log: "/root/out-{{ marker }}.log"
+      run_once: yes
+    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }})"
       shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }}" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
 
+    - name: "Initialize an empty list for registration times"
+      set_fact:
+        register_times: []
+      run_once: true
     - name: "Get how long registration took"
       shell:
         grep '"msg". "Register ' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_reg_timings
+    - name: "Append registration timings to central list"
+      set_fact:
+        register_times: "{{ register_times }} + {{ hostvars[item]['clients_yaml_reg_timings']['stdout_lines'] }}"
+      with_items: "{{ ansible_play_batch }}"
+      run_once: true
     - name: "Show how long registration took"
       debug:
-        var: clients_yaml_reg_timings.stdout_lines
+        var: register_times
+      run_once: true
+    - name: "Show number of successful registrations"
+      debug:
+        var: register_times|length
+      run_once: true
+
+    - name: "Increment number of already registered containers"
+      shell:   # FIXME: Use lineinfile or so
+        echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
 
     ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
     ###  delegate_to: 127.0.0.1
@@ -66,16 +89,9 @@
     - set_fact:
         end_time: "{{ lookup('pipe', 'date --utc -d \"{{ clients_yaml_cmd.end }} {{ date_z_cmd.stdout }}\" +%s') }}"
 
-    - name: "DEBUG: stderr"
-      debug:
-        msg: "{{ clients_yaml_cmd.stderr_lines }}"
     - name: "DEBUG: result"
       debug:
         msg: "rc:{{ clients_yaml_cmd.rc }} size:{{ size }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
-
-    - name: "Increment number of already registered containers"
-      shell:   # FIXME: Use lineinfile or so
-        echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
 
     - name: "Give server some time to rest"
       pause:

@@ -148,6 +148,9 @@ grafana_port: 3000
 grafana_username: admin
 grafana_password: admin
 
+# If you have some service where you can add results of experiments, set its hostname
+recorder_server: ''
+
 # VMs provisioning
 vms:
   kvm1.example.com:
