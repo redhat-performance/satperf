@@ -1,0 +1,12 @@
+---
+  - name: "Extend root LV to all available VG space"
+    lvol:
+      vg: "rhel_{{ inventory_hostname_short }}"
+      lv: root
+      size: +100%FREE
+  - name: "Extend root filesystem to whole LV"
+    filesystem:
+      dev: "/dev/rhel_{{ inventory_hostname_short }}/root"
+      fstype: xfs
+      resizefs: yes
+...

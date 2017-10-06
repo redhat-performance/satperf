@@ -13,7 +13,6 @@
     ###- upgrade-restart
     ###- satellite-ec2-partitioning
     - remove-home-extend-root
-      when: "extend_root_partition == 'true'"
     - setup
     - enlarge-arp-table
     - satellite-populate
