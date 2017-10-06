@@ -11,7 +11,11 @@ rhsm_user: your_portal_username
 rhsm_pass: your_portal_passowd
 rhsm_pool: 'Pool you want to consume'
 
+# Skip, Remove home partition and Extend Root partiion.
+extend_root_partition: true
+
 # Satellite
+sat_version: "6.2"
 sat_user: admin
 sat_pass: changeme
 sat_email: root@localhost
@@ -71,6 +75,7 @@ content_content_view_name: test
 client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
 
 # Capsule install options
+base_capsule_pool: 'Pool you want to consume' # Needs to contain Base RHEL7 repo, which is set via rhsm-satellite, as every manifest may not have 'Employee SKU'.
 sat_capsule_pool: 'Pool you want to consume'   # Needs to contain Capsule
 capsule_install_source: cdn   # either 'cdn' or 'repo'
                               #   'cdn' ... configure value of 'capsule_cdn_reponame'

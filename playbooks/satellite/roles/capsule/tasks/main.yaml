@@ -73,13 +73,24 @@
       name="{{ capsule_installer_pkg }}"
       state=present
 
-  # Prepare for capsule installation
+  # Prepare for 6.2  capsule installation
   - name: "Run capsule-certs-generate on Satellite"
     shell:
       "capsule-certs-generate --capsule-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
+    when: "sat_version == '6.2'"
+
+  # Prepare for 6.3  capsule installation
+  # NOTE: The change of --capsule-fqdn to --foreman-proxy-fqdn for Sat6.3
+  - name: "Run capsule-certs-generate on Satellite"
+    shell:
+      "capsule-certs-generate --foreman-proxy-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+    when: "sat_version == '6.3'"
     # Output of this command looks like this:
     # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
     # Installing             Done                                               [100%] [..........]
@@ -122,6 +133,12 @@
   - name: "Fix certificate tarball path"
     shell:
       sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+
+  # Fix for BZ 1458749
+  - name: "Fix the capsule scenario"
+    shell:
+      sed -i 's|--scenario foreman-proxy-content|--scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
+    when: "sat_version == '6.3'"
 
   # Make sure remote execution plugin is enabled
   # https://bugzilla.redhat.com/show_bug.cgi?id=1402240
