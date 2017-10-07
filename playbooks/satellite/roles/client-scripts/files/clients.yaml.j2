@@ -10,15 +10,18 @@
     bootstrap_foreman_fqdn: "{% raw %}{{ server }}{% endraw %}"
 
     bootstrap_download_method: http
-    bootstrap_org: "Default_Organization"
-    #when not passing username/password, org has to be the label, otherwise the name:
-    #bootstrap_org: "Default Organization"
+    bootstrap_org_label: "Default_Organization"
+    bootstrap_org_name: "Default Organization"
     ###bootstrap_location: "..."   # will be set later in the play
     bootstrap_activationkey: "ActivationKey"
-    bootstrap_login: ""
-    bootstrap_password: ""
+    bootstrap_login: "admin"
+    bootstrap_password: "changeme"
     bootstrap_hostgroup: "HostGroup"
+    bootstrap_operatingsystem: "RedHat 7.4"
     bootstrap_additional_args: "--force"
+    bootstrap_rex_args: ""   # use tag 'REM' to install remote execution ssh key via bootstrap.py, use 'REM_ONLY' to just add it to registered system
+    bootstrap_puppet_args: "--skip-puppet"   # use tag 'PUP' to also install puppet via bootstrap.py, or 'PUP_ONLY' to just add it to registered system
+    bootstrap_katello_args: "--skip katello-agent"   # use tag 'KAT' to also install katello-agent via bootstrap.py, or 'KAT_ONLY' to just add it to registered system
     bootstrap_target_path: /root/bootstrap.py
 
     marker: "{% raw %}{{ marker }}{% endraw %}"
@@ -128,11 +131,23 @@
 
     - name: generate bootstrap.py arguments
       set_fact:
-        bootstrap_args: "{% raw %}--server {{ bootstrap_foreman_fqdn }} --organization '{{ bootstrap_org }}' --location '{{ bootstrap_location }}' --activationkey '{{ bootstrap_activationkey }}' --download-method {{ bootstrap_download_method }}{% endraw %}"
-        bootstrap_foreman_args: "{% raw %}{% if bootstrap_password != '' %}--login '{{ bootstrap_login }}' --password '{{ bootstrap_password }}' --hostgroup '{{ bootstrap_hostgroup }}'{% else %}--skip foreman{% endif %}{% endraw %}"
+        bootstrap_args: "{% raw %}--server {{ bootstrap_foreman_fqdn }} --activationkey '{{ bootstrap_activationkey }}' --download-method {{ bootstrap_download_method }}{% endraw %}"
+        bootstrap_foreman_args: "{% raw %}{% if bootstrap_password != '' %}--login '{{ bootstrap_login }}' --password '{{ bootstrap_password }}' --hostgroup '{{ bootstrap_hostgroup }}' --location '{{ bootstrap_location }}' --organization '{{ bootstrap_org_name }}' --operatingsystem '{{ bootstrap_operatingsystem }}'{% else %}--skip foreman --organization '{{ bootstrap_org_label }}'{% endif %}{% endraw %}"
       tags: REG
+    - name: add Puppet bootstrap.py argument when requested via tag
+      set_fact:
+        bootstrap_puppet_args: ""
+      tags: PUP
+    - name: add katello-agent bootstrap.py argument when requested via tag
+      set_fact:
+        bootstrap_katello_args: ""
+      tags: KAT
+    - name: add ReX bootstrap.py argument when requested via tag
+      set_fact:
+        bootstrap_rex_args: "--rex"
+      tags: REM
     - name: run bootstrap.py
-      command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_additional_args }}{% endraw %}"
+      command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
       register: reg
       until: "reg.rc is defined and reg.rc == 0"
       retries: 50
@@ -169,12 +184,12 @@
       yum:
         name=katello-agent
         state=absent
-      tags: KAT
+      tags: KAT_ONLY
     - name: "Remove gofer when installed"
       yum:
         name=gofer
         state=absent
-      tags: KAT
+      tags: KAT_ONLY
     - name: "Make sure daemonize is installed"
       shell: |
         if ! rpm -q daemonize; then
@@ -186,7 +201,7 @@
       retries: 3
       delay: 10
       tags:
-        - KAT
+        - KAT_ONLY
         - FIXKAT
     - name: "Install katello-agent"
       action:
@@ -198,32 +213,32 @@
       retries: 10
       delay: 10
       tags:
-        - KAT
+        - KAT_ONLY
         - FIXKAT
         - INSTKAT
     - name: "Kill journald if it is running"
       shell:
         pkill --full --exact '/usr/lib/systemd/systemd-journald' || true
       tags:
-        - KAT
+        - KAT_ONLY
         - FIXKAT
     - name: "Start journald"
       command:
         daemonize /usr/lib/systemd/systemd-journald
       tags:
-        - KAT
+        - KAT_ONLY
         - FIXKAT
     - name: "Kill goferd if it is running"
       shell:
         pkill --full --exact 'python /usr/bin/goferd --foreground' || true
       tags:
-        - KAT
+        - KAT_ONLY
         - FIXKAT
     - name: "Start goferd"
       command:
         daemonize -- /usr/bin/goferd --foreground
       tags:
-        - KAT
+        - KAT_ONLY
         - FIXKAT
 
     ##################################################
@@ -268,29 +283,29 @@
       until: "installed.rc is defined and installed.rc == 0"
       retries: 10
       delay: 10
-      tags: PUP
+      tags: PUP_ONLY
     - name: "Set puppet server"
       command:
         /usr/bin/puppet config set server "{% raw %}{{ server }}{% endraw %}" --section agent
-      tags: PUP
+      tags: PUP_ONLY
     - name: "Set puppet ca_server"
       command:
         /usr/bin/puppet config set ca_server "{% raw %}{{ server }}{% endraw %}" --section agent
-      tags: PUP
+      tags: PUP_ONLY
     - name: "Set puppet environment"
       command:
         /usr/bin/puppet config set environment "{{ content_puppet_env }}" --section agent
-      tags: PUP
+      tags: PUP_ONLY
     ###- pause: prompt="Press Enter to start registering puppet"
     - name: "Register puppet host"
       shell:
         /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
       register: reg
-      tags: PUP
+      tags: PUP_ONLY
     - name: "Register puppet host - timings"
       debug:
         msg="RegisterPuppet {% raw %}{{ reg.start }}{% endraw %} to {% raw %}{{ reg.end }}{% endraw %}"
-      tags: PUP
+      tags: PUP_ONLY
 
     ##################################################
     # Configure puppet on satellite for given 
@@ -339,18 +354,18 @@
         path: /root/.ssh
         state: directory
         mode: 0700
-      tags: REM
+      tags: REM_ONLY
     - name: "Obtain remote execution SSH key"
       action:
         command curl --insecure "https://{% raw %}{{ server }}{% endraw %}:9090/ssh/pubkey"
       register: ssh_key
-      tags: REM
+      tags: REM_ONLY
     - name: "Deploy remote execution SSH key"
       authorized_key:
         user: root
         state: present
         key: "{% raw %}{{ ssh_key.stdout }}{% endraw %}"
-      tags: REM
+      tags: REM_ONLY
 
     ##################################################
     # Gather some system data on Satellite
