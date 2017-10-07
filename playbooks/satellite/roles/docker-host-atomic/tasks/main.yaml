@@ -86,34 +86,68 @@
     service:
       name: docker
       state: stopped
+
   # Cleanup Overlay FS configuration if present
   - name: "Check if we have an Overlay configured"
-    command:
-      grep "/dev/{{ docker_host_vg }}/docker" /etc/fstab
+    shell:
+      mount | grep "{{ docker_host_vg }}[/-]docker"
     register: overlay_present
-    always_run: True
+    check_mode: False
     ignore_errors: True
   - name: "Unmount the partition"
     mount:
-      src: "/dev/{{ docker_host_vg }}/docker"
       name: /var/lib/docker
       state: unmounted
     when: overlay_present.rc == 0
   - name: "Cleanup /etc/fstab"
     lineinfile:
       name: /etc/fstab
-      regexp: '^/dev/{{ docker_host_vg }}/docker'
+      regexp: '^/dev/.*{{ docker_host_vg }}[/-]docker'
       state: absent
     when: overlay_present.rc == 0
-  - name: "Remove overlay device"
+  - name: "Remove overlay device {{ docker_host_vg }}/docker"
     command:
-      lvremove -f "{{ docker_host_vg }}"
+      lvremove -f "{{ docker_host_vg }}/docker"
     when: overlay_present.rc == 0
 
-  - name: "Docker storage related config ready to be recreated"
+  - name: "Cleanup docker storage related config"
     shell: |
       rm -rf /var/lib/docker/*
       rm -f /etc/sysconfig/docker-storage
+
+  # Configure docker storage - overlayfs
+  - name: "Remove --selinux-enabled from docker config"
+    command:
+      sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+    when: "docker_host_storage_driver == 'overlay'"
+  - name: "Create device which will host OverlayFS"
+    command:
+      lvcreate --name docker --extents 100%FREE --zero y "{{ docker_host_vg }}"
+    when: "docker_host_storage_driver == 'overlay'"
+  - name: "WORKAROUND: That FS was automatically mounted for me in some cases (system still thinks it is mounted?)"
+    command:
+      umount /var/lib/docker
+    ignore_errors: True
+  - name: "Create filesystem which will host OverlayFS"
+    command:
+      mkfs -t xfs -f -n ftype=1 "/dev/{{ docker_host_vg }}/docker"
+    when: "docker_host_storage_driver == 'overlay'"
+  - name: "OverlayFS in /etc/fstab"
+    lineinfile:
+      dest: /etc/fstab
+      line: "/dev/{{ docker_host_vg }}/docker /var/lib/docker xfs defaults 0 0"
+    when: "docker_host_storage_driver == 'overlay'"
+  - name: "OverlayFS mounted"
+    command:
+      mount /var/lib/docker
+    when: "docker_host_storage_driver == 'overlay'"
+  - name: "docker-storage-setup configured to use OverlayFS"
+    lineinfile:
+      dest: /etc/sysconfig/docker-storage-setup
+      create: yes
+      line: "STORAGE_DRIVER='overlay'"
+    when: "docker_host_storage_driver == 'overlay'"
+
   # Configure docker storage - generate /etc/sysconfig/docker-storage
   - name: "docker-storage-setup"
     command:
