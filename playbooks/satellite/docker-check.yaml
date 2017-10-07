@@ -12,6 +12,9 @@
     ###  selinux:
     ###    policy=targeted
     ###    state=permissive
+    - name: "Cleanup logs"
+      shell:
+        rm -rf /var/log/journal/*
     - name: "Get docker version"
       command:
         rpm -q docker
