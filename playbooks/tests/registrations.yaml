@@ -88,7 +88,7 @@
     - set_fact:
         end_time: "{{ lookup('pipe', 'date --utc -d \"{{ clients_yaml_cmd.end }} {{ date_z_cmd.stdout }}\" +%s') }}"
 
-    - name: "DEBUG: result"
+    - name: "DEBUG: result of clients.yaml"
       debug:
         msg: "rc:{{ clients_yaml_cmd.rc }} size:{{ size }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
 
