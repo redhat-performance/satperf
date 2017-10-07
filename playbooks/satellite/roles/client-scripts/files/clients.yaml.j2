@@ -115,7 +115,7 @@
       ignore_errors: true
       tags: REG
 
-    - name: "download bootstrap.py from {% raw %}{{ bootstrap_foreman_fqdn }}{% endraw %}"
+    - name: "Download bootstrap.py from {% raw %}{{ bootstrap_foreman_fqdn }}{% endraw %}"
       get_url:
         dest: "{% raw %}{{ bootstrap_target_path }}{% endraw %}"
         url: "{% raw %}{{ bootstrap_download_method }}://{{ bootstrap_foreman_fqdn }}/pub/bootstrap.py{% endraw %}"
@@ -129,24 +129,24 @@
         - /etc/pki/product-default/69.pem
         - /etc/pki/product/69.pem
 
-    - name: generate bootstrap.py arguments
+    - name: "Generate bootstrap.py arguments"
       set_fact:
         bootstrap_args: "{% raw %}--server {{ bootstrap_foreman_fqdn }} --activationkey '{{ bootstrap_activationkey }}' --download-method {{ bootstrap_download_method }}{% endraw %}"
         bootstrap_foreman_args: "{% raw %}{% if bootstrap_password != '' %}--login '{{ bootstrap_login }}' --password '{{ bootstrap_password }}' --hostgroup '{{ bootstrap_hostgroup }}' --location '{{ bootstrap_location }}' --organization '{{ bootstrap_org_name }}' --operatingsystem '{{ bootstrap_operatingsystem }}'{% else %}--skip foreman --organization '{{ bootstrap_org_label }}'{% endif %}{% endraw %}"
       tags: REG
-    - name: add Puppet bootstrap.py argument when requested via tag
+    - name: "Add Puppet bootstrap.py argument when requested via tag"
       set_fact:
         bootstrap_puppet_args: ""
       tags: PUP
-    - name: add katello-agent bootstrap.py argument when requested via tag
+    - name: "Add katello-agent bootstrap.py argument when requested via tag"
       set_fact:
         bootstrap_katello_args: ""
       tags: KAT
-    - name: add ReX bootstrap.py argument when requested via tag
+    - name: "Add ReX bootstrap.py argument when requested via tag"
       set_fact:
         bootstrap_rex_args: "--rex"
       tags: REM
-    - name: run bootstrap.py
+    - name: "Run bootstrap.py"
       command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
       register: reg
       until: "reg.rc is defined and reg.rc == 0"
