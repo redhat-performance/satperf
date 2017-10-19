@@ -13,8 +13,7 @@
     - ntp
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
-    - remove-home-extend-root
-      when: "extend_root_partition == 'true'"
+    - {role: remove-home-extend-root, when: "extend_root_partition == 'true'"}
     - capsule
     - capsule-location
     - enlarge-arp-table
