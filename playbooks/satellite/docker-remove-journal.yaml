@@ -1,0 +1,10 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  roles:
+  ###  - common
+  tasks:
+    - name: "Cleanup logs to free disk space"
+      shell:
+        rm -rf /var/log/journal/*

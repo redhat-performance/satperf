@@ -59,6 +59,9 @@
       file:
         name=/root/container-used-count
         state=absent
+    - name: "Cleanup logs to free disk space"
+      shell:
+        rm -rf /var/log/journal/*
     - name: "Caches are dropped"
       shell:
         echo 3 > /proc/sys/vm/drop_caches
