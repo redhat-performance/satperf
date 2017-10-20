@@ -51,27 +51,29 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
 
-  - name: "Custom capsule repo configured"
+  - name: "Custom Capsule repo configured"
     copy:
       src: "{{ capsule_repo_file }}"
       dest: /etc/yum.repos.d/
       force: yes
     when: "capsule_install_source == 'repo'"
-
   - name: "Satellite Capsule repository enabled"
     command:
       subscription-manager repos --enable '{{ capsule_cdn_reponame }}'
-    when: "sat_install_source == 'cdn'"
+    when: "capsule_install_source == 'cdn'"
     register: enabling
     until: "{{ enabling.rc }} == 0"
     retries: 5
     delay: 10
 
   # Install packages required for capsule
-  - name: "Install capsule package"
+  - name: "Make sure we have clean repodata"
+    shell:
+      rm -rf /var/cache/yum/*
+  - name: "Install capsule package {{ capsule_installer_pkg }}"
     yum:
-      name="{{ capsule_installer_pkg }}"
-      state=present
+      name: "{{ capsule_installer_pkg }}"
+      state: present
 
   # Prepare for 6.2  capsule installation
   - name: "Run capsule-certs-generate on Satellite"
