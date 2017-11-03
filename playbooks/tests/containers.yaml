@@ -1,0 +1,34 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: Get the ssh hosts
+      shell:
+         cat /root/.ssh/known_hosts
+      register: known_hosts
+    - name: Create the containers file if does not exists
+      shell:
+         touch /root/containers.txt
+      delegate_to: localhost
+    - name: Write the data to the containers file
+      shell:
+         echo "{{ known_hosts.stdout }}" >> /root/containers.txt
+      delegate_to: localhost
+    - name: Get the ip addresses of the containers
+      shell:
+         cut -d' ' -f1 /root/containers.txt
+      register: ips
+      delegate_to: localhost
+    - name: Save the ips
+      shell:
+        echo "{{ ips.stdout }}" > /root/container-ips.txt
+      delegate_to: localhost
+    - name: Randomize the placement of the ips
+      shell:
+        sort -R /root/container-ips.txt > /root/container-ips.shuffled
+      delegate_to: localhost
+
