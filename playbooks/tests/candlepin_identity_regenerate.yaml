@@ -1,0 +1,27 @@
+---
+ - hosts: all
+   remote_user: root
+   gather_facts: no
+   vars_files:
+     - ../../conf/satperf.yaml
+     - ../../conf/satperf.local.yaml
+   serial:
+   - 5
+   - 10
+   - 25
+   - 50
+   - 100
+   - 150
+   - 200
+   tasks:
+     - name: Run the Identiy regeneration
+       shell:
+          subscription-manager identity --regenerate
+       register: regen
+     - name: Get the timings
+       debug:
+         msg="Identity regen took {{ regen.start }} to {{ regen.end }}"
+     - pause:
+         seconds: 10
+     
+   
