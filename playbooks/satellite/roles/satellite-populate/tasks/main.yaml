@@ -47,10 +47,21 @@
     with_items:
       "{{ sat_repos }}"
 
-  # Start sync of the repos
+  # Start async of the repos
   - name: "Start (asynchronous) sync of repos we have just enabled"
     command:
       hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}' --async
     with_items:
       "{{ sat_repos }}"
+    tags:
+         - async
+
+  # Start sync of the repos
+  - name: "Start (synchronous) sync of repos we have just enabled"
+    command:
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}'
+    with_items:
+      "{{ sat_repos }}"
+    tags:
+         - non-async
 ...

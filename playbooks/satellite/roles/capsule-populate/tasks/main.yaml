@@ -12,12 +12,23 @@
     run_once: true
     with_items: "{{ groups['capsules'] }}"
     ignore_errors: true
-  - name: "Sync"
+  - name: "Syncing in async mode"
     command:
       "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library --async"
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
+    tags:
+         - async
+
+  - name: "Syncing in sync mode"
+    command:
+      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    with_items: "{{ groups['capsules'] }}"
+    tags:
+         - non-async
   #- name: "Set autosign"
   #  ### TODO https://bugzilla.redhat.com/show_bug.cgi?id=1140671
 ...
