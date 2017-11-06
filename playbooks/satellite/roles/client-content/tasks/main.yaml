@@ -50,9 +50,23 @@
   - name: "Sync RHEL in background"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}" --async
+    tags:
+         - async
+  - name: "Sync RHEL in background"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}"
+    tags:
+         - non-async
   - name: "Sync Sat Tools in background"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}" --async
+    tags:
+         - async
+  - name: "Sync Sat Tools in background"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}"
+    tags:
+         - non-async
 
   - name: "Create content view"
     command:
@@ -70,4 +84,11 @@
   - name: "Publish and promote content view"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --async
+    tags:
+         - async
+  - name: "Publish and promote content view"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}"
+    tags:
+         - non-async
 ...
