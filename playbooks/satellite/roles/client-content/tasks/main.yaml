@@ -47,22 +47,22 @@
     command:
       hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type yum --label "{{ content_sattools_label }}" --name "{{ content_sattools_name }}" --organization-id "{{ sat_orgid }}" --product "{{ content_sattools_name }}" --url "{{ content_sattools_url }}"
 
-  - name: "Sync RHEL in background"
+  - name: "Sync RHEL via async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}" --async
     tags:
          - async
-  - name: "Sync RHEL in background"
+  - name: "Sync RHEL without async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}"
     tags:
          - non-async
-  - name: "Sync Sat Tools in background"
+  - name: "Sync Sat Tools via async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}" --async
     tags:
          - async
-  - name: "Sync Sat Tools in background"
+  - name: "Sync Sat Tools without async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}"
     tags:
@@ -81,12 +81,12 @@
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module add --organization-id 1 --content-view "{{ content_content_view_name }}" --name "{{ content_puppet_module_name }}" --author "{{ content_puppet_module_author }}"
 
-  - name: "Publish and promote content view"
+  - name: "Publish and promote content view via async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --async
     tags:
          - async
-  - name: "Publish and promote content view"
+  - name: "Publish and promote content view without async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}"
     tags:

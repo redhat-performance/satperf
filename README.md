@@ -63,13 +63,13 @@ $ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satelli
 ### To prepare Satellite:
 
 ```
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/installation.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/installation.yaml --skip-tags "non-async"
 ```
 
 ### To prepare Capsules:
 
 ```
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/capsules.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/capsules.yaml --skip-tags "non-async"
 ```
 
 ### To install Collectd:
