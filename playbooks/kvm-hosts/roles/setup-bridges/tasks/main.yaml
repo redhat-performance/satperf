@@ -1,0 +1,116 @@
+---
+  # Configure bridge we are going to use
+  # https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/6/html/Deployment_Guide/s2-networkscripts-interfaces_network-bridge.html
+  - name: "We will need bridge utils"
+    yum:
+      name: bridge-utils
+      state: present
+  - name: "Show interfaces we are going to employ"
+    debug:
+      msg: "private: {{ nic_private }}; public: {{ nic_public }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+    with_items:
+      - "{{ nic_private }}"
+      - "{{ nic_public }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^NM_CONTROLLED="
+      line: "NM_CONTROLLED=no"
+    with_items:
+      - "{{ nic_private }}"
+      - "{{ nic_public }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^DEVICE="
+      line: "DEVICE={{ item }}"
+    with_items:
+      - "{{ nic_private }}"
+      - "{{ nic_public }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=none"
+    with_items:
+      - "{{ nic_private }}"
+      - "{{ nic_public }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^TYPE="
+      line: "TYPE=Ethernet"
+    with_items:
+      - "{{ nic_private }}"
+      - "{{ nic_public }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
+      regexp: "^BRIDGE="
+      line: "BRIDGE=brprivate"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_public }}"
+      regexp: "^BRIDGE="
+      line: "BRIDGE=brpublic"
+
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+      create: yes
+    with_items:
+      - brprivate
+      - brpublic
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^TYPE="
+      line: "TYPE=Bridge"
+    with_items:
+      - brprivate
+      - brpublic
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^DELAY="
+      line: "DELAY=0"
+    with_items:
+      - brprivate
+      - brpublic
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^NM_CONTROLLED="
+      line: "NM_CONTROLLED=no"
+    with_items:
+      - brprivate
+      - brpublic
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ item }}"
+      regexp: "^DEVICE="
+      line: "DEVICE={{ item }}"
+    with_items:
+      - brprivate
+      - brpublic
+
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-brpublic"
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=dhcp"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-brprivate"
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=static"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-brprivate"
+      regexp: "^IPADDR="
+      line: "IPADDR={{ ip }}"
+  - lineinfile:
+      dest: "/etc/sysconfig/network-scripts/ifcfg-brprivate"
+      regexp: "^NETMASK="
+      line: "NETMASK=255.0.0.0"
+
+  - name: "Kill all dhclients (network service was not restarting)"
+    command:
+      killall dhclient
+    ignore_errors: true
+  - name: "Restart network"
+    command:
+      service network restart
+...

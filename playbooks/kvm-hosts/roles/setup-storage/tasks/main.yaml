@@ -1,0 +1,19 @@
+---
+  - name: "Create physical volumes and volume group"
+    lvg:
+      vg: guest_images_lvm
+      pvs: /dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf,/dev/sdg,/dev/sdh,/dev/sdi,/dev/sdj,/dev/sdk,/dev/sdl,/dev/sdm,/dev/sdn,/dev/sdo,/dev/sdp,/dev/sdq
+  - name: "Define storage pool"
+    virt_pool:
+      name: guest_images_lvm
+      command: define
+      xml:  "{{ lookup('template', 'files/guest_images_lvm.xml.j2') }}"
+  - name: "Make sure storage pool have autostart enabled"
+    virt_pool:
+      name: guest_images_lvm
+      autostart: yes
+  - name: "Make sure storage pool is active"
+    virt_pool:
+      name: guest_images_lvm
+      state: active
+...
