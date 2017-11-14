@@ -34,14 +34,14 @@
     command:
       subscription-manager register --username "{{ rhsm_user }}" --password "{{ rhsm_pass }}" --force
     register: registering
-    until: "{{ registering.rc }} == 0"
+    until: "registering.rc == 0"
     retries: 5
     delay: 10
   - name: "Determine pool we are going to attach to"
     command:
       subscription-manager list --available --all --matches "{{ rhsm_pool }}" --pool-only
     register: querying
-    until: "{{ querying.rc }} == 0"
+    until: "querying.rc == 0"
     retries: 5
     delay: 10
   - name: "List pools we already consume"
@@ -58,7 +58,7 @@
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
     register: attaching
-    until: "{{ attaching.rc }} == 0"
+    until: "attaching.rc == 0"
     retries: 5
     delay: 10
     when: "querying.stdout_lines|first not in attached.stdout_lines"
