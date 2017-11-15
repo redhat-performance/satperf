@@ -53,8 +53,7 @@
       hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}' --async
     with_items:
       "{{ sat_repos }}"
-    tags:
-         - async
+    when: "sat_repos_sync == 'async'"
 
   # Start sync of the repos
   - name: "Start (synchronous) sync of repos we have just enabled"
@@ -62,6 +61,5 @@
       hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}'
     with_items:
       "{{ sat_repos }}"
-    tags:
-         - non-async
+    when: "sat_repos_sync == 'sync'"
 ...

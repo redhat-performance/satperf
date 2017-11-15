@@ -24,6 +24,7 @@ sat_orglabel: Default_Organization
 sat_orgid: 1
 sat_location: Default Location
 sat_releasever: "7Server"
+sat_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '--async', or to 'sync' if you do not want that option
 sat_repos:
   - product: "Red Hat Enterprise Linux Server"
     reposet: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server (RPMs)"

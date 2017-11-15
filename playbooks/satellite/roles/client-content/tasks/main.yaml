@@ -50,23 +50,19 @@
   - name: "Sync RHEL via async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}" --async
-    tags:
-         - async
+    when: "sat_repos_sync == 'async'"
   - name: "Sync RHEL without async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_rhel_name }}" --name "{{ content_rhel_name }}"
-    tags:
-         - non-async
+    when: "sat_repos_sync == 'sync'"
   - name: "Sync Sat Tools via async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}" --async
-    tags:
-         - async
+    when: "sat_repos_sync == 'async'"
   - name: "Sync Sat Tools without async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization-id 1 --product "{{ content_sattools_name }}" --name "{{ content_sattools_name }}"
-    tags:
-         - non-async
+    when: "sat_repos_sync == 'sync'"
 
   - name: "Create content view"
     command:
@@ -84,11 +80,9 @@
   - name: "Publish and promote content view via async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --async
-    tags:
-         - async
+    when: "sat_repos_sync == 'async'"
   - name: "Publish and promote content view without async"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}"
-    tags:
-         - non-async
+    when: "sat_repos_sync == 'sync'"
 ...
