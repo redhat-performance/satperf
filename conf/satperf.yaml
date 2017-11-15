@@ -12,7 +12,7 @@ rhsm_pass: your_portal_passowd
 rhsm_pool: 'Pool you want to consume'
 
 # Skip, Remove home partition and Extend Root partiion.
-extend_root_partition: true
+extend_root_partition: 'true'
 
 # Satellite
 sat_version: "6.2"
