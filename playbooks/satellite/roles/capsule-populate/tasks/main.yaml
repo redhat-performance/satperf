@@ -18,8 +18,7 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
-    tags:
-         - async
+    when: "capsule_repos_sync == 'async'"
 
   - name: "Syncing in sync mode"
     command:
@@ -27,8 +26,7 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
-    tags:
-         - non-async
+    when: "capsule_repos_sync == 'sync'"
   #- name: "Set autosign"
   #  ### TODO https://bugzilla.redhat.com/show_bug.cgi?id=1140671
 ...
