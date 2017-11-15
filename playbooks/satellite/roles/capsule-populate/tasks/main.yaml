@@ -1,10 +1,8 @@
 ---
   - name: "Add '*' autosign entry"
-    command:
-      "true"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    with_items: "{{ groups['capsules'] }}"
+    lineinfile:
+      path: "/etc/puppet/autosign.conf"
+      line: "*"
   - name: "Assign Library"
     command:
       "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name {{ item }} --organization '{{ sat_org }}' --environment Library"
@@ -27,6 +25,4 @@
     run_once: true
     with_items: "{{ groups['capsules'] }}"
     when: "capsule_repos_sync == 'sync'"
-  #- name: "Set autosign"
-  #  ### TODO https://bugzilla.redhat.com/show_bug.cgi?id=1140671
 ...
