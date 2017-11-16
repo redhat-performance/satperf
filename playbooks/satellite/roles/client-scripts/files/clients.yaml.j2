@@ -23,6 +23,7 @@
     bootstrap_puppet_args: "--skip-puppet"   # use tag 'PUP' to also install puppet via bootstrap.py, or 'PUP_ONLY' to just add it to registered system
     bootstrap_katello_args: "--skip katello-agent"   # use tag 'KAT' to also install katello-agent via bootstrap.py, or 'KAT_ONLY' to just add it to registered system
     bootstrap_target_path: /root/bootstrap.py
+    bootstrap_rex_args: 10
 
     marker: "{% raw %}{{ marker }}{% endraw %}"
 
@@ -150,7 +151,7 @@
       command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
       register: reg
       until: "reg.rc is defined and reg.rc == 0"
-      retries: 10
+      retries: "{{ bootstrap_retries }}"
       delay: 10
       tags: REG
     - name: "Register - timings"
