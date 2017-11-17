@@ -156,7 +156,7 @@ grafana_username: admin
 grafana_password: admin
 
 #Grafana Panel Mappings
-grafana_panel_mapping:
+grafana_panels:
   cpu: 1
   memory: 5
   http_cpu: 43
