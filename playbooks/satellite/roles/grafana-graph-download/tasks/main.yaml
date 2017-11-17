@@ -1,0 +1,20 @@
+---
+  - name: Ensure that start and end timestamps are present
+    assert:
+      that:
+        - "start_time is defined"
+        - "end_time is defined"
+  - name: Verify if the username and password pairs are present for grafana
+    assert:
+      that:
+        - "grafana_username is defined"
+        - "grafana_password is defined"
+  - name: Generate a prefix for output file name
+    set_fact:
+      output_filename_prefix: "{{ start_time }}_{{ end_time }}" 
+  - name: Download the graphs
+    get_url:
+      url: "http://{{ grafana_username }}:{{ grafana_password }}@grafana.perf.lab.eng.bos.redhat.com/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time }}&to={{ end_time }}&var-Cloud=satellite62&var-Node={{ satellite_hostname }}&var-Interface=interface-em2&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&panelId={{ item.value }}&width=1000&height=500"
+      dest: "{{ output_filename_prefix }}_{{ item.key }}"
+    with_dict: "{{ grafana_panels }}"
+...
