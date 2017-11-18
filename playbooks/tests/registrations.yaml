@@ -128,6 +128,6 @@
           panelId: 43
       when: "save_graphs == 'true'"
   roles:
-      - grafana-graph-download
+      - role: grafana-graph-download
         when: "satellite_hostname is defined"
 ...
