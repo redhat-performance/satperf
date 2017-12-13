@@ -147,9 +147,11 @@
     ignore_errors: True
   - name: "Unmount the partition"
     mount:
-      src: "/dev/{{ docker_host_vg }}/docker"
-      name: /var/lib/docker
+      name: "{{ item }}"
       state: unmounted
+    with:
+      - /var/lib/docker
+      - "/dev/{{ docker_host_vg }}/docker"
     when: overlay_present.rc == 0
   - name: "Cleanup /etc/fstab"
     lineinfile:
