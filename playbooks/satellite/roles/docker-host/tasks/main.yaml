@@ -149,7 +149,7 @@
     mount:
       name: "{{ item }}"
       state: unmounted
-    with:
+    with_items:
       - /var/lib/docker
       - "/dev/{{ docker_host_vg }}/docker"
     when: overlay_present.rc == 0
