@@ -6,6 +6,11 @@
 # have minimal size, but metadata-vise should be comparable with normal
 # packages.
 #
+# Requirements:
+#
+# You need rpmfluff python library installed (Fedora have package in repos)
+# or just download rpmfluff.py from https://pagure.io/rpmfluff
+#
 # Usage:
 #
 # Run it and then copy it somewhere containers can reach it:

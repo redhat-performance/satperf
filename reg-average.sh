@@ -13,6 +13,10 @@ shift
 
 export IFS=$'\n'
 for f in $@; do
+    # Hardcoded to show registration start and end date
+    grep -A 1 '^TASK \[Run clients.yaml' $f | tail -n 1
+    grep -A 1 '^TASK \[Initialize an empty list for registration times' $f | tail -n 1
+    # Count average for given matcher
     duration=0
     count=0
     for row in $( grep "\"$matcher " $f | cut -d '"' -f 2 ); do

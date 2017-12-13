@@ -47,27 +47,4 @@
         df -h
       register: df_h
     - debug: var=df_h.stdout_lines
-    - name: "grep '^ *server' /root/clients.yaml"
-      command:
-        grep '^ *server' /root/clients.yaml
-      register: clients_server
-      ignore_errors: yes
-    - debug: var=clients_server.stdout_lines
-    - name: "lvdisplay | grep -e 'LV Name' -e 'Allocated pool data'"
-      shell:
-        lvdisplay | grep -e 'LV Name' -e 'Allocated pool data'
-      register: lv_docker_pool
-    - debug: var=lv_docker_pool.stdout_lines
-    - name: "Get total size of {{ docker_host_vg }}"
-      shell:
-        vgdisplay --colon "{{ docker_host_vg }}" | cut -d ':' -f 14
-      register: vg_size
-    - debug: var=vg_size.stdout
-    - name: "Get free space on {{ docker_host_vg }}"
-      shell:
-        vgdisplay --colon "{{ docker_host_vg }}" | cut -d ':' -f 16
-      register: vg_free
-    - debug: var=vg_free.stdout
-    - name: "Make sure there is at least 5% of PE free on {{ docker_host_vg }}"
-      assert:
-        that: "vg_free.stdout|int >= {{ ( vg_size.stdout|int / 20 ) }}"
+...
