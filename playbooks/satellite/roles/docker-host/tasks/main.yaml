@@ -140,8 +140,8 @@
   
   # Cleanup Overlay FS configuration if present
   - name: "Check if we have an Overlay configured"
-    command:
-      grep "/dev/{{ docker_host_vg }}/docker" /etc/fstab
+    stat:
+      path: "/dev/{{ docker_host_vg }}/docker"
     register: overlay_present
     always_run: True
     ignore_errors: True
@@ -152,17 +152,17 @@
     with_items:
       - /var/lib/docker
       - "/dev/{{ docker_host_vg }}/docker"
-    when: overlay_present.rc == 0
+    when: overlay_present.stat.exists is True
   - name: "Cleanup /etc/fstab"
     lineinfile:
       name: /etc/fstab
       regexp: '^/dev/{{ docker_host_vg }}/docker'
       state: absent
-    when: overlay_present.rc == 0
+    when: overlay_present.stat.exists is True
   - name: "Remove overlay device"
     command:
       lvremove -f "{{ docker_host_vg }}"
-    when: overlay_present.rc == 0
+    when: overlay_present.stat.exists is True
 
   - name: "Docker storage related config ready to be recreated"
     shell: |
