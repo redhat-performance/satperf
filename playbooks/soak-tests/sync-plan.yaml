@@ -1,0 +1,8 @@
+---
+- hosts: satellite6
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - create-sync-plan

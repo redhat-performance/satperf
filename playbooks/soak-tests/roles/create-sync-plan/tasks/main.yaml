@@ -1,0 +1,18 @@
+---
+  - name: Create a new sync plan
+    shell:
+      hammer sync-plan create --name "Daily recursive sync" --description "Run a daily repo sync" --enabled yes --organization "Default Organization" --interval 'daily' --sync-date "{{ ansible_date_time.date }}"
+    register: sync_plan_create
+
+  - name: Get the list of repositories
+    shell:
+      hammer --output json product list --organization "Default Organization" --search "{{ item }}" --enabled yes
+    with_items:
+      - "{{ content_rhel_name }}"
+      - "{{ content_sattools_name }}"
+    register: repolist
+  - debug:
+      var: repolist
+  - debug:
+      msg: "{{ repolist | from_json }}"
+...
