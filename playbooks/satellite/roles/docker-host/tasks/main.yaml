@@ -188,7 +188,7 @@
     when: "docker_host_storage_driver == 'overlay'"
   - name: "Create filesystem which will host OverlayFS"
     command:
-      mkfs -t xfs -f -n ftype=1 "/dev/{{ docker_host_vg }}/docker"
+      mkfs.xfs "/dev/{{ docker_host_vg }}/docker"
     when: "docker_host_storage_driver == 'overlay'"
   - name: "OverlayFS in /etc/fstab"
     lineinfile:
