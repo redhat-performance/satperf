@@ -11,8 +11,6 @@
       - "{{ content_rhel_name }}"
       - "{{ content_sattools_name }}"
     register: repolist
-  - debug:
-      var: repolist
-  - debug:
-      msg: "{{ repolist | from_json }}"
+  - include_tasks: get_repo_id.yaml
+    with_items: "{{ repolist.results }}"
 ...

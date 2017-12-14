@@ -1,0 +1,14 @@
+---
+  - name: Get the repository id
+    set_fact:
+      repo: "{{ item.stdout | from_json }}"
+  - name: Set the repository id
+    set_fact:
+      repoid: "{{ repo_item.ID }}"
+    with_items: "{{ repo }}"
+    loop_control:
+      loop_var: repo_item
+  - debug:
+      var: repoid
+...
+
