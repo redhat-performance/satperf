@@ -1,1 +1,25 @@
 #Soak Test Satellite Configuration
+
+# Repositories to be enabled
+soak_repos:
+  - product: Red Hat Enterprise Linux Server
+    reposet: "Red Hat Enterprise Linux 6 Server (RPMs)"
+    repo: "Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server"
+  - product: Red Hat Enterprise Linux Server
+    reposet: "Red Hat Enterprise Linux 6 Server - RH Common (RPMs)"
+    repo: "Red Hat Enterprise Linux 6 Server - RH Common RPMs x86_64 6Server"
+  - product: Red Hat Enterprise Linux Server
+    reposet: "Red Hat Enterprise Linux 7 Server (RPMs)"
+    repo: "Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server"
+  - product: Red Hat Enterprise Linux Server
+    reposet: "Red Hat Enterprise Linux 7 Server - RH Common (RPMs)"
+    repo: "Red Hat Enterprise Linux 7 Server - RH Common RPMs x86_64 7Server"
+  - product: Red Hat Enterprise Linux Atomic Host
+    reposet: "Red Hat Enterprise Linux Atomic Host (Trees)"
+    repo: "Red Hat Enterprise Linux Atomic Host Trees"
+  - product: Red Hat Enterprise Linux Server
+    reposet: "Red Hat Enterprise Linux 7 Server (Kickstart)"
+    repo: "Red Hat Enterprise Linux 7 Server Kickstart x86_64 7.4"
+  - product: Red Hat Enterprise Linux Server
+    reposet: "Red Hat Enterprise Linux 6 Server (Kickstart)"
+    repo: "Red Hat Enterprise Linux 6 Server Kickstart x86_64 6.9"
