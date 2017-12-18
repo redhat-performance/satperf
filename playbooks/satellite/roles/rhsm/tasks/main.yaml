@@ -23,6 +23,14 @@
     setup:
       gather_subset: "!all"
 
+  ###- name: "Remove registrations"
+  ###  command:
+  ###    subscription-manager clean
+  ###- name: "Remove any preexistent Satellite config"
+  ###  yum:
+  ###    name: katello-ca-consumer-*
+  ###    state: absent
+
   # Make sure configuration matches hosted servers.
   # Maybe we had the system registered to some satellite before? Clenup
   - name: "Make sure configuration matches hosted servers"
