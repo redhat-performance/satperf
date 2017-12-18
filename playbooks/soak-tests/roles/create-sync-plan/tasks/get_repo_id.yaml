@@ -10,7 +10,7 @@
       loop_var: repo_item
   - name: Attach to the sync plan
     shell:
-      hammer product set-sync-plan --sync-plan "Daily recusrive sync" --organization "Default Organization" --id "{{ repoid }}"
+      hammer product set-sync-plan --sync-plan "Daily recursive sync" --organization "Default Organization" --id "{{ repoid }}"
   - debug:
       var: repoid
 ...
