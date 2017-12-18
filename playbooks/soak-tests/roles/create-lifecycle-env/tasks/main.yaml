@@ -1,0 +1,11 @@
+---
+  - name: Create a development lifecycle environment
+    shell:
+      hammer lifecycle-environment create --name "Development" --description "Development lifecycle environment" --organization "Default Organization" --prior "Library"
+  - name: Create a production lifecycle environment
+    shell:
+      hammer lifecycle-environment create --name "Production" --description "Stable release environment" --organization "Default Organization" --prior "Development"
+  - name: List the created environments
+    shell:
+      hammer lifecycle-environment list
+...
