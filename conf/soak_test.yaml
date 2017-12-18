@@ -23,3 +23,15 @@ soak_repos:
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 6 Server (Kickstart)"
     repo: "Red Hat Enterprise Linux 6 Server Kickstart x86_64 6.9"
+  - product: Red Hat Openstack
+    reposet: "Red Hat Openstack 5.0 for RHEL 6 (RPMs)"
+    repo: "Red Hat OpenStack 5.0 for RHEL 6 RPMs x86_64 6Server"
+  - product: Red Hat Openstack
+    reposet: "Red Hat Openstack 5.0 for RHEL 7 (RPMs)"
+    repo: "Red Hat Openstack 5.0 for RHEL 7 RPMs x86_64 7Server"
+  - product: Red Hat Virtualization
+    reposet: "Red Hat Enterprise Virtualization Hypervisor 7 (RPMs)"
+    repo: "Red Hat Enterprise Virtualization Hypervisor 7 RPMs x86_64 7Server"
+  - product: Red Hat Enterprise Virtualization
+    reposet: "Red Hat Virtualization Manager 4.1 (RHEL 7 Server) (RPMs)"
+    repo: "Red Hat Virtualization Manager 4.1 RHEL 7 Server RPMs x86_64"
