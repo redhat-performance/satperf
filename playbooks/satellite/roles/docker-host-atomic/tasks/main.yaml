@@ -1,30 +1,30 @@
 ---
-  - name: "When docker_host_10gnic is empty, set it to default 'eth1'"
+  - name: "When nic_private is empty, set it to default 'eth1'"
     set_fact:
-      docker_host_10gnic: eth1
-    when: "docker_host_10gnic is undefined or docker_host_10gnic is none or docker_host_10gnic == ''"
+      nic_private: eth1
+    when: "nic_private is undefined or nic_private is none or nic_private == ''"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^ONBOOT="
       line: "ONBOOT=yes"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^NM_CONTROLLED="
       line: "NM_CONTROLLED=no"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^DEVICE="
-      line: "DEVICE={{ docker_host_10gnic }}"
+      line: "DEVICE={{ nic_private }}"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^BOOTPROTO="
       line: "BOOTPROTO=none"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^TYPE="
       line: "TYPE=Ethernet"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^BRIDGE="
       line: "BRIDGE=docker0"
   - lineinfile:
