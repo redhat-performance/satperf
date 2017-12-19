@@ -9,7 +9,7 @@
     with_items: "{{ soak_content_view }}"
   - name: Build the content views
     shell:
-      hammer content-view create --name "{{ item.name }}" --description "{{ item.description }}" --organization "Default Organization"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view create --name "{{ item.name }}" --description "{{ item.description }}" --organization "Default Organization"
     when: "{{ item.composite == False }}"
     with_items: "{{ soak_content_view }}"
   - name: Get the list of repositories

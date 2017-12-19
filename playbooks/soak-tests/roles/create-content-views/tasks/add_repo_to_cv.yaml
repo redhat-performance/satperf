@@ -10,7 +10,7 @@
       loop_var: repo_item
   - name: Attach to the content view
     shell:
-      hammer content-view add-repository --name "{{ item.1.name }}" --organization "Default Organization" --repository-id "{{ repoid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view add-repository --name "{{ item.1.name }}" --organization "Default Organization" --repository-id "{{ repoid }}"
   - debug:
       var: repoid 
 ...

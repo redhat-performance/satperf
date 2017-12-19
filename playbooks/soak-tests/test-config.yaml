@@ -1,0 +1,14 @@
+---
+- hosts: localhost
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/soak_test.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: The following content views will be created
+      debug:
+        msg: "{{ item.0.name }} with {{ item.1 }}"
+      with_subelements:  
+        - "{{ soak_content_view }}"
+        - repos

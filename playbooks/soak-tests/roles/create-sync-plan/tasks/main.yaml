@@ -1,7 +1,7 @@
 ---
   - name: Create a new sync plan
     shell:
-      hammer sync-plan create --name "Daily recursive sync" --description "Run a daily repo sync" --enabled yes --organization "Default Organization" --interval 'daily' --sync-date "{{ ansible_date_time.date }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" sync-plan create --name "Daily recursive sync" --description "Run a daily repo sync" --enabled yes --organization "Default Organization" --interval 'daily' --sync-date "{{ ansible_date_time.date }}"
     register: sync_plan_create
 
   - name: Get the list of repositories

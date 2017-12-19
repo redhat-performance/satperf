@@ -1,0 +1,12 @@
+---
+- hosts: satellite6
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+    - ../../conf/soak_test.yaml
+  roles:
+    - create-lifecycle-env
+    - repo-sync
+    - create-content-views   
+...

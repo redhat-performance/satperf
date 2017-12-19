@@ -5,34 +5,43 @@ soak_repos:
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 6 Server (RPMs)"
     repo: "Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server"
+    releasever: 6Server
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 6 Server - RH Common (RPMs)"
     repo: "Red Hat Enterprise Linux 6 Server - RH Common RPMs x86_64 6Server"
+    releasever: 6Server
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 7 Server (RPMs)"
     repo: "Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server"
+    releasever: 7Server
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 7 Server - RH Common (RPMs)"
     repo: "Red Hat Enterprise Linux 7 Server - RH Common RPMs x86_64 7Server"
+    releasever: 7Server
   - product: Red Hat Enterprise Linux Atomic Host
     reposet: "Red Hat Enterprise Linux Atomic Host (Trees)"
     repo: "Red Hat Enterprise Linux Atomic Host Trees"
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 7 Server (Kickstart)"
     repo: "Red Hat Enterprise Linux 7 Server Kickstart x86_64 7.4"
+    releasever: 7.4
   - product: Red Hat Enterprise Linux Server
     reposet: "Red Hat Enterprise Linux 6 Server (Kickstart)"
     repo: "Red Hat Enterprise Linux 6 Server Kickstart x86_64 6.9"
+    releasever: 6.9
   - product: Red Hat Openstack
-    reposet: "Red Hat Openstack 5.0 for RHEL 6 (RPMs)"
+    reposet: "Red Hat OpenStack 5.0 for RHEL 6 (RPMs)"
     repo: "Red Hat OpenStack 5.0 for RHEL 6 RPMs x86_64 6Server"
-  - product: Red Hat Openstack
-    reposet: "Red Hat Openstack 5.0 for RHEL 7 (RPMs)"
-    repo: "Red Hat Openstack 5.0 for RHEL 7 RPMs x86_64 7Server"
+    releasever: 6Server
+  - product: Red Hat OpenStack
+    reposet: "Red Hat OpenStack 5.0 for RHEL 7 (RPMs)"
+    repo: "Red Hat OpenStack 5.0 for RHEL 7 RPMs x86_64 7Server"
+    releasever: 7Server
   - product: Red Hat Virtualization
     reposet: "Red Hat Enterprise Virtualization Hypervisor 7 (RPMs)"
     repo: "Red Hat Enterprise Virtualization Hypervisor 7 RPMs x86_64 7Server"
-  - product: Red Hat Enterprise Virtualization
+    releasever: 7Server
+  - product: Red Hat Virtualization
     reposet: "Red Hat Virtualization Manager 4.1 (RHEL 7 Server) (RPMs)"
     repo: "Red Hat Virtualization Manager 4.1 RHEL 7 Server RPMs x86_64"
 
