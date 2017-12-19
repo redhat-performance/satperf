@@ -1,0 +1,27 @@
+---
+  - assert:
+      that:
+        - soak_content_view is defined
+      msg: "soak_content_view is not defined. Please check soak_test.yaml for configuration"
+  - name: The following content views will be created
+    debug:
+      msg: "{{ item.0.name }} {% if item.0.composite == 'true' %} as composite content view {% endif %}"
+    with_items: "{{ soak_content_view }}"
+  - name: Build the content views
+    shell:
+      hammer content-view create --name "{{ item.name }}" --description "{{ item.description }}" --organization "Default Organization"
+    when: "{{ item.composite == False }}"
+    with_items: "{{ soak_content_view }}"
+  - name: Get the list of repositories
+    shell:
+      hammer --output json product list --organization "Default Organization" --search "{{ item.1 }}" --enabled yes
+    with_subelements:
+      - "{{ soak_content_view }}"
+      - repos
+    register: repolist
+  - include_tasks: add_repo_to_cv.yaml
+    with_subelements: 
+      - "{{ repolist.results }}"
+      - "{{ soak_content_view }}"
+      - repos
+...
