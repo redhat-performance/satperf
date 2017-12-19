@@ -19,6 +19,9 @@
     command:
       subscription-manager repos --enable 'rhel-{{ ansible_distribution_major_version }}-server-extras-rpms'
 
+  - name: "clenup repodata in case we have previous registrations"
+    command:
+      yum clean all
   - name: "docker package installed"
     yum:
       name=docker-1.10.3-59.el7
@@ -42,32 +45,32 @@
     yum:
       name: bridge-utils
       state: present
-  - name: "When docker_host_10gnic is empty, set it to default 'eth1'"
+  - name: "When nic_private is empty, set it to default 'eth1'"
     set_fact:
-      docker_host_10gnic: eth1
-    when: "docker_host_10gnic is undefined or docker_host_10gnic is none or docker_host_10gnic == ''"
+      nic_private: eth1
+    when: "nic_private is undefined or nic_private is none or nic_private == ''"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^ONBOOT="
       line: "ONBOOT=yes"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^NM_CONTROLLED="
       line: "NM_CONTROLLED=no"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^DEVICE="
-      line: "DEVICE={{ docker_host_10gnic }}"
+      line: "DEVICE={{ nic_private }}"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^BOOTPROTO="
       line: "BOOTPROTO=none"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^TYPE="
       line: "TYPE=Ethernet"
   - lineinfile:
-      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ docker_host_10gnic }}"
+      dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
       regexp: "^BRIDGE="
       line: "BRIDGE=docker0"
   - lineinfile:
@@ -137,13 +140,13 @@
     shell: |
       lvs --separator ':' "/dev/mapper/{{ docker_host_vg }}" | grep '^\s*docker-pool:' \
         && lvremove --force "/dev/mapper/{{ docker_host_vg }}-docker--pool" || true
-  
+
   # Cleanup Overlay FS configuration if present
   - name: "Check if we have an Overlay configured"
     stat:
       path: "/dev/{{ docker_host_vg }}/docker"
     register: overlay_present
-    always_run: True
+    check_mode: no
     ignore_errors: True
   - name: "Unmount the partition"
     mount:
@@ -257,10 +260,6 @@
       docker build -t r7perfsat - < /root/Dockerfile
 
   # Install and preconfigure Ansible
-  - name: "EPEL enabled"
-    yum:
-      name: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
-      state: present
   - name: "Package ansible installed"
     yum:
       name: ansible
