@@ -1,16 +1,25 @@
 ---
+  - debug:
+      var: item
   - name: Get the repository id
     set_fact:
-      repo: "{{ item.0.stdout | from_json }}"
+      repo: "{{ item.stdout | from_json }}"
   - name: Set the repository id
     set_fact:
-      repoid: "{{ repo_item.ID }}"
+      repoid: "{{ repo_item.Id }}"
+      reponame: "{{ repo_item.Name }}"
     with_items: "{{ repo }}"
     loop_control:
       loop_var: repo_item
   - name: Attach to the content view
     shell:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view add-repository --name "{{ item.1.name }}" --organization "Default Organization" --repository-id "{{ repoid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view add-repository --name "{{ cv.0.name }}" --organization "Default Organization" --repository-id "{{ repoid }}"
+    when: cv.1 | match(reponame)
+    with_subelements: 
+      - "{{ soak_content_view }}"
+      - repos
+    loop_control:
+      loop_var: cv
   - debug:
       var: repoid 
 ...

@@ -14,14 +14,14 @@
     with_items: "{{ soak_content_view }}"
   - name: Get the list of repositories
     shell:
-      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" product list --organization "Default Organization" --search "{{ item.1 }}" --enabled yes
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" repository list --organization "Default Organization" --name "{{ item.1 }}"
     with_subelements:
       - "{{ soak_content_view }}"
       - repos
     register: repolist
+  - debug:
+      var: repolist
   - include_tasks: add_repo_to_cv.yaml
-    with_subelements: 
-      - "{{ repolist.results }}"
-      - "{{ soak_content_view }}"
-      - repos
+    with_items: 
+      "{{ repolist.results }}"
 ...
