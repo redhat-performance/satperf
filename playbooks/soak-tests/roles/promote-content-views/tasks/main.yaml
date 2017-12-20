@@ -1,0 +1,28 @@
+---
+  - name: Get the list of lifecycle environments
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" lifecycle-environment list --by ID
+    register: lifecycle_environments
+  - debug:
+      var: lifecycle_environments
+  - name: Determine is it the first time we are promoting
+    stat:
+      path: /root/CV_PROMOTE_ID
+    register: cv_version_file
+  - set_fact:
+      cv_version: 1
+    when: cv_version_file.stat.exists == False
+  - set_fact:
+     cv_version: "{{ lookup('file', '/root/CV_PROMOTE_ID') | int + 1}}"
+    when: cv_version_file.stat.exists == True
+  - name: Update the CV version in file
+    copy:
+     content: "{{ cv_version }}"
+     dest: /root/CV_PROMOTE_ID
+    when: cv_version_file.stat.exists == True  
+  - include_tasks: promote-cv.yaml
+    with_items: "{{ lifecycle_environments.stdout | from_json | sort(attribute='ID') }}"
+  - debug:
+      msg: "{{ item.ID }}"
+    with_items: "{{ lifecycle_environments.stdout | from_json | sort(attribute='ID') }}"
+...
