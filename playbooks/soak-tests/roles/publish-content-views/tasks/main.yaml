@@ -1,0 +1,10 @@
+---
+  - name: Get the list of content views that needs to be published
+    debug:
+      msg: "{{ item.name }}"
+    with_items: "{{ soak_content_view }}"
+  - name: Publish content views
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view publish --name "{{ item.name }}" --organization "Default Organization" --async
+    with_items: "{{ soak_content_view }}"
+...
