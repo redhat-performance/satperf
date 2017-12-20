@@ -33,3 +33,15 @@ ansible-playbook -i conf/hosts.ini playbooks/soak-tests/sync-plan.yaml
 ```bash
 ansible-playbook -i conf/hosts.ini playbooks/soak-tests/content-setup.yaml
 ```
+
+- To run a content view publish task only, the following command needs to be executed
+
+```bash
+ansible-playbook -i conf/hosts.ini playbooks/soak-tests/content-view-publish.yaml
+```
+
+- To run a content view promote task only, the following command needs to be executed
+
+```bash
+ansible-playbook -i conf/hosts.ini playbooks/soak-tests/content-view-promote.yaml
+```
