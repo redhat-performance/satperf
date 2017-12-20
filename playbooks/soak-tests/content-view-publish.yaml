@@ -1,0 +1,10 @@
+---
+- hosts: satellite6
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+    - ../../conf/soak_test.yaml
+  roles:
+    - publish-content-views
+...
