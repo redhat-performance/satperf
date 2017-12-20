@@ -48,27 +48,32 @@ soak_repos:
 # Content Views
 soak_content_view:
   - name: rhel6_cv
+    description: RHEL6 Repos
     repos:
       - "Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server"
       - "Red Hat Enterprise Linux 6 Server - RH Common RPMs x86_64 6Server"
       - "Red Hat Enterprise Linux 6 Server Kickstart x86_64 6.9"
     composite: False
   - name: rhel7_cv
+    description: RHEL7 Repos
     repos:
       - "Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server"
       - "Red Hat Enterprise Linux 7 Server - RH Common RPMs x86_64 7Server"
       - "Red Hat Enteprise Linux 7 Server Kickstart x86_64 7.4"
     composite: False
   - name: rhel_atomic
+    description: RHEL Atomic Repos
     repos:
       - "Red Hat Enterprise Linux Atomic Host Trees"
     composite: False
   - name: rhel_openstack
+    description: RHEL Openstack Repos
     repos:
       - "Red Hat Openstack 5.0 for RHEL 6 RPMs x86_64 6Server"
       - "Red Hat Openstack 5.0 for RHEL 7 RPMs x86_64 7Server"
     composite: False
   - name: rhel_virt
+    description: RHEL Virtualization Repos
     repos:
       - "Red Hat Enterprise Virtualization Hypervisor 7 RPMs x86_64 7Server"
       - "Red Hat Virtualization Manager 4.1 RHEL 7 Server RPMs x86_64"
