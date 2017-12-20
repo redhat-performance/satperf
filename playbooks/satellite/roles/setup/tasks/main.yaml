@@ -34,11 +34,6 @@
       dest=/etc/yum.repos.d/
       force=yes
     when: "sat_install_source == 'repo'"
-  # Setup Puppet 4 if Enabled
-  - name: Setup Puppet 4
-    shell:
-      subscription-manager repos --enable "{{ puppet4_repo }}"
-    when: install_puppet4 == 'true'
 
   # Setup repos when installing from CDN
   - name: "CDN Satellite repo configured"
