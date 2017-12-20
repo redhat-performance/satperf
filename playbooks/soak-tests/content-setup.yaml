@@ -8,5 +8,7 @@
   roles:
     - create-lifecycle-env
     - repo-sync
-    - create-content-views   
+    - create-content-views
+    - publish-content-views
+    - promote-content-views
 ...
