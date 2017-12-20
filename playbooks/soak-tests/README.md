@@ -9,6 +9,9 @@ Currently automated tasks include:
 - Repository Enablement and Sync
 - Environment creation
 - Sync Plan Creation
+- Content View Creation
+- Content View Publish
+- Content View Promotion
 
 ## Configuration
 ---
@@ -23,4 +26,10 @@ products under the soak_repos dictionary.
 
 ```bash
 ansible-playbook -i conf/hosts.ini playbooks/soak-tests/sync-plan.yaml
+```
+
+- To create, publish and promote content views, the following command needs to be executed
+
+```bash
+ansible-playbook -i conf/hosts.ini playbooks/soak-tests/content-setup.yaml
 ```
