@@ -5,6 +5,8 @@
     with_items: "{{ soak_content_view }}"
   - name: Publish content views
     shell:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view publish --name "{{ item.name }}" --organization "Default Organization" --async
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view publish --name "{{ item.name }}" --organization "Default Organization"
+    async: 7200
+    poll: 60
     with_items: "{{ soak_content_view }}"
 ...
