@@ -1,0 +1,29 @@
+---
+  - name: Create a new puppet product for soak testing
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" product create --name soak_test_puppet_product --label soak_test_puppet_product --organization "Default Organization"
+  - name: Determine the ID of the product we just created
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" product list --organization "Default Organization" --name "soak_test_puppet_product"
+    register: puppet_product_id
+  - debug:
+      var: puppet_product_id
+  - set_fact:
+      pid: "{{ item.ID }}"
+    with_items: "{{ puppet_product_id.stdout | from_json }}"
+  - name: Create a puppet forge repository
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --name puppet_forge_repo --label puppet_forge_repo --content-type puppet --url http://forge.puppetlabs.com/ --organization "Default Organization" --product-id "{{ pid }}" --publish-via-http 1
+  - name: Determine the Repository ID of the puppet forge repo
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" repository list --name "puppet_forge_repo" --organization "Default Organization"
+    register: puppet_repository_id
+  - debug:
+      var: puppet_repository_id
+  - set_fact:
+      rid: "{{ item.Id }}"
+    with_items: "{{ puppet_repository_id.stdout | from_json }}"
+  - name: Do a puppet repo sync
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository synchronize --async --id "{{ rid }}" --organization "Default Organization" --product-id "{{ pid }}"
+...
