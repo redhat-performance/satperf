@@ -1,0 +1,12 @@
+---
+ - debug:
+     var: item
+ - name: "Add CVs to the CCV"
+   shell:
+     hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view component add --component-content-view "{{ cv.1 }}" --composite-content-view "{{ cv.0.name }}" --latest
+   with_subelements:
+     - "{{ item }}"
+     - cvs
+   loop_control:
+     loop_var: cv
+...
