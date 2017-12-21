@@ -1,0 +1,13 @@
+---
+  - assert:
+      that:
+        - soak_activation_key is defined
+  - name: List the activation keys that will be created
+    debug:
+      msg: "{{ item.name }}"
+    with_items: "{{ soak_activation_key }}"
+  - name: Create the activation keys
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" activation-key create --name "{{ item.name }}" --organization "Default Organization" --content-view "{{ item.cv }}" --lifecycle-environment "{{ Production }}"
+    with_items: "{{ soak_activation_key }}"
+...
