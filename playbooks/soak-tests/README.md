@@ -12,6 +12,8 @@ Currently automated tasks include:
 - Content View Creation
 - Content View Publish
 - Content View Promotion
+- Puppet Product Creation
+- Puppet Forge Repo Creation
 
 ## Configuration
 ---
