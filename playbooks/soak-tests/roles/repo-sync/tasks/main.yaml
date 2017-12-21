@@ -12,8 +12,10 @@
   # Start async of the repos
   - name: "Start (asynchronous) sync of repos we have just enabled"
     command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}' --async
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}'
     ignore_errors: True
+    async: 7200
+    poll: 60
     with_items:
       "{{ soak_repos }}"
 ...
