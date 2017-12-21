@@ -78,3 +78,10 @@ soak_content_view:
       - "Red Hat Enterprise Virtualization Hypervisor 7 RPMs x86_64 7Server"
       - "Red Hat Virtualization Manager 4.1 RHEL 7 Server RPMs x86_64"
     composite: False
+
+# Activation keys
+soak_activation_key:
+  - name: rhel6_act_key
+    cv: rhel6_cv
+  - name: rhel7_act_key
+    cv: rhel7_cv
