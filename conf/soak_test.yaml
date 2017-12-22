@@ -1,5 +1,8 @@
 #Soak Test Satellite Configuration
 
+# Remote Execution Configuration
+rex_host_search_query: "container*"
+
 # Repositories to be enabled
 soak_repos:
   - product: Red Hat Enterprise Linux Server
