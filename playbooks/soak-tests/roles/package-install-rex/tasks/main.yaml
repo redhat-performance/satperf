@@ -1,0 +1,13 @@
+---
+  - assert:
+      that:
+        - package_name is defined
+  - name: List the package we are going to install
+    debug:
+      var: package_name
+  - name: Install the defined package using Remote Execution
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" job-invocation create --search-query "{{ rex_host_search_query }}" --job-template "Run Command - SSH Default" --inputs package="{{ package_name }}",action=install
+    async: 21600
+    poll: 120
+...
