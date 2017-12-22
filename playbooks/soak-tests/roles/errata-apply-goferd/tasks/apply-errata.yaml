@@ -1,0 +1,9 @@
+---
+  - name: "Get the list of applicable errata for {{ item }}"
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" host errata list --host "{{ item }}"
+    register: errata_list
+  - name: Apply the applicable errata to the host
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" host errata apply --host "{{ item }}" --errata-ids "{{ errata_list.stdout | from_json | map(attribute='ID') | list | join(',') }} --async"
+...

@@ -1,0 +1,11 @@
+---
+  - name: Get the list of hosts to apply the errata on
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" host list --page 1 --per-page 500
+    register: host_list
+  - debug:
+      msg: "{{ host_list.stdout | from_json | map(attribute='Name') | list }}"
+  - name: Apply errata on hosts
+    include_tasks: apply-errata.yaml
+    with_items: "{{ host_list.stdout | from_json | map(attribute='Name' | list) }}" 
+...
