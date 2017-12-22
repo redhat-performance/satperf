@@ -12,5 +12,6 @@
     - publish-content-views
     - promote-content-views
     - create-puppet-product
+    - create-activation-keys
     - setup-scap-content
 ...
