@@ -7,5 +7,5 @@
       msg: "{{ host_list.stdout | from_json | map(attribute='Name') | list }}"
   - name: Apply errata on hosts
     include_tasks: apply-errata.yaml
-    with_items: "{{ host_list.stdout | from_json | map(attribute='Name' | list) }}" 
+    with_items: "{{ host_list.stdout | from_json | map(attribute='Name') | list }}" 
 ...
