@@ -7,4 +7,5 @@
     - ../../conf/soak_test.yaml
   roles:
     - errata-apply-goferd
+    - errata-apply-rex
 ...
