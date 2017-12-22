@@ -1,0 +1,28 @@
+---
+  - name: Install the stdlib puppet module (There is a version incompatibility with the one included in Satellite)
+    shell:
+      puppet module install puppetlabs-stdlib --force
+  - name: Upload default scap content to Satellite
+    shell:
+      foreman-rake foreman_openscap:bulk_upload:default
+  - name: See what all content is available
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" scap-content list
+    register: scap_content
+  - debug:
+      var: scap_content
+  - name: Determine the Host ID of the Satellite host
+    shell:
+      hammer --output json --username "{{ sat_user }}" --password "{{ sat_pass }}" host list --search "{{ inventory_hostname }}"
+    register: host_data
+  - name: Get the host ID from results
+    set_fact:
+       hostid: "{{ host_data.stdout | from_json }}"
+  - name: Create a hostgroup for Scap Scans
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" hostgroup create --name "{{ scap_hostgroup }}" --lifecycle-environment "{{ scap_hostgroup_env }}" --content-view "{{ scap_hostgroup_cv }}" --puppet-proxy "{{ inventory_hostname }}" --puppet-ca-proxy "{{ inventory_hostname }}" --query-organization "Default Organization" --openscap-proxy-id "{{ item.Id }}"
+    with_items: "{{ hostid }}"
+  - name: Create a SCAP Policy Guideline
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" policy create --name "{{ scap_policy_name }}" --hostgroups "{{ scap_hostgroup }}" --organization "Default Organization" --period monthly --scap-content "Red Hat rhel7 default content" --scap-policy-content-id "23" --day-of-month "7"
+...

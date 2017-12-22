@@ -12,4 +12,5 @@
     - publish-content-views
     - promote-content-views
     - create-puppet-product
+    - setup-scap-content
 ...

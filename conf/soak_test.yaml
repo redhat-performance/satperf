@@ -3,6 +3,12 @@
 # Remote Execution Configuration
 rex_host_search_query: "container*"
 
+# SCAP Configuration
+scap_hostgroup: rhel_sys
+scap_hostgroup_env: Production
+scap_hostgroup_cv: rhel7_cv
+scap_policy_name: monthly_policy
+
 # Repositories to be enabled
 soak_repos:
   - product: Red Hat Enterprise Linux Server
