@@ -14,6 +14,9 @@ Currently automated tasks include:
 - Content View Promotion
 - Puppet Product Creation
 - Puppet Forge Repo Creation
+- Remote Execution package install
+- Host patching through Goferd
+- Host patching through Remote Execution
 
 ## Configuration
 ---
@@ -46,4 +49,16 @@ ansible-playbook -i conf/hosts.ini playbooks/soak-tests/content-view-publish.yam
 
 ```bash
 ansible-playbook -i conf/hosts.ini playbooks/soak-tests/content-view-promote.yaml
+```
+
+- To run a errata install, the following command needs to be executed
+
+```bash
+ansible-playbook -i conf/hosts.ini playbooks/soak-tests/errata-apply.yaml
+```
+
+- To run a Remote execution based package install, the following command needs to be executed
+
+```bash
+ansible-playbook -i conf/hosts.ini playbooks/soak-tests/rex-job.yaml --extra-vars "package_name=<name_of_package_to_install>"
 ```
