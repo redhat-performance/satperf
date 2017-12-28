@@ -1,0 +1,20 @@
+---
+  - name: Cleanup all the subscription-manager data
+    shell:
+      subscription-manager clean
+  - name: Cleanup yum data
+    shell:
+      yum clean all
+  - name: Cleanup any remaining yum cache
+    shell:
+      rm -rf /var/cache/yum
+  - name: Install the katello-ca-consumer from dogfood server
+    shell:
+      yum -y localinstall http://sat-r220-02.lab.eng.rdu2.redhat.com/pub/katello-ca-consumer-latest.noarch.rpm
+  - name: Register to the dogfood server
+    shell:
+      subscription-manager register --org Sat6-CI --activationkey 'satellite-6.3.0-qa-rhel7'
+  - name: Enable Puppet 4 repos
+    shell:
+      subscription-manager repos --enable='Sat6-CI_Satellite_6_3_Composes_Satellite_6_3_Puppet_4_RHEL7'
+...
