@@ -23,7 +23,7 @@
     bootstrap_puppet_args: "--skip-puppet"   # use tag 'PUP' to also install puppet via bootstrap.py, or 'PUP_ONLY' to just add it to registered system
     bootstrap_katello_args: "--skip katello-agent"   # use tag 'KAT' to also install katello-agent via bootstrap.py, or 'KAT_ONLY' to just add it to registered system
     bootstrap_target_path: /root/bootstrap.py
-    bootstrap_retries: 10
+    bootstrap_retries: 1
 
     marker: "{% raw %}{{ marker }}{% endraw %}"
 
@@ -129,7 +129,12 @@
       with_items:
         - /etc/pki/product-default/69.pem
         - /etc/pki/product/69.pem
-
+    - name: "WORKAROUND: Disable product id checks in yum"
+      lineinfile:
+        dest: /etc/yum/pluginconf.d/product-id.conf
+        regexp: "^enabled"
+        line: 'enabled=0'
+        state: present
     - name: "Generate bootstrap.py arguments"
       set_fact:
         bootstrap_args: "{% raw %}--server {{ bootstrap_foreman_fqdn }} --activationkey '{{ bootstrap_activationkey }}' --download-method {{ bootstrap_download_method }}{% endraw %}"
@@ -148,7 +153,7 @@
         bootstrap_rex_args: "--rex"
       tags: REM
     - name: "Run bootstrap.py"
-      command: "{% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
+      shell: "set -x; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
       register: reg
       until: "reg.rc is defined and reg.rc == 0"
       retries: "{% raw %}{{ bootstrap_retries }} {% endraw %}"
