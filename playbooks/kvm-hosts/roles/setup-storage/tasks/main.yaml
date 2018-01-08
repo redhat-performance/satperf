@@ -2,7 +2,7 @@
   - name: "Create physical volumes and volume group"
     lvg:
       vg: guest_images_lvm
-      pvs: /dev/sdb,/dev/sdc,/dev/sdd,/dev/sde,/dev/sdf,/dev/sdg,/dev/sdh,/dev/sdi,/dev/sdj,/dev/sdk,/dev/sdl,/dev/sdm,/dev/sdn,/dev/sdo,/dev/sdp,/dev/sdq
+      pvs: /dev/sdb
   - name: "Define storage pool"
     virt_pool:
       name: guest_images_lvm
