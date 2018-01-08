@@ -1,4 +1,10 @@
 ---
+# To remove all VMs:
+# for g in $( virsh list --all --name | grep -v '^$' ); do virsh destroy "$g"; virsh undefine "$g" --remove-all-storage; done
+#
+# To get MACs of all VMs:
+# for g in $( virsh list --all --name | grep -v '^$' ); do mac=$( virsh dumpxml "$g" | grep -B 1 "source bridge='brpublic'" | grep "mac address=" | cut -d "'" -f 2 ); echo $g $mac; done
+
 - hosts: kvm-hosts
   remote_user: root
   gather_facts: no
