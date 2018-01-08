@@ -8,19 +8,6 @@
   roles:
     ###- ../satellite/roles/common
   tasks:
-    - name: "Make sure libvirtd is present"
-      yum:
-        name: "{{ item }}"
-        state: present
-      with_items:
-        - libvirt
-        - qemu-kvm
-        - libvirt-python
-        - virt-install
-    - name: "Make sure libvirtd is running"
-      service:
-        name: libvirtd
-        state: started
     - name: "List VMs"
       virt:
         command: list_vms
