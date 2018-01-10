@@ -69,7 +69,7 @@
     until: "attaching.rc == 0"
     retries: 5
     delay: 10
-    when: "querying.stdout_lines|first not in attached.stdout_lines"
+    when: "querying.stdout_lines|length > 0 and querying.stdout_lines|first not in attached.stdout_lines"
 
   # Make sure only base RHEL repo is attached
   - name: "Disable all RHSM repos and only enable base RHEL repo"
