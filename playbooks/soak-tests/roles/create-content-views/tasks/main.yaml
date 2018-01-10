@@ -17,6 +17,11 @@
       msg: "{{ item.name }}"
     when: "{{ item.composite }} == True"
     with_items: "{{ soak_content_view }}"
+  - name: Build the composite content views
+    shell:
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" content-view create --name "{{ item.name }}" --description "{{ item.description }}" --organization "Default Organization" --composite
+    when: "{{ item.composite }} == True"
+    with_items: "{{ soak_content_view }}"
   - name: Include the composite view creation tasks
     include_tasks: create-composite-views.yaml
     when: "{{ item.composite }} == True"
