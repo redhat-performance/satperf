@@ -8,6 +8,6 @@
     with_items: "{{ soak_activation_key }}"
   - name: Create the activation keys
     shell:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" activation-key create --name "{{ item.name }}" --organization "Default Organization" --content-view "{{ item.cv }}" --lifecycle-environment "{{ Production }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" activation-key create --name "{{ item.name }}" --organization "Default Organization" --content-view "{{ item.cv }}" --lifecycle-environment "Production"
     with_items: "{{ soak_activation_key }}"
 ...
