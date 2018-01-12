@@ -5,7 +5,7 @@ do="Default Organization"
 logs="logs-$( date --iso-8601=seconds )"
 mkdir "$logs/"
 
-opts="--forks 100 -i conf/20180112-scale-meltdown-spectre.ini"
+opts="--forks 100 -i conf/20180112-scale-meltdown-spectre.ini --private-key conf/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
 function log() {
