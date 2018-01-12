@@ -57,9 +57,9 @@ function s() {
 ###a $logs/10-reposet-enable-rhel6.log -m "shell" -a "hammer --username admin --password changeme repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'" satellite6
 ###a $logs/10-reposet-enable-rhel7optional.log -m "shell" -a "hammer --username admin --password changeme repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'" satellite6
 ###a $logs/11-repo-immediate-rhel7.log -m "shell" -a "hammer --username admin --password changeme repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'" satellite6
-a $logs/10-repo-sync-rhel7.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)'" satellite6
+a $logs/10-repo-sync-rhel7.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'" satellite6
 s 100
-a $logs/10-repo-sync-rhel6.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)'" satellite6
+a $logs/10-repo-sync-rhel6.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" satellite6
 s 100
-a $logs/10-repo-sync-rhel7optional.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)'" satellite6
+a $logs/10-repo-sync-rhel7optional.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" satellite6
 s 100
