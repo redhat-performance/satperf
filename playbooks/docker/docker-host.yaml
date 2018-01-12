@@ -6,8 +6,8 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - scalelab-nic-cleanup
-    - common
+    - ../common/roles/scalelab-nic-cleanup
+    - ../common/roles/common
     - { role: docker-host-kvm-partitioning, when: docker_host_partitioning == 'kvm' }
     - { role: docker-host-ec2-partitioning, when: docker_host_partitioning == 'ec2' }
     - { role: docker-host-myrhev_cleanup-partitioning, when: docker_host_partitioning == 'myrhev_cleanup' }
@@ -16,11 +16,12 @@
     - { role: docker-host-scalelab6018r-partitioning, when: "'-6018r.' in inventory_hostname" }
     - { role: docker-host-scalelabr930-partitioning, when: "'-r930.' in inventory_hostname" }
     - { role: docker-host-scalelabr630-partitioning, when: "'-r630.' in inventory_hostname" }
-    - { role: rhsm-satellite, when: docker_host_register_to == 'satellite' }
-    - { role: rhsm, when: docker_host_register_to != 'satellite' }
+    - { role: docker-host-scalelab1029p-partitioning, when: "'-1029p.' in inventory_hostname" }
+    - { role: ../common/roles/rhsm-satellite, when: docker_host_register_to == 'satellite' }
+    - { role: ../common/roles/rhsm, when: docker_host_register_to != 'satellite' }
     ###- upgrade-restart
     - docker-host-vg   # when docker_host_vg is empty, this autodetects it
     - docker-host
-    - enlarge-arp-table
-    - client-scripts
+    - ../common/roles/enlarge-arp-table
+    - ../satellite/roles/client-scripts
 ...

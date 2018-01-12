@@ -61,6 +61,20 @@
       done
     when: "'-r730xd.' in inventory_hostname"
 
+  # Systems ...-1029p...
+  #   enp94s0f1 ... private
+  #   eno1 ... public
+  - shell: |
+      for nic in eno2 enp94s0f0 enp94s0f2 enp94s0f3 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
+        ip link set $nic down
+        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+          ip addr del $addr dev $nic
+        done
+        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
+        ip link delete dev $nic || true
+      done
+    when: "'-1029p.' in inventory_hostname"
+
   # Make sure 10G NIC have correct IP
   - lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}

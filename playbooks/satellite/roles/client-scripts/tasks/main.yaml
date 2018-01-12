@@ -11,7 +11,7 @@
     run_once: yes
   - name: "Distribute private key"
     copy:
-      src: "../../../{{ client_private_key }}"
+      src: "../../{{ client_private_key }}"
       dest: /root/id_rsa_key
       mode: "u=rw,g=,o="
       force: yes
