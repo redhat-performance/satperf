@@ -1,13 +1,4 @@
 ---
-# How to create storage pool on preexisting LVM group:
-#
-# https://access.redhat.com/documentation/en-US/Red_Hat_Enterprise_Linux/7/html/Virtualization_Deployment_and_Administration_Guide/sect-LVM_based_storage_pools.html#sect-LVM_based_storage_pools-Creating_an_LVM_based_storage_pool_with_virsh
-# https://serverfault.com/questions/352641/how-can-i-use-the-hosts-lvm-vg-as-a-kvm-pool
-#
-# virsh pool-define-as my_pool logical - - - - /dev/my_volume_group
-# virsh pool-start my_pool
-# virsh pool-autostart my_pool
-
 - hosts: kvm-hosts
   remote_user: root
   gather_facts: no
