@@ -112,9 +112,10 @@ done
 
 
 a $logs/50-rex-set-via-ip.log satellite6 -m "shell" -a "hammer --username admin --password changeme settings set --name remote_execution_connect_by_ip --value true"
-a $logs/51-rex-date.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+a $logs/51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "true > /usr/share/foreman-proxy/.ssh/known_hosts"
+a $logs/52-rex-date.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s 120
-a $logs/52-rex-sm-facts-update.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+a $logs/53-rex-sm-facts-update.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 
 
 function table_row() {
@@ -163,5 +164,5 @@ table_row "21-cv-all-publish.log" "Publish big CV"
 table_row "23-cv-all-promote-[0-9]\+.log" "Promote big CV"
 table_row "33-cv-filtered-publish.log" "Publish smaller filtered CV"
 table_row "44-register-[0-9]\+.log" "Register bunch of containers"
-table_row "51-rex-date.log" "ReX 'date' on all containers"
-table_row "52-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
+table_row "52-rex-date.log" "ReX 'date' on all containers"
+table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
