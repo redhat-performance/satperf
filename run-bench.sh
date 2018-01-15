@@ -52,6 +52,8 @@ function s() {
 
 log "Logging into '$logs/' directory"
 
+###sync; echo 3 > /proc/sys/vm/drop_caches
+###yes | satellite-installer --scenario satellite --reset
 
 a $logs/00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 for i in 1 2 3; do
@@ -113,7 +115,7 @@ done
 
 
 a $logs/50-rex-set-via-ip.log satellite6 -m "shell" -a "hammer --username admin --password changeme settings set --name remote_execution_connect_by_ip --value true"
-a $logs/51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "true > /usr/share/foreman-proxy/.ssh/known_hosts"
+a $logs/51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
 a $logs/52-rex-date.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s 120
 a $logs/53-rex-sm-facts-update.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
