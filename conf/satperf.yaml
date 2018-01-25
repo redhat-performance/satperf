@@ -73,6 +73,9 @@ content_puppet_product: SatPerfPuppetProduct
 content_puppet_repo: SatPerfPuppetRepo
 content_puppet_env: KT_Default_Organization_Library_SatPerfContentView
 content_content_view_name: SatPerfContentView
+content_hostgroup: "SatperfHostGroup"
+content_activationkey: "SatperfActivationKey"
+client_domain: "example.com"
 client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
 
 # Capsule install options

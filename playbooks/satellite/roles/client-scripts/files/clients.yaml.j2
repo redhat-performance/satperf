@@ -10,13 +10,13 @@
     bootstrap_foreman_fqdn: "{% raw %}{{ server }}{% endraw %}"
 
     bootstrap_download_method: http
-    bootstrap_org_label: "Default_Organization"
-    bootstrap_org_name: "Default Organization"
+    bootstrap_org_label: "{{ sat_orglabel }}"
+    bootstrap_org_name: "{{ sat_org }}"
     ###bootstrap_location: "..."   # will be set later in the play
-    bootstrap_activationkey: "ActivationKey"
-    bootstrap_login: "admin"
-    bootstrap_password: "changeme"
-    bootstrap_hostgroup: "HostGroup"
+    bootstrap_activationkey: "{{ content_activationkey }}"
+    bootstrap_login: "{{ sat_user }}"
+    bootstrap_password: "{{ sat_pass }}"
+    bootstrap_hostgroup: "{{ content_hostgroup }}"
     bootstrap_operatingsystem: "RedHat 7.4"
     bootstrap_additional_args: "--force"
     bootstrap_rex_args: ""   # use tag 'REM' to install remote execution ssh key via bootstrap.py, use 'REM_ONLY' to just add it to registered system
