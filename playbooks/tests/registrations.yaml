@@ -14,6 +14,8 @@
     use_only_fresh: true   # should we use only containers which were not registered yet?
     resting: 0
     save_graphs: true
+    bootstrap_retries: 10
+    bootstrap_operatingsystem: "RedHat 7.4"
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
       command:   # FIXME: Use lineinfile
