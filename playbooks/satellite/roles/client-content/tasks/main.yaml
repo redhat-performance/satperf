@@ -88,11 +88,11 @@
 
   - name: "Create host group"
     command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" hostgroup create --name "{{ content_hostgroup }}"
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" hostgroup create --name "{{ content_hostgroup }}" --lifecycle-environment Library --content-view "{{ sat_org }} View" --query-organization "{{ sat_org }}"
   - name: "Create activation key"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" activation-key create --organization "{{ sat_org }}" --name "{{ content_activationkey }}"
   - name: "Create client domain"
     command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}"
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}"
 ...
