@@ -280,6 +280,7 @@
     - name: "Remove puppet certs if any"
       shell:
         rm -rf /var/lib/puppet/ssl/*
+      tags: PUP_ONLY
     - name: "Install puppet"
       action:
         yum
