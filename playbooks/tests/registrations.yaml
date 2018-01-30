@@ -14,7 +14,6 @@
     use_only_fresh: true   # should we use only containers which were not registered yet?
     update_used: true
     resting: 0
-    save_graphs: true
     bootstrap_retries: 10
     bootstrap_operatingsystem: "RedHat 7.4"
     grepper: 'Register '
@@ -102,33 +101,4 @@
         msg: "Graphs: http://{{ grafana_host }}:{{ grafana_port }}/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
       run_once: true
       ignore_errors: true
-    - set_fact:
-        filename_base: "graph-reg-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
-      run_once: true
-      delegate_to: 127.0.0.1
-      when: "save_graphs|bool"
-    - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
-      get_url:
-        url: "http://{{ grafana_host }}:{{ grafana_port }}/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
-        dest: "{{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-{{ item.name }}.png"
-      run_once: true
-      delegate_to: 127.0.0.1
-      ignore_errors: yes
-      with_items:
-        - name: load
-          panelId: 27
-        - name: mem
-          panelId: 5
-        - name: swap
-          panelId: 7
-        - name: swap_io
-          panelId: 8
-        - name: sat6_proc_mem_sum
-          panelId: 56
-        - name: sat6_proc_cpu_sum
-          panelId: 43
-      when: "save_graphs|bool"
-  roles:
-      - role: grafana-graph-download
-        when: "satellite_hostname is defined"
 ...
