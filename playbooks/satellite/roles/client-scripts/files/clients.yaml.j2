@@ -281,11 +281,15 @@
       shell:
         rm -rf /var/lib/puppet/ssl/*
       tags: PUP_ONLY
+    - name: "Hostname is a prerequisity of puppet - see bug 1540068"
+      yum:
+        name: hostname
+        state: present
+      tags: PUP_ONLY
     - name: "Install puppet"
-      action:
-        yum
-          name=puppet
-          state=latest
+      yum:
+        name: puppet
+        state: latest
       register: installed
       until: "installed.rc is defined and installed.rc == 0"
       retries: 10
