@@ -13,6 +13,7 @@
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
     use_only_fresh: true   # should we use only containers which were not registered yet?
     update_used: true
+    forks: "{{ size }}"
     resting: 0
     bootstrap_retries: 10
     bootstrap_operatingsystem: "RedHat 7.4"
@@ -49,7 +50,7 @@
       run_once: yes
     - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }}; tags = {{ tags }})"
       shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ size }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}' bootstrap_retries={{ bootstrap_retries|default(10) }} bootstrap_operatingsystem='{{ bootstrap_operatingsystem|default('RedHat 7.4') }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}' bootstrap_retries={{ bootstrap_retries|default(10) }} bootstrap_operatingsystem='{{ bootstrap_operatingsystem|default('RedHat 7.4') }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
 
