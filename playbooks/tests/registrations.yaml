@@ -17,6 +17,7 @@
     save_graphs: true
     bootstrap_retries: 10
     bootstrap_operatingsystem: "RedHat 7.4"
+    grepper: 'Register '
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
       command:   # FIXME: Use lineinfile
@@ -27,14 +28,14 @@
         cat /root/container-used-count
       register: containers_used_count_cmd
       ignore_errors: true
-      when: "use_only_fresh"
+      when: "use_only_fresh|bool"
     - name: "Set number of used containers to 0"
       set_fact:
         containers_used_count: 0
     - name: "Set number of used containers based on file"
       set_fact:
         containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
-      when: "use_only_fresh and (containers_used_count_cmd.rc is defined and containers_used_count_cmd.rc == 0)"
+      when: "use_only_fresh|bool and (containers_used_count_cmd.rc is defined and containers_used_count_cmd.rc == 0)"
 
     - name: "Generate list of containers we are going to use"
       shell:
@@ -53,32 +54,28 @@
       register: clients_yaml_cmd
       ignore_errors: true
 
-    - name: "Initialize an empty list for registration times"
-      set_fact:
-        register_times: []
-      run_once: true
-    - name: "Get how long registration took"
+    - name: "Get how long '{{ grepper }}' took"
       shell:
-        grep '"msg". "Register ' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
-      register: clients_yaml_reg_timings
-    - name: "Append registration timings to central list"
+        grep '"msg". "{{ grepper }}' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
+      register: clients_yaml_grepper_timings
+    - name: "Append '{{ grepper }}' timings to central list"
       set_fact:
-        register_times: "{{ register_times }} + {{ hostvars[item]['clients_yaml_reg_timings']['stdout_lines'] }}"
+        grepper_times: "{{ grepper_times|default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
       with_items: "{{ ansible_play_batch }}"
       run_once: true
-    - name: "Show how long registration took"
+    - name: "Show how long '{{ grepper }}' took"
       debug:
-        var: register_times
+        var: grepper_times
       run_once: true
-    - name: "Show number of successful registrations"
+    - name: "Show number of successful '{{ grepper }}' events"
       debug:
-        var: register_times|length
+        var: grepper_times|length
       run_once: true
 
     - name: "Increment number of already registered containers"
       shell:   # FIXME: Use lineinfile or so
         echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
-      when: "update_used == 'true'"
+      when: "update_used|bool"
 
     ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
     ###  delegate_to: 127.0.0.1
@@ -109,7 +106,7 @@
         filename_base: "graph-reg-{{ lookup('pipe', 'date --iso-8601=seconds') }}"
       run_once: true
       delegate_to: 127.0.0.1
-      when: "save_graphs == 'true'"
+      when: "save_graphs|bool"
     - name: "Save Grafana load graf to {{ lookup('pipe', 'pwd') }}/../../{{ filename_base }}-*.png"
       get_url:
         url: "http://{{ grafana_host }}:{{ grafana_port }}/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com&fullscreen&var-Interface=interface-eth0&var-Disk=disk-vda&var-cpus0=All&var-cpus00=All&panelId={{ item.panelId }}&width=1500&height=500"
@@ -130,7 +127,7 @@
           panelId: 56
         - name: sat6_proc_cpu_sum
           panelId: 43
-      when: "save_graphs == 'true'"
+      when: "save_graphs|bool"
   roles:
       - role: grafana-graph-download
         when: "satellite_hostname is defined"
