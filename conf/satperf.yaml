@@ -71,7 +71,7 @@ content_puppet_module_file: /tmp/puppet-satperftest.txt
 content_puppet_module_file_content: Some important sentence
 content_puppet_product: SatPerfPuppetProduct
 content_puppet_repo: SatPerfPuppetRepo
-content_puppet_env: KT_Default_Organization_Library_SatPerfContentView
+content_puppet_env: KT_Default_Organization_Library_SatPerfContentView_2
 content_content_view_name: SatPerfContentView
 content_hostgroup: "SatperfHostGroup"
 content_activationkey: "SatperfActivationKey"
