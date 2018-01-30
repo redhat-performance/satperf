@@ -12,6 +12,7 @@
     ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,PUP..."   # Register systems and setup Puppet
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
     use_only_fresh: true   # should we use only containers which were not registered yet?
+    update_used: true
     resting: 0
     save_graphs: true
     bootstrap_retries: 10
@@ -77,6 +78,7 @@
     - name: "Increment number of already registered containers"
       shell:   # FIXME: Use lineinfile or so
         echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
+      when: "update_used == 'true'"
 
     ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
     ###  delegate_to: 127.0.0.1
