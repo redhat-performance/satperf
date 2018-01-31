@@ -135,6 +135,11 @@
         regexp: "^enabled"
         line: 'enabled=0'
         state: present
+    - name: "WORKAROUND: Hostname is a prerequisity of puppet - see bug 1540068"
+      yum:
+        name: hostname
+        state: present
+      tags: REG
     - name: "Generate bootstrap.py arguments"
       set_fact:
         bootstrap_args: "{% raw %}--server {{ bootstrap_foreman_fqdn }} --activationkey '{{ bootstrap_activationkey }}' --download-method {{ bootstrap_download_method }}{% endraw %}"
@@ -341,7 +346,7 @@
     # We need to serialize these hammer calls because of https://bugzilla.redhat.com/show_bug.cgi?id=1336007
     - name: "Configure puppet stuff on Sat for given container"
       command:
-        hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{{ content_puppet_env }}" --puppet-classes qaredhattest
+        hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{{ content_puppet_env }}" --puppet-classes "{{ content_puppet_module_name }}"
       with_items: "{% raw %}{{ groups['all'] }}{% endraw %}"
       when: item != 'localhost'
       run_once: true
@@ -365,9 +370,9 @@
       tags: PUPDEPLOY
     - name: "Check if file was created"
       action: command
-        cat /tmp/puppet-qaredhattest.txt
+        cat "{{ content_puppet_module_file }}"
       register: deployed
-      until: "deployed.rc is defined and installed.rc == 0"
+      until: "deployed.rc is defined and deployed.rc == 0"
       retries: 3
       delay: 10
       tags: PUPDEPLOY

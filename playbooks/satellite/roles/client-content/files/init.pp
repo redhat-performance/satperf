@@ -1,4 +1,4 @@
-class qaredhattest {
+class {{ content_puppet_module_name }} {
   file { "{{ content_puppet_module_file }}":
     ensure => file,
     mode   => 755,
