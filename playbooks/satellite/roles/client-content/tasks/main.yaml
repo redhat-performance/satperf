@@ -94,7 +94,7 @@
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" hostgroup create --name "{{ content_hostgroup }}" --lifecycle-environment Library --content-view "{{ sat_org }} View" --query-organization "{{ sat_org }}"
   - name: "Create activation key"
     command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" activation-key create --organization "{{ sat_org }}" --name "{{ content_activationkey }}"
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" activation-key create --organization "{{ sat_org }}" --name "{{ content_activationkey }}" --lifecycle-environment Library --content-view "{{ sat_org }} View"
   - name: "Determine '{{ content_rhel_name }}' subscription ID"
     shell:
       hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" subscription list --organization "{{ sat_org }}" --search 'name = "{{ content_rhel_name }}"' | grep -v '^ID,'
