@@ -1,0 +1,6 @@
+---
+  - name: "Remove current image"
+    command:
+      docker rmi r7perfsat
+    ignore_errors: yes
+...
