@@ -1,6 +1,6 @@
 FROM registry.access.redhat.com/rhel7/rhel-tools
 MAINTAINER jeder <jeder@redhat.com>
-RUN yum --disablerepo='*' --enablerepo='rhel-7-server-rpms' install -y openssh-server && yum clean all
+RUN yum --disablerepo='*' --enablerepo='rhel-7-server-rpms' install -y openssh-server hostname && yum clean all
 RUN sed -i 's/PermitRootLogin without-password/PermitRootLogin yes/' /etc/ssh/sshd_config
 RUN sed 's@session\s*required\s*pam_loginuid.so@session optional pam_loginuid.so@g' -i /etc/pam.d/sshd
 RUN mkdir /root/.ssh && chmod 700 /root/.ssh && touch /root/.ssh/authorized_keys && chmod 600 /root/.ssh/authorized_keys
