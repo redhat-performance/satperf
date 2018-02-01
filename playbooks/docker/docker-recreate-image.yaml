@@ -12,7 +12,7 @@
       ignore_errors: yes
     - name: "Dockerfile for base container present"
       copy:
-        src: roles/docker-host/files/Dockerfile
+        src: roles/build-image/files/Dockerfile
         dest: /root/Dockerfile
         force: yes
     - name: "Rebuild our base docker image"

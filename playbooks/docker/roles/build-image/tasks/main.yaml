@@ -1,0 +1,10 @@
+---
+  # Build container we will use
+  - name: "Dockerfile for base container present"
+    copy:
+      src: Dockerfile
+      dest: /root/Dockerfile
+  - name: "Base container built"
+    shell:
+      docker build -t r7perfsat - < /root/Dockerfile
+...

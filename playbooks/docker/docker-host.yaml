@@ -22,6 +22,7 @@
     ###- upgrade-restart
     - docker-host-vg   # when docker_host_vg is empty, this autodetects it
     - docker-host
+    - build-image
     - ../common/roles/enlarge-arp-table
     - ../satellite/roles/client-scripts
 ...
