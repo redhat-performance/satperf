@@ -368,8 +368,12 @@
         cat "{{ content_puppet_module_file }}"
       register: deployed
       until: "deployed.rc is defined and deployed.rc == 0"
-      retries: 3
-      delay: 10
+      retries: 30
+      delay: 1
+      tags: PUPDEPLOY
+    - name: "Check if file was created - timings"
+      debug:
+        msg="PickupDeployed {% raw %}{{ deployed.start }}{% endraw %} to {% raw %}{{ deployed.end }}{% endraw %}"
       tags: PUPDEPLOY
 
     ##################################################
