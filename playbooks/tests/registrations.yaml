@@ -17,7 +17,7 @@
     resting: 0
     bootstrap_retries: 10
     bootstrap_operatingsystem: "RedHat 7.4"
-    grepper: 'Register '
+    grepper: ''
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
       command:   # FIXME: Use lineinfile
@@ -58,19 +58,23 @@
       shell:
         grep '"msg". "{{ grepper }}' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_grepper_timings
+      when: "grepper != ''"
     - name: "Append '{{ grepper }}' timings to central list"
       set_fact:
         grepper_times: "{{ grepper_times|default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
       with_items: "{{ ansible_play_batch }}"
       run_once: true
+      when: "grepper != ''"
     - name: "Show how long '{{ grepper }}' took"
       debug:
         var: grepper_times
       run_once: true
+      when: "grepper != ''"
     - name: "Show number of successful '{{ grepper }}' events"
       debug:
         var: grepper_times|length
       run_once: true
+      when: "grepper != ''"
 
     - name: "Increment number of already registered containers"
       shell:   # FIXME: Use lineinfile or so
