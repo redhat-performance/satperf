@@ -41,6 +41,14 @@ function a() {
     return $rc
 }
 
+function a_out() {
+    if $run_lib_dryrun; then
+        echo "FAKE ansible RUN"
+    else
+        ansible $opts_adhoc "$@"
+    fi
+}
+
 function ap() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
