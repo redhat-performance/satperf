@@ -1,43 +1,12 @@
 #!/bin/bash
 
-###set -x
-set -e
+source run-library.sh
 
 opts="--forks 100 -i conf/20170625-gprfc019.ini"
 opts_adhoc="$opts --user root"
 
-function log() {
-    echo "[$( date --iso-8601=seconds )] $*"
-}
-
-function a() {
-    local out=$1; shift
-    local start=$( date +%s )
-    log "Start 'ansible $opts_adhoc $*'"
-    ansible $opts_adhoc "$@" &>$out
-    rc=$?
-    local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
-    return $rc
-}
-function ap() {
-    local out=$1; shift
-    local start=$( date +%s )
-    log "Start 'ansible-playbook $opts $*'"
-    ansible-playbook $opts "$@" &>$out
-    rc=$?
-    local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
-    return $rc
-}
-function s() {
-    log "Sleep for $1 seconds"
-    sleep $1
-}
-
 function measure() {
     log "Start scenario $1"
-    mkdir $1
 
     a $1/restart.log -m "shell" -a "katello-service stop; swapoff -a; echo 3 > /proc/sys/vm/drop_caches; swapon -a; katello-service start" satellite6
     s 120

@@ -1,46 +1,15 @@
 #!/bin/bash
 
-###set -x
-set -e
+source run-library.sh
 
 opts="--forks 100 -i conf/20170625-gprfc019.ini"
 opts_adhoc="$opts --user root --timeout 180"
-
-function log() {
-    echo "[$( date --iso-8601=seconds )] $*"
-}
-
-function a() {
-    local out=$1; shift
-    local start=$( date +%s )
-    log "Start 'ansible $opts_adhoc $*'"
-    ansible $opts_adhoc "$@" &>$out
-    rc=$?
-    local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
-    return $rc
-}
-function ap() {
-    local out=$1; shift
-    local start=$( date +%s )
-    log "Start 'ansible-playbook $opts $*'"
-    ansible-playbook $opts "$@" &>$out
-    rc=$?
-    local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
-    return $rc
-}
-function s() {
-    log "Sleep for $1 seconds"
-    sleep $1
-}
 
 function measure_pmps() {
     # $1 ... base scenario name
     # $2 ... PassengerMaxPoolSize
     log "Start case $1 with $2 setting for PassengerMaxPoolSize"
     d=$1/$2
-    mkdir $d
 
     case $2 in
         3)
@@ -72,7 +41,6 @@ function measure() {
     # $2 ... VM name
     log "Start scenario $1 on $2"
     d="$1/$2"
-    mkdir $d
 
     a $d/boot.log -m "shell" -a "for vm in \$( virsh list --name ); do virsh shutdown \"\$vm\"; done; while [ \$( virsh list --name | grep -v '^\s*$' | wc -l | cut -d ' ' -f 1 ) -gt 0 ]; do sleep 1; done; virsh start '$2'" gprfc019.sbu.lab.eng.bos.redhat.com
     a $d/set-cleanup.log -m "lineinfile" -a "path=/etc/httpd/conf.d/passenger.conf regexp=\"PassengerMaxPoolSize\" state=\"absent\"" satellite6
@@ -91,7 +59,6 @@ function measure() {
 
 function doit() {
     log "START RUN"
-    mkdir $1
 
     ap $1/reg-1st-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,PUP' save_graphs=false"
     ap $1/reg-2nd-40.log playbooks/tests/registrations.yaml -e "size=5 resting=30 tags='untagged,REGTIMEOUTTWEAK,REG,PUP' save_graphs=false"

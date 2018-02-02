@@ -1,43 +1,12 @@
 #!/bin/bash
 
-###set -x
-set -e
+source run-library.sh
 
 opts="--forks 100 -i conf/20170625-gprfc019.ini"
 opts_adhoc="$opts --user root"
 
-function log() {
-    echo "[$( date --iso-8601=seconds )] $*"
-}
-
-function a() {
-    local out=$1; shift
-    local start=$( date +%s )
-    log "Start 'ansible $opts_adhoc $*'"
-    ansible $opts_adhoc "$@" &>$out
-    rc=$?
-    local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
-    return $rc
-}
-function ap() {
-    local out=$1; shift
-    local start=$( date +%s )
-    log "Start 'ansible-playbook $opts $*'"
-    ansible-playbook $opts "$@" &>$out
-    rc=$?
-    local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
-    return $rc
-}
-function s() {
-    log "Sleep for $1 seconds"
-    sleep $1
-}
-
 function measure() {
     log "Start scenario $1"
-    mkdir $1
 
     ap $1-remove-hosts-pre.log playbooks/satellite/satellite-remove-hosts.yaml
 
@@ -111,7 +80,6 @@ scenario="results-rex-$( date +%Y%m%d )-gprfc019-20GB"
 doit "$scenario" "gprfc019-vm1-20GB" 2>&1 | tee $scenario.log
 
 ###X=delme
-###mkdir $X
 ###ap $X-remove-hosts-pre.log  playbooks/satellite/satellite-remove-hosts.yaml
 ###ap $X/reg-1st-40.log playbooks/tests/registrations.yaml -e "size=5 resting=0 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"   # register, downgrade, install katello-agent (for katello-package-upload)
 ###d=$( date --iso-8601=seconds )
