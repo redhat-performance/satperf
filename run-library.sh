@@ -7,6 +7,7 @@ set -e
 opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
 opts_adhoc=${opts_adhoc:-"$opts --user root"}
 logs=${logs:-"logs-$( date --iso-8601=seconds )"}
+run_lib_dryrun=false
 
 # Requirements check
 if ! type bc >/dev/null; then
@@ -28,7 +29,11 @@ function a() {
     mkdir -p $( dirname $out )
     local start=$( date +%s )
     log "Start 'ansible $opts_adhoc $*' with log in $out"
-    ansible $opts_adhoc "$@" &>$out
+    if $run_lib_dryrun; then
+        log "FAKE ansible RUN"
+    else
+        ansible $opts_adhoc "$@" &>$out
+    fi
     rc=$?
     local end=$( date +%s )
     log "Finish after $( expr $end - $start ) seconds with exit code $rc"
@@ -41,7 +46,11 @@ function ap() {
     mkdir -p $( dirname $out )
     local start=$( date +%s )
     log "Start 'ansible-playbook $opts $*' with log in $out"
-    ansible-playbook $opts "$@" &>$out
+    if $run_lib_dryrun; then
+        log "FAKE ansible-playbook RUN"
+    else
+        ansible-playbook $opts "$@" &>$out
+    fi
     rc=$?
     local end=$( date +%s )
     log "Finish after $( expr $end - $start ) seconds with exit code $rc"
@@ -51,7 +60,11 @@ function ap() {
 
 function s() {
     log "Sleep for $1 seconds"
-    sleep $1
+    if $run_lib_dryrun; then
+        log "FAKE SLEEP"
+    else
+        sleep $1
+    fi
 }
 
 

@@ -5,9 +5,14 @@ source run-library.sh
 opts="--forks 100 -i conf/20171214-bagl-puppet4.ini"
 opts_adhoc="$opts --user root"
 
-###ansible-playbook --forks 100 -i conf/20171214-bagl-puppet4.ini playbooks/satellite/satellite-remove-hosts.yaml >/tmp/satellite-remove-hosts.log &
-###ansible-playbook --forks 100 -i conf/20171214-bagl-puppet4.ini playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml >/tmp/docker-tierdown-tierup.log &
-###wait
+### FIXME
+run_lib_dryrun=true
+
+ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
+ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
+wait
+
+exit 0
 
 function reg() {
     for i in $( seq $1 ); do
