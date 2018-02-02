@@ -335,6 +335,17 @@
         - PUP_REG_ONLY
 
     ##################################################
+    # Stop puppet service
+    ##################################################
+    - name: "Stop and disable puppet daemon"
+      service:
+        name: puppet
+        state: stopped
+        enabled: false
+      tags:
+        - PUP_STOP
+
+    ##################################################
     # Configure puppet on satellite for given 
     # containers
     ##################################################
