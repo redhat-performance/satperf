@@ -70,3 +70,9 @@
     - name: "Caches are dropped"
       shell:
         echo 3 > /proc/sys/vm/drop_caches
+
+    - name: "Remove ReX's known_hosts on Satellite (workaround to bug 1505842)"
+      shell:
+        :>/usr/share/foreman-proxy/.ssh/known_hosts
+      run_once: true
+      delegate_to: "{{ groups['satellite6']|first }}"
