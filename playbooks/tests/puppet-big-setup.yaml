@@ -1,0 +1,178 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    use_only_fresh: true   # should we use only containers which were not registered yet?
+    update_used: true   # once we use containers, should we update /root/containers-used-count?
+    grepper: PickupPuppet
+    content_puppet_repo: SatPerfPuppetRealModulesRepo
+    content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
+    content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
+    content_puppet_module_download: https://forge.puppet.com/v3/files/
+    content_puppet_cv: SatPerfContentViewPuppetRealModules
+    content_puppet_modules:
+      - author: cnwr
+        name: cacti
+        version: 0.0.2
+      - author: crayfishx
+        name: firewalld
+        version: 2.1.0
+      - author: ghoneycutt
+        name: common
+        version: 1.6.0
+      - author: ghoneycutt
+        name: nsswitch
+        version: 1.6.0
+      - author: ghoneycutt
+        name: pam
+        version: 2.29.1
+      - author: ghoneycutt
+        name: ssh
+        version: 3.46.0
+      - author: jhoblitt
+        name: sysstat
+        version: 1.1.0
+      - author: nanliu
+        name: staging
+        version: 1.0.3
+      - author: puppet
+        name: archive
+        version: 1.1.1
+      - author: puppetlabs
+        name: acl
+        version: 1.1.2
+      - author: puppetlabs
+        name: apache
+        version: 1.11.0
+      - author: puppetlabs
+        name: apache
+        version: 1.8.1
+      - author: puppetlabs
+        name: apt
+        version: 2.4.0
+      - author: puppetlabs
+        name: concat
+        version: 2.2.0
+      - author: puppetlabs
+        name: concat
+        version: 2.2.1
+      - author: puppetlabs
+        name: dhcp
+        version: 0.4.0
+      - author: puppetlabs
+        name: firewall
+        version: 1.7.2
+      - author: puppetlabs
+        name: gcc
+        version: 0.3.0
+      - author: puppetlabs
+        name: haproxy
+        version: 1.4.0
+      - author: puppetlabs
+        name: inifile
+        version: 1.4.3
+      - author: puppetlabs
+        name: java
+        version: 1.4.3
+      - author: puppetlabs
+        name: limits
+        version: 0.1.0
+      - author: puppetlabs
+        name: motd
+        version: 1.4.0
+      - author: puppetlabs
+        name: mysql
+        version: 3.11.0
+      - author: puppetlabs
+        name: mysql
+        version: 3.6.2
+      - author: puppetlabs
+        name: ntp
+        version: 4.1.2
+      - author: puppetlabs
+        name: ntp
+        version: 4.2.0
+      - author: puppetlabs
+        name: postgresql
+        version: 4.7.0
+      - author: puppetlabs
+        name: postgresql
+        version: 4.9.0
+      - author: puppetlabs
+        name: stdlib
+        version: 4.12.0
+      - author: puppetlabs
+        name: stdlib
+        version: 4.17.0
+      - author: puppetlabs
+        name: tomcat
+        version: 1.4.1
+      - author: puppetlabs
+        name: tomcat
+        version: 1.7.0
+      - author: puppetlabs
+        name: vcsrepo
+        version: 1.3.2
+      - author: puppet
+        name: staging
+        version: 2.0.1
+      - author: rodjek
+        name: logrotate
+        version: 1.1.1
+      - author: rtyler
+        name: jenkins
+        version: 1.6.1
+      - author: saz
+        name: rsyslog
+        version: 3.5.1
+      - author: stbenjam
+        name: hash_resources
+        version: 1.0.1
+      - author: theforeman
+        name: puppet
+        version: 6.0.1
+      - author: thias
+        name: postfix
+        version: 0.3.4
+      - author: thias
+        name: sysctl
+        version: 1.0.6
+      - author: yuav
+        name: autofs
+        version: 1.2.3
+  tasks:
+    - name: "Create Puppet repo"
+      command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository create --content-type puppet --product "{{ content_puppet_product }}" --organization "{{ sat_org }}" --name "{{ content_puppet_repo }}"
+      register: cmd
+      failed_when: "cmd.rc != 0 and 'Name has already been taken for this product.' not in cmd.stderr and 'Label has already been taken for this product.' not in cmd.stderr"
+      changed_when: "cmd.rc == 0"
+    - name: "Directory for modules"
+      file:
+        name: /root/puppet-real-modules
+        state: directory
+    - name: "Puppet modules downloaded"
+      get_url:
+        url: "{{ content_puppet_module_download }}/{{ item.author }}-{{ item.name }}-{{ item.version }}.tar.gz"
+        dest: "/root/puppet-real-modules/{{ item.author }}-{{ item.name }}-{{ item.version }}.tar.gz"
+        force: no
+      with_items: "{{ content_puppet_modules }}"
+    - name: "Upload puppet modules"
+      command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository upload-content --product "{{ content_puppet_product }}" --organization "{{ sat_org }}" --name "{{ content_puppet_repo }}" --path "/root/puppet-real-modules/{{ item.author }}-{{ item.name }}-{{ item.version }}.tar.gz"
+      with_items: "{{ content_puppet_modules }}"
+    - name: "Create content view we will use"
+      command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view create --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
+    - name: "Add puppet modules into the content view"
+      command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module add --organization "{{ sat_org }}" --content-view "{{ content_puppet_cv }}" --name "{{ item.name }}" --author "{{ item.author }}"
+      with_items: "{{ content_puppet_modules }}"
+    - name: "Publish our content view"
+      command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
+...

@@ -1,0 +1,40 @@
+---
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Gather facts"
+      setup:
+        gather_subset: '!hardware'
+        ###gather_timeout: 60   # available in Ansible 2.2
+      tags: SETUP
+    - name: "Configure puppet stuff on Satellite containers"
+      shell: |
+        sleep "$(( $RANDOM % {% raw %}{{ groups['all']|length }}{% endraw %} ))"   # randomize this a bit in case we have lots of docker hosts
+        hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --puppet-classes "{% raw %}{{ content_puppet_module_name }}{% endraw %}"
+      with_items: "{% raw %}{{ groups['all'] }}{% endraw %}"
+      when: item != 'localhost'
+      run_once: true
+      delegate_to: "{{ groups['satellite6']|first }}"
+      ignore_errors: true
+      tags: SETUP
+    - name: "Set puppet environment"
+      command:
+        /usr/bin/puppet config set environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --section agent
+      tags: SETUP
+    - name: "Downgrade this package version as modules needs to install ...-devel later (should not be required if we would be running against real RHEL repo)"
+      command:
+        yum -y distribution-synchronization libstdc++
+      tag: SETUP
+
+    - name: "Pickup puppet action"
+      command:
+        /usr/bin/puppet agent --onetime --no-daemonize --ignorecache
+      register: pickup
+      ignore_errors: true
+      tags: DEPLOY
+    - name: "Pickup puppet action - timings"
+      debug:
+        msg="PickupPuppet {% raw %}{{ pickup.start }}{% endraw %} to {% raw %}{{ pickup.end }}{% endraw %}"
+      tags: DEPLOY
+...
