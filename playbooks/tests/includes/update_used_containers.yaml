@@ -1,0 +1,12 @@
+---
+# Update count of used containers
+#
+# Expects these variables to be set:
+#   used_count ... to which number we should set the counter
+#   update_used ... bool determining if we should do this at all
+
+  - name: "Increment number of already used containers"
+    shell:   # FIXME: Use lineinfile or so
+      echo "{{ used_count|int }}" >/root/container-used-count
+    when: "update_used|bool"
+...

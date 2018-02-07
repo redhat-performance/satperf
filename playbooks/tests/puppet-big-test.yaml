@@ -10,7 +10,7 @@
     forks: "{{ size }}"   # in how many forks should playbooks run?
     use_only_fresh: true   # should we use only containers which were not registered yet?
     update_used: true   # once we use containers, should we update /root/containers-used-count?
-    grepper: PickupPuppet
+    grepper: ''
     content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
     content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
   tasks:
@@ -24,27 +24,52 @@
       command:   # FIXME: Use lineinfile
         sed -i 's|^.*host_key_checking.*$|host_key_checking = False|' /etc/ansible/ansible.cfg
 
-    - name: "Load number of already registered containers"
-      command:
-        cat /root/container-used-count
-      register: containers_used_count_cmd
-      ignore_errors: true
-      when: "use_only_fresh|bool"
-    - name: "Set number of used containers to 0"
-      set_fact:
-        containers_used_count: 0
-    - name: "Set number of used containers based on file"
-      set_fact:
-        containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
-      when: "use_only_fresh|bool and (containers_used_count_cmd.rc is defined and containers_used_count_cmd.rc == 0)"
+    - include_tasks: includes/prepare_clients_ini.yaml
+      vars:
+        use_only_fresh: "{{ use_only_fresh|bool }}"
+        size: "{{ size|ini }}"
 
-    - name: "Generate list of containers we are going to use"
-      shell:
-        head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
     - name: "Determine marker variable"
       set_fact:
         marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
       run_once: yes
+
+
+
+    ##################################################
+    ### Puppet registration
+    ##################################################
+
+    - name: "Determine log name for registration preparation"
+      set_fact:
+        prepare_cmd_log: "/root/out-puppet-big-prepare-{{ marker }}.log"
+      run_once: yes
+    - name: "Run puppet-big-client.yaml (log = {{ prepare_cmd_log }}; tags = PREPARE)"
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentView_2' content_puppet_module_name=''" --tags "PREPARE" puppet-big-client.yaml &> "{{ prepare_cmd_log }}"
+      register: prepare_cmd
+      ignore_errors: true
+
+    - name: "Determine log name for register"
+      set_fact:
+        register_cmd_log: "/root/out-puppet-big-register-{{ marker }}.log"
+      run_once: yes
+    - name: "Run puppet-big-client.yaml (log = {{ register_cmd_log }}; tags = REGISTER)"
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentView_2' content_puppet_module_name=''" --tags "REGISTER" puppet-big-client.yaml &> "{{ register_cmd_log }}"
+      register: register_cmd
+      ignore_errors: true
+
+    - include_tasks: includes/show_grepper.yaml
+      vars:
+        grepper: "{{ grepper }}"
+        grepper_log: "{{ register_cmd_log }}"
+
+
+
+    ##################################################
+    ### Puppet deploy our single module
+    ##################################################
 
     - name: "Determine log name for setup"
       set_fact:
@@ -66,30 +91,46 @@
       register: deploy_cmd
       ignore_errors: true
 
-    - name: "Get how long '{{ grepper }}' took"
-      shell:
-        grep '"msg". "{{ grepper }}' "{{ deploy_cmd_log }}" | cut -d '"' -f 4
-      register: clients_yaml_grepper_timings
-      when: "grepper != ''"
-    - name: "Append '{{ grepper }}' timings to central list"
-      set_fact:
-        grepper_times: "{{ grepper_times|default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
-      with_items: "{{ ansible_play_batch }}"
-      run_once: true
-      when: "grepper != ''"
-    - name: "Show how long '{{ grepper }}' took"
-      debug:
-        var: grepper_times
-      run_once: true
-      when: "grepper != ''"
-    - name: "Show number of successful '{{ grepper }}' events"
-      debug:
-        var: grepper_times|length
-      run_once: true
-      when: "grepper != ''"
+    - include_tasks: includes/show_grepper.yaml
+      vars:
+        grepper: "{{ grepper }}"
+        grepper_log: "{{ deploy_cmd_log }}"
 
-    - name: "Increment number of already registered containers"
-      shell:   # FIXME: Use lineinfile or so
-        echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
-      when: "update_used|bool"
+
+
+    ##################################################
+    ### Puppet deploy lots of modules
+    ##################################################
+
+    - name: "Determine log name for setup"
+      set_fact:
+        setup_cmd_log: "/root/out-puppet-big-setup-{{ marker }}.log"
+      run_once: yes
+    - name: "Run puppet-big-client.yaml (log = {{ setup_cmd_log }}; tags = SETUP)"
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3' content_puppet_module_name='acl,apache,archive,autofs,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat'" --tags "SETUP" puppet-big-client.yaml &> "{{ setup_cmd_log }}"
+      register: setup_cmd
+      ###ignore_errors: true
+
+    - name: "Determine log name for deploy"
+      set_fact:
+        deploy_cmd_log: "/root/out-puppet-big-deploy-{{ marker }}.log"
+      run_once: yes
+    - name: "Run puppet-big-client.yaml (log = {{ deploy_cmd_log }}; tags = DEPLOY)"
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3' content_puppet_module_name='acl,apache,archive,autofs,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat'" --tags "DEPLOY" puppet-big-client.yaml &> "{{ deploy_cmd_log }}"
+      register: deploy_cmd
+      ignore_errors: true
+
+    - include_tasks: includes/show_grepper.yaml
+      vars:
+        grepper: "{{ grepper }}"
+        grepper_log: "{{ deploy_cmd_log }}"
+
+
+
+    - include_tasks: includes/update_used_containers.yaml
+      vars:
+        used_count: "{{ containers_used_count|int + size|int }}"
+        update_used: "{{ update_used|bool }}"
 ...

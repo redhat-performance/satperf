@@ -2,7 +2,52 @@
 - hosts: all
   remote_user: root
   gather_facts: no
+  vars:
+    server: "satellite.example.com"
+    content_puppet_env: "..."
+    content_puppet_module_name: "..."
   tasks:
+    - name: "Remove puppet certs if any"
+      shell:
+        rm -rf /var/lib/puppet/ssl/*
+      tags: PREPARE
+    - name: "Hostname is a prerequisity of puppet - see bug 1540068"
+      yum:
+        name: hostname
+        state: present
+      tags: PREPARE
+    - name: "Install puppet"
+      yum:
+        name: puppet
+        state: latest
+      register: installed
+      until: "installed.rc is defined and installed.rc == 0"
+      retries: 10
+      delay: 10
+      tags: PREPARE
+    - name: "Set puppet server"
+      command:
+        /usr/bin/puppet config set server "{% raw %}{{ server }}{% endraw %}" --section agent
+      tags: PREPARE
+    - name: "Set puppet ca_server"
+      command:
+        /usr/bin/puppet config set ca_server "{% raw %}{{ server }}{% endraw %}" --section agent
+      tags: PREPARE
+    - name: "Set puppet environment"
+      command:
+        /usr/bin/puppet config set environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --section agent
+      tags: PREPARE
+
+    - name: "Register puppet host"
+      shell:
+        /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
+      register: reg
+      tags: REGISTER
+    - name: "Register puppet host - timings"
+      debug:
+        msg="RegisterPuppet {% raw %}{{ reg.start }}{% endraw %} to {% raw %}{{ reg.end }}{% endraw %}"
+      tags: REGISTER
+
     - name: "Gather facts"
       setup:
         gather_subset: '!hardware'
@@ -17,10 +62,6 @@
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
       ignore_errors: true
-      tags: SETUP
-    - name: "Set puppet environment"
-      command:
-        /usr/bin/puppet config set environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --section agent
       tags: SETUP
     - name: "Downgrade this package version as modules needs to install ...-devel later (should not be required if we would be running against real RHEL repo)"
       command:

@@ -1,0 +1,30 @@
+---
+# On all hosts running playbook, extract lines matching grepper patter from
+# certain file and print them.
+#
+# Expects these variables to be set:
+#   grepper ... string to grep for
+#   grepper_log ... filename of a log to grep
+
+  - name: "Get how long '{{ grepper }}' took"
+    shell:
+      grep '"msg". "{{ grepper }}' "{{ grepper_log }}" | cut -d '"' -f 4
+    register: log_grepper_timings
+    when: "grepper != ''"
+  - name: "Append '{{ grepper }}' timings to central list"
+    set_fact:
+      grepper_times: "{{ grepper_times|default([]) + hostvars[item]['log_grepper_timings']['stdout_lines'] }}"
+    with_items: "{{ ansible_play_batch }}"
+    run_once: true
+    when: "grepper != ''"
+  - name: "Show how long '{{ grepper }}' took"
+    debug:
+      var: grepper_times
+    run_once: true
+    when: "grepper != ''"
+  - name: "Show number of successful '{{ grepper }}' events"
+    debug:
+      var: grepper_times|length
+    run_once: true
+    when: "grepper != ''"
+...

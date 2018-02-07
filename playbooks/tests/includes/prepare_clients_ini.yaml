@@ -1,0 +1,26 @@
+---
+# This will load number of used containers and then based on requested
+# number of containers creates clients.ini file with fresh containers.
+#
+# Expects these variables to be set:
+#   use_only_fresh ... only consider used containers counter if this is true
+#   size ... how many containers should be in clients.ini
+
+  - name: "Load number of already registered containers"
+    command:
+      cat /root/container-used-count
+    register: containers_used_count_cmd
+    ignore_errors: true
+    when: "use_only_fresh|bool"
+  - name: "Set number of used containers to 0"
+    set_fact:
+      containers_used_count: 0
+  - name: "Set number of used containers based on file"
+    set_fact:
+      containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
+    when: "use_only_fresh|bool and (containers_used_count_cmd.rc is defined and containers_used_count_cmd.rc == 0)"
+
+  - name: "Generate list of containers we are going to use"
+    shell:
+      head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
+...
