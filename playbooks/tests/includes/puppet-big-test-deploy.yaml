@@ -26,6 +26,6 @@
 
   - include_tasks: includes/show_grepper.yaml
     vars:
-      grepper: "{{ grepper }}"
+      grepper: "PickupPuppet"
       grepper_log: "{{ deploy_cmd_log }}"
 ...

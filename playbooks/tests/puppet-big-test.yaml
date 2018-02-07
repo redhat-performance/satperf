@@ -10,7 +10,6 @@
     forks: "{{ size }}"   # in how many forks should playbooks run?
     use_only_fresh: true   # should we use only containers which were not registered yet?
     update_used: true   # once we use containers, should we update /root/containers-used-count?
-    grepper: ''
   tasks:
     - name: "Deploy docker host side of big puppet test"
       template:
@@ -35,6 +34,7 @@
 
     # Puppet registration
     - include_tasks: includes/puppet-big-test-register.yaml
+      tags: REGISTER
 
 
     # Puppet deploy our single module
@@ -43,6 +43,7 @@
         nickname: single
         content_puppet_env: KT_Default_Organization_Library_SatPerfContentView_2
         content_puppet_module_name: satperftest
+      tags: DEPLOY_SINGLE
 
 
     # Puppet deploy lots of modules
@@ -51,6 +52,7 @@
         nickname: bunch
         content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
         content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
+      tags: DEPLOY_BUNCH
 
 
     - include_tasks: includes/update_used_containers.yaml

@@ -21,6 +21,6 @@
 
   - include_tasks: includes/show_grepper.yaml
     vars:
-      grepper: "{{ grepper }}"
+      grepper: "RegisterPuppet"
       grepper_log: "{{ register_cmd_log }}"
 ...
