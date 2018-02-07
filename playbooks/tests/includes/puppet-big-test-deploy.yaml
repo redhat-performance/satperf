@@ -1,0 +1,31 @@
+---
+# Expects these variables to be set:
+#   nickname ... just a marker to include in a log name
+#   content_puppet_env ... puppet environment label you want to assign to the hosts
+#   content_puppet_module_name ... modules to configure deploy on a hosts (must be in the environment)
+
+  - name: "Determine log name for setup"
+    set_fact:
+      setup_cmd_log: "/root/out-puppet-{{ nickname }}-setup-{{ marker }}.log"
+    run_once: yes
+  - name: "Run puppet-big-client.yaml (log = {{ setup_cmd_log }}; tags = SETUP)"
+    shell:
+      ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='{{ content_puppet_env }}' content_puppet_module_name='{{ content_puppet_module_name }}'" --tags "SETUP" puppet-big-client.yaml &> "{{ setup_cmd_log }}"
+    register: setup_cmd
+    ###ignore_errors: true
+
+  - name: "Determine log name for deploy"
+    set_fact:
+      deploy_cmd_log: "/root/out-puppet-big-deploy-{{ marker }}.log"
+    run_once: yes
+  - name: "Run puppet-big-client.yaml (log = {{ deploy_cmd_log }}; tags = DEPLOY)"
+    shell:
+      ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --tags "DEPLOY" puppet-big-client.yaml &> "{{ deploy_cmd_log }}"
+    register: deploy_cmd
+    ignore_errors: true
+
+  - include_tasks: includes/show_grepper.yaml
+    vars:
+      grepper: "{{ grepper }}"
+      grepper_log: "{{ deploy_cmd_log }}"
+...

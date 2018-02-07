@@ -11,8 +11,6 @@
     use_only_fresh: true   # should we use only containers which were not registered yet?
     update_used: true   # once we use containers, should we update /root/containers-used-count?
     grepper: ''
-    content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
-    content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
   tasks:
     - name: "Deploy docker host side of big puppet test"
       template:
@@ -35,98 +33,24 @@
       run_once: yes
 
 
+    # Puppet registration
+    - include_tasks: includes/puppet-big-test-register.yaml
 
-    ##################################################
-    ### Puppet registration
-    ##################################################
 
-    - name: "Determine log name for registration preparation"
-      set_fact:
-        prepare_cmd_log: "/root/out-puppet-big-prepare-{{ marker }}.log"
-      run_once: yes
-    - name: "Run puppet-big-client.yaml (log = {{ prepare_cmd_log }}; tags = PREPARE)"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentView_2' content_puppet_module_name=''" --tags "PREPARE" puppet-big-client.yaml &> "{{ prepare_cmd_log }}"
-      register: prepare_cmd
-      ignore_errors: true
-
-    - name: "Determine log name for register"
-      set_fact:
-        register_cmd_log: "/root/out-puppet-big-register-{{ marker }}.log"
-      run_once: yes
-    - name: "Run puppet-big-client.yaml (log = {{ register_cmd_log }}; tags = REGISTER)"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentView_2' content_puppet_module_name=''" --tags "REGISTER" puppet-big-client.yaml &> "{{ register_cmd_log }}"
-      register: register_cmd
-      ignore_errors: true
-
-    - include_tasks: includes/show_grepper.yaml
+    # Puppet deploy our single module
+    - include_tasks: includes/puppet-big-test-deploy.yaml
       vars:
-        grepper: "{{ grepper }}"
-        grepper_log: "{{ register_cmd_log }}"
+        nickname: single
+        content_puppet_env: KT_Default_Organization_Library_SatPerfContentView_2
+        content_puppet_module_name: satperftest
 
 
-
-    ##################################################
-    ### Puppet deploy our single module
-    ##################################################
-
-    - name: "Determine log name for setup"
-      set_fact:
-        setup_cmd_log: "/root/out-puppet-big-setup-{{ marker }}.log"
-      run_once: yes
-    - name: "Run puppet-big-client.yaml (log = {{ setup_cmd_log }}; tags = SETUP)"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3' content_puppet_module_name='acl,apache,archive,autofs,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat'" --tags "SETUP" puppet-big-client.yaml &> "{{ setup_cmd_log }}"
-      register: setup_cmd
-      ###ignore_errors: true
-
-    - name: "Determine log name for deploy"
-      set_fact:
-        deploy_cmd_log: "/root/out-puppet-big-deploy-{{ marker }}.log"
-      run_once: yes
-    - name: "Run puppet-big-client.yaml (log = {{ deploy_cmd_log }}; tags = DEPLOY)"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3' content_puppet_module_name='acl,apache,archive,autofs,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat'" --tags "DEPLOY" puppet-big-client.yaml &> "{{ deploy_cmd_log }}"
-      register: deploy_cmd
-      ignore_errors: true
-
-    - include_tasks: includes/show_grepper.yaml
+    # Puppet deploy lots of modules
+    - include_tasks: includes/puppet-big-test-deploy.yaml
       vars:
-        grepper: "{{ grepper }}"
-        grepper_log: "{{ deploy_cmd_log }}"
-
-
-
-    ##################################################
-    ### Puppet deploy lots of modules
-    ##################################################
-
-    - name: "Determine log name for setup"
-      set_fact:
-        setup_cmd_log: "/root/out-puppet-big-setup-{{ marker }}.log"
-      run_once: yes
-    - name: "Run puppet-big-client.yaml (log = {{ setup_cmd_log }}; tags = SETUP)"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3' content_puppet_module_name='acl,apache,archive,autofs,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat'" --tags "SETUP" puppet-big-client.yaml &> "{{ setup_cmd_log }}"
-      register: setup_cmd
-      ###ignore_errors: true
-
-    - name: "Determine log name for deploy"
-      set_fact:
-        deploy_cmd_log: "/root/out-puppet-big-deploy-{{ marker }}.log"
-      run_once: yes
-    - name: "Run puppet-big-client.yaml (log = {{ deploy_cmd_log }}; tags = DEPLOY)"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3' content_puppet_module_name='acl,apache,archive,autofs,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat'" --tags "DEPLOY" puppet-big-client.yaml &> "{{ deploy_cmd_log }}"
-      register: deploy_cmd
-      ignore_errors: true
-
-    - include_tasks: includes/show_grepper.yaml
-      vars:
-        grepper: "{{ grepper }}"
-        grepper_log: "{{ deploy_cmd_log }}"
-
+        nickname: bunch
+        content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
+        content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
 
 
     - include_tasks: includes/update_used_containers.yaml
