@@ -1,6 +1,6 @@
 ---
-- include: remove_home_partition.yaml
+- include_tasks: remove_home_partition.yaml
   when: "extend_root_partition == 'true'"
-- include: extend_root_partition.yaml
+- include_tasks: extend_root_partition.yaml
   when: "extend_root_partition == 'true'"
 ...
