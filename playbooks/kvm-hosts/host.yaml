@@ -6,8 +6,8 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - ../satellite/roles/scalelab-nic-cleanup
-    - ../satellite/roles/rhsm
+    - ../common/roles/scalelab-nic-cleanup
+    - ../common/roles/rhsm
     - setup-bridges
     - install-libvirtd
     - setup-storage
