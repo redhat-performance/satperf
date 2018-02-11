@@ -5,10 +5,10 @@ source run-library.sh
 opts="--forks 100 -i conf/20171214-bagl-puppet4.ini"
 opts_adhoc="$opts --user root"
 
-###ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
-###ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
-###wait
-###s 300
+ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
+ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
+wait
+s 300
 
 function reg_five() {
     # Register "$1 * 5 * number_of_docker_hosts" containers
@@ -40,3 +40,29 @@ function measure() {
 measure 10
 measure 20
 measure 30
+
+ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
+ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
+wait
+s 300
+
+function measure_lots() {
+    local concurency=$1
+    local host_fives=$(( $concurency / 5 ))
+    log "===== Concurency $concurency: $( date ) ====="
+
+    a $concurency-backup-used-containers-count.log -m shell -a "cp /root/container-used-count{,.foobarbaz}" docker-hosts
+    reg_five $host_fives
+    a $concurency-restore-used-containers-count.log -m shell -a "cp /root/container-used-count{.foobarbaz,}" docker-hosts
+
+    ap $concurency-PickupPuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_BUNCH -e "size=$concurency"
+    ./reg-average.sh PickupPuppet $logs/$concurency-PickupPuppetBunch.log
+    s 300
+}
+
+measure_lots 20
+measure_lots 60
+measure_lots 100
+measure_lots 140
+measure_lots 180
+measure_lots 220
