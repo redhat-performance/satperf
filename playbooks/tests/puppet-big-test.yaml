@@ -16,17 +16,23 @@
         src: puppet-big-client.yaml.j2
         dest: /root/puppet-big-client.yaml
         validate: python -c 'import yaml; print yaml.safe_load(open("%s", "r"))'
+      tags: always
 
     - name: "Ansible on docker host configured to ignore host keys"
       command:   # FIXME: Use lineinfile
         sed -i 's|^.*host_key_checking.*$|host_key_checking = False|' /etc/ansible/ansible.cfg
+      tags: always
 
     - include_tasks: includes/prepare_clients_ini.yaml
+      vars:
+        size: "{{ size }}"
+      tags: always
 
     - name: "Determine marker variable"
       set_fact:
         marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
       run_once: yes
+      tags: always
 
 
     # Puppet registration
@@ -55,4 +61,5 @@
     - include_tasks: includes/update_used_containers.yaml
       vars:
         used_count: "{{ containers_used_count|int + size|int }}"
+      tags: always
 ...
