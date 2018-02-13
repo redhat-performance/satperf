@@ -6,7 +6,7 @@
 
   - name: "Determine log name for setup"
     set_fact:
-      setup_cmd_log: "/root/out-puppet-{{ nickname }}-setup-{{ marker }}.log"
+      setup_cmd_log: "/root/out-puppet-{{ nickname }}-setup-{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}.log"
     run_once: yes
   - name: "Run puppet-big-client.yaml (log = {{ setup_cmd_log }}; tags = SETUP)"
     shell:
@@ -16,7 +16,7 @@
 
   - name: "Determine log name for deploy"
     set_fact:
-      deploy_cmd_log: "/root/out-puppet-big-deploy-{{ marker }}.log"
+      deploy_cmd_log: "/root/out-puppet-{{ nickname }}-deploy-{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}.log"
     run_once: yes
   - name: "Run puppet-big-client.yaml (log = {{ deploy_cmd_log }}; tags = DEPLOY)"
     shell:
