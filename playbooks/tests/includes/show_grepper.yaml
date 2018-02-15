@@ -11,6 +11,9 @@
       grep '"msg". "{{ grepper }}' "{{ grepper_log }}" | cut -d '"' -f 4
     register: log_grepper_timings
     when: "grepper != ''"
+  - name: "Make sure central list is empty"
+    set_fact:
+      grepper_times: []
   - name: "Append '{{ grepper }}' timings to central list"
     set_fact:
       grepper_times: "{{ grepper_times|default([]) + hostvars[item]['log_grepper_timings']['stdout_lines'] }}"
