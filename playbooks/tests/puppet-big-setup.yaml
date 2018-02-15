@@ -175,4 +175,5 @@
     - name: "Publish our content view"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
+    ### TODO: Publish CV to create environment
 ...
