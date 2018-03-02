@@ -9,8 +9,10 @@
       state: absent
   - name: "Remove /home LV"
     lvol:
-      vg: "rhel_{{ inventory_hostname_short }}"
-      lv: home
+      vg: "{{ item.value.vg }}"
+      lv: "{{ item.key }}"
       state: absent
       force: yes
+    with_dict: "{{ ansible_lvm.lvs }}"
+    when: item.key in "lv_home"
 ...
