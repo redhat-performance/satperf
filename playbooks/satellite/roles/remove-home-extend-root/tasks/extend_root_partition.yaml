@@ -1,42 +1,20 @@
 ---
-  - name: "List existing VGs to be able to guess which one we are going to use"
-    command:
-      vgs
-    register: vgs_cmd
-  - name: "Guess VG name we are going to use"
-    set_fact:
-      main_vg: "{{ item }}"
-    when: "main_vg is not defined and item in vgs_cmd.stdout"
-    with_items:
-      - "rhel_{{ inventory_hostname_short }}"
-      - "vg_{{ inventory_hostname_short }}"
-  - name: "Make sure we have guessed VG name"
-    assert:
-      that: "main_vg is defined"
-
-  - name: "List existing LVs to be able to guess which one we are going to use"
-    command:
-      lvs
-    register: lvs_cmd
-  - name: "Guess LV name we are going to use"
-    set_fact:
-      main_lv: "{{ item }}"
-    when: "main_lv is not defined and item in lvs_cmd.stdout"
-    with_items:
-      - "lv_root"
-      - "root"
-  - name: "Make sure we have guessed LV name"
-    assert:
-      that: "main_lv is defined"
-
+# We rely on root LV name always containing string "root"
+# If now, this is not going to work
   - name: "Extend root LV to all available VG space"
     lvol:
-      vg: "{{ main_vg }}"
-      lv: "{{ main_lv }}"
+      vg: "{{ item.value.vg }}"
+      lv: "{{ item.key }}"
       size: +100%FREE
-  - name: "Extend root filesystem to whole LV"
+    with_dict: "{{ ansible_lvm.lvs }}"
+    when: item.key in "lv_root"
+
+# Ansible can't loop over block. Argh!! So we have to do the loop twice
+  - name: "Resize the root filesystem"
     filesystem:
-      dev: "/dev/{{ main_vg }}/{{ main_lv }}"
+      dev: "/dev/{{ item.value.vg }}/{{ item.key }}"
       fstype: xfs
       resizefs: yes
+    with_dict: "{{ ansible_lvm.lvs }}"
+    when: item.key in "lv_root"
 ...
