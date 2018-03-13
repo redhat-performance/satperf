@@ -2,7 +2,7 @@
   - name: "Create physical volumes and volume group"
     lvg:
       vg: guest_images_lvm
-      pvs: /dev/sdb
+      pvs: "{{ vms_storage_pvs | default('/dev/sdb') }}"
   - name: "Define storage pool"
     virt_pool:
       name: guest_images_lvm
