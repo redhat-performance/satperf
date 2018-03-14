@@ -15,7 +15,7 @@
     - { role: docker-host-scalelab6048r-partitioning, when: "'-6048r.' in inventory_hostname" }
     - { role: docker-host-scalelab6018r-partitioning, when: "'-6018r.' in inventory_hostname" }
     - { role: docker-host-scalelabr930-partitioning, when: "'-r930.' in inventory_hostname" }
-    - { role: docker-host-scalelabr630-partitioning, when: "'-r630.' in inventory_hostname" }
+    - { role: docker-host-scalelabr630-partitioning, when: "'-r630.' in inventory_hostname or '-r620.' in inventory_hostname" }
     - { role: docker-host-scalelab1029p-partitioning, when: "'-1029p.' in inventory_hostname" }
     - { role: ../common/roles/rhsm-satellite, when: docker_host_register_to == 'satellite' }
     - { role: ../common/roles/rhsm, when: docker_host_register_to != 'satellite' }
