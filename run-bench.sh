@@ -14,6 +14,8 @@ opts_adhoc="$opts --user root"
 ###sync; echo 3 > /proc/sys/vm/drop_caches
 ###yes | satellite-installer --scenario satellite --reset
 
+a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
+s 300
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 for i in 1 2 3; do
     a 01-manifest-upload-$i.log -m "shell" -a "hammer --username admin --password changeme subscription upload --file '/root/manifest-auto.zip' --organization '$do'" satellite6

@@ -8,6 +8,7 @@ opts_adhoc="$opts --user root"
 ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
 ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
 wait
+a satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
 s 300
 
 function reg_five() {
