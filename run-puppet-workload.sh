@@ -15,7 +15,7 @@ function reg_five() {
     # Register "$1 * 5 * number_of_docker_hosts" containers
     d=$( date --utc --iso-8601=seconds )
     for i in $( seq $1 ); do
-        ap reg-$d-$i.log playbooks/tests/registrations.yaml -e "size=5 tags=untagged,REG,REM bootstrap_retries=3"
+        ap reg-$d-$i.log playbooks/tests/registrations.yaml -e "size=5 tags=untagged,REG,REM bootstrap_retries=3 bootstrap_operatingsystem='RHEL Server 7.4' grepper='Register'"
         s 300
     done
 }
