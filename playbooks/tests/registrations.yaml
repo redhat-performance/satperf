@@ -17,6 +17,8 @@
     resting: 0
     bootstrap_retries: 10
     bootstrap_operatingsystem: "RedHat 7.4"
+    bootstrap_activationkey: "SatperfActivationKey"
+    bootstrap_hostgroup: "SatperfHostGroup"
     grepper: ''
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
@@ -50,7 +52,7 @@
       run_once: yes
     - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }}; tags = {{ tags }})"
       shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}' bootstrap_retries={{ bootstrap_retries|default(10) }} bootstrap_operatingsystem='{{ bootstrap_operatingsystem|default('RedHat 7.4') }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
+        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}' bootstrap_retries={{ bootstrap_retries|default(10) }} bootstrap_operatingsystem='{{ bootstrap_operatingsystem }}' bootstrap_activationkey='{{ bootstrap_activationkey }}' bootstrap_hostgroup='{{ bootstrap_hostgroup }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
 
