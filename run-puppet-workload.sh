@@ -2,7 +2,7 @@
 
 source run-library.sh
 
-opts="--forks 100 -i conf/20171214-bagl-puppet4.ini"
+opts="--forks 100 -i conf/2018-03-13-puppet4-with-tunings/inventory.ini"
 opts_adhoc="$opts --user root"
 
 ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
@@ -37,6 +37,7 @@ function measure() {
     s 300
 }
 
+measure 5
 measure 10
 measure 20
 measure 30
