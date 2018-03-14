@@ -5,7 +5,7 @@
     - ../../conf/satperf.local.yaml
   remote_user: root
   roles:
-    - common
+    - ../common/roles/common
   tasks:
     - name: "Ensure that katello-remove is available"
       stat:
