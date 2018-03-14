@@ -2,11 +2,12 @@
 
 source run-library.sh
 
-manifest="/home/pok/DownloadsWork/manifest_ed59abc3-32d7-45fe-bcaf-0160e588a0a6.zip"
+manifest="conf/2018-03-13-retpoline-on-vm/manifest.zip"
 do="Default Organization"
-registrations_per_docker_hosts=13
+registrations_per_docker_hosts=20
+registrations_iterations=20
 
-opts="--forks 100 -i conf/20180112-scale-meltdown-spectre.ini --private-key conf/id_rsa_perf"
+opts="--forks 100 -i conf/2018-03-13-retpoline-on-vm/inventory.ini --private-key conf/2018-03-13-retpoline-on-vm/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
 
@@ -66,8 +67,8 @@ ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 a 41-hostgroup-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 a 42-domain-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme domain create --name example.com --organizations '$do'"
 a 43-ak-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
-for i in $( seq 19 ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='RHEL Server 7.4'"
+for i in $( seq $registrations_iterations ); do
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='RedHat 7.4' bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s 120
 done
 
