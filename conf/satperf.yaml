@@ -15,7 +15,7 @@ rhsm_pool: 'Pool you want to consume'
 extend_root_partition: 'true'
 
 # Satellite
-sat_version: "6.2"
+sat_version: "6.3"
 sat_user: admin
 sat_pass: changeme
 sat_email: root@localhost
@@ -33,8 +33,8 @@ sat_repos:
     reposet: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common (RPMs)"
     repo: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - RH Common RPMs x86_64 {{ sat_releasever }}"
   - product: "Red Hat Satellite Capsule"
-    reposet: "Red Hat Satellite Capsule 6.2 (for RHEL {{ ansible_distribution_major_version }} Server) (RPMs)"
-    repo: "Red Hat Satellite Capsule 6.2 for RHEL {{ ansible_distribution_major_version }} Server RPMs x86_64"
+    reposet: "Red Hat Satellite Capsule {{ sat_version }} (for RHEL {{ ansible_distribution_major_version }} Server) (RPMs)"
+    repo: "Red Hat Satellite Capsule {{ sat_version }} for RHEL {{ ansible_distribution_major_version }} Server RPMs x86_64"
   - product: "Red Hat Software Collections for RHEL Server"
     reposet: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
     repo: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server x86_64 {{ sat_releasever }}"
@@ -46,23 +46,23 @@ sat_repos:
 sat_install_source: cdn   # either 'cdn' or 'repo'
                           #   'cdn' ... configure value of 'sat_cdn_reponame'
                           #   'repo' ... configure value of 'sat_repo_file'
-sat_repo_file: ../../../../../conf/sat62.repo
-sat_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-6.2-rpms'
+sat_repo_file: ../../../../../conf/sat63.repo
+sat_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-{{ sat_version }}-rpms'
 sat_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Satellite and Software Collections
                                            # when installing from custom repository, Software Collections should be enough
 # sat_installer_pkg: capsule-installer   # Satellite 6.1
 # sat_installer_cmd: katello-installer   # Satellite 6.1
-sat_installer_pkg: satellite   # Satellite 6.2
-sat_installer_cmd: satellite-installer --scenario satellite   # Satellite 6.2
+sat_installer_pkg: satellite   # Satellite 6.2 and 6.3
+sat_installer_cmd: satellite-installer --scenario satellite   # Satellite 6.2 and 6.3
 sat_manifest: ../../../../../conf/manifest.zip
 
 # Content for client testing (RHEL repo with erratas and Satellite tools repo)
 content_rhel_name: RHEL7 x86_64 Base
 content_rhel_label: rhel7-x86_64-base
 content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
-content_sattools_name: Sat6.2 Tools
-content_sattools_label: sat62-x86_64-tools
-content_sattools_url: http://repos.example.com/released/SatTools-6.2/7.2/Server/x86_64/os/
+content_sattools_name: Sat Tools
+content_sattools_label: sat-x86_64-tools
+content_sattools_url: http://repos.example.com/released/SatTools/7Server/x86_64/os/
 content_daemonize: daemonize-1.7.7-1.el7.x86_64.rpm
 content_puppet_module_author: satperf
 content_puppet_module_name: satperftest
@@ -85,13 +85,13 @@ capsule_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '-
 capsule_install_source: cdn   # either 'cdn' or 'repo'
                               #   'cdn' ... configure value of 'capsule_cdn_reponame'
                               #   'repo' ... configure value of 'capsule_repo_file'
-capsule_repo_file: ../../../../../conf/capsule62.repo
-capsule_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-capsule-6.2-rpms'
+capsule_repo_file: ../../../../../conf/capsule63.repo
+capsule_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-capsule-{{ sat_version }}-rpms'
 capsule_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Capsule
 # capsule_installer_pkg: capsule-installer   # Satellite 6.1
 # capsule_installer_cmd: katello-installer   # Satellite 6.1
-capsule_installer_pkg: satellite-capsule   # Satellite 6.2
-capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2
+capsule_installer_pkg: satellite-capsule   # Satellite 6.2 and 6.3
+capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2 and 6.3
 
 # Docker hosts
 docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
@@ -146,7 +146,7 @@ collectd_interval: 10
 # Port Graphite is listening on
 graphite_port: 80
 # Graphite prefix / Cloud name used both with graphite and grafana dashboards
-graphite_prefix: satellite62
+graphite_prefix: satellite
 # Graphite username and password for login on the dashboard
 graphite_username: root
 graphite_password: password
@@ -209,6 +209,6 @@ vms:
       ip: 172.1.1.2
       netmask: 255.0.0.0
       rootpw: password
-vms_kss_os: http://repos.example.com/RHEL-7/7.2/Server/x86_64/os/
+vms_kss_os: http://repos.example.com/RHEL-7/7.4/Server/x86_64/os/
 vms_ssh_key: "{{ lookup('file', '../../conf/id_rsa.pub') }}"
 ...
