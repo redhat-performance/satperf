@@ -1,0 +1,9 @@
+---
+  - name: "Configure larger inotify limits"
+    copy:
+      src: 40-max-user-watches.conf
+      dest: /etc/sysctl.d/40-max-user-watches.conf
+  - name: "Reload sysctl config"
+    command:
+      sysctl -p /etc/sysctl.d/40-max-user-watches.conf
+...

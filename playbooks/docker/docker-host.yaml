@@ -24,5 +24,6 @@
     - docker-host
     - build-image
     - ../common/roles/enlarge-arp-table
+    - ../common/roles/enlarge-inotify-limits
     - ../satellite/roles/client-scripts
 ...
