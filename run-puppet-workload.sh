@@ -43,6 +43,9 @@ measure 5
 measure 10
 measure 20
 measure 30
+measure 40
+measure 50
+measure 60
 
 ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
 ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
@@ -69,3 +72,7 @@ measure_lots 10
 measure_lots 14
 measure_lots 18
 measure_lots 22
+measure_lots 26
+measure_lots 30
+measure_lots 34
+measure_lots 38
