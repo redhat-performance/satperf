@@ -4,14 +4,13 @@ source run-library.sh
 
 manifest="conf/2018-03-13-retpoline-on-vm/manifest.zip"
 do="Default Organization"
-registrations_per_docker_hosts=20
-registrations_iterations=20
+registrations_per_docker_hosts=10
+registrations_iterations=40
 
 opts="--forks 100 -i conf/2018-03-13-retpoline-on-vm/inventory.ini --private-key conf/2018-03-13-retpoline-on-vm/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
 
-###sync; echo 3 > /proc/sys/vm/drop_caches
 ###yes | satellite-installer --scenario satellite --reset
 
 a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
