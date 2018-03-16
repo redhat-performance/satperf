@@ -37,39 +37,16 @@
     command:
       subscription-manager config --server.hostname=subscription.rhsm.redhat.com --server.port=443 --server.prefix=/subscription --rhsm.baseurl=https://cdn.redhat.com --rhsm.ca_cert_dir=/etc/rhsm/ca/ --rhsm.repo_ca_cert=/etc/rhsm/ca/redhat-uep.pem
 
-  # Register and attach to given pool
-  - name: "Register with RHSM"
-    command:
-      subscription-manager register --username "{{ rhsm_user }}" --password "{{ rhsm_pass }}" --force
+  - name: "Register the system with RHSM"
+    redhat_subscription:
+      username: "{{ rhsm_user }}"
+      password: "{{ rhsm_pass }}"
+      force_register: true
+      pool: "{{ rhsm_pool }}"
     register: registering
-    until: "registering.rc == 0"
+    until: registering.changed
     retries: 5
     delay: 10
-  - name: "Determine pool we are going to attach to"
-    command:
-      subscription-manager list --available --all --matches "{{ rhsm_pool }}" --pool-only
-    register: querying
-    until: "querying.rc == 0"
-    retries: 5
-    delay: 10
-  - name: "List pools we already consume"
-    command:
-      subscription-manager list --consumed --pool-only
-    register: attached
-  - name: "Show pool ID we are going to attach"
-    debug:
-      var: "querying.stdout_lines|first"
-  - name: "Show pool IDs we are consuming already"
-    debug:
-      var: "attached.stdout_lines"
-  - name: "Attach to the pool"
-    command:
-      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
-    register: attaching
-    until: "attaching.rc == 0"
-    retries: 5
-    delay: 10
-    when: "querying.stdout_lines|length > 0 and querying.stdout_lines|first not in attached.stdout_lines"
 
   # Make sure only base RHEL repo is attached
   - name: "Disable all RHSM repos and only enable base RHEL repo"
