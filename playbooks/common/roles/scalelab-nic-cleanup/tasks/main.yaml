@@ -75,30 +75,59 @@
       done
     when: "'-1029p.' in inventory_hostname"
 
-  # Make sure 10G NIC have correct IP
-  - lineinfile:
-      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-      regexp: "^ONBOOT="
-      line: "ONBOOT=yes"
-  - lineinfile:
-      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-      regexp: "^BOOTPROTO="
-      line: "BOOTPROTO=static"
-  - lineinfile:
-      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-      regexp: "^IPADDR="
-      line: "IPADDR={{ ip }}"
-  - lineinfile:
-      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-      regexp: "^NETMASK="
-      line: "NETMASK=255.0.0.0"
+  - name: Check for interface file presence
+    stat:
+      path: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
+    register: iffile_stat
 
-  # Restart network
+  - name: Create a new interface file
+    block:
+    - name: Get the MAC address of the {{ nic_private }}
+      command: cat /sys/class/net/{{ nic_private }}/address
+      register: private_nic_mac_address
+
+    - name: Build a new interface file
+      template:
+        src: templates/ifcfg-ethx.j2
+        dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
+        owner: root
+        group: root
+      register:
+        iffile_created
+    when:
+      iffile_stat.stat.exists == False
+
+  - name: Ensure correct config options in the already existing interface file
+    block:
+    - name: Ensure ONBOOT=yes
+      lineinfile:
+        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+        regexp: "^ONBOOT="
+        line: "ONBOOT=yes"
+    - name: Ensure BOOTPROTO=static
+      lineinfile:
+        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+        regexp: "^BOOTPROTO="
+        line: "BOOTPROTO=static"
+    - name: Ensure correct IP address
+      lineinfile:
+        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+        regexp: "^IPADDR="
+        line: "IPADDR={{ ip }}"
+    - name: Ensure correct netmask
+      lineinfile:
+        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+        regexp: "^NETMASK="
+        line: "NETMASK=255.255.0.0"
+    when: iffile_created.changed == False
+
   - name: "Kill all dhclients (network service was not restarting)"
     command:
       killall dhclient
     ignore_errors: true
+
   - name: "Restart network"
-    command:
-      service network restart
+    service:
+      name: network
+      state: restarted
 ...
