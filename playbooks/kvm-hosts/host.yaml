@@ -7,6 +7,7 @@
     - ../../conf/satperf.local.yaml
   roles:
     - ../common/roles/scalelab-nic-cleanup
+    - ../common/roles/enlarge-arp-table
     - ../common/roles/rhsm
     - setup-bridges
     - install-libvirtd
