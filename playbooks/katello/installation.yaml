@@ -1,0 +1,14 @@
+---
+- hosts: katello
+  remote_user: root
+
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - ../common/roles/add-epel
+    - ../common/roles/rhsm
+    - ../common/roles/ntp
+    - add_rhsm_repos
+    - add_katello_repos
+    # - setup

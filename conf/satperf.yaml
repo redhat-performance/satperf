@@ -56,6 +56,15 @@ sat_installer_pkg: satellite   # Satellite 6.2 and 6.3
 sat_installer_cmd: satellite-installer --scenario satellite   # Satellite 6.2 and 6.3
 sat_manifest: ../../../../../conf/manifest.zip
 
+# Katello nightly install options
+foreman_repositories_version: nightly
+foreman_repository_base: "http://koji.katello.org/releases/yum/foreman-{{ foreman_repositories_version }}/RHEL/{{ ansible_distribution_major_version }}/x86_64/"
+foreman_plugin_repository_base: "http://koji.katello.org/releases/yum/foreman-plugins-{{ foreman_repositories_version }}/RHEL/{{ ansible_distribution_major_version }}/x86_64/"
+katello_repositories_version: nightly
+katello_repositories_pulp_version: 2.15
+katello_repositories_pulp_release: stable
+epel_repo_installer: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+
 # Content for client testing (RHEL repo with erratas and Satellite tools repo)
 content_rhel_name: RHEL7 x86_64 Base
 content_rhel_label: rhel7-x86_64-base
