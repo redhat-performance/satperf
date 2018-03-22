@@ -9,7 +9,7 @@
     - ../common/roles/add-epel
     - ../common/roles/rhsm
     - ../common/roles/ntp
-    - ../../satellite/roles/remove-home-extend-root    
+    - ../../satellite/roles/remove-home-extend-root
     - add_rhsm_repos
     - add_katello_repos
     - configure_firewall
