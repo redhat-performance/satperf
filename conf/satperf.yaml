@@ -64,6 +64,14 @@ katello_repositories_version: nightly
 katello_repositories_pulp_version: 2.15
 katello_repositories_pulp_release: stable
 epel_repo_installer: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+katello_installer_cmd: foreman-installer --scenario katello
+katello_user: admin
+katello_password: changeme
+katello_ports:
+  - 80/tcp
+  - 443/tcp
+  - 5647/tcp
+  - 9090/tcp
 
 # Content for client testing (RHEL repo with erratas and Satellite tools repo)
 content_rhel_name: RHEL7 x86_64 Base
