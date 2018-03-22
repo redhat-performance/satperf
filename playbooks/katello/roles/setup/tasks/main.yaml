@@ -1,2 +1,10 @@
 ---
-  
+  - name: Install katello package
+    yum:
+      name: katello
+      state: latest
+    register: installing
+
+  - name: Run foreman installer
+    command: "{{ katello_installer_cmd }} --foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
+    when: installing.changed
