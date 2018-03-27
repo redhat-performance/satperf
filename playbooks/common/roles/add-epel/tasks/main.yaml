@@ -1,0 +1,5 @@
+---
+  - name: Install EPEL yum repo package
+    yum:
+      name: "{{ epel_repo_installer }}"
+      state: present

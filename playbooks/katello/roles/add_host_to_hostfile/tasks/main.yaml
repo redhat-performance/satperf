@@ -1,0 +1,30 @@
+---
+  - name: Make sure IPv4 localhost is present in hosts file
+    lineinfile:
+      dest: /etc/hosts
+      regexp: '^127\.0\.0\.1\s+localhost localhost\.localdomain localhost4 localhost4\.localdomain4$'
+      line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"
+      state: present
+
+  - name: Make sure IPv6 localhost is present in hosts file
+    lineinfile:
+      dest: /etc/hosts
+      regexp: '^::1\s+localhost localhost\.localdomain localhost6 localhost6\.localdomain6$'
+      line: "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
+      state: present
+
+  # Bit of hack here - we always set the default (public) ip address first...
+  - name: Add default Katello host ip to the hosts file
+    lineinfile:
+      dest: /etc/hosts
+      regexp: ".*{{ groups['katello'] | first }}$"
+      line: "{{ ansible_default_ipv4.address }} {{ groups['katello'] | first }}"
+
+  # ...and here we replace it with the private ip used to communicate using the
+  # private 10gb network, if present
+  - name: Add private ip address to the hosts file if defined
+    lineinfile:
+      dest: /etc/hosts
+      regexp: ".*{{ groups['katello'] | first }}$"
+      line: "{{ hostvars[groups['katello'] | first].ip }} {{ groups['katello'] | first }}"
+    when: "hostvars[groups['katello'] | first].ip is defined"

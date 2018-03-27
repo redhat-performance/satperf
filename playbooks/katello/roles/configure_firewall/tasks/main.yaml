@@ -1,0 +1,14 @@
+---
+  - name: Check if firewalld present
+    command:
+      rpm -q firewalld
+    register: firewalld_installed
+
+  - name: "Open network ports in the firewall "
+    firewalld:
+      port: "{{ item }}"
+      state: enabled
+      permanent: true
+      immediate: true
+    when: firewalld_installed.rc == 0
+    with_items: "{{ katello_ports }}"

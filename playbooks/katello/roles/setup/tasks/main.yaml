@@ -1,0 +1,36 @@
+---
+  - name: Update system packages
+    yum:
+      name: "*"
+      state: latest
+
+  - name: Install katello package
+    yum:
+      name: katello
+      state: latest
+    register: installing
+
+  - name: Install foreman-ansible plugin
+    yum:
+      name: "{{ item }}"
+      state: latest
+    with_items:
+      - tfm-rubygem-foreman_ansible
+      - tfm-rubygem-foreman-tasks
+      - tfm-rubygem-foreman_bootdisk
+      - tfm-rubygem-foreman_templates
+      - tfm-rubygem-foreman_hooks
+      - tfm-rubygem-hammer_cli_foreman_docker
+      - tfm-rubygem-foreman_docker
+
+  - name: Run foreman installer
+    shell: >
+     {{ katello_installer_cmd }}
+     --foreman-admin-email {{ sat_email }}
+     --foreman-admin-username {{ sat_user }}
+     --foreman-admin-password {{ sat_pass }}
+     --enable-foreman-plugin-discovery
+     --enable-foreman-plugin-remote-execution
+     --enable-foreman-proxy-plugin-remote-execution-ssh
+     --enable-foreman-plugin-openscap
+    when: installing.changed
