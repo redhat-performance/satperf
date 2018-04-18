@@ -11,7 +11,7 @@
     command:
       subscription-manager list --available --all --matches "{{ sat_install_pool }}" --pool-only
     register: querying
-    until: "{{ querying.rc }} == 0"
+    until: "querying.rc == 0"
     retries: 5
     delay: 10
   - debug:
@@ -20,7 +20,7 @@
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
     register: attaching
-    until: "{{ attaching.rc }} == 0"
+    until: "attaching.rc == 0"
     retries: 5
     delay: 10
   - name: "Disable all RHSM repos and only enable base RHEL and SCL repos"
