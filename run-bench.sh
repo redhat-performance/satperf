@@ -2,12 +2,13 @@
 
 source run-library.sh
 
-manifest="conf/2018-03-13-retpoline-on-vm/manifest.zip"
+manifest="conf/2018-04-07-retpoline/manifest.zip"
 do="Default Organization"
+dl="Default Location"
 registrations_per_docker_hosts=10
-registrations_iterations=40
+registrations_iterations=20
 
-opts="--forks 100 -i conf/2018-03-13-retpoline-on-vm/inventory.ini --private-key conf/2018-03-13-retpoline-on-vm/id_rsa_perf"
+opts="--forks 100 -i conf/2018-04-07-retpoline/inventory.ini --private-key conf/2018-04-07-retpoline/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
 
@@ -65,11 +66,14 @@ s 100
 
 ap 40-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
+a 40-get-os-title.log satellite6 -m "shell" -a "hammer -u admin -p changeme os info --id 1"
+os_title=$( grep '^Title' $logs/40-get-os-title.log | sed 's/^.*:\s\+\(.*\)$/\1/' )
 a 41-hostgroup-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 a 42-domain-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme domain create --name example.com --organizations '$do'"
+a 42-domain-update.log satellite6 -m "shell" -a "hammer --username admin --password changeme domain update --name example.com --organizations '$do' --locations '$dl'"
 a 43-ak-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='RedHat 7.4' bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='$os_title' bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s 120
 done
 
