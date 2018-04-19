@@ -23,7 +23,7 @@
         sed -i 's|^.*host_key_checking.*$|host_key_checking = False|' /etc/ansible/ansible.cfg
       tags: always
 
-    - include_tasks: includes/prepare_clients_ini.yaml
+    - import_tasks: includes/prepare_clients_ini.yaml
       vars:
         size: "{{ size }}"
       tags: always
@@ -36,12 +36,12 @@
 
 
     # Puppet registration
-    - include_tasks: includes/puppet-big-test-register.yaml
+    - import_tasks: includes/puppet-big-test-register.yaml
       tags: REGISTER
 
 
     # Puppet deploy our single module
-    - include_tasks: includes/puppet-big-test-deploy.yaml
+    - import_tasks: includes/puppet-big-test-deploy.yaml
       vars:
         nickname: single
         content_puppet_env: KT_Default_Organization_Library_SatPerfContentView_2
@@ -50,7 +50,7 @@
 
 
     # Puppet deploy lots of modules
-    - include_tasks: includes/puppet-big-test-deploy.yaml
+    - import_tasks: includes/puppet-big-test-deploy.yaml
       vars:
         nickname: bunch
         content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
@@ -58,7 +58,7 @@
       tags: DEPLOY_BUNCH
 
 
-    - include_tasks: includes/update_used_containers.yaml
+    - import_tasks: includes/update_used_containers.yaml
       vars:
         used_count: "{{ containers_used_count|int + size|int }}"
       tags: always
