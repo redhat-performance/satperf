@@ -3,7 +3,7 @@
   - shell: |
       for nic in ens3f1 enp5s0f1 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
-        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
         done
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
@@ -15,7 +15,7 @@
   - shell: |
       for nic in em2 p1p1 p1p2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
-        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
         done
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
@@ -27,7 +27,7 @@
   - shell: |
       for nic in p2p2 em2 em3 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
-        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
         done
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
@@ -39,7 +39,7 @@
   - shell: |
       for nic in p2p4 em1 em2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
-        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
         done
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
@@ -53,7 +53,7 @@
   - shell: |
       for nic in p4p1 p4p2 em2 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
-        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
         done
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
@@ -67,7 +67,7 @@
   - shell: |
       for nic in eno2 enp94s0f0 enp94s0f2 enp94s0f3 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
-        for addr in $( ip a show dev $nic scope global up | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
         done
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
@@ -118,7 +118,7 @@
       lineinfile:
         dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
         regexp: "^NETMASK="
-        line: "NETMASK=255.255.0.0"
+        line: "NETMASK=255.0.0.0"
     when: iffile_created.changed == False
 
   - name: "Kill all dhclients (network service was not restarting)"
