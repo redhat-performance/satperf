@@ -17,7 +17,7 @@
     bootstrap_login: "{{ sat_user }}"
     bootstrap_password: "{{ sat_pass }}"
     bootstrap_hostgroup: "{{ content_hostgroup }}"
-    bootstrap_operatingsystem: "RedHat 7.4"
+    bootstrap_operatingsystem: "{{ content_operatingsystem }}"
     bootstrap_additional_args: "--force"
     bootstrap_rex_args: ""   # use tag 'REM' to install remote execution ssh key via bootstrap.py, use 'REM_ONLY' to just add it to registered system
     bootstrap_puppet_args: "--skip-puppet"   # use tag 'PUP' to also install puppet via bootstrap.py, or 'PUP_ONLY' to just add it to registered system

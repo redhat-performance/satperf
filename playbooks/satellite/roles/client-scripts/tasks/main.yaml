@@ -1,4 +1,15 @@
 ---
+  - name: "Discover operating system we are going to use"
+    shell:
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os info --id 1 | grep '^Title' | sed 's/^.*:\s\+\(.*\)$/\1/'
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    register: content_operatingsystem_command
+  - name: "Set operating system we are going to hardcode into clients.yaml"
+    set_fact:
+        content_operatingsystem: "{{ content_operatingsystem_command.stdout }}"
+    run_once: true
+
   - name: "Distribute clients.yaml"
     template:
       src: "files/clients.yaml.j2"
