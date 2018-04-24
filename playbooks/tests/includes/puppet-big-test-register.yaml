@@ -19,7 +19,7 @@
     register: register_cmd
     ignore_errors: true
 
-  - include_tasks: includes/show_grepper.yaml
+  - import_tasks: includes/show_grepper.yaml
     vars:
       grepper: "RegisterPuppet"
       grepper_log: "{{ register_cmd_log }}"

@@ -24,7 +24,7 @@
     register: deploy_cmd
     ignore_errors: true
 
-  - include_tasks: includes/show_grepper.yaml
+  - import_tasks: includes/show_grepper.yaml
     vars:
       grepper: "PickupPuppet"
       grepper_log: "{{ deploy_cmd_log }}"
