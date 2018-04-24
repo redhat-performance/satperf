@@ -1,4 +1,15 @@
 ---
+  #- name: "Cleanup possible existing VGs and PVs"
+  #  shell: |
+  #      vgremove docker
+  #      vgremove vg_docker
+  #      pvremove /dev/sdb
+  #      if fdisk -l /dev/sdb | grep '/dev/sdb1'; then
+  #          pvremove /dev/sdb1
+  #          echo -e "d\nw" | fdisk /dev/sdb
+  #          partprobe
+  #      fi
+  #  ignore_errors: True
   - name: "Volume group on empty drive exists"
     shell: |
       pvcreate --yes "{{ docker_host_kvm_partition }}"

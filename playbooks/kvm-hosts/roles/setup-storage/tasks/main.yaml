@@ -1,4 +1,16 @@
 ---
+  #- name: "Cleanup possible existing VGs and PVs"
+  #  shell: |
+  #      vgremove docker
+  #      vgremove vg_docker
+  #      pvremove /dev/sdb
+  #      if fdisk -l /dev/sdb | grep '/dev/sdb1'; then
+  #          pvremove /dev/sdb1
+  #          echo -e "d\nw" | fdisk /dev/sdb
+  #          partprobe
+  #      fi
+  #  ignore_errors: True
+
   - name: "Create physical volumes and volume group"
     lvg:
       vg: guest_images_lvm
