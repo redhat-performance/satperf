@@ -37,7 +37,7 @@ function a() {
     fi
     rc=$?
     local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
+    log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     echo "$( echo "ansible $opts_adhoc $@" | sed 's/,/_/g' ),$out,$rc,$start,$end" >>$logs/measurement.log
     return $rc
 }
@@ -62,7 +62,7 @@ function ap() {
     fi
     rc=$?
     local end=$( date +%s )
-    log "Finish after $( expr $end - $start ) seconds with exit code $rc"
+    log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     echo "$( echo "ansible-playbook $opts_adhoc $@" | sed 's/,/_/g' ),$out,$rc,$start,$end" >>$logs/measurement.log
     return $rc
 }
