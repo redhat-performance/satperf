@@ -161,17 +161,35 @@
         dest: "/root/puppet-real-modules/{{ item.author }}-{{ item.name }}-{{ item.version }}.tar.gz"
         force: no
       with_items: "{{ content_puppet_modules }}"
+
+    - name: "List already uploaded puppet modules"
+      shell:
+        hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" puppet-module list | grep -v '^ID,Name,' | cut -d ',' -f 2
+      register: puppet_uploaded
     - name: "Upload puppet modules"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository upload-content --product "{{ content_puppet_product }}" --organization "{{ sat_org }}" --name "{{ content_puppet_repo }}" --path "/root/puppet-real-modules/{{ item.author }}-{{ item.name }}-{{ item.version }}.tar.gz"
+      when: "item.name not in puppet_uploaded.stdout_lines"
       with_items: "{{ content_puppet_modules }}"
+
     - name: "Create content view we will use"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view create --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
+      register: cmd
+      failed_when: "cmd.rc != 0 and 'Name has already been taken' not in cmd.stderr and 'Label has already been taken' not in cmd.stderr"
+      changed_when: "cmd.rc == 0"
+
+    - name: "List puppet modules already in the content view"
+      shell:
+        hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module list --organization "{{ sat_org }}" --content-view "{{ content_puppet_cv }}" | grep -v '^UUID,Name,' | cut -d ',' -f 2
+      register: cv_content
+    - debug: var=cv_content
     - name: "Add puppet modules into the content view"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module add --organization "{{ sat_org }}" --content-view "{{ content_puppet_cv }}" --name "{{ item.name }}" --author "{{ item.author }}"
+      when: "item.name not in cv_content.stdout_lines"
       with_items: "{{ content_puppet_modules }}"
+
     - name: "Publish our content view"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
