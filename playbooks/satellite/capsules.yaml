@@ -13,7 +13,7 @@
     - ntp
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
-    - remove-home-extend-root
+    - ../common/roles/remove-home-extend-root
     - capsule
     - capsule-location
     - enlarge-arp-table

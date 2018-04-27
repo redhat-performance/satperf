@@ -13,7 +13,7 @@
     - ../common/roles/ntp
     ###- upgrade-restart
     ###- satellite-ec2-partitioning
-    - remove-home-extend-root
+    - ../common/roles/remove-home-extend-root
     - setup
     - ../common/roles/enlarge-arp-table
     - satellite-populate
