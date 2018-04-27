@@ -36,9 +36,6 @@
       - author: jhoblitt
         name: sysstat
         version: 1.1.0
-      - author: nanliu
-        name: staging
-        version: 1.0.3
       - author: puppet
         name: archive
         version: 1.1.1
@@ -47,16 +44,10 @@
         version: 1.1.2
       - author: puppetlabs
         name: apache
-        version: 1.11.0
-      - author: puppetlabs
-        name: apache
         version: 1.8.1
       - author: puppetlabs
         name: apt
         version: 2.4.0
-      - author: puppetlabs
-        name: concat
-        version: 2.2.0
       - author: puppetlabs
         name: concat
         version: 2.2.1
@@ -88,29 +79,14 @@
         name: mysql
         version: 3.11.0
       - author: puppetlabs
-        name: mysql
-        version: 3.6.2
-      - author: puppetlabs
-        name: ntp
-        version: 4.1.2
-      - author: puppetlabs
         name: ntp
         version: 4.2.0
-      - author: puppetlabs
-        name: postgresql
-        version: 4.7.0
       - author: puppetlabs
         name: postgresql
         version: 4.9.0
       - author: puppetlabs
         name: stdlib
-        version: 4.12.0
-      - author: puppetlabs
-        name: stdlib
         version: 4.17.0
-      - author: puppetlabs
-        name: tomcat
-        version: 1.4.1
       - author: puppetlabs
         name: tomcat
         version: 1.7.0
