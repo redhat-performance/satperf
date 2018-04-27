@@ -7,15 +7,15 @@
     - ../../conf/satperf.local.yaml
   roles:
     ###- common-eth1
-    - common
-    - epel-not-present
-    - rhsm-satellite
-    - ntp
+    - ../common/roles/common
+    - ../common/roles/epel-not-present
+    - ../common/roles/rhsm-satellite
+    - ../common/roles/ntp
     ###- upgrade-restart
     ###- capsule-ec2-partitioning
     - ../common/roles/remove-home-extend-root
     - capsule
     - capsule-location
-    - enlarge-arp-table
+    - ../common/roles/enlarge-arp-table
     ###- capsule-myrhev-partitioning
     - capsule-populate
