@@ -53,7 +53,7 @@
         gather_subset: '!hardware'
         ###gather_timeout: 60   # available in Ansible 2.2
       tags: SETUP
-    - name: "Configure puppet stuff on Satellite containers"
+    - name: "Configure puppet stuff on Satellite"
       shell: |
         sleep "$(( $RANDOM % {% raw %}{{ groups['all']|length }}{% endraw %} ))"   # randomize this a bit in case we have lots of docker hosts
         hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --puppet-classes "{% raw %}{{ content_puppet_module_name }}{% endraw %}"
@@ -62,6 +62,12 @@
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
       ignore_errors: true
+      register: setup
+      tags: SETUP
+    - name: "Configure puppet on Satellite action - timings"
+      debug:   # FIXME: If the setup failed, this is our only indication that it did
+        msg="SetupPuppet {% raw %}{{ setup.results.start }}{% endraw %} to {% raw %}{{ setup.results.end }}{% endraw %}"
+      when: "setup.results is defined and setup.results.rc is defined and setup.results.rc == 0"
       tags: SETUP
     - name: "Downgrade this package version as modules needs to install ...-devel later (should not be required if we would be running against real RHEL repo)"
       command:

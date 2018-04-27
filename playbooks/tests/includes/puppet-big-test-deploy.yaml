@@ -14,6 +14,11 @@
     register: setup_cmd
     ###ignore_errors: true
 
+  - import_tasks: includes/show_grepper.yaml
+    vars:
+      grepper: "SetupPuppet"
+      grepper_log: "{{ setup_cmd_log }}"
+
   - name: "Determine log name for deploy"
     set_fact:
       deploy_cmd_log: "/root/out-puppet-{{ nickname }}-deploy-{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}.log"
