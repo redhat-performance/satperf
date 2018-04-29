@@ -76,3 +76,14 @@
         :>/usr/share/foreman-proxy/.ssh/known_hosts
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
+
+
+
+- hosts: capsules
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Remove ReX's known_hosts on Capsules (workaround to bug 1505842)"
+      shell:
+        :>/usr/share/foreman-proxy/.ssh/known_hosts
+...
