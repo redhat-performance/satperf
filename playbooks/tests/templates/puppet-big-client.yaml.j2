@@ -64,6 +64,8 @@
       ignore_errors: true
       register: setup
       tags: SETUP
+    - debug: var=setup
+      tags: SETUP
     - name: "Configure puppet on Satellite action - timings"
       debug:   # FIXME: If the setup failed, this is our only indication that it did
         msg="SetupPuppet {% raw %}{{ setup.results.start }}{% endraw %} to {% raw %}{{ setup.results.end }}{% endraw %}"
