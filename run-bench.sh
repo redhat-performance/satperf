@@ -2,13 +2,13 @@
 
 source run-library.sh
 
-manifest="conf/2018-04-07-retpoline/manifest.zip"
+manifest="conf/contperf/manifest.zip"
 do="Default Organization"
 dl="Default Location"
 registrations_per_docker_hosts=10
 registrations_iterations=20
 
-opts="--forks 100 -i conf/2018-04-07-retpoline/inventory.ini --private-key conf/2018-04-07-retpoline/id_rsa_perf"
+opts="--forks 100 -i conf/contperf/inventory.ini --private-key conf/contperf/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
 
