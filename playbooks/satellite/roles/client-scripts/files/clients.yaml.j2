@@ -196,19 +196,6 @@
         name=gofer
         state=absent
       tags: KAT_ONLY
-    - name: "Make sure daemonize is installed"
-      shell: |
-        if ! rpm -q daemonize; then
-          rpm -ivh "http://{{ groups['satellite6']|first }}/pub/daemonize-1.7.7-1.el7.x86_64.rpm" \
-            || rpm -ivh http://dl.fedoraproject.org/pub/epel/7/x86_64/d/daemonize-1.7.7-1.el7.x86_64.rpm
-        fi
-      register: installed
-      until: "installed.rc is defined and installed.rc == 0"
-      retries: 3
-      delay: 10
-      tags:
-        - KAT_ONLY
-        - FIXKAT
     - name: "Install katello-agent"
       action:
         yum
@@ -228,12 +215,6 @@
       tags:
         - KAT_ONLY
         - FIXKAT
-    - name: "Start journald"
-      command:
-        daemonize /usr/lib/systemd/systemd-journald
-      tags:
-        - KAT_ONLY
-        - FIXKAT
     - name: "Kill goferd if it is running"
       shell:
         pkill --full --exact 'python /usr/bin/goferd --foreground' || true
@@ -241,8 +222,10 @@
         - KAT_ONLY
         - FIXKAT
     - name: "Start goferd"
-      command:
-        daemonize -- /usr/bin/goferd --foreground
+      service:
+        name: goferd
+        state: started
+        enabled: yes
       tags:
         - KAT_ONLY
         - FIXKAT
