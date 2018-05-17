@@ -1,4 +1,9 @@
 ---
+# This role is mean to free space on VM installed by playbooks/kvm-hosts/install-vms.yaml
+# when you want to use it as a docker-host. If you need to tweak some your VM, please
+# create your own "docker-host-kvm-partitioning" role, set "docker_host_partitioning"
+# and change playbooks/docker/docker-host.yaml to consider it.
+
   #- name: "Cleanup possible existing VGs and PVs"
   #  shell: |
   #      vgremove docker
@@ -10,8 +15,25 @@
   #          partprobe
   #      fi
   #  ignore_errors: True
-  - name: "Volume group on empty drive exists"
-    shell: |
-      pvcreate --yes "{{ docker_host_kvm_partition }}"
-      vgcreate docker "{{ docker_host_kvm_partition }}"
+  #- name: "Volume group on empty drive exists"
+  #  shell: |
+  #    pvcreate --yes "{{ docker_host_kvm_partition }}"
+  #    vgcreate docker "{{ docker_host_kvm_partition }}"
+
+  - name: "Make sure docker_host_vg is not set"
+    assert:
+      that: "docker_host_vg is undefined or docker_host_vg is none or docker_host_vg|trim == ''"
+  - name: "Umount /home"
+    mount:
+      path: /home
+      state: absent
+  - name: "/home LV removed"
+    lvol:
+      vg: "{{ ansible_lvm.lvs.home.vg }}"
+      lv: home
+      state: absent
+      force: yes
+  - name: "Set docker_host_vg for later"
+    set_fact:
+      docker_host_vg: "{{ ansible_lvm.lvs.home.vg }}"
 ...
