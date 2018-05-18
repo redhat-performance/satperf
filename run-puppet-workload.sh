@@ -41,7 +41,7 @@ function reg_five() {
 function measure_one() {
     local concurency=$1
     local host_fives=$(( $concurency / 5 ))
-    log "===== Register and apply one module with concurency $concurency: $( date --utc ) ====="
+    log "===== Register and apply one module with concurency $concurency ====="
 
     reg_five $host_fives
     ap $concurency-PuppetOne.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_SINGLE -e "size=$concurency"
@@ -67,7 +67,7 @@ s $sleep_time
 
 function measure_lots() {
     local concurency=$1
-    log "===== Register and apply bunch of modules with concurency $concurency ====="
+    log "===== Register and apply bunch of modules with concurency ====="
 
     ap $concurency-PuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_BUNCH -e "size=$concurency"
     log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
@@ -76,7 +76,7 @@ function measure_lots() {
     s $sleep_time
 }
 
-log "===== Registering hosts for experiment with lots of modules: $( date --utc ) ====="
+log "===== Registering hosts for experiment with lots of modules ====="
 ###reg_five 15   # so we have 15 * 5 = 75 registered containers on each docker host
 reg_five 10
 
