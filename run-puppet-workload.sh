@@ -8,6 +8,7 @@ opts="--forks 100 -i conf/contperf/inventory.ini"
 opts_adhoc="$opts --user root"
 
 # Checked that all works and then remove "-e" flag so every error do not terminate whole run
+log "===== Checking environment ====="
 a check-ping-docker.log satellite6 -m "shell" -a "ping -c 3 {{ groups['docker-hosts']|first }}"
 a check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer -u admin -p changeme ping | grep 'Status:' | grep -v 'ok$' )"
@@ -15,6 +16,7 @@ a check-sat-content.log satellite6 -m "shell" -a "hammer -u admin -p changeme os
 set +e
 
 # Prepare environment
+log "===== Preparing environment ====="
 ap satellite-puppet-big-cv.log playbooks/tests/puppet-big-setup.yaml &
 ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
 ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml &
@@ -36,37 +38,39 @@ function reg_five() {
     a $d-restore-used-containers-count.log -m shell -a "cp /root/container-used-count{.foobarbaz,}" docker-hosts
 }
 
-function measure() {
+function measure_one() {
     local concurency=$1
     local host_fives=$(( $concurency / 5 ))
-    log "===== Register and apply one with concurency $concurency: $( date --utc ) ====="
+    log "===== Register and apply one module with concurency $concurency: $( date --utc ) ====="
 
     reg_five $host_fives
     ap $concurency-PuppetOne.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_SINGLE -e "size=$concurency"
     log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
     log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
     s $sleep_time
 }
 
-measure 5
-#measure 10
-###measure 20
-###measure 30
-###measure 40
-###measure 50
-###measure 60
+measure_one 5
+measure_one 10
+measure_one 20
+measure_one 30
+###measure_one 40
+###measure_one 50
+###measure_one 60
 
-###ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
-###ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml playbooks/satellite/client-scripts.yaml &
+ap satellite-remove-hosts.log playbooks/satellite/satellite-remove-hosts.yaml &
+ap docker-tierdown-tierup.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml playbooks/satellite/client-scripts.yaml &
 a rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" &
 wait
 s $sleep_time
 
 function measure_lots() {
     local concurency=$1
-    log "===== Apply bunch with concurency $concurency: $( date --utc ) ====="
+    log "===== Register and apply bunch of modules with concurency $concurency ====="
 
     ap $concurency-PuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_BUNCH -e "size=$concurency"
+    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
     log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
     log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
     s $sleep_time
@@ -74,13 +78,13 @@ function measure_lots() {
 
 log "===== Registering hosts for experiment with lots of modules: $( date --utc ) ====="
 ###reg_five 15   # so we have 15 * 5 = 75 registered containers on each docker host
-reg_five 1
+reg_five 10
 
 measure_lots 2
-#measure_lots 6
-###measure_lots 10
-###measure_lots 14
-###measure_lots 18
+measure_lots 6
+measure_lots 10
+measure_lots 14
+measure_lots 18
 ###measure_lots 22
 ###measure_lots 26
 ###measure_lots 30
