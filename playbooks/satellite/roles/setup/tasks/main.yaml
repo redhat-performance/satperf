@@ -19,6 +19,7 @@
   - name: "Attach to the pool"
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+    when: querying.stdout!=""
     register: attaching
     until: "attaching.rc == 0"
     retries: 5
