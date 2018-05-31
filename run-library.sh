@@ -9,6 +9,7 @@ opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
 opts_adhoc=${opts_adhoc:-"$opts --user root"}
 logs=${logs:-"logs-$( date --iso-8601=seconds )"}
 run_lib_dryrun=false
+hammer_opts="-u admin -p changeme"
 
 # Requirements check
 if ! type bc >/dev/null; then
@@ -74,6 +75,11 @@ function s() {
     else
         sleep $1
     fi
+}
+
+function h() {
+    local log_relative=$1; shift
+    a "$log_relative" -m shell -a "hammer $hammer_opts $@" satellite6
 }
 
 

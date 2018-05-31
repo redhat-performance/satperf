@@ -5,84 +5,115 @@ source run-library.sh
 manifest="conf/contperf/manifest.zip"
 do="Default Organization"
 dl="Default Location"
-registrations_per_docker_hosts=10
+###registrations_per_docker_hosts=10
+registrations_per_docker_hosts=5
 registrations_iterations=20
+###wait_interval=100
+wait_interval=10
 
 opts="--forks 100 -i conf/contperf/inventory.ini --private-key conf/contperf/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
-
+#### Run this manually on the Satellite
 ###yes | satellite-installer --scenario satellite --reset
 
+
+log "===== Checking environment ====="
+a check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
+a check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
+set +e
+
+
+log "===== Prepare for Red Hat content ====="
 a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
-s 300
+s $( expr 3 \* $wait_interval )
+h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
+h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-for i in 1 2 3; do
-    a 01-manifest-upload-$i.log -m "shell" -a "hammer --username admin --password changeme subscription upload --file '/root/manifest-auto.zip' --organization '$do'" satellite6
-    s 10
-    if [ $i -lt 3 ]; then
-        a 02-manifest-delete-$i.log -m "shell" -a "hammer --username admin --password changeme subscription delete-manifest --organization '$do'" satellite6
-        s 10
+count=5
+for i in $( seq $count ); do
+    h 01-manifest-upload-$i.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
+    s $( expr $wait_interval / 3 )
+    if [ $i -lt $count ]; then
+        h 02-manifest-delete-$i.log "subscription delete-manifest --organization '$do'"
+        s $( expr $wait_interval / 3 )
     fi
 done
-a 03-manifest-refresh.log -m "shell" -a "hammer --username admin --password changeme subscription refresh-manifest --organization '$do'" satellite6
-s 100
+h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
+s $wait_interval
 
 
-a 10-reposet-enable-rhel7.log -m "shell" -a "hammer --username admin --password changeme repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'" satellite6
-a 10-reposet-enable-rhel6.log -m "shell" -a "hammer --username admin --password changeme repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'" satellite6
-a 10-reposet-enable-rhel7optional.log -m "shell" -a "hammer --username admin --password changeme repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'" satellite6
-a 11-repo-immediate-rhel7.log -m "shell" -a "hammer --username admin --password changeme repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'" satellite6
-a 12-repo-sync-rhel7.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'" satellite6
-s 100
-a 12-repo-sync-rhel6.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" satellite6
-s 100
-a 12-repo-sync-rhel7optional.log -m "shell" -a "hammer --username admin --password changeme repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" satellite6
-s 100
+log "===== Sync from mirror ====="
+h 10-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7.5' --basearch 'x86_64'"
+h 10-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6.5' --basearch 'x86_64'"
+h 10-reposet-enable-rhel7optional.log "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7.5' --basearch 'x86_64'"
+h 11-repo-immediate-rhel7.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7.5' --download-policy 'immediate'"
+h 12-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7.5'"
+s $wait_interval
+h 12-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6.5'"
+s $wait_interval
+h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7.5'"
+s $wait_interval
 
 
-a 20-cv-create-all.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
-a 21-cv-all-publish.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view publish --organization '$do' --name 'BenchContentView'"
-s 100
-a 22-le-create-1.log satellite6 -m "shell" -a "hammer --username admin --password changeme lifecycle-environment create --organization '$do' --prior 'Library' --name 'BenchLifeEnvAAA'"
-a 22-le-create-2.log satellite6 -m "shell" -a "hammer --username admin --password changeme lifecycle-environment create --organization '$do' --prior 'BenchLifeEnvAAA' --name 'BenchLifeEnvBBB'"
-a 22-le-create-3.log satellite6 -m "shell" -a "hammer --username admin --password changeme lifecycle-environment create --organization '$do' --prior 'BenchLifeEnvBBB' --name 'BenchLifeEnvCCC'"
-a 23-cv-all-promote-1.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'BenchLifeEnvAAA'"
-s 100
-a 23-cv-all-promote-2.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvAAA' --to-lifecycle-environment 'BenchLifeEnvBBB'"
-s 100
-a 23-cv-all-promote-3.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvBBB' --to-lifecycle-environment 'BenchLifeEnvCCC'"
-s 100
+log "===== Publish and promote big CV ====="
+h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
+h 21-cv-all-publish.log "content-view publish --organization '$do' --name 'BenchContentView'"
+s $wait_interval
+h 22-le-create-1.log "lifecycle-environment create --organization '$do' --prior 'Library' --name 'BenchLifeEnvAAA'"
+h 22-le-create-2.log "lifecycle-environment create --organization '$do' --prior 'BenchLifeEnvAAA' --name 'BenchLifeEnvBBB'"
+h 22-le-create-3.log "lifecycle-environment create --organization '$do' --prior 'BenchLifeEnvBBB' --name 'BenchLifeEnvCCC'"
+h 23-cv-all-promote-1.log "content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'BenchLifeEnvAAA'"
+s $wait_interval
+h 23-cv-all-promote-2.log "content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvAAA' --to-lifecycle-environment 'BenchLifeEnvBBB'"
+s $wait_interval
+h 23-cv-all-promote-3.log "content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvBBB' --to-lifecycle-environment 'BenchLifeEnvCCC'"
+s $wait_interval
 
 
-a 30-cv-create-filtered.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
-a 31-filter-create-1.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
-a 31-filter-create-2.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
-a 32-rule-create-1.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '$do' --types enhancement,bugfix,security"
-a 32-rule-create-2.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '$do' --types security"
-a 33-cv-filtered-publish.log satellite6 -m "shell" -a "hammer --username admin --password changeme content-view publish --organization '$do' --name 'BenchFilteredContentView'"
-s 100
+log "===== Publish and promote filtered CV ====="
+h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
+h 31-filter-create-1.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
+h 31-filter-create-2.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
+h 32-rule-create-1.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '$do' --types enhancement,bugfix,security"
+h 32-rule-create-2.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '$do' --types security"
+h 33-cv-filtered-publish.log "content-view publish --organization '$do' --name 'BenchFilteredContentView'"
+s $wait_interval
 
 
+log "===== Sync non-EUS from CDN (do not measure becasue of unpredictable network latency) ====="
+h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url 'http://cdn.stage.redhat.com/'"
+h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
+h 10b-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
+h 10b-reposet-enable-rhel7optional.log "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'"
+h 12b-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'" &
+h 12b-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" &
+h 12b-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" &
+wait
+s $wait_interval
+
+
+log "===== Register ====="
 ap 40-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
-a 40-get-os-title.log satellite6 -m "shell" -a "hammer -u admin -p changeme os info --id 1"
+h 40-get-os-title.log "os info --id 1"
 os_title=$( grep '^Title' $logs/40-get-os-title.log | sed 's/^.*:\s\+\(.*\)$/\1/' )
-a 41-hostgroup-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
-a 42-domain-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme domain create --name example.com --organizations '$do'"
-a 42-domain-update.log satellite6 -m "shell" -a "hammer --username admin --password changeme domain update --name example.com --organizations '$do' --locations '$dl'"
-a 43-ak-create.log satellite6 -m "shell" -a "hammer --username admin --password changeme activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
+h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
+h 42-domain-create.log "domain create --name example.com --organizations '$do'"
+h 42-domain-update.log "domain update --name example.com --organizations '$do' --locations '$dl'"
+h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 for i in $( seq $registrations_iterations ); do
     ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='$os_title' bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
-    s 120
+    s $wait_interval
 done
 
 
-a 50-rex-set-via-ip.log satellite6 -m "shell" -a "hammer --username admin --password changeme settings set --name remote_execution_connect_by_ip --value true"
+log "===== Remote execution ====="
+h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
-a 52-rex-date.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-s 120
-a 53-rex-sm-facts-update.log satellite6 -m "shell" -a "hammer --username admin --password changeme job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+s $wait_interval
+h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 
 
 function table_row() {
@@ -100,11 +131,11 @@ function table_row() {
         fi
         if echo "$identifier" | grep --quiet -- "-register-"; then
             local log="$( echo "$row" | cut -d ',' -f 2 )"
-            local out=$( ./reg-average.sh "Register" "$log" | tail -n 1 )
-            local passed=$( echo "$out" | cut -d ' ' -f 4 )
+            local out=$( ./reg-average.sh "Register" "$log" | grep '^Register in ' | tail -n 1 )
+            local passed=$( echo "$out" | cut -d ' ' -f 6 )
             [ -z "$note" ] && note="Number of passed regs:"
             local note="$note $passed"
-            local diff=$( echo "$out" | cut -d ' ' -f 6 )
+            local diff=$( echo "$out" | cut -d ' ' -f 8 )
             let sum+=$diff
             let count+=1
         else
@@ -122,7 +153,7 @@ function table_row() {
     echo -e "$description\t$avg\t$note"
 }
 
-log "Formatting results:"
+log "===== Formatting results ====="
 table_row "01-manifest-upload-[0-9]\+.log" "Manifest upload"
 table_row "12-repo-sync-rhel7.log" "Sync RHEL7 (immediate)"
 table_row "12-repo-sync-rhel6.log" "Sync RHEL6 (on-demand)"
