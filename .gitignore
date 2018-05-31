@@ -10,6 +10,7 @@ conf/id_rsa*
 conf/*.zip
 manifest.zip
 log/
+logs-*/
 
 lextab.py
 yacctab.py
