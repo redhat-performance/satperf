@@ -9,6 +9,8 @@ opts_adhoc="$opts --user root"
 
 # Checked that all works and then remove "-e" flag so every error do not terminate whole run
 log "===== Checking environment ====="
+a info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
+a info-hostname.log satellite6 -m "shell" -a "hostname"
 a check-ping-docker.log satellite6 -m "shell" -a "ping -c 3 {{ groups['docker-hosts']|first }}"
 a check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer -u admin -p changeme ping | grep 'Status:' | grep -v 'ok$' )"

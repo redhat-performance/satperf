@@ -19,6 +19,8 @@ opts_adhoc="$opts --user root"
 
 
 log "===== Checking environment ====="
+a info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
+a info-hostname.log satellite6 -m "shell" -a "hostname"
 a check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 set +e
