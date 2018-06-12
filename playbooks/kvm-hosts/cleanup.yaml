@@ -63,9 +63,22 @@
         name: "{{ item }}"
         state: destroyed
       with_items: "{{ our_vms }}"
+      #In case the VMs are already deleted.
+      ignore_errors: yes
 
     - name: "All VMs removed"
       virt:
         name: "{{ item }}"
         command: undefine
       with_items: "{{ our_vms }}"
+      #In case the VMs are already deleted.
+      ignore_errors: yes
+
+    - name: "Remove unused Logical Volumes"
+      lvol:
+        lv: "{{ item }}"
+        vg: "{{ vm_vg }}"
+        state: absent
+        force: yes
+      with_items: "{{ our_vms }}"
+...
