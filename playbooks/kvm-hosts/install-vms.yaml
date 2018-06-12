@@ -56,4 +56,24 @@
       register: ips
     - debug: msg="{{ item.stdout }} {{ item.item.item.name }}"
       with_items: "{{ ips.results }}"
+
+    - name: "Wait for installation to be finished and machines turned off"
+      wait_for:
+        # We will give VM 600 seconds to finish the install and turn off.
+        # This is ugly, ineffective, and a race condition, which will fail at the worst time.
+        # We should come up with a better way.
+        timeout: 600
+
+    - name: "Start the VMs..."
+      virt:
+        name: "{{ item.name }}"
+        state: running
+      with_items: "{{ vms[inventory_hostname] }}"
+
+    - name: "...and wait until they are ready"
+      wait_for:
+        host: "{{ item.ip }}"
+        port: 22
+        search_regex: OpenSSH
+      with_items: "{{ vms[inventory_hostname] }}"
 ...
