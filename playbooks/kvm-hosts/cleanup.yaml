@@ -53,20 +53,19 @@
       virt:
         command: list_vms
       register: vms_list
-    - name: "Status of VMs"
-      virt:
-        name: "{{ item }}"
-        command: status
-      with_items: "{{ vms_list.list_vms }}"
-      register: vms_status
+
+    - name: "Get our VMs names"
+      set_fact:
+        our_vms: "{{ vms[inventory_hostname] | map(attribute='name') | list }}"
+
     - name: "All VMs stopped"
       virt:
-        name: "{{ item.item }}"
-        command: destroy
-      when: "{{ item.status != 'shutdown' }}"
-      with_items: "{{ vms_status.results }}"
+        name: "{{ item }}"
+        state: destroyed
+      with_items: "{{ our_vms }}"
+
     - name: "All VMs removed"
       virt:
         name: "{{ item }}"
         command: undefine
-      with_items: "{{ vms_list.list_vms }}"
+      with_items: "{{ our_vms }}"
