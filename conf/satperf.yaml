@@ -212,12 +212,14 @@ grafana_panels:
 recorder_server: ''
 
 # VMs provisioning
+vm_vg: default
+
 vms:
   kvm1.example.com:
     - name: kvm1-vm1
       cpu_count: 4
       mem_size: 16000
-      disk: pool=default,size=100,cache=none
+      disk: "pool={{ vm_vg }},size=100,cache=none"
       nic_1g_bridge: br1
       nic_1g_mac: RANDOM
       nic_10g_bridge: br0
