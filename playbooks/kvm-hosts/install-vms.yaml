@@ -56,4 +56,29 @@
       register: ips
     - debug: msg="{{ item.stdout }} {{ item.item.item.name }}"
       with_items: "{{ ips.results }}"
+
+    - name: "Wait for installation to be finished and machines turned off"
+    # We will give VM a half hour to finish the install and turn off.
+    # My usual number of 30 seconds tries before the machines are installed is around 15.
+      virt:
+        command: status
+        name: "{{ item.name }}"
+      register: vminfo
+      until: vminfo.status == "shutdown"
+      retries: 60
+      delay: 30
+      with_items: "{{ vms[inventory_hostname] }}"
+
+    - name: "Start the VMs..."
+      virt:
+        name: "{{ item.name }}"
+        state: running
+      with_items: "{{ vms[inventory_hostname] }}"
+
+    - name: "...and wait until they are ready"
+      wait_for:
+        host: "{{ item.ip }}"
+        port: 22
+        search_regex: OpenSSH
+      with_items: "{{ vms[inventory_hostname] }}"
 ...
