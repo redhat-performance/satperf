@@ -46,6 +46,10 @@ sat_repos:
 sat_install_source: cdn   # either 'cdn' or 'repo'
                           #   'cdn' ... configure value of 'sat_cdn_reponame'
                           #   'repo' ... configure value of 'sat_repo_file'
+# Repos needed for the Satellite installation
+sat_installation_repos:
+  - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+  - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
 sat_repo_file: ../../../../../conf/sat63.repo
 sat_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-{{ sat_version }}-rpms'
 sat_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Satellite and Software Collections
