@@ -58,11 +58,16 @@
       with_items: "{{ ips.results }}"
 
     - name: "Wait for installation to be finished and machines turned off"
-      wait_for:
-        # We will give VM 600 seconds to finish the install and turn off.
-        # This is ugly, ineffective, and a race condition, which will fail at the worst time.
-        # We should come up with a better way.
-        timeout: 600
+    # We will give VM a half hour to finish the install and turn off.
+    # My usual number of 30 seconds tries before the machines are installed is around 15.
+      virt:
+        command: status
+        name: "{{ item.name }}"
+      register: vminfo
+      until: vminfo.status == "shutdown"
+      retries: 60
+      delay: 30
+      with_items: "{{ vms[inventory_hostname] }}"
 
     - name: "Start the VMs..."
       virt:
