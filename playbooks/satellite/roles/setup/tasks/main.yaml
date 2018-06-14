@@ -24,17 +24,36 @@
     until: "attaching.rc == 0"
     retries: 5
     delay: 10
-  - name: "Disable all RHSM repos and only enable base RHEL and SCL repos"
+  - name: "Disable all RHSM repos"
     shell:
-      subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms' --enable 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
+      subscription-manager repos --disable '*'
+  - name: "Enable all SM repos required for installation"
+    shell:
+      subscription-manager repos --enable "{{ item }}"
+    with_items: "{{ sat_installation_repos }}"
 
   # Setup repo when installing from custom repository
+
+  # Get repofile from http[s]/ftp[s] URL if the file is remote
+  - name: "Custom Satellite repo configured"
+    get_url:
+      url="{{ sat_repo_file }}"
+      dest=/etc/yum.repos.d/satellite.repo
+      force=yes
+    when:
+      - sat_install_source is match("repo")
+      - sat_repo_file is search("^(https?|s?ftps?):\/\/")
+
+  # Get repofile from a local source
   - name: "Custom Satellite repo configured"
     copy:
       src="{{ sat_repo_file }}"
-      dest=/etc/yum.repos.d/
+      dest=/etc/yum.repos.d/satellite.repo
       force=yes
-    when: "sat_install_source == 'repo'"
+    when:
+      - sat_install_source is match("repo")
+      - sat_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
+
 
   # Setup repos when installing from CDN
   - name: "CDN Satellite repo configured"
