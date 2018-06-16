@@ -15,7 +15,9 @@
     command:
       hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription upload --organization '{{ sat_org }}' --file /root/manifest.zip
     register: uploading
-    until: "{{ uploading.rc }} == 0"
+    # rc==70 is the new manifest data are same as those already present.
+    failed_when: not (uploading.rc == 70 or uploading.rc == 0)
+    until: (uploading.rc == 70) or (uploading.rc == 0)
     retries: 5
     delay: 10
     when: "manifesting.stat.exists is defined or manifesting.stat.exists == true or copying.changed"
@@ -25,12 +27,12 @@
     lineinfile:
       path: "/etc/puppet/autosign.conf"
       line: "*"
-    when: "{{ sat_version }} != '6.4'"
+    when: sat_version != 6.4
   - name: "Add '*' autosign entry (Satellite 6.4)"
     lineinfile:
       path: "/etc/puppetlabs/puppet/autosign.conf"
       line: "*"
-    when: "{{ sat_version }} == '6.4'"
+    when: sat_version == 6.4
 
   # TODO: We want to be sure manifest is in the Sat before we start trying
   # to enable repos. There have to be some better way, but for now this
