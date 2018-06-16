@@ -11,18 +11,18 @@
 
   - name: "Make sure puppet module build dir is empty"
     file:
-      path: "/root/{{ content_puppet_module }}"
+      path: "/root/{{ content_puppet_module_name }}"
       state: absent
   - name: "Generate puppet module template"
     command:
-      puppet module generate "{{ content_puppet_module }}" --skip-interview
+      "puppet module generate {{ content_puppet_module }} --skip-interview"
   - name: "Create puppet module content"
     template:
       src: files/init.pp
-      dest: "/root/{{ content_puppet_module }}/manifests/init.pp"
+      dest: "/root/{{ content_puppet_module_name }}/manifests/init.pp"
   - name: "Build our puppet module"
     command:
-      puppet module build "/root/{{ content_puppet_module }}"
+      puppet module build "/root/{{ content_puppet_module_name }}"
 
   - name: "Create puppet product"
     command:
@@ -32,7 +32,7 @@
       hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type puppet --label "{{ content_puppet_repo }}" --name "{{ content_puppet_repo }}" --organization-id "{{ sat_orgid }}" --product "{{ content_puppet_product }}"
   - name: "Upload our puppet module to the repository"
     command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module }}/pkg/{{ content_puppet_module }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module_name }}/pkg/{{ content_puppet_module }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
     register: upload
     until: "{{ upload.rc }} == 0"
     retries: 2
