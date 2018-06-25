@@ -132,10 +132,6 @@ ntp_server: clock.redhat.com
 # EPEL
 epel_release_rpm: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
 
-# Monitoring
-pbench_enabled: True
-pbench_repo_file: "https://copr.fedorainfracloud.org/coprs/ndokos/pbench/repo/epel-{{ ansible_distribution_major_version }}/ndokos-pbench-epel-{{ ansible_distribution_major_version }}.repo"
-
 # Product names to be created
 tests_products: perf-gen1 perf-gen2 perf-gen3 perf-gen4 perf-gen5 perf-gen6 perf-gen7 perf-gen8
 tests_backup_path: /home/backup
@@ -148,36 +144,7 @@ methods:
   cv_pub: 10 #number of times content publish
   concurrent: 1 #concurrent (1) or sync (0)
 
-Monitoring:
-  # for collectd multi/single-host installations
-  # one/all of satellite6:docker-hosts:capsules
-  # hosts: satellite6:capsules
-  hosts: satellite6
-
-########################################
-# Collectd Configuration
-########################################
-# Interval in seconds
-collectd_interval: 10
-# Run collectd on specific Satellite-6 nodes:
-
-########################################
-# Graphite Configuration
-########################################
-# Graphite Server gathered as groups['graphite']|first (Collectd -> Graphite server)
-# Port Graphite is listening on
-graphite_port: 80
-# Graphite prefix / Cloud name used both with graphite and grafana dashboards
-graphite_prefix: satellite
-# Graphite username and password for login on the dashboard
-graphite_username: root
-graphite_password: password
-
-########################################
-# Grafana Dashboarding Configuration
-########################################
-# Grafana Server gathered as groups['grafana']|first (Can be hosted on the Graphite server)
-# Port Grafite is listening on
+# Port Grafana is listening on
 grafana_host: 127.0.0.1
 grafana_port: 3000
 # Grafana username and password
