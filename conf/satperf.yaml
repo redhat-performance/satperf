@@ -51,6 +51,17 @@ sat_installation_repos:
   - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
   - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
 sat_repo_file: ../../../../../conf/sat63.repo
+
+#additional_repo_files:
+#  # URL for additional repo files, if any needed.
+#  # URLs can be either http[s]://, ftp[s]:// or filepath (/file/system/path/repo_file)
+#  # Doesn't have to be defined, but if it is, the stucture should be as follows:
+#  - target_repo_filename: 'additional-file1.repo'
+#    repo_file_url: 'http://server.example.com/pub/repo_file1'
+#  - target_repo_filename: 'additional-file2.repo'
+#    repo_file_url: '/home/user/repo_file'
+
+
 sat_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-{{ sat_version }}-rpms'
 sat_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Satellite and Software Collections
                                            # when installing from custom repository, Software Collections should be enough
