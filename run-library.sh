@@ -11,6 +11,12 @@ logs=${logs:-"logs-$( date --iso-8601=seconds )"}
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
 
+# We need to add an ID to run-bench runs to be able to filter out results from multiple runs. This ID will be appended as
+# the last field of lines in measurements.log file.
+# The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
+# generated based on the current date and time.
+bench_run_id=${1:-$(date --iso-8601=seconds)}
+
 # Requirements check
 if ! type bc >/dev/null; then
     echo "ERROR: bc not installed" >&2
@@ -39,7 +45,7 @@ function a() {
     rc=$?
     local end=$( date +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    echo "$( echo "ansible $opts_adhoc $@" | sed 's/,/_/g' ),$out,$rc,$start,$end" >>$logs/measurement.log
+    echo "$( echo "ansible $opts_adhoc $@" | sed 's/,/_/g' ),$out,$rc,$start,$end,${bench_run_id}" >>$logs/measurement.log
     return $rc
 }
 
@@ -64,7 +70,7 @@ function ap() {
     rc=$?
     local end=$( date +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    echo "$( echo "ansible-playbook $opts_adhoc $@" | sed 's/,/_/g' ),$out,$rc,$start,$end" >>$logs/measurement.log
+    echo "$( echo "ansible-playbook $opts_adhoc $@" | sed 's/,/_/g' ),$out,$rc,$start,$end,${bench_run_id}" >>$logs/measurement.log
     return $rc
 }
 
