@@ -30,7 +30,7 @@ log "===== Prepare for Red Hat content ====="
 a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
 s $( expr 3 \* $wait_interval )
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
-h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
+#h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 count=5
 for i in $( seq $count ); do
