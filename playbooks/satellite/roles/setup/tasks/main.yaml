@@ -24,6 +24,7 @@
     until: "attaching.rc == 0"
     retries: 5
     delay: 10
+    failed_when: "attaching.rc != 0 and 'This unit has already had the subscription matching pool ID' not in attaching.stdout"
   - name: "Disable all RHSM repos"
     shell:
       subscription-manager repos --disable '*'
