@@ -16,6 +16,8 @@
     - ../common/roles/remove-home-extend-root
     - setup
     - ../common/roles/enlarge-arp-table
-    - satellite-populate
-    - client-content
+    - role: satellite-populate
+      tags: satellite-populate
+    - role: client-content
+      tags: client-content
 ...
