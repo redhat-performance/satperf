@@ -99,8 +99,11 @@
         msg: "rc:{{ clients_yaml_cmd.rc }} size:{{ size }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
 
     - name: "Give server some time to rest"
-      pause:
-        seconds: "{{ resting }}"
+      # To workaround https://github.com/ansible/ansible/pull/42217
+      #pause:
+      #  seconds: "{{ resting }}"
+      command:
+        sleep "{{ resting }}"
 
     # FIXME: Takes into account start/end time from only one (random) docker host (should from min(start) to max(end))
     - debug:
