@@ -118,6 +118,11 @@
         name: autofs
         version: 1.2.3
   tasks:
+    - name: "Create Puppet product"
+      command:
+        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" product create --label "{{ content_puppet_product }}" --name "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+      register: cmd
+      failed_when: cmd.rc != 0 and 'Name has already been taken for a product in this organization.' not in cmd.stderr
     - name: "Create Puppet repo"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository create --content-type puppet --product "{{ content_puppet_product }}" --organization "{{ sat_org }}" --name "{{ content_puppet_repo }}"
