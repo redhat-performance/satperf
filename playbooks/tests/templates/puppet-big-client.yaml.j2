@@ -54,8 +54,7 @@
         ###gather_timeout: 60   # available in Ansible 2.2
       tags: SETUP
     - name: "Configure puppet stuff on Satellite"
-      shell: |
-        sleep "$(( $RANDOM % {% raw %}{{ groups['all']|length }}{% endraw %} ))"   # randomize this a bit in case we have lots of docker hosts
+      shell:
         hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --puppet-classes "{% raw %}{{ content_puppet_module_name }}{% endraw %}"
       with_items: "{% raw %}{{ groups['all'] }}{% endraw %}"
       when: item != 'localhost'
@@ -64,10 +63,8 @@
       ignore_errors: true
       register: setup
       tags: SETUP
-    - debug: var=setup
-      tags: SETUP
     - name: "Configure puppet on Satellite action - timings"
-      debug:   # FIXME: If the setup failed, this is our only indication that it did
+      debug:
         msg="SetupPuppet {% raw %}{{ setup.results.start }}{% endraw %} to {% raw %}{{ setup.results.end }}{% endraw %}"
       when: "setup.results is defined and setup.results.rc is defined and setup.results.rc == 0"
       tags: SETUP
@@ -85,5 +82,6 @@
     - name: "Pickup puppet action - timings"
       debug:
         msg="PickupPuppet {% raw %}{{ pickup.start }}{% endraw %} to {% raw %}{{ pickup.end }}{% endraw %}"
+      when: "pickup.rc is defined and pickup.rc == 0"
       tags: DEPLOY
 ...
