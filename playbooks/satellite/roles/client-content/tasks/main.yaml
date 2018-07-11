@@ -1,14 +1,4 @@
 ---
-  - name: "Do we have daemonize package downloaded?"
-    stat:
-      path: "/var/www/html/pub/{{ content_daemonize }}"
-    register: daemonize_stat
-  - name: "Download daemonize package"
-    get_url:
-      url: "http://dl.fedoraproject.org/pub/epel/7/x86_64/d/{{ content_daemonize }}"
-      dest: "/var/www/html/pub/{{ content_daemonize }}"
-    when: "{{ daemonize_stat.stat.exists }}"
-
   - name: "Make sure puppet module build dir is empty"
     file:
       path: "/root/{{ content_puppet_module_name }}"

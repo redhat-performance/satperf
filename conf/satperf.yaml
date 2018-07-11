@@ -96,7 +96,6 @@ content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
 content_sattools_name: Sat Tools
 content_sattools_label: sat-x86_64-tools
 content_sattools_url: http://repos.example.com/released/SatTools/7Server/x86_64/os/
-content_daemonize: daemonize-1.7.7-1.el7.x86_64.rpm
 content_puppet_module_author: satperf
 content_puppet_module_name: satperftest
 content_puppet_module: "{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
