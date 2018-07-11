@@ -6,9 +6,6 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    use_only_fresh: true   # should we use only containers which were not registered yet?
-    update_used: true   # once we use containers, should we update /root/containers-used-count?
-    grepper: PickupPuppet
     content_puppet_repo: SatPerfPuppetRealModulesRepo
     content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
     content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
@@ -169,5 +166,4 @@
     - name: "Publish our content view"
       command:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
-    ### TODO: Publish CV to create environment
 ...
