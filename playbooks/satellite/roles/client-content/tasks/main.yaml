@@ -1,33 +1,4 @@
 ---
-  - name: "Make sure puppet module build dir is empty"
-    file:
-      path: "/root/{{ content_puppet_module_name }}"
-      state: absent
-  - name: "Generate puppet module template"
-    command:
-      "puppet module generate {{ content_puppet_module }} --skip-interview"
-  - name: "Create puppet module content"
-    template:
-      src: files/init.pp
-      dest: "/root/{{ content_puppet_module_name }}/manifests/init.pp"
-  - name: "Build our puppet module"
-    command:
-      puppet module build "/root/{{ content_puppet_module_name }}"
-
-  - name: "Create puppet product"
-    command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" product create --label "{{ content_puppet_product }}" --name "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
-  - name: "Create puppet repository"
-    command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type puppet --label "{{ content_puppet_repo }}" --name "{{ content_puppet_repo }}" --organization-id "{{ sat_orgid }}" --product "{{ content_puppet_product }}"
-  - name: "Upload our puppet module to the repository"
-    command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module_name }}/pkg/{{ content_puppet_module }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
-    register: upload
-    until: "{{ upload.rc }} == 0"
-    retries: 2
-    delay: 10
-
   - name: "Create RHEL product"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ content_rhel_name }}"
@@ -67,9 +38,6 @@
   - name: "Add Sat Tools repo to the content view"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view add-repository --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}" --product "{{ content_sattools_name }}" --repository "{{ content_sattools_name }}"
-  - name: "Add Puppet module to the content view"
-    command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module add --organization-id 1 --content-view "{{ content_content_view_name }}" --name "{{ content_puppet_module_name }}" --author "{{ content_puppet_module_author }}"
 
   - name: "Publish and promote content view via async"
     command:

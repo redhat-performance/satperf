@@ -44,7 +44,7 @@
     - import_tasks: includes/puppet-big-test-deploy.yaml
       vars:
         nickname: single
-        content_puppet_env: KT_Default_Organization_Library_SatPerfContentView_2
+        content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetFakeModule_2
         content_puppet_module_name: satperftest
       tags: DEPLOY_SINGLE
 

@@ -96,14 +96,6 @@ content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
 content_sattools_name: Sat Tools
 content_sattools_label: sat-x86_64-tools
 content_sattools_url: http://repos.example.com/released/SatTools/7Server/x86_64/os/
-content_puppet_module_author: satperf
-content_puppet_module_name: satperftest
-content_puppet_module: "{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
-content_puppet_module_file: /tmp/puppet-satperftest.txt
-content_puppet_module_file_content: Some important sentence
-content_puppet_product: SatPerfPuppetProduct
-content_puppet_repo: SatPerfPuppetRepo
-content_puppet_env: KT_Default_Organization_Library_SatPerfContentView_2
 content_content_view_name: SatPerfContentView
 content_hostgroup: "SatperfHostGroup"
 content_activationkey: "SatperfActivationKey"
