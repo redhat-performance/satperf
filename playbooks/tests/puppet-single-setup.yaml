@@ -6,6 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
+    content_puppet_product: SatPerfPuppetProduct
     content_puppet_repo: SatPerfPuppetFakeModuleRepo
     content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetFakeModule_2
     content_puppet_module_author: satperf

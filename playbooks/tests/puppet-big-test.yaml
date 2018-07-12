@@ -35,27 +35,28 @@
       tags: always
 
 
-    # Puppet registration
-    - import_tasks: includes/puppet-big-test-register.yaml
-      tags: REGISTER
-
-
-    # Puppet deploy our single module
-    - import_tasks: includes/puppet-big-test-deploy.yaml
-      vars:
+    - name: "Set variables for single module job"
+      set_fact:
         nickname: single
         content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetFakeModule_2
         content_puppet_module_name: satperftest
-      tags: DEPLOY_SINGLE
+      tags: SINGLE
 
-
-    # Puppet deploy lots of modules
-    - import_tasks: includes/puppet-big-test-deploy.yaml
-      vars:
+    - name: "Set variables for single module job"
+      set_fact:
         nickname: bunch
         content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
         content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
-      tags: DEPLOY_BUNCH
+      tags: BUNCH
+
+
+    # Puppet registration
+    - import_tasks: includes/puppet-big-test-register.yaml
+      tags: always
+
+    # Puppet deploy
+    - import_tasks: includes/puppet-big-test-deploy.yaml
+      tags: always
 
 
     - import_tasks: includes/update_used_containers.yaml
