@@ -298,7 +298,7 @@
         - PUP_SETUP_ONLY
     - name: "Set puppet environment"
       command:
-        /usr/bin/puppet config set environment "{{ content_puppet_env }}" --section agent
+        /usr/bin/puppet config set environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --section agent
       tags:
         - PUP_ONLY
         - PUP_SETUP_ONLY
@@ -335,7 +335,7 @@
     # We need to serialize these hammer calls because of https://bugzilla.redhat.com/show_bug.cgi?id=1336007
     - name: "Configure puppet stuff on Sat for given container"
       command:
-        hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{{ content_puppet_env }}" --puppet-classes "{{ content_puppet_module_name }}"
+        hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --puppet-classes "{% raw %}{{ content_puppet_module_name }}{% endraw %}"
       with_items: "{% raw %}{{ groups['all'] }}{% endraw %}"
       when: item != 'localhost'
       run_once: true
@@ -359,7 +359,7 @@
       tags: PUPDEPLOY
     - name: "Check if file was created"
       action: command
-        cat "{{ content_puppet_module_file }}"
+        cat "{% raw %}{{ content_puppet_module_file }}{% endraw %}"
       register: deployed
       until: "deployed.rc is defined and deployed.rc == 0"
       retries: 30
