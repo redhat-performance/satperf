@@ -7,7 +7,7 @@
 #
 # # Create lots of locations/domains/subnets
 # ansible -u root --private-key conf/contperf/id_rsa_perf -i conf/contperf/inventory.ini -m copy -a "src=scripts/create_lots_of_subnets.sh dest=/root/create_lots_of_subnets.sh force=yes" satellite6
-# ansible -u root --private-key conf/contperf/id_rsa_perf -i conf/contperf/inventory.ini -m command -a "bash /root/create_lots_of_subnets.sh 126 150" satellite6
+# ansible -u root --private-key conf/contperf/id_rsa_perf -i conf/contperf/inventory.ini -m command -a "bash /root/create_lots_of_subnets.sh 100 150" satellite6
 # ansible -u root --private-key conf/contperf/id_rsa_perf -i conf/contperf/inventory.ini -m shell -a "hammer -u admin -p changeme location list | wc -l; hammer -u admin -p changeme domain list | wc -l; hammer -u admin -p changeme subnet list | wc -l" satellite6
 
 locations_from=$1
