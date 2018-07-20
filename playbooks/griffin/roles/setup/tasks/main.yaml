@@ -1,0 +1,34 @@
+---
+- name: "Install git and ansible"
+  yum:
+    name: "{{ item }}"
+    state: present
+  with_items:
+    - git
+    - ansible
+    - python-virtualenv
+
+- name: "Clone ehelms's repo"
+  git:
+    repo: https://github.com/ehelms/forklift.git
+    dest: /root/forklift/
+    update: yes
+    version: podify
+
+- name: "Run"
+  shell: |
+    cd /root
+    virtualenv /root/griffin_venv
+    source /root/griffin_venv/bin/activate
+    pip install git+https://github.com/ehelms/openshift-restclient-python.git@fix-destination-ca
+    cd /root/forklift/containers/
+    ansible-galaxy install -r requirements.yml
+    oc login -u developer -p a
+    ansible-playbook foreman.yml --tags start -e "minishift=false" -e "ansible_python_interpreter=/root/griffin_venv/bin/python"
+    oc login -u system:admin
+    ###oc adm policy add-scc-to-user anyuid system:serviceaccount:foreman:anyuid   # probably not needed now
+    ansible-playbook foreman.yml --tags start -e "minishift=false" -e "ansible_python_interpreter=/root/griffin_venv/bin/python"
+    oc login -u developer -p a
+    oc project foreman
+    oc status
+...

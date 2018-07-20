@@ -1,0 +1,16 @@
+---
+- name: "Download and extract oc archive"
+  unarchive:
+    creates: "/root/{{ oc_release_download | basename | regex_replace('.tar.gz$', '') }}"
+    dest: /root/
+    remote_src: yes
+    src: "{{ oc_release_download }}"
+- name: "Copy oc to /usr/sbin/"
+  copy:
+    dest: /usr/sbin/oc
+    src: "/root/{{ oc_release_download | basename | regex_replace('.tar.gz$', '') }}/oc"
+    remote_src: yes
+    owner: root
+    group: root
+    mode: '755'
+...

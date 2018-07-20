@@ -1,9 +1,15 @@
 ---
   # Check variables
-  - assert:
+  - name: "Make sure only one Satellite is specified"
+    assert:
       that: "groups['satellite6']|length == 1"
       msg: "Satellite not specified or too many of them specified"
-    when: "ignore_satellite is not defined or ignore_satellite != 'true'"
+    when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
+  - name: "Make sure only one Griffin is specified"
+    assert:
+      that: "groups['griffin']|length == 1"
+      msg: "Griffin not specified or too many of them specified"
+    when: "'griffin' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
 
   # Make sure we have key deployed
   - name: "Deploy key"
@@ -87,13 +93,25 @@
       host: "{{ groups['satellite6']|first }}"
       port: 22
       timeout: 10
-    when: "ignore_satellite is not defined or ignore_satellite != 'true'"
+    when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
   - name: "We can ping Satellite via special network"
     wait_for:
       host: "{{ hostvars[groups['satellite6']|first].ip }}"
       port: 22
       timeout: 10
-    when: "( ignore_satellite is not defined or ignore_satellite != 'true' ) and hostvars[groups['satellite6']|first].ip is defined"
+    when: "'satellite6' in groups and ( ( ignore_satellite is not defined or ignore_satellite != 'true' ) and hostvars[groups['satellite6']|first].ip is defined )"
+  - name: "We can ping Griffin"
+    wait_for:
+      host: "{{ groups['griffin']|first }}"
+      port: 22
+      timeout: 10
+    when: "'griffin' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
+  - name: "We can ping Griffin via special network"
+    wait_for:
+      host: "{{ hostvars[groups['griffin']|first].ip }}"
+      port: 22
+      timeout: 10
+    when: "'griffin' in groups and ( ( ignore_satellite is not defined or ignore_satellite != 'true' ) and hostvars[groups['griffin']|first].ip is defined )"
   - name: "We can ping NTP server"
     command:
       ping -c 3 "{{ ntp_server }}"

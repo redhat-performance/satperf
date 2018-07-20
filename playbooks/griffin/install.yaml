@@ -1,0 +1,13 @@
+---
+# Assumes docker is already there, configured
+- hosts: griffin
+  remote_user: root
+  ###gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - install-openshift-oc
+    - install-openshift-cluster-up
+    - setup
+...
