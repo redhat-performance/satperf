@@ -63,8 +63,10 @@
   command:
     firewall-cmd --permanent --new-zone dockerc
   register: zone_created
-  changed_when: "'created' in zone_created.stdout"
-  failed_when: "'created' in zone_created.stdout and 'NAME_CONFLICT' not in zone_created.stderr"
+  changed_when: "'success' in zone_created.stdout"
+  failed_when: "'success' not in zone_created.stdout and 'NAME_CONFLICT' not in zone_created.stderr"
+- debug:
+    var: zone_created.stdout
 - name: "Reload firewalld so new zone is available"
   systemd:
     name: firewalld
@@ -96,5 +98,5 @@
   register: oc_cluster_up
 - name: "Show output"
   debug:
-    var: oc_cluster_up.stdoutlines
+    var: oc_cluster_up.stdout_lines
 ...
