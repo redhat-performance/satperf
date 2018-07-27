@@ -19,12 +19,16 @@
 
 - name: "Run"
   shell: |
-    cd /root
     virtualenv /root/griffin_venv
+
+    eval $(minishift oc-env)
     source /root/griffin_venv/bin/activate
     pip install openshift
     cd /root/forklift/containers/
     #ansible-galaxy install -r requirements.yml
+    #oc login -u system:admin
+    #oc adm policy add-scc-to-user hostnetwork -z router
+    #oc adm router
     oc login -u developer -p a
     ansible-playbook foreman.yml -i does-not-exist.ini -e "minishift=false" -e "ansible_python_interpreter=/root/griffin_venv/bin/python"
     #oc login -u system:admin
