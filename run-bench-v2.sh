@@ -14,6 +14,9 @@ wait_interval=10
 opts="--forks 100 -i conf/contperf/inventory.ini --private-key conf/contperf/id_rsa_perf"
 opts_adhoc="$opts --user root"
 
+puppet_one_concurency="5 15 30"
+puppet_bunch_concurency="2 6 10 14 18"
+
 
 log "===== Checking environment ====="
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
@@ -139,7 +142,7 @@ s $wait_interval
 
 
 log "===== Apply one module with different concurency ====="
-for concurency in 5 15 30; do
+for concurency in $puppet_one_concurency; do
     ap $concurency-PuppetOne.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
     log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
     log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
@@ -149,7 +152,7 @@ done
 
 
 log "===== Apply bunch of modules with different concurency ====="
-for concurency in 2 6 10 14 18; do
+for concurency in $puppet_bunch_concurency; do
     ap $concurency-PuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
     log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
     log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
@@ -161,6 +164,7 @@ done
 function table_row() {
     local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
     local description="$2"
+    local grepper="$3"
     export IFS=$'\n'
     local count=0
     local sum=0
@@ -171,11 +175,11 @@ function table_row() {
             echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
             continue
         fi
-        if echo "$identifier" | grep --quiet -- "-register-"; then
+        if [ -n "$grepper" ]; then
             local log="$( echo "$row" | cut -d ',' -f 2 )"
-            local out=$( ./reg-average.sh "Register" "$log" | grep '^Register in ' | tail -n 1 )
+            local out=$( ./reg-average.sh "$grepper" "$log" | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
-            [ -z "$note" ] && note="Number of passed regs:"
+            [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"
             local diff=$( echo "$out" | cut -d ' ' -f 8 )
             let sum+=$diff
@@ -203,7 +207,13 @@ table_row "12-repo-sync-rhel7optional.log" "Sync RHEL7 Optional (on-demand)"
 table_row "21-cv-all-publish.log" "Publish big CV"
 table_row "23-cv-all-promote-[0-9]\+.log" "Promote big CV"
 table_row "33-cv-filtered-publish.log" "Publish smaller filtered CV"
-table_row "44-register-[0-9]\+.log" "Register bunch of containers"
+table_row "44-register-[0-9]\+.log" "Register bunch of containers" "Register"
 table_row "52-rex-date.log" "ReX 'date' on all containers"
 table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
 table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --force' on all containers"
+for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" ); do
+    table_row "$concurency-PuppetOne.log" "Registering $concurency * <hosts> Puppet clients, scenario 'One'" "RegisterPuppet"
+done
+for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" ); do
+    table_row "$concurency-PuppetBunch.log" "Registering $concurency * <hosts> Puppet clients, scenario 'Bunch'" "RegisterPuppet"
+done
