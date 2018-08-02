@@ -2,16 +2,18 @@
 
 source run-library.sh
 
-manifest="conf/contperf/manifest.zip"
+manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
+private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
+
+registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
+registrations_iterations=${PARAM_registrations_iterations:-20}
+wait_interval=${PARAM_wait_interval:-10}
+
 do="Default Organization"
 dl="Default Location"
-###registrations_per_docker_hosts=10
-registrations_per_docker_hosts=5
-registrations_iterations=20
-###wait_interval=100
-wait_interval=10
 
-opts="--forks 100 -i conf/contperf/inventory.ini --private-key conf/contperf/id_rsa_perf"
+opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
 #### Run this manually on the Satellite
