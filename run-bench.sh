@@ -10,27 +10,29 @@ registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-10}
 
+puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
+puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
+
 do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
-#### Run this manually on the Satellite
-###yes | satellite-installer --scenario satellite --reset
-
-
 log "===== Checking environment ====="
-a info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
-a info-hostname.log satellite6 -m "shell" -a "hostname"
-a check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
-a check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
+a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
+a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
+a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
+a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
+ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
+ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
+ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
+a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
+s $( expr 3 \* $wait_interval )
 set +e
 
 
 log "===== Prepare for Red Hat content ====="
-a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
-s $( expr 3 \* $wait_interval )
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
 #h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
@@ -98,8 +100,6 @@ s $wait_interval
 
 
 log "===== Register ====="
-ap 40-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
-ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 h 40-get-os-title.log "os info --id 1"
 os_title=$( grep '^Title' $logs/40-get-os-title.log | sed 's/^.*:\s\+\(.*\)$/\1/' )
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
@@ -118,11 +118,15 @@ a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/fore
 h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
 h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+s $wait_interval
+h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='katello-package-upload --force'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+s $wait_interval
 
 
 function table_row() {
     local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
     local description="$2"
+    local grepper="$3"
     export IFS=$'\n'
     local count=0
     local sum=0
@@ -133,11 +137,11 @@ function table_row() {
             echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
             continue
         fi
-        if echo "$identifier" | grep --quiet -- "-register-"; then
+        if [ -n "$grepper" ]; then
             local log="$( echo "$row" | cut -d ',' -f 2 )"
-            local out=$( ./reg-average.sh "Register" "$log" | grep '^Register in ' | tail -n 1 )
+            local out=$( ./reg-average.sh "$grepper" "$log" | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
-            [ -z "$note" ] && note="Number of passed regs:"
+            [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"
             local diff=$( echo "$out" | cut -d ' ' -f 8 )
             let sum+=$diff
@@ -165,6 +169,7 @@ table_row "12-repo-sync-rhel7optional.log" "Sync RHEL7 Optional (on-demand)"
 table_row "21-cv-all-publish.log" "Publish big CV"
 table_row "23-cv-all-promote-[0-9]\+.log" "Promote big CV"
 table_row "33-cv-filtered-publish.log" "Publish smaller filtered CV"
-table_row "44-register-[0-9]\+.log" "Register bunch of containers"
+table_row "44-register-[0-9]\+.log" "Register bunch of containers" "Register"
 table_row "52-rex-date.log" "ReX 'date' on all containers"
 table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
+table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --force' on all containers"
