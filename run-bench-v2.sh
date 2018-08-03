@@ -135,6 +135,8 @@ s $wait_interval
 h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='katello-package-upload --force'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
 
+log "===== Misc simple tests ====="
+ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
 
 log "===== Preparing Puppet environment ====="
 ap satellite-puppet-single-cv.log playbooks/tests/puppet-single-setup.yaml &
@@ -176,6 +178,7 @@ table_row "44-register-[0-9]\+.log" "Register bunch of containers" "Register"
 table_row "52-rex-date.log" "ReX 'date' on all containers"
 table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
 table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --force' on all containers"
+table_row "60-generate-applicability.log" "Generate errata applicability on all profiles" "GenerateApplicability"
 for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" ); do
     table_row "$concurency-PuppetOne.log" "Registering $concurency * <hosts> Puppet clients, scenario 'One'" "RegisterPuppet"
 done

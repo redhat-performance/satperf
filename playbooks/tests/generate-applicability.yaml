@@ -1,0 +1,37 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: "Deploy generate applicability script"
+      copy:
+        content: |
+          echo "ForemanTasks.async_task(::Actions::Katello::Host::GenerateApplicability, Host.all)" | foreman-rake console
+          tmp=$( mktemp )
+          while true; do
+              hammer --output yaml -u admin -p changeme task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' > $tmp
+              grep '^\s*Ended at:\s*$' $tmp || break
+              sleep 1
+          done
+
+          from=$( grep -n '^\s*\[[0-9]' $tmp | cut -d ':' -f 1 )
+          to=$( grep -n '^\s*[0-9]\+\]' $tmp | cut -d ':' -f 1 )
+          echo $( expr $to - $from + 1 )
+          grep 'Started at' $tmp | sed "s/^.*: '\(.*\)'/\1/" | sed -e "s/T/ /" -e "s/Z$//"
+          grep 'Ended at' $tmp | sed "s/^.*: '\(.*\)'/\1/" | sed -e "s/T/ /" -e "s/Z$//"
+        dest: /root/generate-applicability.sh
+    - name: "Run generate applicability script"
+      command:
+        bash /root/generate-applicability.sh
+      register: run_applicability
+    # Why are we printing it {{ count }} times? Because when we are
+    # constructing table in run-bench.sh, it assumes that every line
+    # is a attemot and if there are more lines, it includes number
+    # of attemots in the output, which is what I want
+    - name: "Print results"
+      debug:
+        msg: "GenerateApplicability {{ run_applicability.stdout_lines[-2] }} to {{ run_applicability.stdout_lines[-1] }}"
+      with_sequence: count="{{ run_applicability.stdout_lines[-3]|int }}"
