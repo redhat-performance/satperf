@@ -121,46 +121,6 @@ h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='k
 s $wait_interval
 
 
-function table_row() {
-    local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
-    local description="$2"
-    local grepper="$3"
-    export IFS=$'\n'
-    local count=0
-    local sum=0
-    local note=""
-    for row in $( grep "$identifier" $logs/measurement.log ); do
-        local rc="$( echo "$row" | cut -d ',' -f 3 )"
-        if [ "$rc" -ne 0 ]; then
-            echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
-            continue
-        fi
-        if [ -n "$grepper" ]; then
-            local log="$( echo "$row" | cut -d ',' -f 2 )"
-            local out=$( ./reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
-            local passed=$( echo "$out" | cut -d ' ' -f 6 )
-            [ -z "$note" ] && note="Number of passed:"
-            local note="$note $passed"
-            local diff=$( echo "$out" | cut -d ' ' -f 8 )
-            if [ -n "$diff" ]; then
-                let sum+=$diff
-                let count+=1
-            fi
-        else
-            local start="$( echo "$row" | cut -d ',' -f 4 )"
-            local end="$( echo "$row" | cut -d ',' -f 5 )"
-            let sum+=$( expr "$end" - "$start" )
-            let count+=1
-        fi
-    done
-    if [ "$count" -eq 0 ]; then
-        local avg="N/A"
-    else
-        local avg=$( echo "scale=2; $sum / $count" | bc )
-    fi
-    echo -e "$description\t$avg\t$note"
-}
-
 log "===== Formatting results ====="
 table_row "01-manifest-upload-[0-9]\+.log" "Manifest upload"
 table_row "12-repo-sync-rhel7.log" "Sync RHEL7 (immediate)"
