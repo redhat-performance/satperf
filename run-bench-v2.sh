@@ -180,13 +180,15 @@ function table_row() {
         fi
         if [ -n "$grepper" ]; then
             local log="$( echo "$row" | cut -d ',' -f 2 )"
-            local out=$( ./reg-average.sh "$grepper" "$log" | grep "^$grepper in " | tail -n 1 )
+            local out=$( ./reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
             [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"
             local diff=$( echo "$out" | cut -d ' ' -f 8 )
-            let sum+=$diff
-            let count+=1
+            if [ -n "$diff" ]; then
+                let sum+=$diff
+                let count+=1
+            fi
         else
             local start="$( echo "$row" | cut -d ',' -f 4 )"
             local end="$( echo "$row" | cut -d ',' -f 5 )"

@@ -25,7 +25,6 @@ a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
 a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
-ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
 a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
 s $( expr 3 \* $wait_interval )
@@ -100,14 +99,13 @@ s $wait_interval
 
 
 log "===== Register ====="
-h 40-get-os-title.log "os info --id 1"
-os_title=$( grep '^Title' $logs/40-get-os-title.log | sed 's/^.*:\s\+\(.*\)$/\1/' )
+ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 h 42-domain-create.log "domain create --name example.com --organizations '$do'"
 h 42-domain-update.log "domain update --name example.com --organizations '$do' --locations '$dl'"
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='$os_title' bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s $wait_interval
 done
 
@@ -139,13 +137,15 @@ function table_row() {
         fi
         if [ -n "$grepper" ]; then
             local log="$( echo "$row" | cut -d ',' -f 2 )"
-            local out=$( ./reg-average.sh "$grepper" "$log" | grep "^$grepper in " | tail -n 1 )
+            local out=$( ./reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
             [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"
             local diff=$( echo "$out" | cut -d ' ' -f 8 )
-            let sum+=$diff
-            let count+=1
+            if [ -n "$diff" ]; then
+                let sum+=$diff
+                let count+=1
+            fi
         else
             local start="$( echo "$row" | cut -d ',' -f 4 )"
             local end="$( echo "$row" | cut -d ',' -f 5 )"
