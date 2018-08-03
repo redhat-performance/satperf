@@ -53,9 +53,8 @@
         create: yes
     - name: "Hide older logs"
       shell: |
-        mkdir /root/old_logs
-        mv /root/*.log /root/old_logs/
-      ignore_errors: true
+        mkdir -p /root/old_logs
+        mv /root/*.log /root/old_logs/ || true
     - name: "Flush ebtables on Sat"
       command:
         ebtables -t nat --flush

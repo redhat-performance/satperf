@@ -1,6 +1,6 @@
 ---
 # Assumes docker is already there, configured
-- hosts: griffin
+- hosts: containerized
   remote_user: root
   ###gather_facts: no
   vars_files:
