@@ -1,0 +1,17 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: "Run 'hammer host list' command"
+      shell:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host list --organization "{{ sat_org }}" --page 1 --per-page 100 >/dev/null
+      register: run_hammer
+      with_sequence: count=10
+    - name: "Print results"
+      debug:
+        msg: "HammerHostList {{ item.start }} to {{ item.end }}"
+      loop: "{{ run_hammer.results }}"
