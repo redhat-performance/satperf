@@ -27,5 +27,5 @@ for f in $@; do
         let duration+=$( expr $end - $begin )
         let count+=1
     done
-    echo "$matcher in $f: $duration / $count = $( echo "$duration / $count" | bc )"
+    echo "$matcher in $f: $duration / $count = $( echo "scale=2; $duration / $count" | bc )"
 done
