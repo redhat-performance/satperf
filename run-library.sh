@@ -111,13 +111,13 @@ function table_row() {
             local note="$note $passed"
             local diff=$( echo "$out" | cut -d ' ' -f 8 )
             if [ -n "$diff" ]; then
-                let sum+=$diff
+                sum=$( echo "$sum + $diff" | bc )
                 let count+=1
             fi
         else
             local start="$( echo "$row" | cut -d ',' -f 4 )"
             local end="$( echo "$row" | cut -d ',' -f 5 )"
-            let sum+=$( expr "$end" - "$start" )
+            sum=$( echo "$end - $start" | bc )
             let count+=1
         fi
     done
