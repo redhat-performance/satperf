@@ -57,7 +57,7 @@ You need Ansible installed.
 ### To prepare Docker hosts:
 
 ```
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/docker-host.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/docker/docker-host.yaml
 ```
 
 ### To prepare Satellite:
