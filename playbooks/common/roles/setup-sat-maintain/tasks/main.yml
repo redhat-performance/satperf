@@ -1,0 +1,7 @@
+---
+  - name: "Satellite maintenance repo configured"
+    copy:
+      src: "{{ sat_maintain_repo_file }}"
+      dest: /etc/yum.repos.d/
+      force: yes
+ 

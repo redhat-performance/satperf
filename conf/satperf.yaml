@@ -117,6 +117,9 @@ capsule_install_pool: 'Pool you want to use'   # when installing from CDN, this 
 capsule_installer_pkg: satellite-capsule   # Satellite 6.2 and 6.3
 capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2 and 6.3
 
+# Satellite Maintenance
+sat_maintain_repo_file: ../../../../../conf/sat-maintain-next.repo
+
 # Docker hosts
 docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
 docker_host_containers: 50
