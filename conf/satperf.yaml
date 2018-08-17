@@ -146,41 +146,6 @@ methods:
   cv_pub: 10 #number of times content publish
   concurrent: 1 #concurrent (1) or sync (0)
 
-# Port Grafana is listening on
-grafana_host: 127.0.0.1
-grafana_port: 3000
-# Grafana username and password
-grafana_username: admin
-grafana_password: admin
-
-#Grafana Panel Mappings
-grafana_panels:
-  cpu: 1
-  memory: 5
-  http_cpu: 43
-  dynflow_cpu: 44
-  smartproxy_cpu: 45
-  mongodb_cpu: 46
-  passenger_cpu: 47
-  postgres_cpu: 48
-  pulp_cpu: 49
-  puppet_agent_cpu: 50
-  qpidd_cpu: 51
-  tomcat_cpu: 52
-  http_mem: 56
-  dynflow_mem: 57
-  smartproxy_mem: 58
-  mongodb_mem: 59
-  passenger_mem: 60
-  postgres_mem: 61
-  pulp_mem: 62
-  puppet_agent_mem: 63
-  qpidd_mem: 64
-  tomcat_mem: 65
-  postgres_db_size: 108
-  postgres_connected_clients: 109
-  postgres_foreman_op: 113
-  postgres_candlepin_op: 114
 
 # If you have some service where you can add results of experiments, set its hostname
 recorder_server: ''
