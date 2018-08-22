@@ -13,6 +13,8 @@ wait_interval=${PARAM_wait_interval:-10}
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
 puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
 
+cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
+cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 do="Default Organization"
 dl="Default Location"
 
@@ -110,8 +112,7 @@ h repository-sync-puppet-upgrade.log "repository synchronize --organization '$do
 
 
 log "===== Register ====="
-h 40-get-os-title.log "os info --id 1"
-os_title=$( grep '^Title' $logs/40-get-os-title.log | sed 's/^.*:\s\+\(.*\)$/\1/' )
+ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 h 42-domain-create.log "domain create --name example.com --organizations '$do'"
 h 42-domain-update.log "domain update --name example.com --organizations '$do' --locations '$dl'"
@@ -120,7 +121,7 @@ h subs-list-tools.log "--csv subscription list --organization '$do' --search 'na
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
 h ak-add-subs.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_operatingsystem='$os_title' bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s $wait_interval
 done
 
