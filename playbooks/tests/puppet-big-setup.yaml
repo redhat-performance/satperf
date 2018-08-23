@@ -8,7 +8,6 @@
   vars:
     content_puppet_product: SatPerfPuppetProduct
     content_puppet_repo: SatPerfPuppetRealModulesRepo
-    content_puppet_env: KT_Default_Organization_Library_SatPerfContentViewPuppetRealModules_3
     content_puppet_module_name: acl,apache,archive,firewalld,gcc,haproxy,java,limits,motd,nsswitch,ntp,pam,rsyslog,ssh,sysstat,tomcat
     content_puppet_module_download: https://forge.puppet.com/v3/files/
     content_puppet_cv: SatPerfContentViewPuppetRealModules
