@@ -34,4 +34,5 @@
     - name: "Print results"
       debug:
         msg: "GenerateApplicability {{ run_applicability.stdout_lines[-2] }} to {{ run_applicability.stdout_lines[-1] }}"
-      with_sequence: count="{{ run_applicability.stdout_lines[-3]|int }}"
+      when: "run_applicability.rc is defined and run_applicability.rc == 0"
+      loop: "{{ range(run_applicability.stdout_lines[-3]|int)|list }}"
