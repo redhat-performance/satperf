@@ -61,20 +61,18 @@
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
       ignore_errors: true
-      register: setup
+      register: setup_cmd
       tags: SETUP
-    - name: "DEBUG SETUP"
-      debug:
-        var: setup
     - name: "Configure puppet on Satellite action - timings"
       debug:
-        msg="SetupPuppet {% raw %}{{ setup.results.start }}{% endraw %} to {% raw %}{{ setup.results.end }}{% endraw %}"
-      when: "setup.results is defined and setup.results.rc is defined and setup.results.rc == 0"
+        msg="SetupPuppet {% raw %}{{ item.start }}{% endraw %} to {% raw %}{{ item.end }}{% endraw %}"
+      when: "item.rc is defined and item.rc == 0"
+      with_items: "{% raw %}{{ setup_cmd.results }}{% endraw %}"
       tags: SETUP
-    - name: "Downgrade this package version as modules needs to install ...-devel later (should not be required if we would be running against real RHEL repo)"
-      command:
-        yum -y distribution-synchronization libstdc++
-      tag: SETUP
+    #- name: "Downgrade this package version as modules needs to install ...-devel later (should not be required if we would be running against real RHEL repo)"
+    #  command:
+    #    yum -y distribution-synchronization libstdc++
+    #  tags: SETUP
 
     - name: "Pickup puppet action"
       command:

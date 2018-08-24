@@ -9,7 +9,10 @@
     - name: "Deploy generate applicability script"
       copy:
         content: |
+          # Start the GenerateApplicability task
           echo "ForemanTasks.async_task(::Actions::Katello::Host::GenerateApplicability, Host.all)" | foreman-rake console
+
+          # Wait till it finishes
           tmp=$( mktemp )
           while true; do
               hammer --output yaml -u admin -p changeme task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' > $tmp
@@ -17,6 +20,12 @@
               sleep 1
           done
 
+          # DEBUG
+          echo "====="
+          cat $tmp
+          echo "====="
+
+          # Format output so we can consume it later in the playbook
           from=$( grep -n '^\s*\[[0-9]' $tmp | cut -d ':' -f 1 )
           to=$( grep -n '^\s*[0-9]\+\]' $tmp | cut -d ':' -f 1 )
           echo $( expr $to - $from + 1 )
@@ -27,6 +36,8 @@
       command:
         bash /root/generate-applicability.sh
       register: run_applicability
+    - debug:
+        var: run_applicability
     # Why are we printing it {{ count }} times? Because when we are
     # constructing table in run-bench.sh, it assumes that every line
     # is a attemot and if there are more lines, it includes number
