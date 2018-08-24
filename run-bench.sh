@@ -16,11 +16,15 @@ puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
+repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
+repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/}"
+
 do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
+
 
 log "===== Checking environment ====="
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
@@ -54,20 +58,20 @@ s $wait_interval
 
 log "===== Sync from mirror ====="
 h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_mirror'"
-h 10-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7.5' --basearch 'x86_64'"
-h 10-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6.5' --basearch 'x86_64'"
-h 10-reposet-enable-rhel7optional.log "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7.5' --basearch 'x86_64'"
-h 11-repo-immediate-rhel7.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7.5' --download-policy 'immediate'"
-h 12-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7.5'"
+h 10-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
+h 10-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
+h 10-reposet-enable-rhel7optional.log "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'"
+h 11-repo-immediate-rhel7.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
+h 12-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
 s $wait_interval
-h 12-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6.5'"
+h 12-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'"
 s $wait_interval
-h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7.5'"
+h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
 s $wait_interval
 
 
 log "===== Publish and promote big CV ====="
-h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7.5','Red Hat Enterprise Linux 6 Server RPMs x86_64 6.5','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7.5' --name 'BenchContentView'"
+h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
 h 21-cv-all-publish.log "content-view publish --organization '$do' --name 'BenchContentView'"
 s $wait_interval
 h 22-le-create-1.log "lifecycle-environment create --organization '$do' --prior 'Library' --name 'BenchLifeEnvAAA'"
@@ -82,17 +86,16 @@ s $wait_interval
 
 
 log "===== Publish and promote filtered CV ====="
-h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6.5' --name 'BenchFilteredContentView'"
+h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
 h 31-filter-create-1.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
 h 31-filter-create-2.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
-# FIXME: all errata in 6.5 are released at one day
 h 32-rule-create-1.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '$do' --types enhancement,bugfix,security"
 h 32-rule-create-2.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '$do' --types security"
 h 33-cv-filtered-publish.log "content-view publish --organization '$do' --name 'BenchFilteredContentView'"
 s $wait_interval
 
 
-log "===== Sync non-EUS from CDN (do not measure becasue of unpredictable network latency) ====="
+log "===== Sync from CDN (do not measure becasue of unpredictable network latency) ====="
 h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
 h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10b-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
@@ -104,12 +107,28 @@ wait
 s $wait_interval
 
 
-log "===== Register ====="
+log "===== Sync Tools repo we will need ====="
+h product-create.log "product create --organization '$do' --name SatToolsProduct"
+h repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
+h repository-create-puppet-upgrade.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo --content-type yum --url '$repo_sat_tools_puppet'"
+h repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo" &
+h repository-sync-puppet-upgrade.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo" &
+wait
+s $wait_interval
+
+
+log "===== Prepare for registrations ====="
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 h 42-domain-create.log "domain create --name example.com --organizations '$do'"
 h 42-domain-update.log "domain update --name example.com --organizations '$do' --locations '$dl'"
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
+h subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
+tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
+h ak-add-subs.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
+
+
+log "===== Register ====="
 for i in $( seq $registrations_iterations ); do
     ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s $wait_interval
@@ -127,6 +146,41 @@ h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='k
 s $wait_interval
 
 
+log "===== Misc simple tests ====="
+ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
+s $wait_interval
+ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
+s $wait_interval
+
+
+log "===== Preparing Puppet environment ====="
+ap satellite-puppet-single-cv.log playbooks/tests/puppet-single-setup.yaml &
+ap satellite-puppet-big-cv.log playbooks/tests/puppet-big-setup.yaml &
+a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker-hosts &
+wait
+s $wait_interval
+
+
+log "===== Apply one module with different concurency ====="
+for concurency in $puppet_one_concurency; do
+    ap $concurency-PuppetOne.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
+    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    s $wait_interval
+done
+
+
+log "===== Apply bunch of modules with different concurency ====="
+for concurency in $puppet_bunch_concurency; do
+    ap $concurency-PuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
+    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
+    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
+    log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
+    s $wait_interval
+done
+
+
 log "===== Formatting results ====="
 table_row "01-manifest-upload-[0-9]\+.log" "Manifest upload"
 table_row "12-repo-sync-rhel7.log" "Sync RHEL7 (immediate)"
@@ -139,3 +193,11 @@ table_row "44-register-[0-9]\+.log" "Register bunch of containers" "Register"
 table_row "52-rex-date.log" "ReX 'date' on all containers"
 table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
 table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --force' on all containers"
+table_row "60-generate-applicability.log" "Generate errata applicability on all profiles" "GenerateApplicability"
+table_row "61-hammer-list.log" "Run hammer host list --per-page 100" "HammerHostList"
+for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" ); do
+    table_row "$concurency-PuppetOne.log" "Registering $concurency * <hosts> Puppet clients, scenario 'One'" "RegisterPuppet"
+done
+for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" ); do
+    table_row "$concurency-PuppetBunch.log" "Registering $concurency * <hosts> Puppet clients, scenario 'Bunch'" "RegisterPuppet"
+done
