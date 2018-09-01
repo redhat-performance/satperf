@@ -16,7 +16,7 @@
   tasks:
   - name: "Make sure puppet module build dir is empty"
     file:
-      path: "/root/{{ content_puppet_module_name }}"
+      path: "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
       state: absent
   - name: "Generate puppet module template"
     command:
@@ -24,10 +24,10 @@
   - name: "Create puppet module content"
     template:
       src: files/init.pp
-      dest: "/root/{{ content_puppet_module_name }}/manifests/init.pp"
+      dest: "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}/manifests/init.pp"
   - name: "Build our puppet module"
     command:
-      puppet module build "/root/{{ content_puppet_module_name }}"
+      puppet module build "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
 
   - name: "Create Puppet product"
     command:
@@ -41,7 +41,7 @@
     failed_when: cmd.rc != 0 and 'Name has already been taken for this product.' not in cmd.stderr
   - name: "Upload our puppet module to the repository"
     command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module_name }}/pkg/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}/pkg/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
     register: upload
     until: "{{ upload.rc }} == 0"
     retries: 2
