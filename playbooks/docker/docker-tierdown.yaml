@@ -27,8 +27,8 @@
         state: stopped
     - name: "Purge docker network configs (causes problems on incorrect shutdown)"
       file:
-        name=/var/lib/docker/network
-        state=absent
+        name: /var/lib/docker/network
+        state: absent
     - name: "Purge interfaces in docker0 bridge if some left"
       shell: |
         for iface in $( brctl show docker0 | grep '^\s*veth' ); do
@@ -58,12 +58,12 @@
       when: docker_psa_wc.stdout|int > 0
     - name: "Docker daemon is restarted"
       service:
-        name=docker
-        state=restarted
+        name: docker
+        state: restarted
     - name: "Purge file we use to count used containers"
       file:
-        name=/root/container-used-count
-        state=absent
+        name: /root/container-used-count
+        state: absent
     - name: "Cleanup logs to free disk space"
       shell:
         rm -rf /var/log/journal/*
@@ -72,8 +72,9 @@
         echo 3 > /proc/sys/vm/drop_caches
 
     - name: "Remove ReX's known_hosts on Satellite (workaround to bug 1505842)"
-      shell:
-        :>/usr/share/foreman-proxy/.ssh/known_hosts
+      file:
+        name: /usr/share/foreman-proxy/.ssh/known_hosts
+        state: absent
       run_once: true
       delegate_to: "{{ groups['satellite6']|first }}"
 
@@ -85,5 +86,6 @@
   tasks:
     - name: "Remove ReX's known_hosts on Capsules (workaround to bug 1505842)"
       shell:
-        :>/usr/share/foreman-proxy/.ssh/known_hosts
+        name: /usr/share/foreman-proxy/.ssh/known_hosts
+        state: absent
 ...
