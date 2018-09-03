@@ -13,10 +13,15 @@
     content_puppet_module_file: /tmp/puppet-satperftest.txt
     content_puppet_module_file_content: Some important sentence
     content_puppet_cv: SatPerfContentViewPuppetFakeModule
+    content_puppet_module_dir: "/root/{{ content_puppet_module_name }}"
   tasks:
+  - name: "If we are on Sat 6.3, puppet module dir name is different"
+    set_fact:
+      content_puppet_module_name: "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
+    when: "sat_version == '6.3'"
   - name: "Make sure puppet module build dir is empty"
     file:
-      path: "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
+      path: "{{ content_puppet_module_name }}"
       state: absent
   - name: "Generate puppet module template"
     command:
@@ -24,10 +29,10 @@
   - name: "Create puppet module content"
     template:
       src: files/init.pp
-      dest: "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}/manifests/init.pp"
+      dest: "{{ content_puppet_module_name }}/manifests/init.pp"
   - name: "Build our puppet module"
     command:
-      puppet module build "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
+      puppet module build "{{ content_puppet_module_name }}"
 
   - name: "Create Puppet product"
     command:
@@ -41,7 +46,7 @@
     failed_when: cmd.rc != 0 and 'Name has already been taken for this product.' not in cmd.stderr
   - name: "Upload our puppet module to the repository"
     command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}/pkg/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module_name }}/pkg/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
     register: upload
     until: "{{ upload.rc }} == 0"
     retries: 2
