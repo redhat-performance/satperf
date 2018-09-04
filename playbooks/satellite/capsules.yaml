@@ -18,4 +18,5 @@
     - capsule-location
     - ../common/roles/enlarge-arp-table
     ###- capsule-myrhev-partitioning
+    - puppet-autosign
     - capsule-populate

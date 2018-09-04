@@ -1,8 +1,4 @@
 ---
-  - name: "Add '*' autosign entry"
-    lineinfile:
-      path: "/etc/puppet/autosign.conf"
-      line: "*"
   - name: "Assign Library"
     command:
       "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name {{ item }} --organization '{{ sat_org }}' --environment Library"

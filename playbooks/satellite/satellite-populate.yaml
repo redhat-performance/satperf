@@ -6,5 +6,6 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
+    - puppet-autosign
     - satellite-populate
 ...

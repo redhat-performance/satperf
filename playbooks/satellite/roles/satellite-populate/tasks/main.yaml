@@ -22,18 +22,6 @@
     delay: 10
     when: "manifesting.stat.exists is defined or manifesting.stat.exists == true or copying.changed"
 
-  # Add '*' autosign entry to Puppet CA of integrated capsule
-  - name: "Add '*' autosign entry"
-    lineinfile:
-      path: "/etc/puppet/autosign.conf"
-      line: "*"
-    when: sat_version != 6.4
-  - name: "Add '*' autosign entry (Satellite 6.4)"
-    lineinfile:
-      path: "/etc/puppetlabs/puppet/autosign.conf"
-      line: "*"
-    when: sat_version == 6.4
-
   # TODO: We want to be sure manifest is in the Sat before we start trying
   # to enable repos. There have to be some better way, but for now this
   # should suffice
