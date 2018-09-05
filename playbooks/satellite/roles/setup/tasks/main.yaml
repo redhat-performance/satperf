@@ -62,7 +62,7 @@
       dest: '/etc/yum.repos.d/{{ item.target_repo_filename }}'
     when:
       - additional_repo_files is defined
-      - additional_repo_files|length > 0
+      - additional_repo_files
       - item.repo_file_url is search("^(https?|s?ftps?):\/\/")
     with_items: '{{ additional_repo_files }}'
 
@@ -73,7 +73,7 @@
       dest: '/etc/yum.repos.d/{{ item.target_repo_filename }}'
     when:
       - additional_repo_files is defined
-      - additional_repo_files|length > 0
+      - additional_repo_files
       - item.repo_file_url is search("^(?!(https?|s?ftps?):\/\/)")
     with_items: '{{ additional_repo_files }}'
 
