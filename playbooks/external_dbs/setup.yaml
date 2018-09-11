@@ -1,0 +1,103 @@
+---
+- hosts: dbs
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - ../common/roles/scalelab-nic-cleanup
+    - ../common/roles/common
+    - ../common/roles/epel-not-present
+    - ../common/roles/rhsm
+    - ../common/roles/ntp
+    - ../common/roles/remove-home-extend-root
+  tasks:
+  - name: "Enable SCL repo"
+    command:
+      subscription-manager repos --enable rhel-server-rhscl-7-rpms
+  - name: "Install databases"
+    yum:
+      name: "{{ packages }}"
+    vars:
+      packages:
+      - postgresql-server
+      - rh-mongodb34-mongodb-server
+      - rh-mongodb34-mongodb
+  - name: "Initialize PostgreSQL"
+    shell: |
+      postgresql-setup initdb
+      echo "listen_addresses = '*'" >> /var/lib/pgsql/data/postgresql.conf
+      echo "host all all 0.0.0.0/0 md5" >> /var/lib/pgsql/data/pg_hba.conf
+      systemctl start postgresql
+      systemctl enable postgresql
+      su - postgres -c  "psql -c \"CREATE USER \\\"foreman\\\" WITH PASSWORD 'foremanpw';\""
+      su - postgres -c  "psql -c \"CREATE USER \\\"candlepin\\\" WITH PASSWORD 'candlepinpw';\""
+      su - postgres -c 'createdb foreman -O foreman'
+      su - postgres -c 'createdb candlepin -O candlepin'
+  - name: "Initialize MongoDB"
+    shell: |
+      systemctl start rh-mongodb34-mongod
+      scl enable rh-mongodb34 -- mongo pulpdb --eval "db.createUser({user:'pulp',pwd:'Pulp_Password',roles:[{role:'dbOwner', db:'pulpdb'},{ role: 'readWrite', db: 'pulpdb'}]})"
+      sed -i 's/bindIp.*/bindIp: 0.0.0.0/' /etc/opt/rh/rh-mongodb34/mongod.conf
+      echo "security.authorization: enabled" >> /etc/opt/rh/rh-mongodb34/mongod.conf
+      systemctl restart rh-mongodb34-mongod
+      systemctl enable postgresql rh-mongodb34-mongod
+  - name: "Enable DB ports in the firewall"
+    shell: |
+      firewall-cmd --add-port 5432/tcp --add-port 27017/tcp || true
+      firewall-cmd --add-port 5432/tcp --add-port 27017/tcp --permanent || true
+  - name: "Tune PostgreSQL"
+    lineinfile:
+      path: /var/lib/pgsql/data/postgresql.conf
+      regexp: '^{{ item.key }}\s*=.*'
+      line: '{{ item.key }} = {{ item.val }}'
+    loop:
+      - key: max_connections
+        val: 500
+      - key: shared_buffers
+        val: 512MB
+      - key: checkpoint_completion_target
+        val: 0.9
+      - key: work_mem
+        val: 4MB
+  - name: "Restart PostrgreSQL so the changes takes effect"
+    command:
+      systemctl restart postgresql
+
+
+- hosts: satellite6
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    - database: 172.27.0.1
+  tasks:
+  - name: "Backup PostgreSQL"
+    shell: |
+      mkdir -p /tmp/backup
+      chown :postgres /tmp/backup
+      chmod g+w /tmp/backup
+      foreman-maintain backup online -y --preserve-directory /tmp/backup/
+  - name: "Migrate MongoDB"
+    shell:
+      scl enable rh-mongodb34 -- mongorestore -u pulp -p Pulp_Password -d pulpdb --host '{{ database }}' /tmp/backup/mongo_dump/pulp_database/
+  - name: "Push foreman PostgreSQL DB"
+    shell:
+      PGPASSWORD=foremanpw pg_restore -U foreman -d foreman /tmp/backup/foreman.dump -h '{{ database }}' || true
+  - name: "Push candlepin PostgreSQL DB"
+    shell:
+      PGPASSWORD=candlepinpw pg_restore -U candlepin -d candlepin /tmp/backup/candlepin.dump -h '{{ database }}' || true
+  - name: "Reconfigure Satellite"
+    shell: |
+      satellite-installer --scenario satellite --foreman-db-manage false --foreman-db-host  '{{ database }}' --foreman-db-database foreman --foreman-db-username foreman --foreman-db-password foremanpw --foreman-db-port     5432 --katello-candlepin-manage-db false --katello-candlepin-db-host '{{ database }}' --katello-candlepin-db-name     candlepin --katello-candlepin-db-user     candlepin --katello-candlepin-db-password candlepinpw --katello-candlepin-db-port     5432  --katello-pulp-manage-db false --katello-pulp-db-name pulpdb --katello-pulp-db-username pulp --katello-pulp-db-password Pulp_Password --katello-pulp-db-seeds '{{ database }}':27017
+  - name: "Stop databases and restart"
+    shell: |
+      foreman-maintain service stop
+      systemctl stop postgresql rh-mongodb34-mongod
+      systemctl disable postgresql rh-mongodb34-mongod
+      foreman-maintain service start
+  - name: "Hammer ping"
+    command:
+      hammer ping
+...
