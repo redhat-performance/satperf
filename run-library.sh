@@ -117,7 +117,7 @@ function table_row() {
         else
             local start="$( echo "$row" | cut -d ',' -f 4 )"
             local end="$( echo "$row" | cut -d ',' -f 5 )"
-            sum=$( echo "$end - $start" | bc )
+            sum=$( echo "$sum + $end - $start" | bc )
             let count+=1
         fi
     done
