@@ -43,7 +43,7 @@
     - name: "Start docker daemon"
       service:
         name: docker
-        state: stopped
+        state: started
     - name: "Count running containers"
       shell:
         docker ps -q | wc -l
