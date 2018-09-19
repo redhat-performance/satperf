@@ -1,0 +1,5 @@
+---
+  - name: "Enable remote execution by IP instead of hostname"
+    shell:
+      hammer -u "{{sat_user}}" -p "{{sat_pass}}" settings set --name remote_execution_connect_by_ip --value true
+...
