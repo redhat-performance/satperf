@@ -50,7 +50,7 @@
 
   - name: "Create client domain"
     command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}"
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}" --location "{{ sat_location }}"
   - name: "Create host group"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" hostgroup create --name "{{ content_hostgroup }}" --lifecycle-environment Library --content-view "{{ sat_org }} View" --query-organization "{{ sat_org }}"
