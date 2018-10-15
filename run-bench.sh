@@ -8,7 +8,7 @@ private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
-wait_interval=${PARAM_wait_interval:-10}
+wait_interval=${PARAM_wait_interval:-50}
 
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
 puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
@@ -46,10 +46,10 @@ a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip 
 count=5
 for i in $( seq $count ); do
     h 01-manifest-upload-$i.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
-    s $( expr $wait_interval / 3 )
+    s $wait_interval
     if [ $i -lt $count ]; then
         h 02-manifest-delete-$i.log "subscription delete-manifest --organization '$do'"
-        s $( expr $wait_interval / 3 )
+        s $wait_interval
     fi
 done
 h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
