@@ -9,37 +9,33 @@
   tasks:
     - name: "Ensure that katello-remove is available"
       stat:
-        path=/usr/bin/katello-remove
+        path: /usr/sbin/katello-remove
       register: remover
+    - name: "Assert it is available"
+      assert:
+        that: "remover.stat.exists is defined and remover.stat.exists == true"
     - name: "Ensure we have expect installed"
       yum:
-        name=expect
-        state=present
-      when: remover.stat.exists is defined and remover.stat.exists == true
+        name: expect
+        state: present
     - name: "Deploy expect script for katello-remove"
       copy:
-        src=automate_katello-remove.exp
-        dest=/root/automate_katello-remove.exp
-        mode="u+x"
-      when: remover.stat.exists is defined and remover.stat.exists == true
+        src: automate_katello-remove.exp
+        dest: /root/automate_katello-remove.exp
+        mode: "u+x"
     - name: "Uninstall Satellite"
       command:
         /root/automate_katello-remove.exp
-      when: remover.stat.exists is defined and remover.stat.exists == true
 
-    - name: "Check if /etc/foreman-installer exists"
-      stat:
-        path=/etc/foreman-installer
-      register: messpath
-    - name: "Cleanup mess"
+    - name: "Cleanup installer's config"
       file:
-        path=/etc/foreman-installer
-        state=absent
-      when: messpath.stat.exists is defined and messpath.stat.exists == true
+        path: /etc/foreman-installer
+        state: absent
 
     - name: "Delete manifest"
-      command:
-        rm -rf /root/manifest.zip
+      file:
+        path: /root/manifest.zip
+        state: absent
 
     - name: "Remove ReX tmp files"
       file:
