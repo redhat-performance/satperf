@@ -125,7 +125,10 @@ h 42-domain-update.log "domain update --name example.com --organizations '$do' -
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 h subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-h ak-add-subs.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
+h ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
+h subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \'Employee SKU\''"
+employee_subs_id=$( tail -n 1 $logs/subs-list-employee.log | cut -d ',' -f 1 )
+h ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 
 log "===== Register ====="
