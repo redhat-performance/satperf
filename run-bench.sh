@@ -199,8 +199,8 @@ table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --for
 table_row "60-generate-applicability.log" "Generate errata applicability on all profiles" "GenerateApplicability"
 table_row "61-hammer-list.log" "Run hammer host list --per-page 100" "HammerHostList"
 for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" ); do
-    table_row "$concurency-PuppetOne.*\.log" "Registering $concurency * <hosts> Puppet clients, scenario 'One'" "RegisterPuppet"
+    table_row "$concurency-PuppetOne.*\.log" "Registering $concurency * <hosts> Puppet clients; scenario 'One'" "RegisterPuppet"
 done
 for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" ); do
-    table_row "$concurency-PuppetBunch.*\.log" "Registering $concurency * <hosts> Puppet clients, scenario 'Bunch'" "RegisterPuppet"
+    table_row "$concurency-PuppetBunch.*\.log" "Registering $concurency * <hosts> Puppet clients; scenario 'Bunch'" "RegisterPuppet"
 done
