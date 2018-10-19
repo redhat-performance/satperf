@@ -165,22 +165,29 @@ s $wait_interval
 
 
 log "===== Apply one module with different concurency ====="
-for concurency in $puppet_one_concurency; do
-    ap $concurency-PuppetOne.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
-    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
-    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
-    log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
-    s $wait_interval
+for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u ); do
+    iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
+    for iteration in $( seq $iterations ); do
+        ap $concurency-PuppetOne-$iteration.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
+        log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        s $wait_interval
+    done
 done
 
 
 log "===== Apply bunch of modules with different concurency ====="
 for concurency in $puppet_bunch_concurency; do
-    ap $concurency-PuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
-    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
-    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
-    log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
-    s $wait_interval
+for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u ); do
+    iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
+    for iteration in $( seq $iterations ); do
+        ap $concurency-PuppetBunch-$iteration.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
+        log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        s $wait_interval
+    done
 done
 
 
