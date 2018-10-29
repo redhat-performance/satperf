@@ -178,7 +178,6 @@ done
 
 
 log "===== Apply bunch of modules with different concurency ====="
-for concurency in $puppet_bunch_concurency; do
 for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u ); do
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
