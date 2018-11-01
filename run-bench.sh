@@ -25,6 +25,8 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
+satellite_version='TODO'   # will be determined automatically later
+
 
 log "===== Checking environment ====="
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
@@ -35,6 +37,8 @@ ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/do
 ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
 a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
+a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite"
+satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log ); echo "$satellite_version" | grep '^satellite-6\.'   # make sure it was detected correctly
 s $( expr 3 \* $wait_interval )
 set +e
 
