@@ -187,7 +187,7 @@
     when: "docker_host_storage_driver == 'overlay'"
   - name: "Create device which will host OverlayFS"
     command:
-      lvcreate --name docker --extents 100%FREE --zero y "{{ docker_host_vg }}"
+      lvcreate --name docker --extents 100%FREE --zero y --yes "{{ docker_host_vg }}"
     when: "docker_host_storage_driver == 'overlay'"
   - name: "Create filesystem which will host OverlayFS"
     command:
