@@ -15,7 +15,7 @@
           # Wait till it finishes
           tmp=$( mktemp )
           while true; do
-              hammer --output yaml -u admin -p changeme task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' > $tmp
+              hammer -d --output yaml -u admin -p changeme task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' &> $tmp
               grep '^\s*Ended at:\s*$' $tmp || break
               sleep 1
           done
@@ -26,9 +26,8 @@
           echo "====="
 
           # Format output so we can consume it later in the playbook
-          from=$( grep -n '^\s*\[[0-9]' $tmp | cut -d ':' -f 1 )
-          to=$( grep -n '^\s*[0-9]\+\]' $tmp | cut -d ':' -f 1 )
-          echo $( expr $to - $from + 1 )
+          count=$( grep '^\s*\[[0-9 ]\+\]\s*[0-9]\+,$' $tmp | wc -l | cut -d ' ' -f 1 )
+          echo $count
           grep 'Started at' $tmp | sed "s/^.*: '\(.*\)'/\1/" | sed -e "s/T/ /" -e "s/Z$//"
           grep 'Ended at' $tmp | sed "s/^.*: '\(.*\)'/\1/" | sed -e "s/T/ /" -e "s/Z$//"
         dest: /root/generate-applicability.sh
