@@ -1,0 +1,58 @@
+---
+# https://mojo.redhat.com/groups/satellite6qe/blog/2018/08/14/maybe-you-need-to-load-satellite-6-ui-page-without-selenium
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    ui_pages_reloads: 10
+  tasks:
+    - name: "Get authenticity token"
+      shell:
+        curl --cookie-jar curl.cookies --silent --insecure -X GET https://localhost/users/login | grep 'name="authenticity_token"' | sed 's/.*value="\([^"]\+\)".*/\1/'
+      register: authenticity_token_cmd
+    - name: "Log in and populate cookies cache"
+      shell:
+        curl https://localhost/users/login -X POST --data "utf8=%E2%9C%93&authenticity_token={{ authenticity_token_cmd.stdout | urlencode }}&login%5Blogin%5D={{ sat_user }}&login%5Bpassword%5D={{ sat_pass }}&commit=Log+In" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location
+    - name: "Run measurement"
+      shell: |
+        for i in $( seq "{{ ui_pages_reloads }}" ); do
+            out="/tmp/curl-{{ item.uri | replace('/', '_') | default('dashboard', true) }}-$i.output"
+            curl "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location -o $out || exit 2
+            grep --quiet "{{ item.assert }}" $out || exit 3
+        done
+      loop:
+        - uri: ''
+          assert: 'h1.\+Overview.\+h1'
+        - uri: 'job_invocations'
+          assert: 'h1.\+Job invocations.\+h1'
+        - uri: 'foreman_tasks/tasks'
+          assert: 'h1.\+Tasks.\+h1'
+        - uri: 'hosts'
+          assert: 'h1.\+Hosts.\+h1'
+        - uri: 'templates/provisioning_templates'
+          assert: 'h1.\+Provisioning Templates.\+h1'
+        - uri: 'hostgroups'
+          assert: 'h1.\+Host Groups.\+h1'
+        - uri: 'smart_proxies'
+          assert: 'h1.\+Capsules.\+h1'
+        - uri: 'domains'
+          assert: 'h1.\+Domains.\+h1'
+        #- uri: 'katello/api/v2/subscriptions?organization_id={{ sat_orgid }}'
+        #  assert: '.results.:'
+        #- uri: 'katello/api/v2/products?organization_id={{ sat_orgid }}'
+        #  assert: '.results.:'
+        #- uri: 'katello/api/v2/content_views?nondefault=true&organization_id={{ sat_orgid }}'
+        #  assert: '.results.:'
+        #- uri: 'katello/api/v2/packages?organization_id={{ sat_orgid }}'
+        #  assert: '.results.:'
+      register: run_curl
+      ignore_errors: true
+    - name: "Print results"
+      debug:
+        msg: "WebUIPage{{ ui_pages_reloads }}_{{ item.item.uri | replace('/', '_') | default('dashboard', true) }} {{ item.start }} to {{ item.end }}"
+      loop: "{{ run_curl.results }}"
+      when: "item.rc is defined and item.rc == 0"
+...

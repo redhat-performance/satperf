@@ -19,6 +19,8 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/}"
 
+ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
+
 do="Default Organization"
 dl="Default Location"
 
@@ -158,6 +160,8 @@ ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
 s $wait_interval
 ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
 s $wait_interval
+ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
+s $wait_interval
 
 
 log "===== Preparing Puppet environment ====="
@@ -208,6 +212,9 @@ table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update
 table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --force' on all containers"
 table_row "60-generate-applicability.log" "Generate errata applicability on all profiles" "GenerateApplicability"
 table_row "61-hammer-list.log" "Run hammer host list --per-page 100" "HammerHostList"
+for i in dashboard job_invocations foreman_tasks_tasks hosts templates_provisioning_templates hostgroups smart_proxies domains; do
+    table_row "62-some-webui-pages.log" "UI page reload on $i" "WebUIPage${ui_pages_reloads}_${i}"
+done
 for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -nu ); do
     table_row "$concurency-PuppetOne.*\.log" "Registering $concurency * <hosts> Puppet clients; scenario 'One'" "RegisterPuppet"
 done
