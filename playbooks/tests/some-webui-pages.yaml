@@ -21,7 +21,12 @@
         for i in $( seq "{{ ui_pages_reloads }}" ); do
             out="/tmp/curl-{{ item.uri | replace('/', '_') | default('dashboard', true) }}-$i.output"
             curl "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location -o $out || exit 2
-            grep --quiet "{{ item.assert }}" $out || exit 3
+            if ! grep --quiet "{{ item.assert }}" $out; then
+                echo "DEBUG >>>>>"
+                cat $out
+                echo "DEBUG <<<<<"
+                exit 3
+            fi
         done
       loop:
         - uri: ''
