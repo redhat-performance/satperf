@@ -21,7 +21,7 @@
         for i in $( seq "{{ ui_pages_reloads }}" ); do
             out="/tmp/curl-{{ item.uri | replace('/', '_') | default('dashboard', true) }}-$i.output"
             curl "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location -o $out || exit 2
-            if ! grep --quiet "{{ item.assert }}" $out; then
+            if ! grep --quiet -z "{{ item.assert }}" $out; then
                 echo "DEBUG >>>>>"
                 cat $out
                 echo "DEBUG <<<<<"
@@ -29,22 +29,23 @@
             fi
         done
       loop:
+                  'h1[^>]\+>\s\+Job invocations\s\+</h1'
         - uri: ''
-          assert: 'h1.\+Overview.\+h1'
+          assert: 'h1[^>]\+>\s\+Overview\s\+</h1'
         - uri: 'job_invocations'
-          assert: 'h1.\+Job invocations.\+h1'
+          assert: 'h1[^>]\+>\s\+Job invocations\s\+</h1'
         - uri: 'foreman_tasks/tasks'
-          assert: 'h1.\+Tasks.\+h1'
+          assert: 'h1[^>]\+>\s\+Tasks\s\+</h1'
         - uri: 'hosts'
-          assert: 'h1.\+Hosts.\+h1'
+          assert: 'h1[^>]\+>\s\+Hosts\s\+</h1'
         - uri: 'templates/provisioning_templates'
-          assert: 'h1.\+Provisioning Templates.\+h1'
+          assert: 'h1[^>]\+>\s\+Provisioning Templates\s\+</h1'
         - uri: 'hostgroups'
-          assert: 'h1.\+Host Groups.\+h1'
+          assert: 'h1[^>]\+>\s\+Host Groups\s\+</h1'
         - uri: 'smart_proxies'
-          assert: 'h1.\+Capsules.\+h1'
+          assert: 'h1[^>]\+>\s\+Capsules\s\+</h1'
         - uri: 'domains'
-          assert: 'h1.\+Domains.\+h1'
+          assert: 'h1[^>]\+>\s\+Domains\s\+</h1'
         #- uri: 'katello/api/v2/subscriptions?organization_id={{ sat_orgid }}'
         #  assert: '.results.:'
         #- uri: 'katello/api/v2/products?organization_id={{ sat_orgid }}'
