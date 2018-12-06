@@ -170,6 +170,7 @@ vms:
       ip: 172.1.1.2
       netmask: 255.0.0.0
       rootpw: password
+      extra_kernel_args: ""
 vms_kss_os: http://repos.example.com/RHEL-7/7.4/Server/x86_64/os/
 vms_ssh_key: "{{ lookup('file', '../../conf/id_rsa.pub') }}"
 ...
