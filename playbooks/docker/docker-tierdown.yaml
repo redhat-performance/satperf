@@ -85,7 +85,7 @@
   gather_facts: no
   tasks:
     - name: "Remove ReX's known_hosts on Capsules (workaround to bug 1505842)"
-      shell:
+      file:
         name: /usr/share/foreman-proxy/.ssh/known_hosts
         state: absent
 ...
