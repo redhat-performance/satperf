@@ -35,14 +35,14 @@
     shell: |
       subscription-manager register --env Library --org "{{ sat_orglabel }}" --username "{{ sat_user }}" --password "{{ sat_pass }}" --force
     register: registration
-    until: "{{ registration.rc }} == 0"
+    until: "registration.rc == 0"
     retries: 5
     delay: 10
   - name: "Determine pool we are going to attach to"
     command:
       subscription-manager list --available --all --matches "{{ base_capsule_pool }}" --pool-only
     register: querying
-    until: "{{ querying.rc }} == 0"
+    until: "querying.rc == 0"
     retries: 5
     delay: 10
   - debug:
@@ -51,7 +51,7 @@
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
     register: attaching
-    until: "{{ attaching.rc }} == 0"
+    until: "attaching.rc == 0"
     retries: 5
     delay: 10
 
