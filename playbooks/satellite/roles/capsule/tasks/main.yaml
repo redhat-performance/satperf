@@ -68,7 +68,7 @@
       force: yes
     when:
       - "capsule_install_source is match('repo')"
-      - "capsule_repo_file is search('^(https?|s?ftps?):\/\/')"
+      - "capsule_repo_file is search('^(https?|s?ftps?)://')"
   - name: "Custom Capsule repo deployed"
     copy:
       src: "{{ capsule_repo_file }}"
@@ -76,7 +76,7 @@
       force: yes
     when:
       - "capsule_install_source is match('repo')"
-      - "capsule_repo_file is search('^(?!(https?|s?ftps?):\/\/)')"
+      - "capsule_repo_file is search('^(?!(https?|s?ftps?)://)')"
   - name: "Satellite Capsule repository enabled"
     command:
       subscription-manager repos --enable '{{ capsule_cdn_reponame }}'
