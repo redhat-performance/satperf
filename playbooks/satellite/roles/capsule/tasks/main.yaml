@@ -32,12 +32,51 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
 
-  - name: "Custom Capsule repo configured"
+  # We will need base RHEL and Software Collections for sure,
+  # repo with Satellite packages (either custom repo or CDN repo
+  # will be configured lower)
+  - name: "Determine pool we are going to attach to"
+    command:
+      subscription-manager list --available --all --matches "{{ sat_capsule_pool }}" --pool-only
+    register: querying
+    until: "querying.rc == 0"
+    retries: 5
+    delay: 10
+  - debug:
+      var: querying
+  - name: "Attach to the pool"
+    command:
+      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+    when: querying.stdout!=""
+    register: attaching
+    until: "attaching.rc == 0"
+    retries: 5
+    delay: 10
+    failed_when: "attaching.rc != 0 and 'This unit has already had the subscription matching pool ID' not in attaching.stdout"
+  - name: "Disable all RHSM repos"
+    shell:
+      subscription-manager repos --disable '*'
+  - name: "Enable all SM repos required for installation"
+    shell:
+      subscription-manager repos --enable "{{ item }}"
+    with_items: "{{ capsule_installation_repos }}"
+
+  - name: "Custom Capsule repo downloaded"
+    get_url:
+      url: "{{ capsule_repo_file }}"
+      dest: /etc/yum.repos.d/capsule_repo_file.repo
+      force: yes
+    when:
+      - capsule_install_source is match("repo")
+      - capsule_repo_file is search("^(https?|s?ftps?):\/\/")
+  - name: "Custom Capsule repo deployed"
     copy:
       src: "{{ capsule_repo_file }}"
       dest: /etc/yum.repos.d/
       force: yes
-    when: "capsule_install_source == 'repo'"
+    when:
+      - capsule_install_source is match("repo")
+      - capsule_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
   - name: "Satellite Capsule repository enabled"
     command:
       subscription-manager repos --enable '{{ capsule_cdn_reponame }}'

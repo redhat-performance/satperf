@@ -51,8 +51,10 @@ sat_installation_repos:
   - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
   - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
   - 'rhel-{{ ansible_distribution_major_version }}-server-extras-rpms'
+# Either file or url
 sat_repo_file: ../../../../../conf/sat63.repo
 
+# Additional repos for Satellite installation
 #additional_repo_files:
 #  # URL for additional repo files, if any needed.
 #  # URLs can be either http[s]://, ftp[s]:// or filepath (/file/system/path/repo_file)
@@ -61,7 +63,6 @@ sat_repo_file: ../../../../../conf/sat63.repo
 #    repo_file_url: 'http://server.example.com/pub/repo_file1'
 #  - target_repo_filename: 'additional-file2.repo'
 #    repo_file_url: '/home/user/repo_file'
-
 
 sat_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-{{ sat_version }}-rpms'
 sat_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Satellite and Software Collections
@@ -109,16 +110,17 @@ capsule_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '-
 capsule_install_source: cdn   # either 'cdn' or 'repo'
                               #   'cdn' ... configure value of 'capsule_cdn_reponame'
                               #   'repo' ... configure value of 'capsule_repo_file'
-capsule_repo_file: ../../../../../conf/capsule63.repo
+capsule_repo_file: ../../../../../conf/capsule63.repo   # either file or url
 capsule_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-capsule-{{ sat_version }}-rpms'
 capsule_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Capsule
 # capsule_installer_pkg: capsule-installer   # Satellite 6.1
 # capsule_installer_cmd: katello-installer   # Satellite 6.1
 capsule_installer_pkg: satellite-capsule   # Satellite 6.2 and 6.3
 capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2 and 6.3
-
-# Satellite Maintenance
-sat_maintain_repo_file: ../../../../../conf/sat-maintain-next.repo
+capsule_installation_repos:
+  - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+  - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
+  - 'rhel-{{ ansible_distribution_major_version }}-server-ansible-2.6-rpms'
 
 # Docker hosts
 docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
