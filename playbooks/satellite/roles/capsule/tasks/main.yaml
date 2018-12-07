@@ -47,7 +47,7 @@
   - name: "Attach to the pool"
     command:
       subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
-    when: querying.stdout!=""
+    when: "querying.stdout != ''"
     register: attaching
     until: "attaching.rc == 0"
     retries: 5
@@ -67,16 +67,16 @@
       dest: /etc/yum.repos.d/capsule_repo_file.repo
       force: yes
     when:
-      - capsule_install_source is match("repo")
-      - capsule_repo_file is search("^(https?|s?ftps?):\/\/")
+      - "capsule_install_source is match('repo')"
+      - "capsule_repo_file is search('^(https?|s?ftps?):\/\/')"
   - name: "Custom Capsule repo deployed"
     copy:
       src: "{{ capsule_repo_file }}"
       dest: /etc/yum.repos.d/
       force: yes
     when:
-      - capsule_install_source is match("repo")
-      - capsule_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
+      - "capsule_install_source is match('repo')"
+      - "capsule_repo_file is search('^(?!(https?|s?ftps?):\/\/)')"
   - name: "Satellite Capsule repository enabled"
     command:
       subscription-manager repos --enable '{{ capsule_cdn_reponame }}'
@@ -102,7 +102,7 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
-    when: "{{ sat_version is version('6.2', '<=') }}"
+    when: "sat_version is version('6.2', '<=')"
 
   # Prepare for 6.3  capsule installation
   # NOTE: The change of --capsule-fqdn to --foreman-proxy-fqdn for Sat6.3
@@ -112,7 +112,7 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     with_items: "{{ groups['capsules'] }}"
-    when: "{{ sat_version is version('6.3', '>=') }}"
+    when: "sat_version is version('6.3', '>=')"
     # Output of this command looks like this:
     # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
     # Installing             Done                                               [100%] [..........]
