@@ -143,6 +143,10 @@ epel_release_rpm: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ 
 tests_products: perf-gen1 perf-gen2 perf-gen3 perf-gen4 perf-gen5 perf-gen6 perf-gen7 perf-gen8
 tests_backup_path: /home/backup
 
+# Various test variables
+test_sync_repositories_count: 8
+test_sync_repositories_url_template: "http://repos.example.com/repo*"
+
 # workload settings
 methods:
   repo_count: 5 #Number of repos

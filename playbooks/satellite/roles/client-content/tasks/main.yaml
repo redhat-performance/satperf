@@ -48,9 +48,15 @@
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}"
     when: "sat_repos_sync == 'sync'"
 
-  - name: "Create client domain"
+  - name: "Create client domain (on 6.4+)"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}" --location "{{ sat_location }}"
+    when: "sat_version is version('6.3', '>')"
+  - name: "Create client domain (on 6.3-)"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}" --locations "{{ sat_location }}"
+    when: "sat_version is version('6.3', '<=')"
+
   - name: "Create host group"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" hostgroup create --name "{{ content_hostgroup }}" --lifecycle-environment Library --content-view "{{ sat_org }} View" --query-organization "{{ sat_org }}"
