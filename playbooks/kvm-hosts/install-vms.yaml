@@ -40,7 +40,7 @@
           --graphics spice
           --location "{{ vms_kss_os }}"
           --initrd-inject "/root/{{ item.name }}-{{ item.ks }}"
-          --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=tty0 console=ttyS0,115200 {{ item.extra_kernel_args }}"
+          --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=tty0 console=ttyS0,115200 {% if item.extra_kernel_args is defined %}{{ item.extra_kernel_args }}{% endif %}"
           --noautoconsole
       when: "item.name not in vms_list.list_vms"
       with_items: "{{ vms[inventory_hostname] }}"
