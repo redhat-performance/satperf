@@ -9,32 +9,34 @@
     test_sync_repositories_count: 8
     test_sync_repositories_url_template: "http://repos.example.com/repo*"
     test_sync_repositories_product: "test_sync_repositories_product"
+    test_sync_repositories_le: "test_sync_repositories_le"
     test_sync_repositories_repo_template: "test_sync_repositories_repo*"
-    test_sync_repositories_max_sync_secs: 30
+    test_sync_repositories_cv_template: "test_sync_repositories_cv*"
+    test_sync_repositories_max_sync_secs: 600
   tasks:
-#    - name: "Create product"
-#      command:
-#        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_repositories_product }}"
-#      register: create_product
-#      failed_when: "create_product.rc != 0 and 'Name has already been taken for a product in this organization' not in create_product.stderr"
-#      changed_when: "create_product.rc == 0 and 'Product created' in create_product.stdout"
-#    - name: "Delete repos"
-#      command:
-#        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository delete --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}"
-#      register: delete_repo
-#      failed_when: "delete_repo.rc != 0 and 'Error: repository not found.' not in delete_repo.stderr"
-#      changed_when: "delete_repo.rc == 0 and 'Repository deleted.' in delete_repo.stdout"
-#      loop: "{{ range(test_sync_repositories_count)|list }}"
-#      ignore_errors: yes
-#    - name: "Create repos"
-#      command:
-#        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --content-type yum --download-policy on_demand --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --url "{{ test_sync_repositories_url_template|replace('*', item) }}"
-#      register: create_repo
-#      loop: "{{ range(test_sync_repositories_count)|list }}"
+    - name: "Create product"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_repositories_product }}"
+      register: create_product
+      failed_when: "create_product.rc != 0 and 'Name has already been taken for a product in this organization' not in create_product.stderr"
+      changed_when: "create_product.rc == 0 and 'Product created' in create_product.stdout"
+    - name: "Delete repos"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository delete --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}"
+      register: delete_repo
+      failed_when: "delete_repo.rc != 0 and 'Error: repository not found.' not in delete_repo.stderr"
+      changed_when: "delete_repo.rc == 0 and 'Repository deleted.' in delete_repo.stdout"
+      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      ignore_errors: yes
+    - name: "Create repos"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --content-type yum --download-policy on_demand --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --url "{{ test_sync_repositories_url_template|replace('*', item) }}"
+      register: create_repo
+      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
     - name: "Run sync"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --async
-      loop: "{{ range(test_sync_repositories_count)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
       register: start_sync
       ignore_errors: true
     - name: "Sync start stdout"
@@ -69,7 +71,7 @@
                 break
             fi
             # Check for timeout
-            started_at=$( date --utc -d "$( grep 'Started at:' $log | cut -d ':' -f 2 )" +%s )
+            started_at=$( date --utc -d "$( grep 'Started at:' $log | sed 's/^[^:]\+: //' )" +%s )
             now=$( date --utc +%s )
             if [ "$( expr $now - $started_at )" -gt "{{ test_sync_repositories_max_sync_secs }}" ]; then
                 echo "TIMEOUT wainting on sync finish of task $task" >&2
@@ -84,8 +86,8 @@
             # Wait and try again
             sleep 10
         done
-        grep '^Started at:' $log | sed 's/^[^:]: //'
-        grep '^Ended at:' $log | sed 's/^[^:]: //'
+        grep '^Started at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
+        grep '^Ended at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
       loop: "{{ start_sync.results }}"
       loop_control:
         label: "{{ test_sync_repositories_repo_template|replace('*', item.item) }}"
@@ -97,5 +99,111 @@
       debug:
         msg: "SyncRepositories {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
       loop: "{{ wait_sync.results }}"
+      when: "item.rc is defined and item.rc == 0"
+
+    - name: "Create lifecycle environment"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization-id "{{ sat_orgid }}" --prior Library --name "{{ test_sync_repositories_le }}"
+      register: create_le
+    - name: "Create content views"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --repositories "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_repositories_cv_template|replace('*', item) }}"
+      register: create_cv
+      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+
+    - name: "Publish content views"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization-id "{{ sat_orgid }}" --name "{{ test_sync_repositories_cv_template|replace('*', item) }}"
+      register: start_publish
+      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+    - name: "Wait for publish to finish"
+      shell: |
+        log=$( mktemp )
+        task="{{ item.stdout.split()[7].split('.')[0] }}"
+        while true; do
+            hammer --output yaml task info --id "$task" >$log
+            # Check if we are in correct state
+            if grep --quiet '^State:\s\+stopped' $log \
+                && grep --quiet '^Result:\s\+success' $log; then
+                echo "Task $task is in stopped/success now"
+                break
+            fi
+            # Check for timeout
+            started_at=$( date --utc -d "$( grep 'Started at:' $log | sed 's/^[^:]\+: //' )" +%s )
+            now=$( date --utc +%s )
+            if [ "$( expr $now - $started_at )" -gt "{{ test_sync_repositories_max_sync_secs }}" ]; then
+                echo "TIMEOUT wainting on sync finish of task $task" >&2
+                exit 1
+            fi
+            # Check if we are in some incorrent state
+            if grep --quiet '^State:\s\+stopped' $log \
+                && grep --quiet '^Result:\s\+warning' $log; then
+                echo "ERROR Task $task is in stopped/warning now" >&2
+                exit 2
+            fi
+            # Wait and try again
+            sleep 10
+        done
+        grep '^Started at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
+        grep '^Ended at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
+      loop: "{{ start_publish.results }}"
+      loop_control:
+        label: "{{ test_sync_repositories_cv_template|replace('*', item.item) }}"
+      register: wait_publish
+      ignore_errors: yes
+    - debug:
+        var: wait_publish
+    - name: "Print results"
+      debug:
+        msg: "PublishContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+      loop: "{{ wait_publish.results }}"
+      when: "item.rc is defined and item.rc == 0"
+
+    - name: "Promote content views"
+      command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization-id "{{ sat_orgid }}" --content-view "{{ test_sync_repositories_cv_template|replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_repositories_le }}"
+      register: start_promote
+      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+    - name: "Wait for promote to finish"
+      shell: |
+        log=$( mktemp )
+        task="{{ item.stdout.split()[7].split('.')[0] }}"
+        while true; do
+            hammer --output yaml task info --id "$task" >$log
+            # Check if we are in correct state
+            if grep --quiet '^State:\s\+stopped' $log \
+                && grep --quiet '^Result:\s\+success' $log; then
+                echo "Task $task is in stopped/success now"
+                break
+            fi
+            # Check for timeout
+            started_at=$( date --utc -d "$( grep 'Started at:' $log | sed 's/^[^:]\+: //' )" +%s )
+            now=$( date --utc +%s )
+            if [ "$( expr $now - $started_at )" -gt "{{ test_sync_repositories_max_sync_secs }}" ]; then
+                echo "TIMEOUT wainting on sync finish of task $task" >&2
+                exit 1
+            fi
+            # Check if we are in some incorrent state
+            if grep --quiet '^State:\s\+stopped' $log \
+                && grep --quiet '^Result:\s\+warning' $log; then
+                echo "ERROR Task $task is in stopped/warning now" >&2
+                exit 2
+            fi
+            # Wait and try again
+            sleep 10
+        done
+        grep '^Started at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
+        grep '^Ended at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
+      loop: "{{ start_promote.results }}"
+      loop_control:
+        label: "{{ test_sync_repositories_cv_template|replace('*', item.item) }}"
+      register: wait_promote
+      ignore_errors: yes
+    - debug:
+        var: wait_promote
+    - name: "Print results"
+      debug:
+        msg: "PromoteContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+      loop: "{{ wait_promote.results }}"
       when: "item.rc is defined and item.rc == 0"
 ...
