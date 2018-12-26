@@ -1,0 +1,8 @@
+---
+- name: "Deploy wait-for-task.sh"
+  copy:
+    remote_src: no
+    src: files/wait-for-task.sh
+    dest: /root/wait-for-task.sh
+    mode: 0700
+...
