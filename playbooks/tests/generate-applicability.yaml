@@ -5,36 +5,20 @@
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
+  vars:
+    test_generate_applicability_repeats: 5
+    test_generate_applicability_timeout: 100
+  roles:
+    - wait-for-task-script
   tasks:
-    - name: "Deploy generate applicability script"
-      copy:
-        content: |
-          # Start the GenerateApplicability task
-          echo "ForemanTasks.async_task(::Actions::Katello::Host::GenerateApplicability, Host.all)" | foreman-rake console
-
-          # Wait till it finishes
-          tmp=$( mktemp )
-          while true; do
-              hammer -d --output yaml -u admin -p changeme task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' &> $tmp
-              grep '^\s*Ended at:\s*$' $tmp || break
-              sleep 1
-          done
-
-          # DEBUG
-          echo "====="
-          cat $tmp
-          echo "====="
-
-          # Format output so we can consume it later in the playbook
-          count=$( grep '^\s*\[[0-9 ]\+\]\s*[0-9]\+,$' $tmp | wc -l | cut -d ' ' -f 1 )
-          echo $count
-          grep 'Started at' $tmp | sed "s/^.*: '\(.*\)'/\1/" | sed -e "s/T/ /" -e "s/Z$//"
-          grep 'Ended at' $tmp | sed "s/^.*: '\(.*\)'/\1/" | sed -e "s/T/ /" -e "s/Z$//"
-        dest: /root/generate-applicability.sh
-    - name: "Run generate applicability script"
-      command:
-        bash /root/generate-applicability.sh
+    - name: "Measure generate applicability task"
+      shell: |
+        echo "ForemanTasks.async_task(::Actions::Katello::Host::GenerateApplicability, Host.all)" | foreman-rake console
+        task=$( hammer --output yaml -u admin -p changeme task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' | grep '^- ID:' | cut -d ' ' -f 3 )
+        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "$task" "{{ test_generate_applicability_timeout }}"
+      loop: "{{ range(1, test_generate_applicability_repeats+1)|list }}"
       register: run_applicability
+      ignore_errors: yes
     - debug:
         var: run_applicability
     # Why are we printing it {{ count }} times? Because when we are
@@ -43,6 +27,6 @@
     # of attemots in the output, which is what I want
     - name: "Print results"
       debug:
-        msg: "GenerateApplicability {{ run_applicability.stdout_lines[-2] }} to {{ run_applicability.stdout_lines[-1] }}"
-      when: "run_applicability.rc is defined and run_applicability.rc == 0"
-      loop: "{{ range(run_applicability.stdout_lines[-3]|int)|list }}"
+        msg: "GenerateApplicability {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+      when: "item.rc is defined and item.rc == 0"
+      loop: "{{ run_applicability.results }}"
