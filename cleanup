@@ -3,3 +3,6 @@
 rm -rf *~ log/ *.pyc */*.pyc */*.pyc  __pycache__ lextab.py yacctab.py
 find . -name \*.retry -delete
 find . -name \*.swp -delete
+
+mkdir -p logs-old/
+mv logs-20* logs-old/
