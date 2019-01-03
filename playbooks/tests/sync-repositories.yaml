@@ -8,6 +8,7 @@
 #     hammer content-view remove-from-environment --id $cv_id --lifecycle-environment Library --organization-id 1
 #     hammer content-view delete --id $cv_id --organization-id 1
 # done
+# sleep 30
 # hammer product delete --organization-id 1 --name test_sync_repositories_product
 ---
 - hosts: satellite6
