@@ -1,3 +1,14 @@
+# This test creates and synces 8 repos, creates and publishes 8 CVs each with
+# one repo, creates lifecycle environment and publishes these repos into it.
+#
+# To cleanup:
+#
+# hammer lifecycle-environment delete --name test_sync_repositories_le --organization-id 1
+# for cv_id in $( hammer --output csv --no-headers content-view list --search 'label ~ test_sync_repositories_cv' | cut -d ',' -f 1 ); do
+#     hammer content-view remove-from-environment --id $cv_id --lifecycle-environment Library --organization-id 1
+#     hammer content-view delete --id $cv_id --organization-id 1
+# done
+# hammer product delete --organization-id 1 --name test_sync_repositories_product
 ---
 - hosts: satellite6
   remote_user: root
@@ -12,7 +23,7 @@
     test_sync_repositories_le: "test_sync_repositories_le"
     test_sync_repositories_repo_template: "test_sync_repositories_repo*"
     test_sync_repositories_cv_template: "test_sync_repositories_cv*"
-    test_sync_repositories_max_sync_secs: 600
+    test_sync_repositories_max_sync_secs: 1800
   roles:
     - wait-for-task-script
   tasks:
