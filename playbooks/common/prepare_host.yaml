@@ -1,0 +1,15 @@
+---
+- hosts: all
+  remote_user: root
+  ###gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - ../common/roles/scalelab-nic-cleanup
+    - ../common/roles/common
+    - ../common/roles/remove-home-extend-root
+    - ../common/roles/epel-not-present
+    - ../common/roles/rhsm
+    - ../common/roles/ntp
+...
