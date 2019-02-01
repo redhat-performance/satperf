@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    ###- common-eth1
+    - ../common/roles/scalelab-nic-cleanup
     - ../common/roles/common
     - ../common/roles/epel-not-present
     - ../common/roles/rhsm-satellite
