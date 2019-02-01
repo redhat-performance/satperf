@@ -9,7 +9,10 @@
   ###  - common
   tasks:
     - setup:
-        gather_subset: "!all"
+        gather_subset: "!all,network"
+    - name: "WORKAROUND for issue when docker0 MAC gets changed on container start (bug: TODO)"
+      command:
+        ip link set docker0 address "{{ hostvars[inventory_hostname]['ansible_'+nic_private]['macaddress'] }}"
     - name: "Count running containers"
       command:
         docker ps -q
