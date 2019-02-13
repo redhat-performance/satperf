@@ -1,9 +1,9 @@
 ---
   - include_tasks: enable_repo.yaml
 
-  # If it fails, restart Satellite, refresh manifest and try again
-  - include_tasks: restart_and_refresh.yaml
-    when: enable_repo.rc is not defined or enable_repo.rc != 0
-  - include_tasks: enable_repo.yaml
-    when: enable_repo.rc is not defined or enable_repo.rc != 0
+  #### If it fails, restart Satellite, refresh manifest and try again
+  ###- include_tasks: restart_and_refresh.yaml
+  ###  when: enable_repo.rc is not defined or enable_repo.rc != 0
+  ###- include_tasks: enable_repo.yaml
+  ###  when: enable_repo.rc is not defined or enable_repo.rc != 0
 ...
