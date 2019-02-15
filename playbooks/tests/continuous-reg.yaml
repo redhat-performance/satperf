@@ -24,7 +24,7 @@
         tail -n "+{{ contreg_size + 1 }}" "{{ contreg_file }}.full" >/root/container-ips.shuffled
         cut -d ' ' -f 2 "{{ contreg_file }}" >"{{ contreg_inv }}"
       when: "not ( file_stat.stat.isreg is defined and file_stat.stat.isreg )"
-    - name: "Run the loop of registratoins"
+    - name: "Run the loop for {{ contreg_inv }} iterations with registratoins"
       shell: |
         ansible -u root -i clients.continuous-reg.ini --private-key id_rsa_key all -m shell -a "
             set -xe;
