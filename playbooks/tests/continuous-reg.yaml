@@ -35,7 +35,7 @@
             for i in \$( seq {{ contreg_iter }} ); do
                 subscription-manager unregister || true;
                 subscription-manager status || true;
-                if ! subscription-manager register --activationkey SatperfActivationKey --org Default_Organization; then
+                if ! subscription-manager register --activationkey {{ content_activationkey }} --org {{ sat_orglabel }}; then
                     rc=\$?
                     [ \"\$rc\" -ne 2 ] && echo \"ERROR: Regrastration failed with \$rc\" >&2;
                 fi
