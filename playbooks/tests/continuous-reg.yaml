@@ -1,0 +1,51 @@
+---
+- hosts: docker-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    # size=10 tags=untagged,REG,REM bootstrap_retries=0 grepper='Register'
+    contreg_size: 3   # how many containers per docker host to use?
+    contreg_iter: 100   # how many register&unregister iterations to perform
+    contreg_file: "/root/container-ips.shuffled.continuous-reg"
+    contreg_inv: "/root/clients.continuous-reg.ini"
+    contreg_log: "/root/out-continuous-reg-{{ lookup('pipe', 'date --iso-8601=seconds') }}.log"
+  tasks:
+    - name: "Check if we already have {{ contreg_file }} file"
+      stat:
+        path: "{{ contreg_file }}"
+      register: file_stat
+    - name: "Select hosts to use for continuous registrations"
+      shell: |
+        head -n "{{ contreg_size }}" /root/container-ips.shuffled >"{{ contreg_file }}"
+        cp /root/container-ips.shuffled "{{ contreg_file }}.full"
+        tail -n "+{{ contreg_size + 1 }}" "{{ contreg_file }}.full" >/root/container-ips.shuffled
+        cut -d ' ' -f 2 "{{ contreg_file }}" >"{{ contreg_inv }}"
+      when: "not ( file_stat.stat.isreg is defined and file_stat.stat.isreg )"
+    - name: "Run the loop of registratoins"
+      shell: |
+        ansible -u root -i clients.continuous-reg.ini --private-key id_rsa_key all -m shell -a "
+            set -xe;
+            sleep \$(( \$RANDOM % 60 ));
+            rpm -q katello-host-tools || yum -y install katello-host-tools;
+            rpm -q zsh && rpm -e zsh;
+            subscription-manager status || true;
+            for i in \$( seq {{ contreg_iter }} ); do
+                subscription-manager unregister || true;
+                subscription-manager status || true;
+                if ! subscription-manager register --activationkey SatperfActivationKey --org Default_Organization; then
+                    rc=\$?
+                    [ \"\$rc\" -ne 2 ] && echo \"ERROR: Regrastration failed with \$rc\" >&2;
+                fi
+                subscription-manager status | grep 'Overall Status: \(Current\|Invalid\)';
+                subscription-manager refresh;
+                yum -y install zsh;
+                yum -y remove zsh;
+            done 2>&1 | tee {{ contreg_log }} | tail"
+      register: contreg_run
+    - name: "Show output (more output in {{ contreg_log }} in the container)"
+      debug:
+        var: contreg_run.stdout_lines
+...
