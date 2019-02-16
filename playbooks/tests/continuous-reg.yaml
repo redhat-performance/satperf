@@ -43,7 +43,8 @@
                 subscription-manager refresh;
                 yum -y install zsh;
                 yum -y remove zsh;
-            done 2>&1 | tee {{ contreg_log }} | tail"
+            done &> {{ contreg_log }};
+            tail {{ contreg_log }}"
       register: contreg_run
     - name: "Show output (more output in {{ contreg_log }} in the container)"
       debug:
