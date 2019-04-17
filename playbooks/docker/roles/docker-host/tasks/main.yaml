@@ -114,6 +114,13 @@
     command:
       service network restart
 
+  - name: "Ensure sysctl net.ipv4.ip_forward=1"
+    sysctl:
+      name: net.ipv4.ip_forward
+      value: 1
+      state: present
+      reload: yes
+
   # Configure docker networking
   - name: "When docker_host_cidr_range is empty, set it to default '24'"
     set_fact:
