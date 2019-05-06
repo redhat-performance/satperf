@@ -7,6 +7,7 @@ import dateutil.parser
 import collections
 import requests
 import pprint
+import simplejson.scanner
 
 username = sys.argv[1]
 password = sys.argv[2]
@@ -32,7 +33,11 @@ def get_json(uri, params=None):
             params=params,
             auth=(username, password),
             verify=False)
-    return r.json()
+    try:
+        return r.json()
+    except simplejson.scanner.JSONDecodeError:
+        print("ERROR: Error parsing json: %s" % r.text)
+        sys.exit(1)
 
 def get_all(uri, params=None):
     out = []
