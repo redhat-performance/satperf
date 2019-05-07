@@ -56,6 +56,12 @@ def get_all(uri, params=None):
         ###return out   # DEBUG: del me
 
 parent_task = get_json("/foreman_tasks/api/tasks/%s" % task_id)
+if 'error' in parent_task:
+    print "ERROR: Error retrieving parent task info: %s" % parent_task
+    sys.exit(1)
+if 'state' not in parent_task:
+    print "ERROR: Unexpected parent task format, missing 'state': %s" % parent_task
+    sys.exit(1)
 if parent_task['state'] != 'stopped':
     pprint.pprint(parent_task)
     print "ERROR: Parent task not finished yet"
