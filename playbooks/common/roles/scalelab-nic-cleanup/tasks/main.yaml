@@ -1,5 +1,5 @@
 ---
-  # Systems ...-6048r....
+  # Systems ...-6048r.rdu....
   - shell: |
       for nic in ens3f1 enp5s0f1 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
@@ -9,9 +9,9 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-6048r.' in inventory_hostname"
+    when: "'-6048r.rdu.' in inventory_hostname"
 
-  # Systems ...-r930....
+  # Systems ...-r930.rdu....
   - shell: |
       for nic in em2 p1p1 p1p2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
@@ -21,9 +21,9 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-r930.' in inventory_hostname"
+    when: "'-r930.rdu.' in inventory_hostname"
 
-  # Systems ...-r630....
+  # Systems ...-r630.rdu....
   - shell: |
       for nic in p2p2 em2 em3 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
@@ -33,9 +33,9 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-r630.' in inventory_hostname"
+    when: "'-r630.rdu.' in inventory_hostname"
 
-  # Systems ...-r620...
+  # Systems ...-r620.rdu....
   - shell: |
       for nic in p2p4 em1 em2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
@@ -45,9 +45,9 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-r620.' in inventory_hostname"
+    when: "'-r620.rdu.' in inventory_hostname"
 
-  # Systems ...-r730xd...
+  # Systems ...-r730xd.rdu....
   #   em1 ... private
   #   em3 ... public
   - shell: |
@@ -59,9 +59,9 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-r730xd.' in inventory_hostname"
+    when: "'-r730xd.rdu.' in inventory_hostname"
 
-  # Systems ...-1029p...
+  # Systems ...-1029p.rdu....
   #   enp94s0f1 ... private
   #   eno1 ... public
   - shell: |
@@ -73,7 +73,21 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-1029p.' in inventory_hostname"
+    when: "'-1029p.rdu.' in inventory_hostname"
+
+    # Systems ...-r620.rdu2....
+    #   em1 ... private
+    #   em3 ... public
+  - shell: |
+      for nic in em2 em4 p2p1 p2p2 p2p3 p2p4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
+        ip link set $nic down
+        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+          ip addr del $addr dev $nic
+        done
+        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
+        ip link delete dev $nic || true
+      done
+    when: "'-r620.rdu2.' in inventory_hostname"
 
   - name: Check for interface file presence
     stat:
