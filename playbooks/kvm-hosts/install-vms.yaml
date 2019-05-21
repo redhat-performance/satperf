@@ -8,6 +8,8 @@
 - hosts: kvm-hosts
   remote_user: root
   gather_facts: no
+  vars:
+    vm_create_delay: 10
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -26,22 +28,23 @@
       when: "item.name not in vms_list.list_vms"
       with_items: "{{ vms[inventory_hostname] }}"
     - name: "Install VM"
-      command:
-        virt-install
-          --name "{{ item.name }}"
-          --vcpus "{{ item.cpu_count }}"
-          --ram "{{ item.mem_size }}"
-          --disk "{{ item.disk }}"
-          --network bridge="{{ item.nic_1g_bridge }}",mac="{{ item.nic_1g_mac }}"
-          --network bridge="{{ item.nic_10g_bridge }}",mac="{{ item.nic_10g_mac }}"
-          --virt-type kvm
-          --os-type linux
-          --os-variant rhel7
-          --graphics spice
-          --location "{{ vms_kss_os }}"
-          --initrd-inject "/root/{{ item.name }}-{{ item.ks }}"
-          --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=tty0 console=ttyS0,115200 {% if item.extra_kernel_args is defined %}{{ item.extra_kernel_args }}{% endif %}"
+      shell: |
+        virt-install \
+          --name "{{ item.name }}" \
+          --vcpus "{{ item.cpu_count }}" \
+          --ram "{{ item.mem_size }}" \
+          --disk "{{ item.disk }}" \
+          --network bridge="{{ item.nic_1g_bridge }}",mac="{{ item.nic_1g_mac }}" \
+          --network bridge="{{ item.nic_10g_bridge }}",mac="{{ item.nic_10g_mac }}" \
+          --virt-type kvm \
+          --os-type linux \
+          --os-variant rhel7 \
+          --graphics spice \
+          --location "{{ vms_kss_os }}" \
+          --initrd-inject "/root/{{ item.name }}-{{ item.ks }}" \
+          --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=tty0 console=ttyS0,115200 {% if item.extra_kernel_args is defined %}{{ item.extra_kernel_args }}{% endif %}" \
           --noautoconsole
+        sleep "{{ vm_create_delay }}"
       when: "item.name not in vms_list.list_vms"
       with_items: "{{ vms[inventory_hostname] }}"
     - name: "Get MAC adresses of 1Gb NIC"
