@@ -1,5 +1,6 @@
 ---
-- hosts: physical-clients[1:10]
+- hosts: physical-clients[100:]
+  serial: 50
   remote_user: root
   gather_facts: no
   vars_files:
