@@ -1,9 +1,19 @@
 ---
 - hosts: physical-clients[1:10]
   remote_user: root
+  gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
+  pre_tasks:
+    - name: "Gather facts"
+      setup:
+        gather_subset:
+            - '!all'
+      retries: 3
+      delay: 3
+      register: result
+      until: not result.failed
   roles:
     - ../common/roles/common
     - ../common/roles/rhsm-satellite
@@ -14,3 +24,7 @@
         state: present
         key: "https://{{ groups['satellite6']|first }}:9090/ssh/pubkey"
         validate_certs: no
+      retries: 3
+      delay: 3
+      register: result
+      until: not result.failed
