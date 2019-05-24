@@ -38,8 +38,8 @@
       regexp: ".*{{ item }}$"
       line: "{{ hostvars[item].ip }} {{ item }}"
       state: present
-    when: "hostvars[item].ip is defined and ( 'satellite6' in hostvars[item].group_names or 'capsules' in hostvars[item].group_names )"
-    with_items: "{{ groups['all'] }}"
+    when: "hostvars[item].ip is defined"
+    with_items: "{{ groups['satellite6'] + groups['capsules'] }}"
   - name: "File /etc/hosts have correct SELinux context (had issues before)"
     command:
       restorecon -vR /etc/hosts
