@@ -48,18 +48,6 @@
         sleep "{{ vm_create_delay }}"
       when: "item.name not in vms_list.list_vms"
       with_items: "{{ vms[inventory_hostname] }}"
-    ###- name: "Get MAC adresses of 1Gb NIC"
-    ###  shell:
-    ###    virsh dumpxml "{{ item.name }}" | grep -B 1 "source bridge='{{ item.nic_1g_bridge }}'" | grep 'mac\s\+address=' | cut -d "'" -f 2
-    ###  with_items: "{{ vms[inventory_hostname] }}"
-    ###  register: macs
-    ###- name: "Get IP adresses for given MAC"
-    ###  shell:
-    ###    arp -n | grep -i "{{ item.stdout }}" | cut -d " " -f 1
-    ###  with_items: "{{ macs.results }}"
-    ###  register: ips
-    ###- debug: msg="{{ item.stdout }} {{ item.item.item.name }}"
-    ###  with_items: "{{ ips.results }}"
 
     - name: "Wait for installation to be finished and machines turned off"
     # We will give VM a half hour to finish the install and turn off.
