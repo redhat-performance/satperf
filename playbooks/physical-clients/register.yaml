@@ -1,0 +1,16 @@
+---
+- hosts: physical-clients[1:10]
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - ../common/roles/common
+    - ../common/roles/rhsm-satellite
+  tasks:
+    - name: "Deploy remote execution SSH key"
+      authorized_key:
+        user: root
+        state: present
+        key: "https://{{ groups['satellite6']|first }}:9090/ssh/pubkey"
+        validate_certs: no
