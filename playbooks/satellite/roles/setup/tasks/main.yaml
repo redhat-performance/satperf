@@ -38,9 +38,9 @@
   # Get repofile from http[s]/ftp[s] URL if the file is remote
   - name: "Custom Satellite repo configured"
     get_url:
-      url="{{ sat_repo_file }}"
-      dest=/etc/yum.repos.d/satellite.repo
-      force=yes
+      url: "{{ sat_repo_file }}"
+      dest: /etc/yum.repos.d/satellite.repo
+      force: yes
     when:
       - sat_install_source is match("repo")
       - sat_repo_file is search("^(https?|s?ftps?):\/\/")
@@ -48,9 +48,9 @@
   # Get repofile from a local source
   - name: "Custom Satellite repo configured"
     copy:
-      src="{{ sat_repo_file }}"
-      dest=/etc/yum.repos.d/satellite.repo
-      force=yes
+      src: "{{ sat_repo_file }}"
+      dest: /etc/yum.repos.d/satellite.repo
+      force: yes
     when:
       - sat_install_source is match("repo")
       - sat_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
@@ -89,8 +89,8 @@
       rm -rf /var/cache/yum/*
   - name: "Package satellite installed"
     yum:
-      name="{{ sat_installer_pkg }}"
-      state=present
+      name: "{{ sat_installer_pkg }}"
+      state: present
     register: installing
   - name: "Satellite configured"
     command:
