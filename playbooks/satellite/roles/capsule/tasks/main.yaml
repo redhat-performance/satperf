@@ -155,6 +155,10 @@
   - name: "Fix certificate tarball path"
     shell:
       sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+  - name: "Fix scenario (workaround for bug 1726151)"
+    shell:
+      sed -i 's|foreman-installer\s\+--scenario\s\+foreman-proxy-content|satellite-installer --scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
+    when: "sat_version is version('6.6', '=')"
 
   # Fix for BZ 1458749
   - name: "Fix the capsule scenario"
