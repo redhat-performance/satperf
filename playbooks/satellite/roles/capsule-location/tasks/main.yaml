@@ -1,5 +1,19 @@
 ---
   # Create location for this capsule if it does not exist yet and move the location there
+  # Client domain is added to the location
+  - name: "Get id of a domain"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/domains/{{ client_domain }}"
+      method: GET
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+    register: domain_info
+    run_once: true
+  - name: Determine domain ID
+    set_fact:
+      domain_id: "{{ domain_info.json.id }}"
   - name: "Get list of locations"
     uri:
       url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
@@ -21,7 +35,7 @@
       HEADER_Content-Type: application/json
       HEADER_Accept: application/json
       body: >
-        {"location":{"name":"Location for {{ inventory_hostname }}"}}
+        {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"]}}
       status_code: 201
       body_format: json
     when: "'Location for {{ inventory_hostname }}' not in locations.json.results|map(attribute='name')"
