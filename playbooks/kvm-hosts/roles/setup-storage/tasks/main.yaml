@@ -1,15 +1,25 @@
 ---
-  #- name: "Cleanup possible existing VGs and PVs"
-  #  shell: |
-  #      vgremove docker
-  #      vgremove vg_docker
-  #      pvremove /dev/sdb
-  #      if fdisk -l /dev/sdb | grep '/dev/sdb1'; then
-  #          pvremove /dev/sdb1
-  #          echo -e "d\nw" | fdisk /dev/sdb
-  #          partprobe
-  #      fi
-  #  ignore_errors: True
+  # Cleanup possible existing VGs and PVs:
+  #
+  #   vgremove docker
+  #   vgremove vg_docker
+  #   pvremove /dev/sdb
+  #   if fdisk -l /dev/sdb | grep '/dev/sdb1'; then
+  #       pvremove /dev/sdb1
+  #       echo -e "d\nw" | fdisk /dev/sdb
+  #       partprobe
+  #   fi
+  #
+  # Another cleanup procedure when /dev/sdb1 is used in VG:
+  #
+  #   umount /home/
+  #   sed -i '/\/home/d' /etc/fstab
+  #   lvremove --yes /dev/mapper/rhel_gprfc032-home
+  #   pvmove /dev/sdb1
+  #   vgreduce rhel_gprfc032 /dev/sdb1
+  #   pvremove /dev/sdb1
+  #   echo -e "d\nw" | fdisk /dev/sdb
+  #   partprobe
 
   - name: "Create physical volumes and volume group"
     lvg:
