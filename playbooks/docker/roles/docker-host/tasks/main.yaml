@@ -7,11 +7,12 @@
 
   # If docker is already installed, we should remove it
   - name: "Removing previously installed version of docker"
-    yum: pkg={{item}} state=absent
-    with_items:
-     - docker-selinux
-     - docker-common
-     - docker-engine
+    yum:
+      state: absent
+      name:
+        - docker-selinux
+        - docker-common
+        - docker-engine
     when: docker_installed.rc == 0
 
   # TODO Do we need to add possibility to attach to specific pool here?
@@ -24,14 +25,14 @@
       yum clean all
   - name: "docker package installed"
     yum:
-      name=docker-1.10.3-59.el7
-      state=present
+      name: docker-1.10.3-59.el7
+      state: present
 
   # Abrt causing load when something fails and we do not care
   - name: "abrt package not present"
     yum:
-      name=abrt
-      state=absent
+      name: abrt
+      state: absent
 
   # We are using killall below and generally this is nice to have
   - name: "psmisc package installed"
