@@ -10,6 +10,7 @@
     - ../common/roles/common
     - { role: docker-host-kvm-partitioning, when: docker_host_partitioning == 'kvm' }
     - { role: docker-host-ec2-partitioning, when: docker_host_partitioning == 'ec2' }
+    - { role: docker-host-from_disk-partitioning, when: docker_host_partitioning == 'from_disk' }
     - { role: docker-host-myrhev_cleanup-partitioning, when: docker_host_partitioning == 'myrhev_cleanup' }
     - { role: docker-host-try10klab-partitioning, when: docker_host_partitioning == 'try10klab' }
     - { role: docker-host-scalelab6048r-partitioning, when: "'-6048r.' in inventory_hostname" }
