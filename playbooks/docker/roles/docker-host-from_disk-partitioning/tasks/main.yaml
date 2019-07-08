@@ -1,0 +1,28 @@
+---
+# This role is supposed to create VG {{ docker_host_vg }} for Docker on disk
+# specified in {{ docker_host_partitioning_from_disk }} variable.
+
+  - name: "Make sure variables we need are set"
+    assert:
+      that:
+        - "docker_host_vg is defined"
+        - "docker_host_partitioning_from_disk is defined"
+
+  - name: "Cleanup possible existing VGs and PVs"
+    shell: |
+        vgremove "{{ docker_host_vg }}"
+        pvremove "{{ docker_host_partitioning_from_disk }}"
+        if fdisk -l "{{ docker_host_partitioning_from_disk }}" | grep "{{ docker_host_partitioning_from_disk }}1"; then
+            pvremove "{{ docker_host_partitioning_from_disk }}1"
+            echo -e "d\nw" | fdisk "{{ docker_host_partitioning_from_disk }}"
+            partprobe
+        fi
+    ignore_errors: True
+
+  - name: "Create physical volume {{ docker_host_partitioning_from_disk }}"
+    command:
+      pvcreate --yes "{{ docker_host_partitioning_from_disk }}"
+  - name: "Create volume group {{ docker_host_vg }}"
+    command:
+      vgcreate "{{ docker_host_vg }}" "{{ docker_host_partitioning_from_disk }}"
+...
