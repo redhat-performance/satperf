@@ -31,7 +31,7 @@
             sleep \$(( \$RANDOM % 60 ));
             rpm --quiet -q katello-host-tools || yum -y install katello-host-tools;
             rpm --quiet -q zsh && rpm -e zsh;
-            curl -X DELETE -k -u '{{ sat_user }}:{{ sat_pass }}' https://{{ groups['satellite6']|first }}/api/v2/hosts/$( hostname ) || true
+            curl -X DELETE -k -u '{{ sat_user }}:{{ sat_pass }}' https://{{ groups['satellite6']|first }}/api/v2/hosts/\$( hostname ) || true
             subscription-manager status || true;
             for i in \$( seq {{ contreg_iter }} ); do
                 subscription-manager unregister || true;
