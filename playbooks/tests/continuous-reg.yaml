@@ -29,8 +29,8 @@
         ansible -u root -i clients.continuous-reg.ini --private-key id_rsa_key all -m shell -a "
             set -xe;
             sleep \$(( \$RANDOM % 60 ));
-            rpm -q katello-host-tools || yum -y install katello-host-tools;
-            rpm -q zsh && rpm -e zsh;
+            rpm --quiet -q katello-host-tools || yum -y install katello-host-tools;
+            rpm --quiet -q zsh && rpm -e zsh;
             subscription-manager status || true;
             for i in \$( seq {{ contreg_iter }} ); do
                 subscription-manager unregister || true;
