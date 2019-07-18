@@ -15,3 +15,6 @@
         for c in $( docker ps -qa ); do
           docker start $c
         done
+    # Also you need to add satellite and capsule back into /etc/hosts - e.g. with:
+    #
+    # for c in $( cut -d ' ' -f 1 container-ips ); do docker exec -ti $c /bin/bash -c "echo -e '172.29.1.1 satellite.sat66soak.local\n172.29.1.2 caps1.sat66soak.local\n172.29.1.3 caps2.sat66soak.local' >>/etc/hosts"; done
