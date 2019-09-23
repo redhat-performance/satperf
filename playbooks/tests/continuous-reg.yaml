@@ -50,4 +50,7 @@
     - name: "Show output (more output in {{ contreg_log }} in the container)"
       debug:
         var: contreg_run.stdout_lines
+    - name: "Show error output (more output in {{ contreg_log }} in the container)"
+      debug:
+        var: contreg_run.stderr_lines
 ...
