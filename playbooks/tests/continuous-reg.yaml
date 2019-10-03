@@ -31,14 +31,14 @@
             sleep \$(( \$RANDOM % 60 ));
             rpm --quiet -q katello-host-tools || yum -y install katello-host-tools;
             rpm --quiet -q zsh && rpm -e zsh;
-            curl -X DELETE -k -s -u '{{ sat_user }}:{{ sat_pass }}' https://{{ groups['satellite6']|first }}/api/v2/hosts/\$( hostname ) || true
+            curl -X DELETE -k -s -u '{{ sat_user }}:{{ sat_pass }}' https://{{ groups['satellite6']|first }}/api/v2/hosts/\$( hostname ) || true;
             subscription-manager status || true;
             for i in \$( seq {{ contreg_iter }} ); do
                 subscription-manager unregister || true;
                 subscription-manager status || true;
                 if ! subscription-manager register --activationkey {{ content_activationkey }} --org {{ sat_orglabel }}; then
-                    rc=\$?
-                    [ \"\$rc\" -ne 2 ] && echo \"ERROR: Regrastration failed with \$rc\" >&2;
+                    rc=\$?;
+                    [ \"\$rc\" -ne 2 ] && echo \"ERROR: Registration failed with \$rc\" >&2;
                 fi
                 subscription-manager status | grep 'Overall Status: \(Current\|Invalid\)';
                 subscription-manager refresh;
