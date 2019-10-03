@@ -27,23 +27,25 @@
     - name: "Run the loop for {{ contreg_inv }} iterations with registratoins"
       shell: |
         ansible -u root -i clients.continuous-reg.ini --private-key id_rsa_key all -m shell -a "
-            set -xe;
+            set -x;
             sleep \$(( \$RANDOM % 60 ));
             rpm --quiet -q katello-host-tools || yum -y install katello-host-tools;
             rpm --quiet -q zsh && rpm -e zsh;
-            curl -X DELETE -k -s -u '{{ sat_user }}:{{ sat_pass }}' https://{{ groups['satellite6']|first }}/api/v2/hosts/\$( hostname ) || true;
-            subscription-manager status || true;
+            curl -X DELETE -k -s -u '{{ sat_user }}:{{ sat_pass }}' https://{{ groups['satellite6']|first }}/api/v2/hosts/\$( hostname );
+            subscription-manager status;
             for i in \$( seq {{ contreg_iter }} ); do
-                subscription-manager unregister || true;
-                subscription-manager status || true;
-                if ! subscription-manager register --activationkey {{ content_activationkey }} --org {{ sat_orglabel }}; then
-                    rc=\$?;
-                    [ \"\$rc\" -ne 2 ] && echo \"ERROR: Registration failed with \$rc\" >&2;
-                fi
-                subscription-manager status | grep 'Overall Status: \(Current\|Invalid\)';
-                subscription-manager refresh;
-                yum -y install zsh;
-                yum -y remove zsh;
+                subscription-manager unregister;
+                subscription-manager status;
+                subscription-manager register --activationkey {{ content_activationkey }} --org {{ sat_orglabel }};
+                rc=\$?;
+                if ! [ \"\$rc\" -eq 0 -o \"\$rc\" -eq 2 ]; then
+                    echo \"ERROR: Registration failed with \$rc\" >&2;
+                    exit 1;
+                fi;
+                subscription-manager status | grep 'Overall Status: \(Current\|Invalid\)' || exit 2;
+                subscription-manager refresh || exit 3;
+                yum -y install zsh || exit 4;
+                yum -y remove zsh || exit 5;
             done &> {{ contreg_log }};
             tail {{ contreg_log }}"
       register: contreg_run
