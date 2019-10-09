@@ -9,6 +9,7 @@
     - ../common/roles/scalelab-nic-cleanup
     - ../common/roles/common
     - { role: docker-host-kvm-partitioning, when: docker_host_partitioning == 'kvm' }
+    - { role: docker-host-redocker-partitioning, when: docker_host_partitioning == 'redocker' }
     - { role: docker-host-ec2-partitioning, when: docker_host_partitioning == 'ec2' }
     - { role: docker-host-from_disk-partitioning, when: docker_host_partitioning == 'from_disk' }
     - { role: docker-host-myrhev_cleanup-partitioning, when: docker_host_partitioning == 'myrhev_cleanup' }
