@@ -23,11 +23,12 @@
   - name: "Stop docker"
     shell:
       systemctl stop docker
+    ignore_errors: true
   - name: "Umount /var/lib/docker"
     mount:
       path: /var/lib/docker
       state: absent
-  - name: "/home LV removed"
+  - name: "/var/lib/docker LV removed"
     lvol:
       vg: "{{ ansible_lvm.lvs.docker.vg }}"
       lv: home
