@@ -24,7 +24,7 @@
     test_sync_repositories_le: "test_sync_repositories_le"
     test_sync_repositories_repo_template: "test_sync_repositories_repo*"
     test_sync_repositories_cv_template: "test_sync_repositories_cv*"
-    test_sync_repositories_max_sync_secs: 1800
+    test_sync_repositories_max_sync_secs: 3600
   roles:
     - wait-for-task-script
   tasks:
