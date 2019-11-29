@@ -55,7 +55,7 @@
       tags: SETUP
     - name: "Configure puppet stuff on Satellite"
       shell:
-        hammer -u admin -p changeme host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --puppet-classes "{% raw %}{{ content_puppet_module_name }}{% endraw %}"
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host update --name "{% raw %}{{ hostvars[item]['ansible_fqdn'] }}{% endraw %}" --puppet-proxy "{% raw %}{{ server }}{% endraw %}" --puppet-ca-proxy "{% raw %}{{ server }}{% endraw %}" --environment "{% raw %}{{ content_puppet_env }}{% endraw %}" --puppet-classes "{% raw %}{{ content_puppet_module_name }}{% endraw %}"
       with_items: "{% raw %}{{ groups['all'] }}{% endraw %}"
       when: item != 'localhost'
       run_once: true

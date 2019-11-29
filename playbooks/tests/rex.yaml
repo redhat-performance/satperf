@@ -21,7 +21,7 @@
         sleep 15
     - name: "Get last job ID"
       shell:
-        hammer --csv -u admin -p changeme job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
+        hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
       register: last_job_id_cmd
     - debug: var=last_job_id_cmd
     - name: "Set last job ID"

@@ -70,7 +70,7 @@
     #     for numcap in `seq 1 {{ num_capsules }}`; do
     #       capid=`expr ${numcap} + 1`
     #       echo "[$(date -R)] Starting Capsule Synchronize: ${numcap}"
-    #       time hammer -u admin -p changeme capsule content synchronize --id ${capid} >> "{{ config_name }}".${capid} 2>&1  &
+    #       time hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --id ${capid} >> "{{ config_name }}".${capid} 2>&1  &
     #     done
     #     echo "[$(date -R)] Waiting for Sync to finish on Capsules"
     #     wait
