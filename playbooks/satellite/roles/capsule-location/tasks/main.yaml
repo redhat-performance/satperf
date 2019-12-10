@@ -86,7 +86,6 @@
       body: >
         {"host":{"location_id":"{{ location_id }}"}}
       body_format: json
-    ignore_errors: true   # not confident this all will work
 
   - name: "Move capsule to the location"
     uri:
@@ -102,5 +101,4 @@
       body: >
         {"smart_proxy":{"location_ids":["{{ location_id }}"],"organization_ids":["1"]}}
       body_format: json
-    ignore_errors: true   # not confident this all will work
 ...
