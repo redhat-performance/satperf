@@ -11,9 +11,24 @@
       validate_certs: no
     register: domain_info
     run_once: true
-  - name: Determine domain ID
+  - name: "Determine domain ID"
     set_fact:
       domain_id: "{{ domain_info.json.id }}"
+
+  - name: "Get id of an environment"
+    uri:
+      url: "https://{{ groups['satellite6']|first }}/api/environments/{{ client_environment }}"
+      method: GET
+      user: "{{ sat_user }}"
+      password: "{{ sat_pass }}"
+      force_basic_auth: yes
+      validate_certs: no
+    register: environment_info
+    run_once: true
+  - name: "Determine environment ID"
+    set_fact:
+      environment_id: "{{ environment_info.json.id }}"
+
   - name: "Get list of locations"
     uri:
       url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
@@ -36,10 +51,11 @@
         Content-Type: application/json
         Accept: application/json
       body: >
-        {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"]}}
+        {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"], "environment_ids":["{{ environment_id }}"]}}
       status_code: 201
       body_format: json
     when: "'Location for {{ inventory_hostname }}' not in locations.json.results|map(attribute='name')"
+
   - name: "Get updated list of locations if needed"
     uri:
       url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
@@ -55,6 +71,7 @@
       location_id: "{{ item.id }}"
     when: "item.name == 'Location for {{ inventory_hostname }}'"
     with_items: "{{ locations.json.results }}"
+
   - name: "Move capsule's host to the location"
     uri:
       url: "https://{{ groups['satellite6']|first }}/api/hosts/{{ inventory_hostname }}"
@@ -70,6 +87,7 @@
         {"host":{"location_id":"{{ location_id }}"}}
       body_format: json
     ignore_errors: true   # not confident this all will work
+
   - name: "Move capsule to the location"
     uri:
       url: "https://{{ groups['satellite6']|first }}/api/smart_proxies/{{ inventory_hostname }}"
