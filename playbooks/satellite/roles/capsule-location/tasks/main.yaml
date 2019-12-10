@@ -32,8 +32,9 @@
       password: "{{ sat_pass }}"
       force_basic_auth: yes
       validate_certs: no
-      HEADER_Content-Type: application/json
-      HEADER_Accept: application/json
+      headers:
+        Content-Type: application/json
+        Accept: application/json
       body: >
         {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"]}}
       status_code: 201
@@ -62,8 +63,9 @@
       password: "{{ sat_pass }}"
       force_basic_auth: yes
       validate_certs: no
-      HEADER_Content-Type: application/json
-      HEADER_Accept: application/json,version=2
+      headers:
+        Content-Type: application/json
+        Accept: application/json,version=2
       body: >
         {"host":{"location_id":"{{ location_id }}"}}
       body_format: json
@@ -76,8 +78,9 @@
       password: "{{ sat_pass }}"
       force_basic_auth: yes
       validate_certs: no
-      HEADER_Content-Type: application/json
-      HEADER_Accept: application/json,version=2
+      headers:
+        Content-Type: application/json
+        Accept: application/json,version=2
       body: >
         {"smart_proxy":{"location_ids":["{{ location_id }}"],"organization_ids":["1"]}}
       body_format: json
