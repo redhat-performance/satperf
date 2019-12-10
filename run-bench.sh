@@ -17,7 +17,7 @@ cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/}"
+repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
 
 ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 
@@ -116,9 +116,11 @@ s $wait_interval
 log "===== Sync Tools repo we will need ====="
 h product-create.log "product create --organization '$do' --name SatToolsProduct"
 h repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-h repository-create-puppet-upgrade.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo --content-type yum --url '$repo_sat_tools_puppet'"
+[ "$repo_sat_tools_puppet" != "none" ] \
+    && h repository-create-puppet-upgrade.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo --content-type yum --url '$repo_sat_tools_puppet'"
 h repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo" &
-h repository-sync-puppet-upgrade.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo" &
+[ "$repo_sat_tools_puppet" != "none" ] \
+    && h repository-sync-puppet-upgrade.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo" &
 wait
 s $wait_interval
 
