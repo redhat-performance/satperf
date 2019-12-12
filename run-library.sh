@@ -27,6 +27,33 @@ if ! type ansible >/dev/null; then
     echo "ERROR: ansible not installed" >&2
     exit 1
 fi
+if ! type rpmdev-vercmp >/dev/null; then
+    echo "ERROR: rpmdevtools not installed" >&2
+    exit 1
+fi
+
+function _vercmp() {
+    ver1=$( echo "$1" | sed 's/^satellite-\(.*\)\.noarch/\1/' )
+    ver2=$( echo "$2" | sed 's/^satellite-\(.*\)\.noarch/\1/' )
+    rpmdev-vercmp "$ver1" "$ver2"
+    rc=$?
+    log "Compared versions '$ver1' and '$ver2' and return code is $rc"
+    return $rc
+}
+
+function vercmp_gt() {
+    # Check if first parameter is greater than second using version string comparision
+    _vercmp "$1" "$2"
+    rc=$?
+    [ "$rc" -eq 11 ] && return 0 || return 1
+}
+
+function vercmp_ge() {
+    # Check if first parameter is greater or equal than second using version string comparision
+    _vercmp "$1" "$2"
+    rc=$?
+    [ "$rc" -eq 11 -o "$rc" -eq 0 ] && return 0 || return 1
+}
 
 function measurement_add() {
     python -c "import csv; import sys; print sys.argv[1:]; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
@@ -71,6 +98,7 @@ function a() {
 }
 
 function a_out() {
+    # Just run the ansible command. No output processing, action logging or measurements
     if $run_lib_dryrun; then
         echo "FAKE ansible RUN"
     else
@@ -107,6 +135,11 @@ function s() {
 function h() {
     local log_relative=$1; shift
     a "$log_relative" -m shell -a "hammer $hammer_opts $@" satellite6
+}
+
+function h_out() {
+    # Just run the hammer command via ansible. No output processing, action logging or measurements
+    a_out -m shell -a "hammer $hammer_opts $@" satellite6
 }
 
 function table_row() {

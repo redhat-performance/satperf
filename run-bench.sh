@@ -75,9 +75,20 @@ s $wait_interval
 h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
 s $wait_interval
 
-
 log "===== Publish and promote big CV ====="
-h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
+# Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
+if vercmp_ge "$satellite_version" "6.6.0"; then
+    rids=""
+    for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'; do
+        tmp=$( mktemp )
+        h_out "--output yaml repository info --organization 'Default Organization' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
+        rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
+        [ ${#rids} -eq 0 ] && rids="$rid" || rids="$rids,$rid"
+    done
+    h 20-cv-create-all.log "content-view create --organization '$do' --repository-ids '$rids' --name 'BenchContentView'"
+else
+    h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
+fi
 h 21-cv-all-publish.log "content-view publish --organization '$do' --name 'BenchContentView'"
 s $wait_interval
 h 22-le-create-1.log "lifecycle-environment create --organization '$do' --prior 'Library' --name 'BenchLifeEnvAAA'"
