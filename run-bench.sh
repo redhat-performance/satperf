@@ -81,7 +81,7 @@ if vercmp_ge "$satellite_version" "6.6.0"; then
     rids=""
     for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'; do
         tmp=$( mktemp )
-        h_out "--output yaml repository info --organization 'Default Organization' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
+        h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
         rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
         [ ${#rids} -eq 0 ] && rids="$rid" || rids="$rids,$rid"
     done
@@ -103,7 +103,15 @@ s $wait_interval
 
 
 log "===== Publish and promote filtered CV ====="
-h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
+# Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
+if vercmp_ge "$satellite_version" "6.6.0"; then
+    tmp=$( mktemp )
+    h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" >$tmp
+    rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
+    h 20-cv-create-all.log "content-view create --organization '$do' --repository-ids '$rid' --name 'BenchFilteredContentView'"
+else
+    h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
+fi
 h 31-filter-create-1.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
 h 31-filter-create-2.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
 h 32-rule-create-1.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '$do' --types enhancement,bugfix,security"
