@@ -7,7 +7,7 @@ set -e
 
 opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
 opts_adhoc=${opts_adhoc:-"$opts --user root"}
-logs=${logs:-"logs-$( date --iso-8601=seconds )"}
+logs=${logs:-"logs-$( date --utc --iso-8601=seconds )"}
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
 satellite_version='N/A'   # will be determined automatically by run-bench.sh
@@ -16,7 +16,7 @@ satellite_version='N/A'   # will be determined automatically by run-bench.sh
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
-bench_run_id=${1:-$(date --iso-8601=seconds)}
+bench_run_id=${1:-$(date --utc --iso-8601=seconds)}
 
 # Requirements check
 if ! type bc >/dev/null; then
@@ -63,7 +63,7 @@ function measurement_row_field() {
 }
 
 function log() {
-    echo "[$( date --iso-8601=seconds )] $*"
+    echo "[$( date --utc --iso-8601=seconds )] $*"
 }
 
 function _format_opts() {
@@ -83,7 +83,7 @@ function _format_opts() {
 function a() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
-    local start=$( date +%s )
+    local start=$( date --utc +%s )
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible RUN"
@@ -91,7 +91,7 @@ function a() {
         ansible $opts_adhoc "$@" &>$out
     fi
     rc=$?
-    local end=$( date +%s )
+    local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$bench_run_id"
     return $rc
@@ -109,7 +109,7 @@ function a_out() {
 function ap() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
-    local start=$( date +%s )
+    local start=$( date --utc +%s )
     log "Start 'ansible-playbook $opts $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible-playbook RUN"
@@ -117,7 +117,7 @@ function ap() {
         ansible-playbook $opts "$@" &>$out
     fi
     rc=$?
-    local end=$( date +%s )
+    local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$bench_run_id"
     return $rc
