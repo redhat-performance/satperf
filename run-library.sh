@@ -5,18 +5,18 @@ set -o pipefail
 set -e
 
 
-opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
-opts_adhoc=${opts_adhoc:-"$opts --user root"}
-logs=${logs:-"logs-$( date --utc --iso-8601=seconds )"}
-run_lib_dryrun=false
-hammer_opts="-u admin -p changeme"
-satellite_version='N/A'   # will be determined automatically by run-bench.sh
-
 # We need to add an ID to run-bench runs to be able to filter out results from multiple runs. This ID will be appended as
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
-bench_run_id=${1:-$(date --utc --iso-8601=seconds)}
+marker=${1:-run-$(date --utc --iso-8601=seconds)}
+
+opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
+opts_adhoc=${opts_adhoc:-"$opts --user root"}
+logs="$marker"
+run_lib_dryrun=false
+hammer_opts="-u admin -p changeme"
+satellite_version='N/A'   # will be determined automatically by run-bench.sh
 
 # Requirements check
 if ! type bc >/dev/null; then
@@ -93,7 +93,7 @@ function a() {
     rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$bench_run_id"
+    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -119,7 +119,7 @@ function ap() {
     rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$bench_run_id"
+    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
     return $rc
 }
 
