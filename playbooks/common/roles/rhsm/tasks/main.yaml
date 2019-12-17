@@ -42,7 +42,7 @@
       username: "{{ rhsm_user }}"
       password: "{{ rhsm_pass }}"
       force_register: true
-      pool: "{{ rhsm_pool }}"
+      pool: "{{ rhsm_pool | regex_escape() }}"
     register: registering
     until: registering.changed
     retries: 5
@@ -50,7 +50,8 @@
 
   # Make sure only base RHEL repo is attached
   - name: "Disable all RHSM repos and only enable base RHEL repo"
-    command:
-      subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+    rhsm_repository:
+      name: 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+      purge: True
     when: registering.changed
 ...
