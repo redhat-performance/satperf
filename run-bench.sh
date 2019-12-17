@@ -27,8 +27,6 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
-satellite_version='TODO'   # will be determined automatically later
-
 
 log "===== Checking environment ====="
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"

@@ -9,14 +9,16 @@ set -e
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
-marker=${1:-run-$(date --utc --iso-8601=seconds)}
+if [ -z "$marker" ]; then
+    marker=${1:-run-$(date --utc --iso-8601=seconds)}
+fi
 
 opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
 opts_adhoc=${opts_adhoc:-"$opts --user root"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
-satellite_version='N/A'   # will be determined automatically by run-bench.sh
+satellite_version="${satellite_version:-N/A}"   # will be determined automatically by run-bench.sh
 
 # Requirements check
 if ! type bc >/dev/null; then
@@ -56,7 +58,7 @@ function vercmp_ge() {
 }
 
 function measurement_add() {
-    python -c "import csv; import sys; print sys.argv[1:]; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
+    python -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
 }
 function measurement_row_field() {
     python -c "import csv; import sys; reader=csv.reader(sys.stdin); print list(reader)[0][int(sys.argv[1])-1]" $1
@@ -78,6 +80,23 @@ function _format_opts() {
         shift
     done
     echo "$out"
+}
+
+function c() {
+    local out=$logs/$1; shift
+    mkdir -p $( dirname $out )
+    local start=$( date --utc +%s )
+    log "Start '$*' with log in $out"
+    if $run_lib_dryrun; then
+        log "FAKE command RUN"
+    else
+        eval "$@" &>$out
+    fi
+    rc=$?
+    local end=$( date --utc +%s )
+    log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
+    measurement_add "$@" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    return $rc
 }
 
 function a() {
@@ -185,5 +204,5 @@ function table_row() {
 
 
 # Create dir for logs
-mkdir "$logs/"
+mkdir -p "$logs/"
 log "Logging into '$logs/' directory"
