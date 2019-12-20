@@ -21,10 +21,10 @@ hammer_opts="-u admin -p changeme"
 satellite_version="${satellite_version:-N/A}"   # will be determined automatically by run-bench.sh
 
 # Requirements check
-if ! type bc >/dev/null; then
-    echo "ERROR: bc not installed" >&2
-    exit 1
-fi
+#if ! type bc >/dev/null; then
+#    echo "ERROR: bc not installed" >&2
+#    exit 1
+#fi
 if ! type ansible >/dev/null; then
     echo "ERROR: ansible not installed" >&2
     exit 1
