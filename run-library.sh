@@ -29,18 +29,30 @@ if ! type ansible >/dev/null; then
     echo "ERROR: ansible not installed" >&2
     exit 1
 fi
-if ! type rpmdev-vercmp >/dev/null; then
-    echo "ERROR: rpmdevtools not installed" >&2
-    exit 1
-fi
 
 function _vercmp() {
-    ver1=$( echo "$1" | sed 's/^satellite-\(.*\)\.noarch/\1/' )
-    ver2=$( echo "$2" | sed 's/^satellite-\(.*\)\.noarch/\1/' )
-    rpmdev-vercmp "$ver1" "$ver2"
-    rc=$?
-    log "Compared versions '$ver1' and '$ver2' and return code is $rc"
-    return $rc
+    # FIXME: This parser sucks. Would be better to have rpmdev-vercmp once
+    # https://projects.engineering.redhat.com/browse/CID-5112 is resolved
+    ver1=$( echo "$1" | sed 's/^satellite-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+    ver2=$( echo "$2" | sed 's/^satellite-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+    echo "Comparing $ver1 vs. $ver2"
+    ver1_1=$( echo "$ver1" | cut -d '.' -f 1 )
+    ver1_2=$( echo "$ver1" | cut -d '.' -f 2 )
+    ver1_3=$( echo "$ver1" | cut -d '.' -f 3 )
+    ver2_1=$( echo "$ver2" | cut -d '.' -f 1 )
+    ver2_2=$( echo "$ver2" | cut -d '.' -f 2 )
+    ver2_3=$( echo "$ver2" | cut -d '.' -f 3 )
+    vers1=( $ver1_1 $ver1_2 $ver1_3 )
+    vers2=( $ver2_1 $ver2_2 $ver2_3 )
+    for i in 0 1 2; do
+        echo "Comparing item ${vers1[$i]} vs. ${vers2[$i]}"
+        if [ "${vers1[$i]}" -gt "${vers2[$i]}" ]; then
+            return 11
+        elif [ "${vers1[$i]}" -lt "${vers2[$i]}" ]; then
+            return 12
+        fi
+    done
+    return 0
 }
 
 function vercmp_gt() {
