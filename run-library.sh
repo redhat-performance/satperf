@@ -32,7 +32,7 @@ fi
 
 function _vercmp() {
     # FIXME: This parser sucks. Would be better to have rpmdev-vercmp once
-    # https://projects.engineering.redhat.com/browse/CID-5112 is resolved
+    # CID-5112 is resolved
     ver1=$( echo "$1" | sed 's/^satellite-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
     ver2=$( echo "$2" | sed 's/^satellite-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
     echo "Comparing $ver1 vs. $ver2"
@@ -71,9 +71,111 @@ function vercmp_ge() {
 
 function measurement_add() {
     python -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
+    status_data_create "$@"
 }
 function measurement_row_field() {
     python -c "import csv; import sys; reader=csv.reader(sys.stdin); print list(reader)[0][int(sys.argv[1])-1]" $1
+}
+
+function status_data_create() {
+    # For every measurement, create new status data file, consult with
+    # historical data if test result is PASS or FAIL, upload current result
+    # to historical storage (ElasticSearch) and add test result to
+    # junit.xml for further analysis.
+
+    # Activate tools virtualenv
+    source insights-perf/venv/bin/activate
+
+    # Load variables
+    sd_section=${SECTION:-default}
+    sd_cli="$1"
+    sd_log="$2"
+    sd_name=$( basename $sd_log .log )   # derive testcase name from log name which is descriptive
+    sd_rc="$3"
+    sd_start="$( date --utc -d @$4 -Iseconds )"
+    sd_end="$( date --utc -d @$5 -Iseconds )"
+    sd_duration="$( expr $5 - $4 )"
+    sd_ver="$6"
+    sd_ver_short=$( echo "$sd_ver" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
+    sd_run="$7"
+    sd_file=$( mktemp )
+
+    # Show variables
+    log "DEBUG: sd_section = $sd_section"
+    log "DEBUG: sd_cli = $sd_cli"
+    log "DEBUG: sd_log = $sd_log"
+    log "DEBUG: sd_name = $sd_name"
+    log "DEBUG: sd_rc = $sd_rc"
+    log "DEBUG: sd_start = $sd_start"
+    log "DEBUG: sd_end = $sd_end"
+    log "DEBUG: sd_duration = $sd_duration"
+    log "DEBUG: sd_ver = $sd_ver"
+    log "DEBUG: sd_ver_short = $sd_ver_short"
+    log "DEBUG: sd_run = $sd_run"
+    log "DEBUG: sd_file = $sd_file"
+
+    # Create status data file
+    rm -f "$sd_file"
+    insights-perf/status_data.py --status-data-file $sd_file --set \
+        "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
+        "parameters.version=$sd_ver" \
+        "parameters.run=$sd_run" \
+        "results.log=$sd_log" \
+        "results.rc=$sd_rc" \
+        "results.duration=$sd_duration" \
+        "started=$sd_start" \
+        "ended=$sd_end"
+
+    # Based on historical data, determine result of this test
+    if [ "$sd_rc" -eq 0 ]; then
+        insights-perf/data_investigator.py --data-from-es \
+            --data-from-es-matcher "results.rc=0" "parameters.cli=$sd_cli" \
+            --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
+            --es-host $PARAM_elasticsearch_host \
+            --es-port $PARAM_elasticsearch_port --es-index satellite_perf_index --es-type cpt \
+            --test-from-status "$sd_file"
+        rc=$?
+        if [ "$rc" -eq 0 ]; then
+            sd_result='PASS'
+        else
+            sd_result='FAIL'
+        fi
+    else
+        sd_result='ERROR'
+    fi
+
+    # Add result to the status data so it is complete
+    insights-perf/status_data.py --status-data-file $sd_file --set "result=$sd_result"
+
+    # Upload status data to ElasticSearch
+    curl --silent -H "Content-Type: application/json" -X POST \
+        "http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/satellite_perf_index/cpt/" \
+        --data "@$sd_file" \
+            | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert obj['_shards']['successful'] == 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data'"
+    ###insights-perf/status_data.py --status-data-file $sd_file --info
+
+    # Enhance log file
+    tmp=$( mktemp )
+    echo "command: $sd_cli" >>$tmp
+    echo "version: $sd_ver" >>$tmp
+    echo "" >>$tmp
+    cat "$sd_log" >>$tmp
+
+    # Create junit.xml file
+    insights-perf/junit_cli.py --file junit.xml add --suite "$sd_section" --name "$sd_name" --result "$sd_result" --start "$sd_start" --end "$sd_end" --out "$tmp"
+    ###insights-perf/junit_cli.py --file junit.xml print
+
+    # Deactivate tools virtualenv
+    deactivate
+}
+
+function junit_upload() {
+    zip_name="SatPerf-ContPerf-$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' ).zip"
+    rm -f $zip_name
+    zip --quiet "$zip_name" junit.xml
+    curl --silent --insecure -X POST --header 'Accept: application/json' --header "Authorization: bearer $PARAM_reportportal_token" --form "file=@$zip_name" "https://$PARAM_reportportal_host/api/v1/$PARAM_reportportal_project/launch/import" \
+        | grep --quiet 'Launch with id = [0-9a-f]\+ is successfully imported' || echo "Failed to upload junit" >&2
+    rm -f "$zip_name"
 }
 
 function log() {

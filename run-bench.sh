@@ -240,3 +240,5 @@ done
 ###for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -nu ); do
 ###    table_row "$concurency-PuppetBunch.*\.log" "Registering $concurency * <hosts> Puppet clients; scenario 'Bunch'" "RegisterPuppet"
 ###done
+
+junit_upload
