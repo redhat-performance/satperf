@@ -135,8 +135,8 @@ function status_data_create() {
             --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
             --es-port $PARAM_elasticsearch_port --es-index satellite_perf_index --es-type cpt \
-            --test-from-status "$sd_file"
-        rc=$?
+            --test-from-status "$sd_file" \
+            && rc=$? || rc=$?
         if [ "$rc" -eq 0 ]; then
             sd_result='PASS'
         else
