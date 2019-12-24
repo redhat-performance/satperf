@@ -83,6 +83,8 @@ function status_data_create() {
     # to historical storage (ElasticSearch) and add test result to
     # junit.xml for further analysis.
 
+    [ -z "$PARAM_elasticsearch_host" ] && return
+
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
 
@@ -162,7 +164,9 @@ function status_data_create() {
     cat "$sd_log" >>$tmp
 
     # Create junit.xml file
-    insights-perf/junit_cli.py --file junit.xml add --suite "$sd_section" --name "$sd_name" --result "$sd_result" --start "$sd_start" --end "$sd_end" --out "$tmp"
+    insights-perf/junit_cli.py --file junit.xml add --suite "$sd_section" \
+        --name "$sd_name" --result "$sd_result" --out "$tmp" \
+        --start "$sd_start" --end "$sd_end"
     ###insights-perf/junit_cli.py --file junit.xml print
 
     # Deactivate tools virtualenv
@@ -170,11 +174,19 @@ function status_data_create() {
 }
 
 function junit_upload() {
+    # Upload junit.xml into ReportPortal for test result investigation
+
+    [ -z "$PARAM_reportportal_host" ] && return
+
     zip_name="SatPerf-ContPerf-$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' ).zip"
     rm -f $zip_name
     zip --quiet "$zip_name" junit.xml
-    curl --silent --insecure -X POST --header 'Accept: application/json' --header "Authorization: bearer $PARAM_reportportal_token" --form "file=@$zip_name" "https://$PARAM_reportportal_host/api/v1/$PARAM_reportportal_project/launch/import" \
-        | grep --quiet 'Launch with id = [0-9a-f]\+ is successfully imported' || echo "Failed to upload junit" >&2
+    curl --silent --insecure -X POST --header 'Accept: application/json' \
+        --header "Authorization: bearer $PARAM_reportportal_token" \
+        --form "file=@$zip_name" \
+        "https://$PARAM_reportportal_host/api/v1/$PARAM_reportportal_project/launch/import" \
+            | grep --quiet 'Launch with id = [0-9a-f]\+ is successfully imported' \
+                || echo "Failed to upload junit" >&2
     rm -f "$zip_name"
 }
 
