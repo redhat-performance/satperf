@@ -119,6 +119,7 @@ function status_data_create() {
     # Create status data file
     rm -f "$sd_file"
     insights-perf/status_data.py --status-data-file $sd_file --set \
+        "name=$sd_section/$sd_name" \
         "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
         "parameters.version=$sd_ver" \
         "parameters.run=$sd_run" \
