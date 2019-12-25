@@ -129,6 +129,7 @@ function status_data_create() {
         "ended=$sd_end"
 
     # Based on historical data, determine result of this test
+    set -x
     if [ "$sd_rc" -eq 0 ]; then
         insights-perf/data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "parameters.cli=$sd_cli" \
@@ -171,6 +172,7 @@ function status_data_create() {
 
     # Deactivate tools virtualenv
     deactivate
+    set +x
 }
 
 function junit_upload() {
