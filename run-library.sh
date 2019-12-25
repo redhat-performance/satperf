@@ -145,6 +145,7 @@ function status_data_create() {
     else
         sd_result='ERROR'
     fi
+    log "DEBUG: sd_result = $sd_result"
 
     # Add result to the status data so it is complete
     insights-perf/status_data.py --status-data-file $sd_file --set "result=$sd_result"
