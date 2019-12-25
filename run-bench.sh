@@ -29,6 +29,7 @@ opts_adhoc="$opts --user root"
 
 
 log "===== Checking environment ====="
+export SECTION='checking-environment'
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
 a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
 a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
@@ -44,6 +45,7 @@ set +e
 
 
 log "===== Prepare for Red Hat content ====="
+export SECTION='prepare-for-red-hat-content'
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
 #h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
@@ -61,6 +63,7 @@ s $wait_interval
 
 
 log "===== Sync from mirror ====="
+export SECTION='sync-form-mirror'
 h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_mirror'"
 h 10-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
@@ -74,6 +77,7 @@ h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --
 s $wait_interval
 
 log "===== Publish and promote big CV ====="
+export SECTION='publish-and-promote-big-cv'
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$satellite_version" "6.6.0"; then
     rids=""
@@ -101,6 +105,7 @@ s $wait_interval
 
 
 log "===== Publish and promote filtered CV ====="
+export SECTION='publish-and-promote-filtered-cv'
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$satellite_version" "6.6.0"; then
     tmp=$( mktemp )
@@ -119,6 +124,7 @@ s $wait_interval
 
 
 log "===== Sync from CDN (do not measure becasue of unpredictable network latency) ====="
+export SECTION='sync-from-cdn'
 h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
 h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10b-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
@@ -131,6 +137,7 @@ s $wait_interval
 
 
 log "===== Sync Tools repo we will need ====="
+export SECTION='sync-tools-repo'
 h product-create.log "product create --organization '$do' --name SatToolsProduct"
 h repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
 [ "$repo_sat_tools_puppet" != "none" ] \
@@ -143,6 +150,7 @@ s $wait_interval
 
 
 log "===== Prepare for registrations ====="
+export SECTION='prepare-for-registrations'
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 h 42-domain-create.log "domain create --name example.com --organizations '$do'"
@@ -157,6 +165,7 @@ h ak-add-subs-employee.log "activation-key add-subscription --organization '$do'
 
 
 log "===== Register ====="
+export SECTION='register'
 for i in $( seq $registrations_iterations ); do
     ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s $wait_interval
@@ -164,6 +173,7 @@ done
 
 
 log "===== Remote execution ====="
+export SECTION='remote-execution'
 h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
 h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
@@ -175,6 +185,7 @@ s $wait_interval
 
 
 log "===== Misc simple tests ====="
+export SECTION='misc-simple-tests'
 ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
 s $wait_interval
 ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
@@ -184,6 +195,7 @@ s $wait_interval
 
 
 log "===== Preparing Puppet environment ====="
+export SECTION='preparing-puppet-environment'
 ap satellite-puppet-single-cv.log playbooks/tests/puppet-single-setup.yaml &
 ap satellite-puppet-big-cv.log playbooks/tests/puppet-big-setup.yaml &
 a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker-hosts &
@@ -192,6 +204,7 @@ s $wait_interval
 
 
 log "===== Apply one module with different concurency ====="
+export SECTION='apply-one-module-with-different-concurency'
 for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u ); do
     iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
@@ -205,6 +218,7 @@ done
 
 
 log "===== Apply bunch of modules with different concurency ====="
+export SECTION='apply-bunch-of-modules-with-different-concurency'
 for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u ); do
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
