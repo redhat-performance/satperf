@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -o pipefail
-###set -x
+set -x
 set -e
 
 
@@ -83,7 +83,7 @@ function status_data_create() {
     # to historical storage (ElasticSearch) and add test result to
     # junit.xml for further analysis.
 
-    [ -z "$PARAM_elasticsearch_host" ] && return
+    [ -z "$PARAM_elasticsearch_host" ] && return 0
 
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
@@ -129,7 +129,6 @@ function status_data_create() {
         "ended=$sd_end"
 
     # Based on historical data, determine result of this test
-    set -x
     if [ "$sd_rc" -eq 0 ]; then
         insights-perf/data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "parameters.cli=$sd_cli" \
@@ -172,13 +171,12 @@ function status_data_create() {
 
     # Deactivate tools virtualenv
     deactivate
-    set +x
 }
 
 function junit_upload() {
     # Upload junit.xml into ReportPortal for test result investigation
 
-    [ -z "$PARAM_reportportal_host" ] && return
+    [ -z "$PARAM_reportportal_host" ] && return 0
 
     zip_name="SatPerf-ContPerf-$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' ).zip"
     rm -f $zip_name
@@ -217,10 +215,10 @@ function c() {
     log "Start '$*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE command RUN"
+        rc=0
     else
-        eval "$@" &>$out
+        eval "$@" &>$out && rc=$? || rc=$?
     fi
-    rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     measurement_add "$@" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
@@ -234,8 +232,9 @@ function a() {
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible RUN"
+        rc=0
     else
-        ansible $opts_adhoc "$@" &>$out
+        ansible $opts_adhoc "$@" &>$out && rc=$? || rc=$?
     fi
     rc=$?
     local end=$( date --utc +%s )
@@ -260,8 +259,9 @@ function ap() {
     log "Start 'ansible-playbook $opts $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible-playbook RUN"
+        rc=0
     else
-        ansible-playbook $opts "$@" &>$out
+        ansible-playbook $opts "$@" &>$out && rc=$? || rc=$?
     fi
     rc=$?
     local end=$( date --utc +%s )
