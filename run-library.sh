@@ -102,19 +102,19 @@ function status_data_create() {
     sd_run="$7"
     sd_file=$( mktemp )
 
-    # Show variables
-    log "DEBUG: sd_section = $sd_section"
-    log "DEBUG: sd_cli = $sd_cli"
-    log "DEBUG: sd_log = $sd_log"
-    log "DEBUG: sd_name = $sd_name"
-    log "DEBUG: sd_rc = $sd_rc"
-    log "DEBUG: sd_start = $sd_start"
-    log "DEBUG: sd_end = $sd_end"
-    log "DEBUG: sd_duration = $sd_duration"
-    log "DEBUG: sd_ver = $sd_ver"
-    log "DEBUG: sd_ver_short = $sd_ver_short"
-    log "DEBUG: sd_run = $sd_run"
-    log "DEBUG: sd_file = $sd_file"
+    ## Show variables
+    #log "DEBUG: sd_section = $sd_section"
+    #log "DEBUG: sd_cli = $sd_cli"
+    #log "DEBUG: sd_log = $sd_log"
+    #log "DEBUG: sd_name = $sd_name"
+    #log "DEBUG: sd_rc = $sd_rc"
+    #log "DEBUG: sd_start = $sd_start"
+    #log "DEBUG: sd_end = $sd_end"
+    #log "DEBUG: sd_duration = $sd_duration"
+    #log "DEBUG: sd_ver = $sd_ver"
+    #log "DEBUG: sd_ver_short = $sd_ver_short"
+    #log "DEBUG: sd_run = $sd_run"
+    #log "DEBUG: sd_file = $sd_file"
 
     # Create status data file
     rm -f "$sd_file"
