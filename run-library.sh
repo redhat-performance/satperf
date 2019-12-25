@@ -164,10 +164,10 @@ function status_data_create() {
     cat "$sd_log" >>$tmp
 
     # Create junit.xml file
-    insights-perf/junit_cli.py --file junit.xml add --suite "$sd_section" \
+    insights-perf/junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
         --name "$sd_name" --result "$sd_result" --out "$tmp" \
         --start "$sd_start" --end "$sd_end"
-    ###insights-perf/junit_cli.py --file junit.xml print
+    ###insights-perf/junit_cli.py --file $logs/junit.xml print
 
     # Deactivate tools virtualenv
     deactivate
@@ -180,7 +180,7 @@ function junit_upload() {
 
     zip_name="SatPerf-ContPerf-$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' ).zip"
     rm -f $zip_name
-    zip --quiet "$zip_name" junit.xml
+    zip --quiet "$zip_name" "$logs/junit.xml"
     curl --silent --insecure -X POST --header 'Accept: application/json' \
         --header "Authorization: bearer $PARAM_reportportal_token" \
         --form "file=@$zip_name" \
