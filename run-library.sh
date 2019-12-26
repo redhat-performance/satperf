@@ -196,6 +196,13 @@ function log() {
     echo "[$( date --utc --iso-8601=seconds )] $*"
 }
 
+function section() {
+    name="${1:-default}"
+    label="$( echo "$name" | sed 's/[^a-zA-Z0-9_-]/_/g' | sed 's/_\+/_/g' )"
+    log "===== $name ====="
+    export SECTION="$label"
+}
+
 function _format_opts() {
     out=""
     while [ -n "$1" ]; do

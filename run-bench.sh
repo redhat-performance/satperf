@@ -28,8 +28,7 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
 
-log "===== Checking environment ====="
-export SECTION='checking-environment'
+section "Checking environment"
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
 a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
 a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
@@ -44,8 +43,7 @@ s $( expr 3 \* $wait_interval )
 set +e
 
 
-log "===== Prepare for Red Hat content ====="
-export SECTION='prepare-for-red-hat-content'
+section "Prepare for Red Hat content"
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
 #h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
@@ -62,8 +60,7 @@ h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
 s $wait_interval
 
 
-log "===== Sync from mirror ====="
-export SECTION='sync-form-mirror'
+section "Sync from mirror"
 h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_mirror'"
 h 10-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
@@ -76,8 +73,7 @@ s $wait_interval
 h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
 s $wait_interval
 
-log "===== Publish and promote big CV ====="
-export SECTION='publish-and-promote-big-cv'
+section "Publish and promote big CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$satellite_version" "6.6.0"; then
     rids=""
@@ -104,8 +100,7 @@ h 23-cv-all-promote-3.log "content-view version promote --organization 'Default 
 s $wait_interval
 
 
-log "===== Publish and promote filtered CV ====="
-export SECTION='publish-and-promote-filtered-cv'
+section "Publish and promote filtered CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$satellite_version" "6.6.0"; then
     tmp=$( mktemp )
@@ -123,8 +118,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '$do' --name '
 s $wait_interval
 
 
-log "===== Sync from CDN (do not measure becasue of unpredictable network latency) ====="
-export SECTION='sync-from-cdn'
+section "Sync from CDN"   # do not measure becasue of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
 h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10b-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
@@ -136,8 +130,7 @@ wait
 s $wait_interval
 
 
-log "===== Sync Tools repo we will need ====="
-export SECTION='sync-tools-repo'
+section "Sync Tools repo"
 h product-create.log "product create --organization '$do' --name SatToolsProduct"
 h repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
 [ "$repo_sat_tools_puppet" != "none" ] \
@@ -149,8 +142,7 @@ wait
 s $wait_interval
 
 
-log "===== Prepare for registrations ====="
-export SECTION='prepare-for-registrations'
+section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 h 42-domain-create.log "domain create --name example.com --organizations '$do'"
@@ -164,16 +156,14 @@ employee_subs_id=$( tail -n 1 $logs/subs-list-employee.log | cut -d ',' -f 1 )
 h ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 
-log "===== Register ====="
-export SECTION='register'
+section "Register"
 for i in $( seq $registrations_iterations ); do
     ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
     s $wait_interval
 done
 
 
-log "===== Remote execution ====="
-export SECTION='remote-execution'
+section "Remote execution"
 h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
 h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
@@ -184,8 +174,7 @@ h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='k
 s $wait_interval
 
 
-log "===== Misc simple tests ====="
-export SECTION='misc-simple-tests'
+section "Misc simple tests"
 ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
 s $wait_interval
 ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
@@ -194,8 +183,7 @@ ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tes
 s $wait_interval
 
 
-log "===== Preparing Puppet environment ====="
-export SECTION='preparing-puppet-environment'
+section "Preparing Puppet environment"
 ap satellite-puppet-single-cv.log playbooks/tests/puppet-single-setup.yaml &
 ap satellite-puppet-big-cv.log playbooks/tests/puppet-big-setup.yaml &
 a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker-hosts &
@@ -203,8 +191,7 @@ wait
 s $wait_interval
 
 
-log "===== Apply one module with different concurency ====="
-export SECTION='apply-one-module-with-different-concurency'
+section "Apply one module with different concurency"
 for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u ); do
     iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
@@ -217,8 +204,7 @@ for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u );
 done
 
 
-log "===== Apply bunch of modules with different concurency ====="
-export SECTION='apply-bunch-of-modules-with-different-concurency'
+section "Apply bunch of modules with different concurency"
 for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u ); do
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
@@ -231,7 +217,7 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
 done
 
 
-###log "===== Formatting results ====="
+###section "Formatting results"
 ###table_row "01-manifest-upload-[0-9]\+.log" "Manifest upload"
 ###table_row "12-repo-sync-rhel7.log" "Sync RHEL7 (immediate)"
 ###table_row "12-repo-sync-rhel6.log" "Sync RHEL6 (on-demand)"

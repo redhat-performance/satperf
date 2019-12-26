@@ -28,8 +28,7 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
 
-log "===== Checking environment ====="
-export SECTION='checking-environment'
+section "Checking environment"
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
 a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
 a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
