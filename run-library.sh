@@ -129,12 +129,11 @@ function status_data_create() {
         "started=$sd_start" \
         "ended=$sd_end"
 
-    set -x
     # Add monitoring data to the status data file
     log "DEBUG: PARAM_cluster_read_config = $PARAM_cluster_read_config"
     log "DEBUG: PARAM_grafana_host = $PARAM_grafana_host"
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
-        insights-perf/status_data.py --status-data-file $sd_file --debug \
+        insights-perf/status_data.py --status-data-file $sd_file \
             --additional "$PARAM_cluster_read_config" \
             --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
             --grafana-host "$PARAM_grafana_host" \
@@ -153,7 +152,9 @@ function status_data_create() {
             --data-from-es-matcher "results.rc=0" "parameters.cli=$sd_cli" \
             --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
-            --es-port $PARAM_elasticsearch_port --es-index satellite_perf_index --es-type cpt \
+            --es-port $PARAM_elasticsearch_port \
+            --es-index satellite_perf_index \
+            --es-type cpt \
             --test-from-status "$sd_file" &>$sd_result_log \
             && rc=$? || rc=$?
         if [ "$rc" -eq 0 ]; then
