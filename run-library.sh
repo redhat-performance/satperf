@@ -129,6 +129,7 @@ function status_data_create() {
         "started=$sd_start" \
         "ended=$sd_end"
 
+    set -x
     # Add monitoring data to the status data file
     log "DEBUG: PARAM_cluster_read_config = $PARAM_cluster_read_config"
     log "DEBUG: PARAM_grafana_host = $PARAM_grafana_host"
