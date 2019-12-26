@@ -130,8 +130,10 @@ function status_data_create() {
         "ended=$sd_end"
 
     # Add monitoring data to the status data file
+    log "DEBUG: PARAM_cluster_read_config = $PARAM_cluster_read_config"
+    log "DEBUG: PARAM_grafana_host = $PARAM_grafana_host"
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
-        insights-perf/status_data.py \
+        insights-perf/status_data.py --debug \
             --additional "$PARAM_cluster_read_config" \
             --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
             --grafana-host "$PARAM_grafana_host" \
