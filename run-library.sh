@@ -130,13 +130,14 @@ function status_data_create() {
         "ended=$sd_end"
 
     # Based on historical data, determine result of this test
+    sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
         insights-perf/data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "parameters.cli=$sd_cli" \
             --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
             --es-port $PARAM_elasticsearch_port --es-index satellite_perf_index --es-type cpt \
-            --test-from-status "$sd_file" \
+            --test-from-status "$sd_file" &>$sd_result_log \
             && rc=$? || rc=$?
         if [ "$rc" -eq 0 ]; then
             sd_result='PASS'
@@ -162,6 +163,10 @@ function status_data_create() {
     tmp=$( mktemp )
     echo "command: $sd_cli" >>$tmp
     echo "version: $sd_ver" >>$tmp
+    if [ "$sd_result" != 'ERROR' ]; then
+        echo "result determination log:" >>$tmp
+        cat "$sd_result_log" >>$tmp
+    fi
     echo "" >>$tmp
     cat "$sd_log" >>$tmp
 
