@@ -129,6 +129,20 @@ function status_data_create() {
         "started=$sd_start" \
         "ended=$sd_end"
 
+    # Add monitoring data to the status data file
+    if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
+        insights-perf/status_data.py \
+            --additional "$PARAM_cluster_read_config" \
+            --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
+            --grafana-host "$PARAM_grafana_host" \
+            --grafana-port "$PARAM_grafana_port" \
+            --grafana-prefix "$PARAM_grafana_prefix" \
+            --grafana-datasource "$PARAM_grafana_datasource" \
+            --grafana-interface "$PARAM_grafana_interface" \
+            --grafana-token "$PARAM_grafana_token" \
+            --grafana-node "$PARAM_grafana_node"
+    fi
+
     # Based on historical data, determine result of this test
     sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
