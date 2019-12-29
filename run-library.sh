@@ -133,7 +133,7 @@ function status_data_create() {
     sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
         insights-perf/data_investigator.py --data-from-es \
-            --data-from-es-matcher "results.rc=0" "parameters.cli=$sd_cli" \
+            --data-from-es-matcher "results.rc=0" "name=$sd_name" \
             --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
             --es-port $PARAM_elasticsearch_port \
