@@ -154,8 +154,8 @@ function status_data_create() {
             --es-index satellite_perf_index \
             --es-type cpt \
             --test-from-status "$sd_file" &>$sd_result_log \
-            && rc=$? || rc=$?
-        if [ "$rc" -eq 0 ]; then
+            && di_rc=$? || di_rc=$?
+        if [ "$di_rc" -eq 0 ]; then
             sd_result='PASS'
         else
             sd_result='FAIL'
