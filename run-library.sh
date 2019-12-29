@@ -102,20 +102,6 @@ function status_data_create() {
     sd_run="$7"
     sd_file=$( mktemp )
 
-    ## Show variables
-    #log "DEBUG: sd_section = $sd_section"
-    #log "DEBUG: sd_cli = $sd_cli"
-    #log "DEBUG: sd_log = $sd_log"
-    #log "DEBUG: sd_name = $sd_name"
-    #log "DEBUG: sd_rc = $sd_rc"
-    #log "DEBUG: sd_start = $sd_start"
-    #log "DEBUG: sd_end = $sd_end"
-    #log "DEBUG: sd_duration = $sd_duration"
-    #log "DEBUG: sd_ver = $sd_ver"
-    #log "DEBUG: sd_ver_short = $sd_ver_short"
-    #log "DEBUG: sd_run = $sd_run"
-    #log "DEBUG: sd_file = $sd_file"
-
     # Create status data file
     rm -f "$sd_file"
     insights-perf/status_data.py --status-data-file $sd_file --set \
@@ -163,7 +149,6 @@ function status_data_create() {
     else
         sd_result='ERROR'
     fi
-    #log "DEBUG: sd_result = $sd_result"
 
     # Add result to the status data so it is complete
     insights-perf/status_data.py --status-data-file $sd_file --set "result=$sd_result"
