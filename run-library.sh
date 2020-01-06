@@ -196,6 +196,7 @@ function junit_upload() {
             | grep --quiet 'Launch with id = [0-9a-f]\+ is successfully imported' \
                 || echo "Failed to upload junit" >&2
     rm -f "$zip_name"
+    cp "$logs/junit.xml" latest-junit.xml
 }
 
 function log() {
