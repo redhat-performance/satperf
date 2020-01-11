@@ -112,8 +112,9 @@ client_domain: "example.com"
 client_environment: "production"
 client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
 
+base_pool: 'Pool you want to consume' # Pool used by rhsm-satellite role. Needs to contain base RHEL7 repo. If empty '', rhsm-satellite will register, but not attach.
+
 # Capsule install options
-base_capsule_pool: 'Pool you want to consume' # Needs to contain Base RHEL7 repo, which is set via rhsm-satellite, as every manifest may not have 'Employee SKU'.
 sat_capsule_pool: 'Pool you want to consume'   # Needs to contain Capsule
 capsule_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '--async', or to 'sync' if you do not want that option
 capsule_install_source: cdn   # either 'cdn' or 'repo'

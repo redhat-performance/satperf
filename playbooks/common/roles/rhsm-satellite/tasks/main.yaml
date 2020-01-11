@@ -38,25 +38,30 @@
     until: "registration.rc == 0"
     retries: 5
     delay: 10
-  - name: "Determine pool we are going to attach to"
-    command:
-      subscription-manager list --available --all --matches "{{ base_capsule_pool }}" --pool-only
-    register: querying
-    until: "querying.rc == 0"
-    retries: 5
-    delay: 10
-  - debug:
-      var: querying
-  - name: "Attach to the pool"
-    command:
-      subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
-    register: attaching
-    until: "attaching.rc == 0"
-    retries: 5
-    delay: 10
 
-  # Make sure only base RHEL repo is attached
-  - name: "Disable all RHSM repos and only enable base RHEL repo"
-    command:
-      subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+  - name: "Attach subscription and enable RHEL repository"
+    block:
+      # Attach
+      - name: "Determine pool we are going to attach to"
+        command:
+          subscription-manager list --available --all --matches "{{ base_pool }}" --pool-only
+        register: querying
+        until: "querying.rc == 0"
+        retries: 5
+        delay: 10
+      - debug:
+          var: querying
+      - name: "Attach to the pool"
+        command:
+          subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
+        register: attaching
+        until: "attaching.rc == 0"
+        retries: 5
+        delay: 10
+
+      # Make sure only base RHEL repo is enabled
+      - name: "Disable all RHSM repos and only enable base RHEL repo"
+        command:
+          subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+    when "base_pool != ''"   # Only run this block when base_pool is not empty
 ...
