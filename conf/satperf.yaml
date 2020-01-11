@@ -130,6 +130,10 @@ capsule_installation_repos:
   - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
   - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
   - 'rhel-{{ ansible_distribution_major_version }}-server-ansible-2.6-rpms'
+capsule_additional_repos:
+  #- name: ...
+  #  baseurl: ...
+  #  gpgcheck: ...
 
 # Docker hosts
 docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
