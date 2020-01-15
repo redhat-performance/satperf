@@ -6,20 +6,12 @@ manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
-registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
+registrations_batches="${PARAM_registrations_batches:-1 2 3}"
 
-puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
-puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
-
-cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
-
-ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 
 do="Default Organization"
 dl="Default Location"
@@ -78,11 +70,28 @@ employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' 
 h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 
-section "Register"
-for i in $( seq $registrations_iterations ); do
-    ap regs-50-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+section "Register more and more"
+ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker-hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+sum=0
+for b in $registrations_batches; do
+    let sum+=$( expr $b \* $ansible_docker_hosts )
+done
+log "Going to register $sum hosts in total. Make sure there is enough hosts available."
+
+iter=1
+for batch in $registrations_batches; do
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    log "$( ./reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
+    let iter+=1
     s $wait_interval
 done
 
+section "Summary"
+iter=1
+for batch in $registrations_batches; do
+    log "$( ./reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
+    let iter+=1
+    s $wait_interval
+done
 
 junit_upload
