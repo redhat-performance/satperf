@@ -63,5 +63,5 @@
       - name: "Disable all RHSM repos and only enable base RHEL repo"
         command:
           subscription-manager repos --disable '*' --enable 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-    when "base_pool != ''"   # Only run this block when base_pool is not empty
+    when: "base_pool != ''"   # Only run this block when base_pool is not empty
 ...
