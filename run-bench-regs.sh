@@ -91,7 +91,6 @@ iter=1
 for batch in $registrations_batches; do
     log "$( ./reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
     let iter+=1
-    s $wait_interval
 done
 
 junit_upload
