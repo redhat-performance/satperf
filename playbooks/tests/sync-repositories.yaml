@@ -38,11 +38,11 @@
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --content-type yum --download-policy on_demand --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --url "{{ test_sync_repositories_url_template|replace('*', item) }}"
       register: create_repo
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
     - name: "Start sync asynchronously"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --async
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
       register: start_sync
       ignore_errors: true
     - name: "Check that start message is sane"
@@ -74,25 +74,25 @@
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --repositories "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_repositories_cv_template|replace('*', item) }}"
       register: create_cv
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
       when: "sat_version is version('6.5', '<=')"
     - name: "Create content views (>= 6.6)"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_repositories_cv_template|replace('*', item) }}"
       register: create_cv
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
       when: "sat_version is version('6.6', '>=')"
     - name: "Add repositories to content views (>= 6.6)"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_repositories_product }}" --repository "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_repositories_cv_template|replace('*', item) }}"
       register: create_cv
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
       when: "sat_version is version('6.5', '<=')"
     - name: "Publish content views"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization-id "{{ sat_orgid }}" --name "{{ test_sync_repositories_cv_template|replace('*', item) }}"
       register: start_publish
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
     - name: "Wait for publish to finish"
       command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_repositories_max_sync_secs }}"
@@ -111,7 +111,7 @@
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization-id "{{ sat_orgid }}" --content-view "{{ test_sync_repositories_cv_template|replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_repositories_le }}"
       register: start_promote
-      loop: "{{ range(1, test_sync_repositories_count+1)|list }}"
+      loop: "{{ range(1, test_sync_repositories_count|int+1)|list }}"
     - name: "Wait for promote to finish"
       command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_repositories_max_sync_secs }}"
