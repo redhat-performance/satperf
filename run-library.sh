@@ -30,6 +30,11 @@ if ! type ansible >/dev/null; then
     exit 1
 fi
 
+# Check for python
+if ! type python; then
+    alias python=python3
+fi
+
 function _vercmp() {
     # FIXME: This parser sucks. Would be better to have rpmdev-vercmp once
     # CID-5112 is resolved
