@@ -105,6 +105,8 @@
     command:
       "{{ sat_installer_cmd }} {{ sat_installer_options }}"
     when: installing.changed
+    environment:
+      LANG: "en_US.UTF-8"
   - name: "Install the katello-client-bootstrap package"
     yum:
       name: katello-client-bootstrap
