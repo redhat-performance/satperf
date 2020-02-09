@@ -190,6 +190,9 @@
   - name: "Run Capsule configuration"
     command:
       bash "/root/{{ inventory_hostname }}-script.sh"
+    environment:
+      LANG: "en_US.UTF-8"
+      LC_ALL: "en_US.UTF-8"
     register: configuration
     until: "{{ configuration.rc }} == 0"
     retries: 5
