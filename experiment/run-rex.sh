@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source run-library.sh
+source experiment/run-library.sh
 
 opts="--forks 100 -i conf/20170625-gprfc019.ini"
 opts_adhoc="$opts --user root"

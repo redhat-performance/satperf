@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source run-library.sh
+source experiment/run-library.sh
 
 ###sleep_time=60
 sleep_time=10

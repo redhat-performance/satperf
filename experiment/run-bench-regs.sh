@@ -1,6 +1,6 @@
 #!/bin/bash
 
-source run-library.sh
+source experiment/run-library.sh
 
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
