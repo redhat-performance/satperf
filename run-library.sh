@@ -186,7 +186,16 @@ function junit_upload() {
 
     [ -z "$PARAM_reportportal_host" ] && return 0
 
-    zip_name="SatPerf-ContPerf-$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' ).zip"
+    # Determine ReportPortal launch name
+    launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
+    if echo "$launch_name" | grep --quiet '%sat_ver%'; then
+        sat_ver="$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        launch_name="$( echo "$launch_name" | sed "s/%sat_ver%/$sat_ver/g" )"
+    fi
+    launch_name="$( echo "$launch_name" | sed "s/[^a-zA-Z0-9._-]/_/g" )"
+
+    # Create and upload zip to ReportPortal
+    zip_name="$launch_name.zip"
     rm -f $zip_name
     zip --quiet "$zip_name" "$logs/junit.xml"
     curl --silent --insecure -X POST --header 'Accept: application/json' \
@@ -196,7 +205,7 @@ function junit_upload() {
             | grep --quiet 'Launch with id = [0-9a-f]\+ is successfully imported' \
                 || echo "Failed to upload junit" >&2
     rm -f "$zip_name"
-    cp "$logs/junit.xml" latest-junit.xml
+    cp "$logs/junit.xml" latest-junit.xml   # so Jenkins can find it easilly on the same path every time
 }
 
 function log() {
