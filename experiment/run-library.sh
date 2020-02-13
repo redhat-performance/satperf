@@ -108,6 +108,7 @@ function status_data_create() {
         "name=$sd_section/$sd_name" \
         "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
         "parameters.version=$sd_ver" \
+        "parameters.version-y-stream=$sd_ver_short" \
         "parameters.run=$sd_run" \
         "results.log=$sd_log" \
         "results.rc=$sd_rc" \
@@ -132,6 +133,7 @@ function status_data_create() {
     # Based on historical data, determine result of this test
     sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
+        # FIXME: Once we have bunch of runs with parameters.version-y-stream, we can stop using `--data-from-es-wildcard "parameters.version=*$sd_ver_short*"` here and just use new variable
         insights-perf/data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "name=$sd_name" \
             --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
