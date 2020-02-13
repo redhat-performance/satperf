@@ -198,9 +198,9 @@ for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u );
     iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetOne-$iteration.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
-        log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        log "$( experiment/reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        log "$( experiment/reg-average.sh SetupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        log "$( experiment/reg-average.sh PickupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
         s $wait_interval
     done
 done
@@ -211,9 +211,9 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetBunch-$iteration.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
-        log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        log "$( experiment/reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        log "$( experiment/reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        log "$( experiment/reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
         s $wait_interval
     done
 done

@@ -331,7 +331,7 @@ function table_row() {
         fi
         if [ -n "$grepper" ]; then
             local log="$( echo "$row" | measurement_row_field 2 )"
-            local out=$( ./reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
+            local out=$( experiment/reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
             [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"
