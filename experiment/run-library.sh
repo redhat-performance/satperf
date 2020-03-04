@@ -316,6 +316,13 @@ function h_out() {
     a_out -m shell -a "hammer $hammer_opts $@" satellite6
 }
 
+function e() {
+    # Examine log for specific measure using reg-average.sh
+    local grepper="$1"
+    local log="$2"
+    experiment/reg-average.sh "$grepper" "$log"
+}
+
 function table_row() {
     # Format row for results table with average duration
     local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
