@@ -101,6 +101,7 @@ function status_data_create() {
     sd_ver_short=$( echo "$sd_ver" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
     sd_run="$7"
     sd_file=$( mktemp )
+    sd_additional="$8"
 
     # Create status data file
     rm -f "$sd_file"
@@ -114,7 +115,8 @@ function status_data_create() {
         "results.rc=$sd_rc" \
         "results.duration=$sd_duration" \
         "started=$sd_start" \
-        "ended=$sd_end"
+        "ended=$sd_end" \
+        $sd_additional
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
@@ -320,7 +322,16 @@ function e() {
     # Examine log for specific measure using reg-average.sh
     local grepper="$1"
     local log="$2"
-    experiment/reg-average.sh "$grepper" "$log"
+    local log_report="$( echo "$log" | sed "s/\.log$/-$grepper.log/" )"
+    experiment/reg-average.sh "$grepper" "$log" &>$log_report
+    local rc=$?
+    local started_ts=$( grep "^min in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
+    local ended_ts=$( grep "^max in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
+    local duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 4 )
+    local passed=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )
+    local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
+    log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
+    measurement_add "experiment/reg-average.sh '$grepper' '$log'" "$log_report" "$rc" "$started_ts" "$ended_ts" "$satellite_version" "$marker" "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
 function table_row() {
