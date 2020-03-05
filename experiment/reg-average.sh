@@ -23,11 +23,11 @@ for f in $@; do
     duration=0
     count=0
     for row in $( grep "\"$matcher " $f | sed "s/^.*\(\"$matcher.*\"\).*$/\1/" | cut -d '"' -f 2 ); do
-        begin=$( date -d "$( echo "$row" | cut -d ' ' -f 2,3 )" +%s )
+        begin=$( date --utc -d "$( echo "$row" | cut -d ' ' -f 2,3 )" +%s )
         if [ -z "$begin_min" -o "$begin" -lt "0$begin_min" ]; then
             begin_min=$begin
         fi
-        end=$( date -d "$( echo "$row" | cut -d ' ' -f 5,6 )" +%s )
+        end=$( date --utc -d "$( echo "$row" | cut -d ' ' -f 5,6 )" +%s )
         if [ -z "$end_max" -o "$end" -gt "0$end_max" ]; then
             end_max=$end
         fi
