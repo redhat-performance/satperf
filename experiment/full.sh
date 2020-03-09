@@ -73,6 +73,13 @@ s $wait_interval
 h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
 s $wait_interval
 
+section "Synchronise capsules"
+h_out "--no-headers --csv capsule list --organization '$do'">13-list-capsules.log
+for capsule_id in $( echo 13-list-capsules.log | cut -d ',' -f 1 | grep -v '1' ); do
+    h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
+done
+s $wait_interval
+
 section "Publish and promote big CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$satellite_version" "6.6.0"; then
@@ -139,6 +146,13 @@ h repository-sync-sat-tools.log "repository synchronize --organization '$do' --p
 [ "$repo_sat_tools_puppet" != "none" ] \
     && h repository-sync-puppet-upgrade.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsPuppetRepo" &
 wait
+s $wait_interval
+
+
+section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
+for capsule_id in $( echo 13-list-capsules.log | cut -d ',' -f 1 | grep -v '1' ); do
+    h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
+done
 s $wait_interval
 
 
