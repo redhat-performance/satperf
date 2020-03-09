@@ -159,8 +159,8 @@ s $wait_interval
 section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
-h 42-domain-create.log "domain create --name example.com --organizations '$do'"
-h 42-domain-update.log "domain update --name example.com --organizations '$do' --locations '$dl'"
+h 42-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
+h 42-domain-update.log "domain update --name '{{ client_domain }}' --organizations '$do' --locations '$dl'"
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 h subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
