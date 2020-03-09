@@ -181,6 +181,7 @@ ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
 e GenerateApplicability $logs/60-generate-applicability.log
 s $wait_interval
 ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
+e HammerList $logs/61-hammer-list.log
 s $wait_interval
 ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
 s $wait_interval
