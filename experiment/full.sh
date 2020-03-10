@@ -25,7 +25,7 @@ do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root"
+opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
@@ -45,7 +45,6 @@ set +e
 
 section "Prepare for Red Hat content"
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
-#h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 count=5
 for i in $( seq $count ); do
@@ -74,8 +73,9 @@ h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --
 s $wait_interval
 
 section "Synchronise capsules"
-h_out "--no-headers --csv capsule list --organization '$do'">13-list-capsules.log
-for capsule_id in $( echo 13-list-capsules.log | cut -d ',' -f 1 | grep -v '1' ); do
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
     h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
 done
 s $wait_interval
@@ -125,7 +125,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '$do' --name '
 s $wait_interval
 
 
-section "Sync from CDN"   # do not measure becasue of unpredictable network latency
+section "Sync from CDN do not measure"   # do not measure becasue of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
 h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10b-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
@@ -150,7 +150,9 @@ s $wait_interval
 
 
 section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
-for capsule_id in $( echo 13-list-capsules.log | cut -d ',' -f 1 | grep -v '1' ); do
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
     h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
 done
 s $wait_interval
@@ -160,18 +162,21 @@ section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h 42-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
 h 42-domain-update.log "domain update --name '{{ client_domain }}' --organizations '$do' --locations '$dl'"
-for row in $( echo 13-list-capsules.log ); do
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for row in $( cut -d ' ' -f 1 $tmp ); do
     capsule_id=$( echo "$row" | cut -d ',' -f 1 )
     capsule_name=$( echo "$row" | cut -d ',' -f 2 )
     subnet_name="subnet-for-$capsule_name"
     hostgroup_name="hostgroup-for-$capsule_name"
     if [ "$capsule_id" -eq 1 ]; then
-        location_name="$do"
+        location_name="$dl"
     else
         location_name="Location for $capsule_name"
     fi
     h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ client_domain }}' --organization '$do' --network 172.31.0.0 --mask 255.255.0.0 --location '$location_name'"
-    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_name -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+    subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
+    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
     h 41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
 done
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
@@ -185,7 +190,8 @@ h ak-add-subs-employee.log "activation-key add-subscription --organization '$do'
 
 section "Register"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='$logs/44-register-docker-host-client-logs'"
+    e Register $logs/44-register-$i.log
     s $wait_interval
 done
 
