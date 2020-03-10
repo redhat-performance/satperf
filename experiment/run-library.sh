@@ -58,14 +58,14 @@ function _vercmp() {
 function vercmp_gt() {
     # Check if first parameter is greater than second using version string comparision
     _vercmp "$1" "$2"
-    rc=$?
+    local rc=$?
     [ "$rc" -eq 11 ] && return 0 || return 1
 }
 
 function vercmp_ge() {
     # Check if first parameter is greater or equal than second using version string comparision
     _vercmp "$1" "$2"
-    rc=$?
+    local rc=$?
     [ "$rc" -eq 11 -o "$rc" -eq 0 ] && return 0 || return 1
 }
 
@@ -244,9 +244,9 @@ function c() {
     log "Start '$*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE command RUN"
-        rc=0
+        local rc=0
     else
-        eval "$@" &>$out && rc=$? || rc=$?
+        eval "$@" &>$out && local rc=$? || local rc=$?
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
@@ -261,11 +261,10 @@ function a() {
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible RUN"
-        rc=0
+        local rc=0
     else
-        ansible $opts_adhoc "$@" &>$out && rc=$? || rc=$?
+        ansible $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
     fi
-    rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
@@ -288,11 +287,10 @@ function ap() {
     log "Start 'ansible-playbook $opts $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible-playbook RUN"
-        rc=0
+        local rc=0
     else
-        ansible-playbook $opts "$@" &>$out && rc=$? || rc=$?
+        ansible-playbook $opts "$@" &>$out && local rc=$? || local rc=$?
     fi
-    rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
     measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
