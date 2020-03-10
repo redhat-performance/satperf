@@ -158,9 +158,22 @@ s $wait_interval
 
 section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
-h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
 h 42-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
 h 42-domain-update.log "domain update --name '{{ client_domain }}' --organizations '$do' --locations '$dl'"
+for row in $( echo 13-list-capsules.log ); do
+    capsule_id=$( echo "$row" | cut -d ',' -f 1 )
+    capsule_name=$( echo "$row" | cut -d ',' -f 2 )
+    subnet_name="subnet-for-$capsule_name"
+    hostgroup_name="hostgroup-for-$capsule_name"
+    if [ "$capsule_id" -eq 1 ]; then
+        location_name="$do"
+    else
+        location_name="Location for $capsule_name"
+    fi
+    h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ client_domain }}' --organization '$do' --network 172.31.0.0 --mask 255.255.0.0 --location '$location_name'"
+    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_name -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+    h 41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
+done
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 h subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
@@ -172,7 +185,7 @@ h ak-add-subs-employee.log "activation-key add-subscription --organization '$do'
 
 section "Register"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register'"
     s $wait_interval
 done
 
