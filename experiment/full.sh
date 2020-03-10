@@ -70,17 +70,14 @@ h 12-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 
 e RepoSyncRhel7 $logs/12-repo-sync-rhel7.log
 s $wait_interval
 h 12-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'"
-e RepoSyncRhel6 $logs/12-repo-sync-rhel6.log
 s $wait_interval
 h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
-e RepoSyncRhel7Optional $logs/12-repo-sync-rhel7optional.log
 s $wait_interval
 
 section "Synchronise capsules"
 h_out "--no-headers --csv capsule list --organization '$do'">13-list-capsules.log
 for capsule_id in $( echo 13-list-capsules.log | cut -d ',' -f 1 | grep -v '1' ); do
     h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
-    e CapsuleSync $logs/13-capsule-sync-$capsule_id.log
 done
 s $wait_interval
 
@@ -225,9 +222,9 @@ for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u );
     iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetOne-$iteration.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
-        e RegisterPuppetOne $logs/$concurency-PuppetOne-$iteration.log
-        e SetupPuppetOne $logs/$concurency-PuppetOne-$iteration.log
-        e PickupPuppetOne $logs/$concurency-PuppetOne-$iteration.log
+        e RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log
+        e SetupPuppet $logs/$concurency-PuppetOne-$iteration.log
+        e PickupPuppet $logs/$concurency-PuppetOne-$iteration.log
         s $wait_interval
     done
 done
@@ -238,9 +235,9 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetBunch-$iteration.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
-        e RegisterPuppetBunch $logs/$concurency-PuppetBunch-$iteration.log 
-        e SetupPuppetBunch $logs/$concurency-PuppetBunch-$iteration.log 
-        e PickupPuppetBunch $logs/$concurency-PuppetBunch-$iteration.log
+        e RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log 
+        e SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log 
+        e PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log
         s $wait_interval
     done
 done
