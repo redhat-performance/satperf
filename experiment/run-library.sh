@@ -14,7 +14,7 @@ if [ -z "$marker" ]; then
 fi
 
 opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
-opts_adhoc=${opts_adhoc:-"$opts --user root"}
+opts_adhoc=${opts_adhoc:-"$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
