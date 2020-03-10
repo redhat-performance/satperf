@@ -66,10 +66,13 @@ h 10-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --pro
 h 10-reposet-enable-rhel7optional.log "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 11-repo-immediate-rhel7.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
 h 12-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
+e RepoSyncRhel7 $logs/12-repo-sync-rhel7.log
 s $wait_interval
 h 12-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'"
+e RepoSyncRhel6 $logs/12-repo-sync-rhel6.log
 s $wait_interval
 h 12-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
+e RepoSyncRhel7Optional $logs/12-repo-sync-rhel7optional.log
 s $wait_interval
 
 section "Synchronise capsules"
@@ -77,6 +80,7 @@ tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
 for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
     h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
+    e CapsuleSync $logs/13-capsule-sync-$capsule_id.log
 done
 s $wait_interval
 
@@ -95,15 +99,19 @@ else
     h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
 fi
 h 21-cv-all-publish.log "content-view publish --organization '$do' --name 'BenchContentView'"
+e Publish $logs/21-cv-all-publish.log
 s $wait_interval
 h 22-le-create-1.log "lifecycle-environment create --organization '$do' --prior 'Library' --name 'BenchLifeEnvAAA'"
 h 22-le-create-2.log "lifecycle-environment create --organization '$do' --prior 'BenchLifeEnvAAA' --name 'BenchLifeEnvBBB'"
 h 22-le-create-3.log "lifecycle-environment create --organization '$do' --prior 'BenchLifeEnvBBB' --name 'BenchLifeEnvCCC'"
 h 23-cv-all-promote-1.log "content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'BenchLifeEnvAAA'"
+e PromoteCV1 $logs/23-cv-all-promote-1.log
 s $wait_interval
 h 23-cv-all-promote-2.log "content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvAAA' --to-lifecycle-environment 'BenchLifeEnvBBB'"
+e PromoteCV2 $logs/23-cv-all-promote-2.log
 s $wait_interval
 h 23-cv-all-promote-3.log "content-view version promote --organization 'Default Organization' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvBBB' --to-lifecycle-environment 'BenchLifeEnvCCC'"
+e PromoteCV3 $logs/23-cv-all-promote-3.log
 s $wait_interval
 
 
@@ -131,8 +139,11 @@ h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --pr
 h 10b-reposet-enable-rhel6.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
 h 10b-reposet-enable-rhel7optional.log "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 12b-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'" &
+e RepoSyncRhel7 $logs/12b-repo-sync-rhel7.log
 h 12b-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" &
+e RepoSyncRhel6 $logs/12b-repo-sync-rhel6.log
 h 12b-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" &
+e RepoSyncRhel7Optional $logs/12b-repo-sync-rhel7optional.log
 wait
 s $wait_interval
 
@@ -233,9 +244,9 @@ for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u );
     iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetOne-$iteration.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
-        log "$( experiment/reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
-        log "$( experiment/reg-average.sh SetupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
-        log "$( experiment/reg-average.sh PickupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        e RegisterPuppetOne $logs/$concurency-PuppetOne-$iteration.log
+        e SetupPuppetOne $logs/$concurency-PuppetOne-$iteration.log
+        e PickupPuppetOne $logs/$concurency-PuppetOne-$iteration.log
         s $wait_interval
     done
 done
@@ -246,9 +257,9 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetBunch-$iteration.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
-        log "$( experiment/reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
-        log "$( experiment/reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
-        log "$( experiment/reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        e RegisterPuppetBunch $logs/$concurency-PuppetBunch-$iteration.log 
+        e SetupPuppetBunch $logs/$concurency-PuppetBunch-$iteration.log 
+        e PickupPuppetBunch $logs/$concurency-PuppetBunch-$iteration.log
         s $wait_interval
     done
 done
