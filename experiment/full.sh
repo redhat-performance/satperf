@@ -113,7 +113,7 @@ if vercmp_ge "$satellite_version" "6.6.0"; then
     tmp=$( mktemp )
     h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" >$tmp
     rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
-    h 20-cv-create-all.log "content-view create --organization '$do' --repository-ids '$rid' --name 'BenchFilteredContentView'"
+    h 30-cv-create-filtered.log "content-view create --organization '$do' --repository-ids '$rid' --name 'BenchFilteredContentView'"
 else
     h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
 fi
