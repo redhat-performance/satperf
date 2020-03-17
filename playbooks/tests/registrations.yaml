@@ -19,7 +19,7 @@
     bootstrap_activationkey: "SatperfActivationKey"
     bootstrap_hostgroup: "SatperfHostGroup"
     grepper: ''
-    registration_logs: "{{ registration_logs|default('registration_logs') }}"
+    registration_logs: "registration_logs"
   tasks:
     - name: "Ansible on docker host configured to ignore host keys"
       lineinfile:
