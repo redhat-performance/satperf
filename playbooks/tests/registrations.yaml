@@ -61,6 +61,7 @@
       fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ registration_logs }}"
+      ignore_errors: true
 
     - name: "Get how long '{{ grepper }}' took"
       shell:
