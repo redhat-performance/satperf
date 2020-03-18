@@ -1,0 +1,84 @@
+---
+- hosts: hosts
+  remote_user: root
+  gather_facts: yes
+  tasks:
+  - name: disable & enable repos
+    shell: "{{ item }}"
+    with_items:
+    - subscription-manager repos --disable "*"
+    - subscription-manager repos --enable rhel-7-server-rpms
+    - subscription-manager repos --enable rhel-7-server-optional-rpms
+    - subscription-manager repos --enable rhel-7-server-extras-rpms
+    - yum install -y yum-utils
+    when: ansible_distribution == "RedHat"
+
+  - name: open required ports and enable firewalld service
+    shell: "{{ item }}"
+    with_items:
+     - systemctl start firewalld
+     - firewall-cmd --zone=public --add-port=80/tcp --permanent
+     - firewall-cmd --zone=public --add-port=443/tcp --permanent
+     - firewall-cmd --zone=public --add-port=5647/tcp --permanent
+     - firewall-cmd --zone=public --add-port=9090/tcp --permanent
+     - firewall-cmd --reload
+
+
+  - name: settup the server for installation
+    shell: "{{ item }}"
+    with_items:
+     yum -y localinstall https://yum.theforeman.org/releases/nightly/el7/x86_64/foreman-release.rpm
+     yum -y localinstall https://fedorapeople.org/groups/katello/releases/yum/nightly/katello/el7/x86_64/katello-repos-latest.rpm
+     yum -y localinstall https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+     yum -y localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+     yum -y install foreman-release-scl     
+
+  - name: create a candlepin.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/candlepin-koji.repo
+      content: |
+                [candlepin-koji]
+                baseurl = http://koji.katello.org/releases/yum/katello-nightly/candlepin/el7/x86_64/
+                gpgcheck = 0
+                name = Candlepin nightly Koji Repository
+                priority = 1
+  
+  - name: create a foreman.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/foreman-koji.repo
+      content: |
+                [foreman-koji]
+                baseurl = http://koji.katello.org/releases/yum/foreman-nightly/RHEL/7/x86_64/
+                gpgcheck = 0
+                name = Foreman nightly Koji Repository
+                priority = 1
+  - name: create a foreman-plugins.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/foreman-plugins-koji.repo
+      content: |
+                [foreman-plugins-koji]
+                baseurl = http://koji.katello.org/releases/yum/foreman-plugins-nightly/RHEL/7/x86_64/
+                gpgcheck = 0
+                name = Foreman Plugins nightly Koji Repository
+                priority = 1
+  
+  - name: create a katello.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/katello-koji.repo
+      content: |
+                [katello-koji]          
+                baseurl = http://koji.katello.org/releases/yum/katello-nightly/katello/el7/x86_64/
+                gpgcheck = 0
+                name = Katello nightly Koji Repository
+                priority = 1
+  - name: create a pulpcore-repository file with content
+    copy:
+      dest: /etc/yum.repos.d/pulpcore-repository.repo
+      content: |
+                [pulpcore-repository]
+                baseurl = http://koji.katello.org/releases/yum/katello-nightly/pulpcore/el7/x86_64/
+                enabled = 1
+                gpgcheck = 0
+                name = Pulpcore repository for Katello nightly
+  - name: install the katello nightly
+    shell: yum -y install katello
