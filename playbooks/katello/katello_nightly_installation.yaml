@@ -1,5 +1,5 @@
 ---
-- hosts: hosts
+- hosts: katello
   remote_user: root
   gather_facts: yes
   tasks:
