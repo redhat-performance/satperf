@@ -2,6 +2,12 @@
 - hosts: katello
   remote_user: root
   gather_facts: yes
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - ../common/roles/remove-home-extend-root
+    - add_host_to_hostfile
   tasks:
   - name: disable & enable repos
     shell: "{{ item }}"
