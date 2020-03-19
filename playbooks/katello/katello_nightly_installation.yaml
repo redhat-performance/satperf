@@ -12,11 +12,11 @@
   - name: disable & enable repos
     shell: "{{ item }}"
     with_items:
-    - subscription-manager repos --disable "*"
-    - subscription-manager repos --enable rhel-7-server-rpms
-    - subscription-manager repos --enable rhel-7-server-optional-rpms
-    - subscription-manager repos --enable rhel-7-server-extras-rpms
-    - yum install -y yum-utils
+     - subscription-manager repos --disable "*"
+     - subscription-manager repos --enable rhel-7-server-rpms
+     - subscription-manager repos --enable rhel-7-server-optional-rpms
+     - subscription-manager repos --enable rhel-7-server-extras-rpms
+     - yum install -y yum-utils
     when: ansible_distribution == "RedHat"
 
   - name: open required ports and enable firewalld service
@@ -33,11 +33,11 @@
   - name: settup the server for installation
     shell: "{{ item }}"
     with_items:
-     yum -y localinstall https://yum.theforeman.org/releases/nightly/el7/x86_64/foreman-release.rpm
-     yum -y localinstall https://fedorapeople.org/groups/katello/releases/yum/nightly/katello/el7/x86_64/katello-repos-latest.rpm
-     yum -y localinstall https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
-     yum -y localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-     yum -y install foreman-release-scl     
+    - yum -y localinstall https://yum.theforeman.org/releases/nightly/el7/x86_64/foreman-release.rpm
+    - yum -y localinstall https://fedorapeople.org/groups/katello/releases/yum/nightly/katello/el7/x86_64/katello-repos-latest.rpm
+    - yum -y localinstall https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+    - yum -y localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    - yum -y install foreman-release-scl     
 
   - name: create a candlepin.repo file with content
     copy:
