@@ -17,14 +17,14 @@
   - name: Add default Katello host ip to the hosts file
     lineinfile:
       dest: /etc/hosts
-      regexp: ".*{{ groups['katello'] | first }}$"
-      line: "{{ ansible_default_ipv4.address }} {{ groups['katello'] | first }}"
+      regexp: ".*{{ ansible_fqdn }}$"
+      line: "{{ ansible_default_ipv4.address }} {{ ansible_fqdn }}"
 
   # ...and here we replace it with the private ip used to communicate using the
   # private 10gb network, if present
   - name: Add private ip address to the hosts file if defined
     lineinfile:
       dest: /etc/hosts
-      regexp: ".*{{ groups['katello'] | first }}$"
-      line: "{{ hostvars[groups['katello'] | first].ip }} {{ groups['katello'] | first }}"
-    when: "hostvars[groups['katello'] | first].ip is defined"
+      regexp: ".*{{ ansible_fqdn }}$"
+      line: "{{ ip }} {{ ansible_fqdn }}"
+    when: "ip is defined"
