@@ -85,6 +85,11 @@ function status_data_create() {
 
     [ -z "$PARAM_elasticsearch_host" ] && return 0
 
+    if [ -z "$4" -o -z "$5" ]; then
+        echo "WARNING: Either start '$4' or end '$5' timestamps are empty, not going to create status data" >&2
+        return 1
+    fi
+
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
 
