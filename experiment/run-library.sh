@@ -108,7 +108,7 @@ function status_data_create() {
     sd_sat_ver="$7"
     sd_sat_ver_short=$( echo "$sd_sat_ver" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
     sd_run="$8"
-    sd_file=$( mktemp )
+    sd_file="$sd_log.json"
     sd_additional="$9"
 
     # Create status data file
