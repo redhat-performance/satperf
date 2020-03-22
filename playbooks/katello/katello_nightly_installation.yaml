@@ -6,8 +6,9 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
+    - ../common/roles/common
     - ../common/roles/remove-home-extend-root
-    - add_host_to_hostfile
+    - ../common/roles/enlarge-arp-table
   tasks:
   - name: disable & enable repos
     shell: "{{ item }}"
@@ -18,17 +19,6 @@
      - subscription-manager repos --enable rhel-7-server-extras-rpms
      - yum install -y yum-utils
     when: ansible_distribution == "RedHat"
-
-  - name: open required ports and enable firewalld service
-    shell: "{{ item }}"
-    with_items:
-     - systemctl start firewalld
-     - firewall-cmd --zone=public --add-port=80/tcp --permanent
-     - firewall-cmd --zone=public --add-port=443/tcp --permanent
-     - firewall-cmd --zone=public --add-port=5647/tcp --permanent
-     - firewall-cmd --zone=public --add-port=9090/tcp --permanent
-     - firewall-cmd --reload
-
 
   - name: settup the server for installation
     shell: "{{ item }}"
