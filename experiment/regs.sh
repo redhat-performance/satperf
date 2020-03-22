@@ -82,7 +82,7 @@ log "Going to register $sum hosts in total. Make sure there is enough hosts avai
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register' bootstrap_retries=0"
     log "$( experiment/reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
     let iter+=1
     s $wait_interval
