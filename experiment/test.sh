@@ -31,7 +31,7 @@ opts_adhoc="$opts --user root"
 section "Checking environment"
 a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
 a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
-###a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
+a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
 katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
