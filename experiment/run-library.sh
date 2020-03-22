@@ -171,7 +171,7 @@ function status_data_create() {
     curl --silent -H "Content-Type: application/json" -X POST \
         "http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/satellite_perf_index/cpt/" \
         --data "@$sd_file" \
-            | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert obj['_shards']['successful'] == 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data'"
+            | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); if '_shards' not in obj: print(obj);  assert obj['_shards']['successful'] == 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data'"
     ###insights-perf/status_data.py --status-data-file $sd_file --info
 
     # Enhance log file
