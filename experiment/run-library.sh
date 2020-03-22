@@ -19,6 +19,7 @@ logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
 satellite_version="${satellite_version:-N/A}"   # will be determined automatically by run-bench.sh
+katello_version="${katello_version:-N/A}"   # will be determined automatically by run-bench.sh
 
 # Requirements check
 #if ! type bc >/dev/null; then
@@ -102,19 +103,23 @@ function status_data_create() {
     sd_start="$( date --utc -d @$4 -Iseconds )"
     sd_end="$( date --utc -d @$5 -Iseconds )"
     sd_duration="$( expr $5 - $4 )"
-    sd_ver="$6"
-    sd_ver_short=$( echo "$sd_ver" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
-    sd_run="$7"
+    sd_kat_ver="$6"
+    sd_kat_ver_short=$( echo "$sd_kat_ver" | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
+    sd_sat_ver="$7"
+    sd_sat_ver_short=$( echo "$sd_sat_ver" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
+    sd_run="$8"
     sd_file=$( mktemp )
-    sd_additional="$8"
+    sd_additional="$9"
 
     # Create status data file
     rm -f "$sd_file"
     insights-perf/status_data.py --status-data-file $sd_file --set \
         "name=$sd_section/$sd_name" \
         "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
-        "parameters.version=$sd_ver" \
-        "parameters.version-y-stream=$sd_ver_short" \
+        "parameters.katello_version=$sd_kat_ver" \
+        "parameters.katello_version-y-stream=$sd_kat_ver_short" \
+        "parameters.version=$sd_sat_ver" \
+        "parameters.version-y-stream=$sd_sat_ver_short" \
         "parameters.run=$sd_run" \
         "results.log=$sd_log" \
         "results.rc=$sd_rc" \
@@ -140,10 +145,10 @@ function status_data_create() {
     # Based on historical data, determine result of this test
     sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
-        # FIXME: Once we have bunch of runs with parameters.version-y-stream, we can stop using `--data-from-es-wildcard "parameters.version=*$sd_ver_short*"` here and just use new variable
+        # FIXME: Once we have bunch of runs with parameters.version-y-stream, we can stop using `--data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*"` here and just use new variable
         insights-perf/data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "name=$sd_name" \
-            --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
+            --data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
             --es-port $PARAM_elasticsearch_port \
             --es-index satellite_perf_index \
@@ -172,7 +177,8 @@ function status_data_create() {
     # Enhance log file
     tmp=$( mktemp )
     echo "command: $sd_cli" >>$tmp
-    echo "version: $sd_ver" >>$tmp
+    echo "satellite version: $sd_sat_ver" >>$tmp
+    echo "katello version: $sd_kat_ver" >>$tmp
     if [ "$sd_result" != 'ERROR' ]; then
         echo "result determination log:" >>$tmp
         cat "$sd_result_log" >>$tmp
@@ -199,6 +205,7 @@ function junit_upload() {
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
     if echo "$launch_name" | grep --quiet '%sat_ver%'; then
         sat_ver="$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        [ -z "$sat_ver" ] && sat_ver="$( echo "$katello_version" | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
         launch_name="$( echo "$launch_name" | sed "s/%sat_ver%/$sat_ver/g" )"
     fi
     launch_name="$( echo "$launch_name" | sed "s/[^a-zA-Z0-9._-]/_/g" )"
@@ -255,7 +262,7 @@ function c() {
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "$@" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    measurement_add "$@" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -272,7 +279,7 @@ function a() {
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -298,7 +305,7 @@ function ap() {
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -334,7 +341,7 @@ function e() {
     local passed=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )
     local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
-    measurement_add "experiment/reg-average.sh '$grepper' '$log'" "$log_report" "$rc" "$started_ts" "$ended_ts" "$satellite_version" "$marker" "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
+    measurement_add "experiment/reg-average.sh '$grepper' '$log'" "$log_report" "$rc" "$started_ts" "$ended_ts" "$katello_version" "$satellite_version" "$marker" "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
 function table_row() {
