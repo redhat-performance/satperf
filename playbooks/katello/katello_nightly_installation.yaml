@@ -6,6 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
+    - ../common/roles/scalelab-nic-cleanup
     - ../common/roles/common
     - ../common/roles/remove-home-extend-root
     - ../common/roles/enlarge-arp-table
@@ -81,4 +82,4 @@
     shell: yum -y install katello
 
   - name: configure the katello nightly
-    command: foreman-installer --scenario katello --skip-checks-i-know-better  --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}
+    command: foreman-installer --scenario katello --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}
