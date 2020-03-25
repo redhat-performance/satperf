@@ -82,4 +82,4 @@
     shell: yum -y install katello
 
   - name: configure the katello nightly
-    command: foreman-installer --scenario katello --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}
+    command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}
