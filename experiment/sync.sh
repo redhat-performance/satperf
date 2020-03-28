@@ -32,7 +32,7 @@ a regs-00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opt
 ap regs-00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
 ap regs-00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 ap regs-00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
-a regs-00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
+a regs-00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
 a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
 katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
 a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
