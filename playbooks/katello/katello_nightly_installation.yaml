@@ -83,16 +83,4 @@
 
   - name: configure the katello nightly
     command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}
-    ignore_errors: true   # WORKAROUND
-
-  - name: "WORKAROUND: fix listening"
-    lineinfile:
-      dest: /usr/lib/systemd/system/foreman.socket
-      regexp: '^ListenStream='
-      line: "ListenStream=127.0.0.1:3000"
-      state: present
-  - name: "WORKAROUND: reload systemctl"
-    command:
-      systemctl daemon-reload
-  - name: "WORKAROUND: re-configure"
-    command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}
+    
