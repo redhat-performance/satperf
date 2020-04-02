@@ -80,6 +80,13 @@
                 enabled = 1
                 gpgcheck = 0
                 name = Pulpcore repository for Katello nightly
+  
+  - name: make a entry of IP & hostname in /etc/hosts file
+    lineinfile:
+     path: /etc/hosts
+     line: '{{ ansible_default_ipv4.address }} {{ ansible_hostname }}'
+     create: yes
+
   - name: install the katello nightly
     shell: yum -y install katello
 
