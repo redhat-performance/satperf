@@ -91,6 +91,8 @@ function status_data_create() {
         return 1
     fi
 
+    set -x
+
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
 
@@ -194,6 +196,8 @@ function status_data_create() {
 
     # Deactivate tools virtualenv
     deactivate
+
+    set +x
 }
 
 function junit_upload() {
