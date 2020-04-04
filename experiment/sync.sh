@@ -44,8 +44,8 @@ section "Sync test"
 ap 10-test-sync-repositories.log playbooks/tests/sync-repositories.yaml -e "test_sync_repositories_count=$test_sync_repositories_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs"
 
 section "Summary"
-log "$( experiment/reg-average.sh SyncRepositories $logs/10-test-sync-repositories.log | tail -n 1 )"
-log "$( experiment/reg-average.sh PublishContentViews $logs/10-test-sync-repositories.log | tail -n 1 )"
-log "$( experiment/reg-average.sh PromoteContentViews $logs/10-test-sync-repositories.log | tail -n 1 )"
+e SyncRepositories $logs/10-test-sync-repositories.log
+e PublishContentViews $logs/10-test-sync-repositories.log
+e PromoteContentViews $logs/10-test-sync-repositories.log
 
 junit_upload
