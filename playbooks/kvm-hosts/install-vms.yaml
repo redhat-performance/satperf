@@ -57,7 +57,7 @@
         name: "{{ item.name }}"
       register: vminfo
       until: vminfo.status == "shutdown"
-      retries: 100
+      retries: 60
       delay: 30
       with_items: "{{ vms[inventory_hostname] }}"
 
