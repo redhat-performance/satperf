@@ -27,6 +27,7 @@ else:
 per_page = 100
 datetime_fmt = "%Y-%m-%d %H:%M"
 
+
 def get_json(uri, params=None):
     r = requests.get(
             "https://%s%s" % (server, uri),
@@ -38,6 +39,7 @@ def get_json(uri, params=None):
     except simplejson.scanner.JSONDecodeError:
         logging.error("Error parsing json: %s" % r.text)
         sys.exit(1)
+
 
 def get_all(uri, params=None):
     out = []
@@ -53,26 +55,28 @@ def get_all(uri, params=None):
         if int(r['page']) * int(r['per_page']) >= int(r['total']):
             return out
         page += 1
-        ###return out   # DEBUG: del me
+
 
 parent_task = get_json("/foreman_tasks/api/tasks/%s" % task_id)
 if 'error' in parent_task:
     logging.error("Error retrieving parent task info: %s" % parent_task)
     sys.exit(1)
 if 'state' not in parent_task:
-    logging.error("Unexpected parent task format, missing 'state': %s" % parent_task)
+    logging.error("Unexpected parent task format, missing 'state': %s"
+                  % parent_task)
     sys.exit(1)
 if parent_task['state'] != 'stopped':
     logging.error("Parent task not finished yet: %s" % parent_task)
     sys.exit(1)
 
-sub_tasks = get_all("/foreman_tasks/api/tasks", {"search": "parent_task_id = %s" % task_id})
-###with open('cache', 'w') as fp:
-###    import json
-###    json.dump(sub_tasks, fp)
-###with open('cache', 'r') as fp:
-###    import json
-###    sub_tasks = json.load(fp)
+sub_tasks = get_all("/foreman_tasks/api/tasks",
+                    {"search": "parent_task_id = %s" % task_id})
+# with open('cache', 'w') as fp:
+#     import json
+#     json.dump(sub_tasks, fp)
+# with open('cache', 'r') as fp:
+#     import json
+#     sub_tasks = json.load(fp)
 
 logging.debug("Task %s have %s sub-tasks" % (task_id, len(sub_tasks)))
 count = 0
@@ -102,4 +106,4 @@ for key, val in reversed(data.items()):
     if val > max_val:
         end = dateutil.parser.parse(key)
         break
-print "When removed start and end of task with less than %.2f of running tasks, task started at %s, finished at %s and lasted for %s" % (max_val, start, end, end - start)
+print("When removed start and end of task with less than %.2f of running tasks, task started at %s, finished at %s and lasted for %s" % (max_val, start, end, end - start))   # noqa: E501
