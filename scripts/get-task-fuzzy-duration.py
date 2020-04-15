@@ -1,12 +1,12 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
+import logging
 import sys
 import datetime
 import dateutil.parser
 import collections
 import requests
-import pprint
 import simplejson.scanner
 
 username = sys.argv[1]
@@ -36,7 +36,7 @@ def get_json(uri, params=None):
     try:
         return r.json()
     except simplejson.scanner.JSONDecodeError:
-        print("ERROR: Error parsing json: %s" % r.text)
+        logging.error("Error parsing json: %s" % r.text)
         sys.exit(1)
 
 def get_all(uri, params=None):
@@ -57,14 +57,13 @@ def get_all(uri, params=None):
 
 parent_task = get_json("/foreman_tasks/api/tasks/%s" % task_id)
 if 'error' in parent_task:
-    print "ERROR: Error retrieving parent task info: %s" % parent_task
+    logging.error("Error retrieving parent task info: %s" % parent_task)
     sys.exit(1)
 if 'state' not in parent_task:
-    print "ERROR: Unexpected parent task format, missing 'state': %s" % parent_task
+    logging.error("Unexpected parent task format, missing 'state': %s" % parent_task)
     sys.exit(1)
 if parent_task['state'] != 'stopped':
-    pprint.pprint(parent_task)
-    print "ERROR: Parent task not finished yet"
+    logging.error("Parent task not finished yet: %s" % parent_task)
     sys.exit(1)
 
 sub_tasks = get_all("/foreman_tasks/api/tasks", {"search": "parent_task_id = %s" % task_id})
@@ -75,7 +74,7 @@ sub_tasks = get_all("/foreman_tasks/api/tasks", {"search": "parent_task_id = %s"
 ###    import json
 ###    sub_tasks = json.load(fp)
 
-print "DEBUG: Task %s have %s sub-tasks" % (task_id, len(sub_tasks))
+logging.debug("Task %s have %s sub-tasks" % (task_id, len(sub_tasks)))
 count = 0
 data = {}
 minute = datetime.timedelta(0, 60, 0)
