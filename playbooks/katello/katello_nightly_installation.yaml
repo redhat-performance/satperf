@@ -93,3 +93,20 @@
   - name: configure the katello nightly
     command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }}
     
+  - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
+    replace:
+     path: /etc/foreman/database.yml
+     regexp: '5'
+     replace: '30'
+    
+  - name: create a file with content  #workaround for https://projects.theforeman.org/issues/29370
+    copy:
+     dest: /usr/share/foreman/config/initializers/foreman-tasks-db-pool-size.rb
+     content: |
+             ForemanTasks.dynflow.config.db_pool_size = 30
+
+  - name: restart the foreman service  #workaround for https://projects.theforeman.org/issues/29370
+    shell: foreman-maintain service restart
+
+
+    
