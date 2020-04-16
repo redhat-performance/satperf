@@ -138,7 +138,7 @@ def doit():
     if not args.dont_hide_warnings:
         urllib3.disable_warnings()
 
-    logging.debug("Args: {args}")
+    logging.debug("Args: %s" % args)
 
     return investigate_task(args)
 
