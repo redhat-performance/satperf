@@ -2,6 +2,7 @@
 
 import logging
 import sys
+import os.path
 import datetime
 import dateutil.parser
 import collections
@@ -9,6 +10,7 @@ import requests
 import argparse
 import urllib3
 import simplejson.scanner
+import json
 
 per_page = 100
 datetime_fmt = "%Y-%m-%d %H:%M"
@@ -27,7 +29,11 @@ def get_json(hostname, uri, username, password, params=None):
         sys.exit(1)
 
 
-def get_all(hostname, uri, username, password, params=None):
+def get_all(hostname, uri, username, password, params=None, cache=None):
+    if cache and os.path.exists(cache):
+        logging.debug("Loading from chache %s" % cache)
+        with open(cache, 'r') as fp:
+            return json.load(fp)
     out = []
     if params is None:
         params = {'per_page': per_page}
@@ -39,6 +45,10 @@ def get_all(hostname, uri, username, password, params=None):
         r = get_json(hostname, uri, username, password, params)
         out += r['results']
         if int(r['page']) * int(r['per_page']) >= int(r['subtotal']):
+            if cache:
+                logging.debug("Writing to chache %s" % cache)
+                with open(cache, 'w') as fp:
+                    json.dump(out, fp)
             return out
         page += 1
 
@@ -61,7 +71,8 @@ def investigate_task(args):
     sub_tasks = get_all(
         args.hostname, "/foreman_tasks/api/tasks",
         args.username, args.password,
-        {"search": "parent_task_id = %s" % args.task_id})
+        {"search": "parent_task_id = %s" % args.task_id},
+        args.cache)
     # with open('cache', 'w') as fp:
     #     import json
     #     json.dump(sub_tasks, fp)
@@ -118,7 +129,7 @@ def doit():
     parser.add_argument('--percentage', type=float, default=3,
                         help='How many %% of longest sub-tasks to ignore')
     parser.add_argument('--cache',
-                        help='Cache data to this file, do not cache when empty')
+                        help='Cache sub-tasks data to this file. Do not cache when option is not provided. Meant for debugging as it does not care about other parameters, it just returns cache content.')
     parser.add_argument('--dont-hide-warnings', action='store_true',
                         help='Show urllib3 warnings like InsecureRequestWarning')
     parser.add_argument('-d', '--debug', action='store_true',
