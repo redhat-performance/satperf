@@ -71,30 +71,31 @@ def investigate_task(args):
 
     logging.debug("Task %s have %s sub-tasks" % (args.task_id, len(sub_tasks)))
     count = 0
-    data = {}
+    running_per_minute = {}   # how many tasks are running every minute?
     minute = datetime.timedelta(0, 60, 0)
     for t in sub_tasks:
         count += 1
+        i = t['id']
         s = dateutil.parser.parse(t['started_at'])
         e = dateutil.parser.parse(t['ended_at'])
+        logging.debug("Processing sub-task %s: %s - %s" % (i, s, e))
         key = s
         while key <= e:
             key_str = key.strftime(datetime_fmt)
-            if key_str not in data:
-                data[key_str] = 0
-            data[key_str] += 1
+            if key_str not in running_per_minute:
+                running_per_minute[key_str] = 0
+            running_per_minute[key_str] += 1
             key += minute
-    data = collections.OrderedDict(sorted(data.items(), key=lambda t: t[0]))
-    print(data)
+    running_per_minute = collections.OrderedDict(sorted(running_per_minute.items(), key=lambda t: t[0]))
 
     max_val = float(count) * args.percentage / 100
     start = None
-    for key, val in data.items():
+    for key, val in running_per_minute.items():
         if val > max_val:
             start = dateutil.parser.parse(key)
             break
     end = None
-    for key, val in reversed(data.items()):
+    for key, val in reversed(running_per_minute.items()):
         if val > max_val:
             end = dateutil.parser.parse(key)
             break
