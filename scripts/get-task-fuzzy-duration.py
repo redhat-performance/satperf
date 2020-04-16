@@ -38,7 +38,7 @@ def get_all(hostname, uri, username, password, params=None):
         params['page'] = page
         r = get_json(hostname, uri, username, password, params)
         out += r['results']
-        if int(r['page']) * int(r['per_page']) >= int(r['total']):
+        if int(r['page']) * int(r['per_page']) >= int(r['subtotal']):
             return out
         page += 1
 
@@ -85,6 +85,7 @@ def investigate_task(args):
             data[key_str] += 1
             key += minute
     data = collections.OrderedDict(sorted(data.items(), key=lambda t: t[0]))
+    print(data)
 
     max_val = float(count) * args.percentage / 100
     start = None
@@ -114,7 +115,7 @@ def doit():
     parser.add_argument('--task-id', required=True,
                         help='Task ID you want to investigate')
     parser.add_argument('--percentage', type=float, default=3,
-                        help='How many % of longest sub-tasks to ignore')
+                        help='How many %% of longest sub-tasks to ignore')
     parser.add_argument('--cache',
                         help='Cache data to this file, do not cache when empty')
     parser.add_argument('--dont-hide-warnings', action='store_true',
