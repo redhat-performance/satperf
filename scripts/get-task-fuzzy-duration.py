@@ -81,36 +81,32 @@ def investigate_task(args):
     #     sub_tasks = json.load(fp)
 
     logging.debug("Task %s have %s sub-tasks" % (args.task_id, len(sub_tasks)))
-    count = 0
-    running_per_minute = {}   # how many tasks are running every minute?
-    minute = datetime.timedelta(0, 60, 0)
-    for t in sub_tasks:
-        count += 1
-        i = t['id']
-        s = dateutil.parser.parse(t['started_at'])
-        e = dateutil.parser.parse(t['ended_at'])
-        logging.debug("Processing sub-task %s: %s - %s" % (i, s, e))
-        key = s
-        while key <= e:
-            key_str = key.strftime(datetime_fmt)
-            if key_str not in running_per_minute:
-                running_per_minute[key_str] = 0
-            running_per_minute[key_str] += 1
-            key += minute
-    running_per_minute = collections.OrderedDict(sorted(running_per_minute.items(), key=lambda t: t[0]))
 
-    max_val = float(count) * args.percentage / 100
-    start = None
-    for key, val in running_per_minute.items():
-        if val > max_val:
-            start = dateutil.parser.parse(key)
-            break
-    end = None
-    for key, val in reversed(running_per_minute.items()):
-        if val > max_val:
-            end = dateutil.parser.parse(key)
-            break
-    print("When removed start and end of task with less than %.2f of running tasks, task started at %s, finished at %s and lasted for %s" % (max_val, start, end, end - start))   # noqa: E501
+    count = len(sub_tasks)
+    starts = [dateutil.parser.parse(t['started_at']) for t in sub_tasks]
+    ends = [dateutil.parser.parse(t['ended_at']) for t in sub_tasks]
+
+    starts.sort()
+    ends.sort()
+
+    start = min(starts)
+    end = max(ends)
+
+    print("From all sub-tasks data, task started at %s, finished at %s and lasted for %s" % (start, end, end - start))   # noqa: E501
+
+    to_remove = round((args.percentage / 100) * count)
+    starts_cleaned = starts[to_remove:]
+    ends_cleaned = ends[:-to_remove]
+
+    start_cleaned = min(starts_cleaned)
+    end_cleaned = max(ends_cleaned)
+
+    print("When removed head and tail with less than %.2f%% of running sub-tasks, task started at %s, finished at %s and lasted for %s" % (args.percentage, start_cleaned, end_cleaned, end_cleaned - start_cleaned))   # noqa: E501
+
+    head = start_cleaned - start
+    tail = end - end_cleaned
+
+    print("So head lasted %s and tail %s, which is %.2f%% of total time" % (head, tail, (head + tail) / (end - start) * 100))
 
 
 def doit():
