@@ -96,8 +96,8 @@
   - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
     replace:
      path: /etc/foreman/database.yml
-     regexp: 'pool : 5$'
-     replace: 'pool : 30'
+     regexp: 'pool: 5$'
+     replace: 'pool: 30'
     
   - name: create a file with content  #workaround for https://projects.theforeman.org/issues/29370
     copy:
