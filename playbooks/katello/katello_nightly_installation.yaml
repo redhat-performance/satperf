@@ -93,6 +93,14 @@
   - name: configure the katello nightly
     command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }}
     
+  - name: Put SELinux in permissive mode   #workaround for https://projects.theforeman.org/issues/29603
+    selinux:
+     policy: targeted
+     state: permissive
+     
+  - name: reboot the server                 #workaround for https://projects.theforeman.org/issues/29603
+    shell: reboot
+    
   - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
     replace:
      path: /etc/foreman/database.yml
