@@ -98,8 +98,8 @@
      policy: targeted
      state: permissive
      
-  - name: reboot the server                 #workaround for https://projects.theforeman.org/issues/29603
-    shell: reboot
+  #- name: reboot the server                 #workaround for https://projects.theforeman.org/issues/29603
+  #  shell: reboot
     
   - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
     replace:
