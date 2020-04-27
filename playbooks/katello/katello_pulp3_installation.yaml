@@ -1,0 +1,119 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: yes
+  vars:
+    - installer_additional_ops: ''
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - ../common/roles/scalelab-nic-cleanup
+    - ../common/roles/common
+    - ../common/roles/remove-home-extend-root
+    - ../common/roles/enlarge-arp-table
+    - ../common/roles/ntp
+  tasks:
+  - name: disable & enable repos
+    shell: "{{ item }}"
+    with_items:
+     - subscription-manager repos --disable "*"
+     - subscription-manager repos --enable rhel-7-server-rpms
+     - subscription-manager repos --enable rhel-7-server-optional-rpms
+     - subscription-manager repos --enable rhel-7-server-extras-rpms
+     - yum install -y yum-utils
+    when: ansible_distribution == "RedHat"
+
+  - name: settup the server for installation
+    shell: "{{ item }}"
+    with_items:
+    - yum -y localinstall https://yum.theforeman.org/releases/nightly/el7/x86_64/foreman-release.rpm
+    - yum -y localinstall https://fedorapeople.org/groups/katello/releases/yum/nightly/katello/el7/x86_64/katello-repos-latest.rpm
+    - yum -y localinstall https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+    - yum -y localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+    - yum -y install foreman-release-scl
+
+  - name: create a candlepin.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/candlepin-koji.repo
+      content: |
+                [candlepin-koji]
+                baseurl = http://koji.katello.org/releases/yum/katello-nightly/candlepin/el7/x86_64/
+                gpgcheck = 0
+                name = Candlepin nightly Koji Repository
+                priority = 1
+
+  - name: create a foreman.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/foreman-koji.repo
+      content: |
+                [foreman-koji]
+                baseurl = http://koji.katello.org/releases/yum/foreman-nightly/RHEL/7/x86_64/
+                gpgcheck = 0
+                name = Foreman nightly Koji Repository
+                priority = 1
+  - name: create a foreman-plugins.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/foreman-plugins-koji.repo
+      content: |
+                [foreman-plugins-koji]
+                baseurl = http://koji.katello.org/releases/yum/foreman-plugins-nightly/RHEL/7/x86_64/
+                gpgcheck = 0
+                name = Foreman Plugins nightly Koji Repository
+                priority = 1
+
+  - name: create a katello.repo file with content
+    copy:
+      dest: /etc/yum.repos.d/katello-koji.repo
+      content: |
+                [katello-koji]
+                baseurl = http://koji.katello.org/releases/yum/katello-nightly/katello/el7/x86_64/
+                gpgcheck = 0
+                name = Katello nightly Koji Repository
+                priority = 1
+  - name: create a pulpcore-repository file with content
+    copy:
+      dest: /etc/yum.repos.d/pulpcore-repository.repo
+      content: |
+                [pulpcore-repository]
+                baseurl = http://koji.katello.org/releases/yum/katello-nightly/pulpcore/el7/x86_64/
+                enabled = 1
+                gpgcheck = 0
+                name = Pulpcore repository for Katello nightly
+
+  - name: make a entry of IP & hostname in /etc/hosts file
+    lineinfile:
+     path: /etc/hosts
+     line: '{{ ansible_default_ipv4.address }} {{ ansible_hostname }}'
+     create: yes
+
+  - name: install the katello nightly
+    shell: yum -y install katello
+
+  - name: configure the katello nightly
+    command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }}
+
+  - name: Put SELinux in permissive mode   #workaround for https://projects.theforeman.org/issues/29603
+    selinux:
+     policy: targeted
+     state: permissive
+
+  #- name: reboot the server                 #workaround for https://projects.theforeman.org/issues/29603
+  #  shell: reboot
+
+  - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
+    replace:
+     path: /etc/foreman/database.yml
+     regexp: 'pool: 5$'
+     replace: 'pool: 30'
+
+  - name: create a file with content  #workaround for https://projects.theforeman.org/issues/29370
+    copy:
+     dest: /usr/share/foreman/config/initializers/foreman-tasks-db-pool-size.rb
+     content: |
+             ForemanTasks.dynflow.config.db_pool_size = 30
+
+  - name: restart the foreman service  #workaround for https://projects.theforeman.org/issues/29370
+    shell: foreman-maintain service restart
+
+
