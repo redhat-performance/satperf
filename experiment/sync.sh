@@ -27,6 +27,7 @@ opts_adhoc="$opts --user root"
 section "Checking environment"
 a regs-00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
 a regs-00-info-hostname.log satellite6 -m "shell" -a "hostname"
+a regs-00-info-ip-a.log satellite6,docker-hosts -m "shell" -a "ip a"
 a regs-00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a regs-00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 ap regs-00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
