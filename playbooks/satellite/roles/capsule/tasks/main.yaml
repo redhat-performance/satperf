@@ -186,6 +186,12 @@
       line: '                    --enable-foreman-proxy-plugin-remote-execution-ssh\'
       insertafter: '.*-installer .*'
 
+  - name: "Make sure Ansible plugin is enabled"
+    lineinfile:
+      dest: "/root/{{ inventory_hostname }}-script.sh"
+      line: '                    --enable-foreman-proxy-plugin-ansible\'
+      insertafter: '.*-installer .*'
+
   # Finally install capsule
   - name: "Run Capsule configuration"
     command:

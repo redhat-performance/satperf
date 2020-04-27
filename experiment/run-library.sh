@@ -14,11 +14,12 @@ if [ -z "$marker" ]; then
 fi
 
 opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
-opts_adhoc=${opts_adhoc:-"$opts --user root"}
+opts_adhoc=${opts_adhoc:-"$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
 satellite_version="${satellite_version:-N/A}"   # will be determined automatically by run-bench.sh
+katello_version="${katello_version:-N/A}"   # will be determined automatically by run-bench.sh
 
 # Requirements check
 #if ! type bc >/dev/null; then
@@ -58,14 +59,14 @@ function _vercmp() {
 function vercmp_gt() {
     # Check if first parameter is greater than second using version string comparision
     _vercmp "$1" "$2"
-    rc=$?
+    local rc=$?
     [ "$rc" -eq 11 ] && return 0 || return 1
 }
 
 function vercmp_ge() {
     # Check if first parameter is greater or equal than second using version string comparision
     _vercmp "$1" "$2"
-    rc=$?
+    local rc=$?
     [ "$rc" -eq 11 -o "$rc" -eq 0 ] && return 0 || return 1
 }
 
@@ -83,7 +84,16 @@ function status_data_create() {
     # to historical storage (ElasticSearch) and add test result to
     # junit.xml for further analysis.
 
+    debug_log="$2.status_data_create_debug"
+    (
+    set -x
+
     [ -z "$PARAM_elasticsearch_host" ] && return 0
+
+    if [ -z "$4" -o -z "$5" ]; then
+        echo "WARNING: Either start '$4' or end '$5' timestamps are empty, not going to create status data" >&2
+        return 1
+    fi
 
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
@@ -97,27 +107,36 @@ function status_data_create() {
     sd_start="$( date --utc -d @$4 -Iseconds )"
     sd_end="$( date --utc -d @$5 -Iseconds )"
     sd_duration="$( expr $5 - $4 )"
-    sd_ver="$6"
-    sd_ver_short=$( echo "$sd_ver" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
-    sd_run="$7"
-    sd_file=$( mktemp )
+    sd_kat_ver="$6"
+    sd_kat_ver_short=$( echo "$sd_kat_ver" | sed 's/^katello-//' | sed 's/[^0-9.]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
+    sd_sat_ver="$7"
+    sd_sat_ver_short=$( echo "$sd_sat_ver" | sed 's/^satellite-//' | sed 's/[^0-9.]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
+    sd_run="$8"
+    sd_file="$sd_log.json"
+    sd_additional="$9"
 
     # Create status data file
     rm -f "$sd_file"
     insights-perf/status_data.py --status-data-file $sd_file --set \
         "name=$sd_section/$sd_name" \
         "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
-        "parameters.version=$sd_ver" \
+        "parameters.katello_version=$sd_kat_ver" \
+        "parameters.katello_version-y-stream=$sd_kat_ver_short" \
+        "parameters.version=$sd_sat_ver" \
+        "parameters.version-y-stream=$sd_sat_ver_short" \
         "parameters.run=$sd_run" \
         "results.log=$sd_log" \
         "results.rc=$sd_rc" \
         "results.duration=$sd_duration" \
+        "results.jenkins.build_url=${BUILD_URL:-NA}" \
+        "results.jenkins.node_name=${NODE_NAME:-NA}" \
         "started=$sd_start" \
-        "ended=$sd_end"
+        "ended=$sd_end" \
+        $sd_additional
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
-        insights-perf/status_data.py --status-data-file $sd_file \
+        insights-perf/status_data.py -d --status-data-file $sd_file \
             --additional "$PARAM_cluster_read_config" \
             --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
             --grafana-host "$PARAM_grafana_host" \
@@ -132,9 +151,10 @@ function status_data_create() {
     # Based on historical data, determine result of this test
     sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
+        # FIXME: Once we have bunch of runs with parameters.version-y-stream, we can stop using `--data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*"` here and just use new variable
         insights-perf/data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "name=$sd_name" \
-            --data-from-es-wildcard "parameters.version=*$sd_ver_short*" \
+            --data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
             --es-port $PARAM_elasticsearch_port \
             --es-index satellite_perf_index \
@@ -157,13 +177,14 @@ function status_data_create() {
     curl --silent -H "Content-Type: application/json" -X POST \
         "http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/satellite_perf_index/cpt/" \
         --data "@$sd_file" \
-            | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert obj['_shards']['successful'] == 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data'"
+            | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] == 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
     ###insights-perf/status_data.py --status-data-file $sd_file --info
 
     # Enhance log file
     tmp=$( mktemp )
     echo "command: $sd_cli" >>$tmp
-    echo "version: $sd_ver" >>$tmp
+    echo "satellite version: $sd_sat_ver" >>$tmp
+    echo "katello version: $sd_kat_ver" >>$tmp
     if [ "$sd_result" != 'ERROR' ]; then
         echo "result determination log:" >>$tmp
         cat "$sd_result_log" >>$tmp
@@ -179,6 +200,9 @@ function status_data_create() {
 
     # Deactivate tools virtualenv
     deactivate
+
+    set +x
+    ) &>$debug_log
 }
 
 function junit_upload() {
@@ -190,6 +214,7 @@ function junit_upload() {
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
     if echo "$launch_name" | grep --quiet '%sat_ver%'; then
         sat_ver="$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        [ -z "$sat_ver" ] && sat_ver="$( echo "$katello_version" | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
         launch_name="$( echo "$launch_name" | sed "s/%sat_ver%/$sat_ver/g" )"
     fi
     launch_name="$( echo "$launch_name" | sed "s/[^a-zA-Z0-9._-]/_/g" )"
@@ -240,13 +265,13 @@ function c() {
     log "Start '$*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE command RUN"
-        rc=0
+        local rc=0
     else
-        eval "$@" &>$out && rc=$? || rc=$?
+        eval "$@" &>$out && local rc=$? || local rc=$?
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "$@" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    measurement_add "$@" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -257,14 +282,13 @@ function a() {
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible RUN"
-        rc=0
+        local rc=0
     else
-        ansible $opts_adhoc "$@" &>$out && rc=$? || rc=$?
+        ansible $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
     fi
-    rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -284,14 +308,13 @@ function ap() {
     log "Start 'ansible-playbook $opts $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible-playbook RUN"
-        rc=0
+        local rc=0
     else
-        ansible-playbook $opts "$@" &>$out && rc=$? || rc=$?
+        ansible-playbook $opts "$@" &>$out && local rc=$? || local rc=$?
     fi
-    rc=$?
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$satellite_version" "$marker"
+    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
     return $rc
 }
 
@@ -314,6 +337,22 @@ function h_out() {
     a_out -m shell -a "hammer $hammer_opts $@" satellite6
 }
 
+function e() {
+    # Examine log for specific measure using reg-average.sh
+    local grepper="$1"
+    local log="$2"
+    local log_report="$( echo "$log" | sed "s/\.log$/-$grepper.log/" )"
+    experiment/reg-average.sh "$grepper" "$log" &>$log_report
+    local rc=$?
+    local started_ts=$( grep "^min in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
+    local ended_ts=$( grep "^max in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
+    local duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 4 )
+    local passed=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )
+    local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
+    log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
+    measurement_add "experiment/reg-average.sh '$grepper' '$log'" "$log_report" "$rc" "$started_ts" "$ended_ts" "$katello_version" "$satellite_version" "$marker" "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
+}
+
 function table_row() {
     # Format row for results table with average duration
     local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
@@ -331,7 +370,7 @@ function table_row() {
         fi
         if [ -n "$grepper" ]; then
             local log="$( echo "$row" | measurement_row_field 2 )"
-            local out=$( ./reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
+            local out=$( experiment/reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
             [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"

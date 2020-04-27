@@ -29,7 +29,7 @@
             fi
         done
       loop:
-                  'h1[^>]\+>\s\+Job invocations\s\+</h1'
+              #    'h1[^>]\+>\s\+Job invocations\s\+</h1'
         - uri: ''
           assert: 'h1[^>]\+>\s\+Overview\s\+</h1'
         - uri: 'job_invocations'
@@ -46,6 +46,8 @@
           assert: 'h1[^>]\+>\s\+Capsules\s\+</h1'
         - uri: 'domains'
           assert: 'h1[^>]\+>\s\+Domains\s\+</h1'
+        - uri: 'audits'
+          assert: 'h1[^>]\+>\s*Audits\s*</h1'
         #- uri: 'katello/api/v2/subscriptions?organization_id={{ sat_orgid }}'
         #  assert: '.results.:'
         #- uri: 'katello/api/v2/products?organization_id={{ sat_orgid }}'

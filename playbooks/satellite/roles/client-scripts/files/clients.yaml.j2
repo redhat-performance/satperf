@@ -154,6 +154,8 @@
       tags: REM
     - name: "Run bootstrap.py"
       shell: "set -x; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
       register: reg
       until: "reg.rc is defined and reg.rc == 0"
       retries: "{% raw %}{{ bootstrap_retries }} {% endraw %}"

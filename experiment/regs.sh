@@ -29,8 +29,10 @@ ap regs-00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playboo
 ap regs-00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 ap regs-00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
 a regs-00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
-a regs-00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite"
-satellite_version=$( tail -n 1 $logs/regs-00-info-rpm-q-satellite.log ); echo "$satellite_version" | grep '^satellite-6\.'   # make sure it was detected correctly
+a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
+katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
+a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
+satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
 s $( expr 3 \* $wait_interval )
 set +e
 
@@ -80,8 +82,8 @@ log "Going to register $sum hosts in total. Make sure there is enough hosts avai
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
-    log "$( ./reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register' bootstrap_retries=0"
+    e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
     s $wait_interval
 done
@@ -89,7 +91,7 @@ done
 section "Summary"
 iter=1
 for batch in $registrations_batches; do
-    log "$( ./reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
+    log "$( experiment/reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
     let iter+=1
 done
 

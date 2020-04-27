@@ -41,7 +41,7 @@
           --os-type linux \
           --os-variant rhel7 \
           --graphics spice \
-          --location "{{ vms_kss_os }}" \
+          --location "{% if item.kss_os is defined %}{{ item.kss_os }}{% else %}{{ vms_kss_os }}{% endif %}" \
           --initrd-inject "/root/{{ item.name }}-{{ item.ks }}" \
           --extra-args "ks=file:/{{ item.name }}-{{ item.ks }} console=tty0 console=ttyS0,115200 {% if item.extra_kernel_args is defined %}{{ item.extra_kernel_args }}{% endif %}" \
           --noautoconsole

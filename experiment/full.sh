@@ -25,7 +25,7 @@ do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root"
+opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
@@ -37,15 +37,16 @@ ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/do
 ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
 a 00-satellite-drop-caches.log -m shell -a "katello-service stop; sync; echo 3 > /proc/sys/vm/drop_caches; katello-service start" satellite6
-a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite"
-satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log ); echo "$satellite_version" | grep '^satellite-6\.'   # make sure it was detected correctly
+a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
+katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
+a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
+satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
 s $( expr 3 \* $wait_interval )
 set +e
 
 
 section "Prepare for Red Hat content"
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
-#h 00-set-local-cdn-mirror.log "organization update --name 'Default Organization' --redhat-repository-url 'http://localhost/pub/'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 count=5
 for i in $( seq $count ); do
@@ -79,9 +80,17 @@ s $wait_interval
 h 12-repo-sync-rhel8optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 8 Server - Optional RPMs x86_64 8Server'"
 s $wait_interval
 
+section "Synchronise capsules"
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
+    h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
+done
+s $wait_interval
+
 section "Publish and promote big CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
-if vercmp_ge "$satellite_version" "6.6.0"; then
+if vercmp_ge "$katello_version" "3.16.0" || vercmp_ge "$satellite_version" "6.6.0"; then
     rids=""
     for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'; do
         tmp=$( mktemp )
@@ -108,11 +117,11 @@ s $wait_interval
 
 section "Publish and promote filtered CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
-if vercmp_ge "$satellite_version" "6.6.0"; then
+if vercmp_ge "$katello_version" "3.16.0" || vercmp_ge "$satellite_version" "6.6.0"; then
     tmp=$( mktemp )
     h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" >$tmp
     rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
-    h 20-cv-create-all.log "content-view create --organization '$do' --repository-ids '$rid' --name 'BenchFilteredContentView'"
+    h 30-cv-create-filtered.log "content-view create --organization '$do' --repository-ids '$rid' --name 'BenchFilteredContentView'"
 else
     h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
 fi
@@ -124,7 +133,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '$do' --name '
 s $wait_interval
 
 
-section "Sync from CDN"   # do not measure becasue of unpredictable network latency
+section "Sync from CDN do not measure"   # do not measure becasue of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
 h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h 10b-reposet-enable-rhel8.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 8 Server (RPMs)' --releasever '8Server' --basearch 'x86_64'"
@@ -152,11 +161,37 @@ wait
 s $wait_interval
 
 
+section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
+    h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
+done
+s $wait_interval
+
+
 section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
-h 41-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup --query-organization '$do'"
-h 42-domain-create.log "domain create --name example.com --organizations '$do'"
-h 42-domain-update.log "domain update --name example.com --organizations '$do' --locations '$dl'"
+h 42-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
+location_ids=$( h_out "--no-headers --csv location list --organization '$do'" | cut -d ',' -f 1 | tr '\n' ',' | sed 's/,$//' )
+h 42-domain-update.log "domain update --name '{{ client_domain }}' --organizations '$do' --location-ids '$location_ids'"
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for row in $( cut -d ' ' -f 1 $tmp ); do
+    capsule_id=$( echo "$row" | cut -d ',' -f 1 )
+    capsule_name=$( echo "$row" | cut -d ',' -f 2 )
+    subnet_name="subnet-for-$capsule_name"
+    hostgroup_name="hostgroup-for-$capsule_name"
+    if [ "$capsule_id" -eq 1 ]; then
+        location_name="$dl"
+    else
+        location_name="Location for $capsule_name"
+    fi
+    h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ client_domain }}' --organization '$do' --network 172.31.0.0 --mask 255.255.0.0 --location '$location_name'"
+    subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
+    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+    h 41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
+done
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 h subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
@@ -168,7 +203,8 @@ h ak-add-subs-employee.log "activation-key add-subscription --organization '$do'
 
 section "Register"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='$logs/44-register-docker-host-client-logs'"
+    e Register $logs/44-register-$i.log
     s $wait_interval
 done
 
@@ -178,6 +214,8 @@ h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --va
 a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
 h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
+h 52-rex-date-ansible.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
+s $wait_interval
 h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
 h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='katello-package-upload --force'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
@@ -186,11 +224,17 @@ s $wait_interval
 
 section "Misc simple tests"
 ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
+e GenerateApplicability $logs/60-generate-applicability.log
 s $wait_interval
 ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
+e HammerHostList $logs/61-hammer-list.log
 s $wait_interval
 ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
 s $wait_interval
+if vercmp_ge "$katello_version" "3.14.0" || vercmp_ge "$satellite_version" "6.7.0"; then
+    a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake foreman_inventory_upload:report:generate"
+    s $wait_interval
+fi
 
 
 section "Preparing Puppet environment"
@@ -206,9 +250,9 @@ for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u );
     iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetOne-$iteration.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
-        log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne-$iteration.log | tail -n 1 )"
+        e RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log
+        e SetupPuppet $logs/$concurency-PuppetOne-$iteration.log
+        e PickupPuppet $logs/$concurency-PuppetOne-$iteration.log
         s $wait_interval
     done
 done
@@ -219,9 +263,9 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
     iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
     for iteration in $( seq $iterations ); do
         ap $concurency-PuppetBunch-$iteration.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
-        log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
-        log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log | tail -n 1 )"
+        e RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log 
+        e SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log 
+        e PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log
         s $wait_interval
     done
 done
