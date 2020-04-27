@@ -124,6 +124,8 @@ function status_data_create() {
         "results.log=$sd_log" \
         "results.rc=$sd_rc" \
         "results.duration=$sd_duration" \
+        "results.jenkins.build_url=${BUILD_URL:-NA}" \
+        "results.jenkins.node_name=${NODE_NAME:-NA}" \
         "started=$sd_start" \
         "ended=$sd_end" \
         $sd_additional
