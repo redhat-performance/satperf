@@ -84,6 +84,10 @@ function status_data_create() {
     # to historical storage (ElasticSearch) and add test result to
     # junit.xml for further analysis.
 
+    debug_log="$2.status_data_create_debug"
+    (
+    set -x
+
     [ -z "$PARAM_elasticsearch_host" ] && return 0
 
     if [ -z "$4" -o -z "$5" ]; then
@@ -132,7 +136,7 @@ function status_data_create() {
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
-        insights-perf/status_data.py --status-data-file $sd_file \
+        insights-perf/status_data.py -d --status-data-file $sd_file \
             --additional "$PARAM_cluster_read_config" \
             --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
             --grafana-host "$PARAM_grafana_host" \
@@ -196,6 +200,9 @@ function status_data_create() {
 
     # Deactivate tools virtualenv
     deactivate
+
+    set +x
+    ) &>$debug_log
 }
 
 function junit_upload() {
