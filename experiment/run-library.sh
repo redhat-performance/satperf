@@ -386,6 +386,46 @@ function e() {
         "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
+function t() {
+    # Show task duration without outliners
+    local log="$1"
+    local task_id="$( extract_task "$log" )"
+    [ -z "$task_id" ] && return 1
+    local satellite_host="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    [ -z "$satellite_host" ] && return 2
+    local log_report="$( echo "$log" | sed "s/\.log$/-duration.log/" )"
+
+    scripts/get-task-fuzzy-duration.py --hostname $satellite_host --task-id "$task_id" --percentage 5 --output status-data &>$log_report
+    local rc=$?
+    started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
+    ended_ts="$( date -d "$( grep '^results.tasks.end=' $log_report | cut -d '"' -f 2 )" +%s )"
+    head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
+    log "Examined task $task_id and if have $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
+    measurement_add \
+        "experiment/reg-average.sh '$grepper' '$log'" \
+        "$log_report" \
+        "$rc" \
+        "$started_ts" \
+        "$ended_ts" \
+        "$katello_version" \
+        "$satellite_version" \
+        "$marker" \
+        "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
+}
+
+function extract_task() {
+    # Take log with hammer run log and extract task ID from it. Do not return
+    # anything if more task IDs are found or in case of any other error.
+    log="$1"
+    candidates=$( grep '^Task [0-9a-zA-Z-]\+ running' "$log" | cut -d ' ' -f 2 | uniq )
+    # Only print f we have exactly one task ID
+    if [ $( echo "$candidates" | wc -l | cut -d ' ' -f 1 ) -eq 1 ]; then
+        echo "$candidates"
+        return 0
+    fi
+    return 1
+}
+
 function table_row() {
     # Format row for results table with average duration
     local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
