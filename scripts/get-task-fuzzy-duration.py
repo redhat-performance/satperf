@@ -53,6 +53,29 @@ def get_all(hostname, uri, username, password, params=None, cache=None):
         page += 1
 
 
+def print_result(output_format, data):
+    if output_format == 'plain':
+        print("From all sub-tasks data, task started at %s, finished at %s and lasted for %s" % (data['start'], data['end'], data['duration']))   # noqa: E501
+        print("When removed head and tail with less than %.2f%% of running sub-tasks, task started at %s, finished at %s and lasted for %s" % (data['percentage'], data['start_cleaned'], data['end_cleaned'], data['duration_cleaned']))   # noqa: E501
+        print("So head lasted %s and tail %s, which is %.2f%% of total time" % (data['head'], data['tail'], data['percentage_removed']))
+    elif output_format == 'bash':
+        data['duration'] = data['duration'].total_seconds()
+        data['duration_cleaned'] = data['duration_cleaned'].total_seconds()
+        data['head'] = data['head'].total_seconds()
+        data['tail'] = data['tail'].total_seconds()
+        for k, v in data.items():
+            print("%s=\"%s\"" % (k.upper(), v))
+    elif output_format == 'status-data':
+        data['duration'] = data['duration'].total_seconds()
+        data['duration_cleaned'] = data['duration_cleaned'].total_seconds()
+        data['head'] = data['head'].total_seconds()
+        data['tail'] = data['tail'].total_seconds()
+        for k, v in data.items():
+            print("results.tasks.%s=\"%s\"" % (k, v))
+    else:
+        raise Exception("Do not know how to prin in %s" % output_format)
+
+
 def investigate_task(args):
     parent_task = get_json(
         args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
@@ -91,8 +114,7 @@ def investigate_task(args):
 
     start = min(starts)
     end = max(ends)
-
-    print("From all sub-tasks data, task started at %s, finished at %s and lasted for %s" % (start, end, end - start))   # noqa: E501
+    duration = end - start
 
     to_remove = round((args.percentage / 100) * count)
     starts_cleaned = starts[to_remove:]
@@ -100,13 +122,25 @@ def investigate_task(args):
 
     start_cleaned = min(starts_cleaned)
     end_cleaned = max(ends_cleaned)
-
-    print("When removed head and tail with less than %.2f%% of running sub-tasks, task started at %s, finished at %s and lasted for %s" % (args.percentage, start_cleaned, end_cleaned, end_cleaned - start_cleaned))   # noqa: E501
+    duration_cleaned = end_cleaned - start_cleaned
 
     head = start_cleaned - start
     tail = end - end_cleaned
+    percentage_removed = (head + tail) / duration * 100
 
-    print("So head lasted %s and tail %s, which is %.2f%% of total time" % (head, tail, (head + tail) / (end - start) * 100))
+    data = {
+        'start': start,
+        'end': end,
+        'duration': duration,
+        'start_cleaned': start_cleaned,
+        'end_cleaned': end_cleaned,
+        'duration_cleaned': duration_cleaned,
+        'head': head,
+        'tail': tail,
+        'percentage': args.percentage,
+        'percentage_removed': percentage_removed,
+    }
+    print_result(args.output, data)
 
 
 def doit():
@@ -123,7 +157,10 @@ def doit():
     parser.add_argument('--task-id', required=True,
                         help='Task ID you want to investigate')
     parser.add_argument('--percentage', type=float, default=3,
-                        help='How many %% of longest sub-tasks to ignore')
+                        help='How many %% of earliest and latest starts and ends to drop')
+    parser.add_argument('-o', '--output', default='plain',
+                        choices=['plain', 'bash', 'status-data'],
+                        help='Format how to present output')
     parser.add_argument('--cache',
                         help='Cache sub-tasks data to this file. Do not cache when option is not provided. Meant for debugging as it does not care about other parameters, it just returns cache content.')
     parser.add_argument('--dont-hide-warnings', action='store_true',
