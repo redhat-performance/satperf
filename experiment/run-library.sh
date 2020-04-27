@@ -271,7 +271,15 @@ function c() {
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "$@" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
+    measurement_add \
+        "$@" \
+        "$out" \
+        "$rc" \
+        "$start" \
+        "$end" \
+        "$katello_version" \
+        "$satellite_version" \
+        "$marker"
     return $rc
 }
 
@@ -288,7 +296,15 @@ function a() {
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible $opts_adhoc $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
+    measurement_add \
+        "ansible $opts_adhoc $( _format_opts "$@" )" \
+        "$out" \
+        "$rc" \
+        "$start" \
+        "$end" \
+        "$katello_version" \
+        "$satellite_version" \
+        "$marker"
     return $rc
 }
 
@@ -314,7 +330,15 @@ function ap() {
     fi
     local end=$( date --utc +%s )
     log "Finish after $( expr $end - $start ) seconds with log in $out and exit code $rc"
-    measurement_add "ansible-playbook $opts $( _format_opts "$@" )" "$out" "$rc" "$start" "$end" "$katello_version" "$satellite_version" "$marker"
+    measurement_add \
+        "ansible-playbook $opts $( _format_opts "$@" )" \
+        "$out" \
+        "$rc" \
+        "$start" \
+        "$end" \
+        "$katello_version" \
+        "$satellite_version" \
+        "$marker"
     return $rc
 }
 
@@ -350,7 +374,16 @@ function e() {
     local passed=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )
     local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
-    measurement_add "experiment/reg-average.sh '$grepper' '$log'" "$log_report" "$rc" "$started_ts" "$ended_ts" "$katello_version" "$satellite_version" "$marker" "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
+    measurement_add \
+        "experiment/reg-average.sh '$grepper' '$log'" \
+        "$log_report" \
+        "$rc" \
+        "$started_ts" \
+        "$ended_ts" \
+        "$katello_version" \
+        "$satellite_version" \
+        "$marker" \
+        "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
 function table_row() {
