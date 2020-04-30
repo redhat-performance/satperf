@@ -25,7 +25,9 @@
     when: ansible_distribution == "RedHat"
 
   - name: settup the server for installation
-    shell: curl -o /etc/yum.repos.d/satellite.repo http://perf54.perf.lab.eng.bos.redhat.com/pub/mirrors/2020-04-30-Katello_Nightly_Sat68_snap1/satellite.repo
+    shell: |
+        yum -y install centos-release-scl
+        curl -o /etc/yum.repos.d/satellite.repo http://perf54.perf.lab.eng.bos.redhat.com/pub/mirrors/2020-04-30-Katello_Nightly_Sat68_snap1/satellite.repo
 
   - name: make a entry of IP & hostname in /etc/hosts file
     lineinfile:
