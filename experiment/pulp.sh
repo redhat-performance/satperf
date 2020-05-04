@@ -49,13 +49,8 @@ s $wait_interval
 
 
 section "Publish and promote big CV"
-rids=""
-for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'; do
-    tmp=$( mktemp )
-    h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
-    rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
-    [ ${#rids} -eq 0 ] && rids="$rid" || rids="$rids,$rid"
-done
+rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
 h 20-cv-create-all.log "content-view create --organization '$do' --repository-ids '$rids' --name 'BenchContentView'"
 h 21-cv-all-publish.log "content-view publish --organization '$do' --name 'BenchContentView'"
 s $wait_interval
@@ -71,13 +66,8 @@ s $wait_interval
 
 
 section "Publish and promote filtered CV"
-rids=""
-for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'; do
-    tmp=$( mktemp )
-    h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
-    rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
-    [ ${#rids} -eq 0 ] && rids="$rid" || rids="$rids,$rid"
-done
+rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
 h 30-cv-create-filtered.log "content-view create --organization '$do' --repository-ids '$rids' --name 'BenchFilteredContentView'"
 h 31-filter-create-1.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
 h 31-filter-create-2.log "content-view filter create --organization '$do' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"

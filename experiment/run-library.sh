@@ -103,6 +103,14 @@ function generic_environment_check() {
     s $( expr 3 \* $wait_interval )
 }
 
+function get_repo_id() {
+    local tmp=$( mktemp )
+    local product="$1"
+    local repo="$2"
+    h_out "--output yaml repository info --organization '$do' --product '$product' --name '$repo'" >$tmp
+    grep '^ID:' $tmp | cut -d ' ' -f 2
+}
+
 function status_data_create() {
     # For every measurement, create new status data file, consult with
     # historical data if test result is PASS or FAIL, upload current result

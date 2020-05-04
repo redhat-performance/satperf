@@ -72,13 +72,9 @@ s $wait_interval
 section "Publish and promote big CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$katello_version" "3.16.0" || vercmp_ge "$satellite_version" "6.6.0"; then
-    rids=""
-    for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'; do
-        tmp=$( mktemp )
-        h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
-        rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
-        [ ${#rids} -eq 0 ] && rids="$rid" || rids="$rids,$rid"
-    done
+    rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+    rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+    rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' )"
     h 20-cv-create-all.log "content-view create --organization '$do' --repository-ids '$rids' --name 'BenchContentView'"
 else
     h 20-cv-create-all.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server','Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server','Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' --name 'BenchContentView'"
@@ -99,10 +95,8 @@ s $wait_interval
 section "Publish and promote filtered CV"
 # Workaround for https://bugzilla.redhat.com/show_bug.cgi?id=1782707
 if vercmp_ge "$katello_version" "3.16.0" || vercmp_ge "$satellite_version" "6.6.0"; then
-    tmp=$( mktemp )
-    h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" >$tmp
-    rid=$( grep '^ID:' $tmp | cut -d ' ' -f 2 )
-    h 30-cv-create-filtered.log "content-view create --organization '$do' --repository-ids '$rid' --name 'BenchFilteredContentView'"
+    rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+    h 30-cv-create-filtered.log "content-view create --organization '$do' --repository-ids '$rids' --name 'BenchFilteredContentView'"
 else
     h 30-cv-create-filtered.log "content-view create --organization '$do' --product 'Red Hat Enterprise Linux Server' --repositories 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --name 'BenchFilteredContentView'"
 fi
