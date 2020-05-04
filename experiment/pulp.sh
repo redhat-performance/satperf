@@ -71,6 +71,7 @@ s $wait_interval
 
 
 section "Publish and promote filtered CV"
+rids=""
 for r in 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'; do
     tmp=$( mktemp )
     h_out "--output yaml repository info --organization '$do' --product 'Red Hat Enterprise Linux Server' --name '$r'" >$tmp
