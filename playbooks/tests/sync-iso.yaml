@@ -128,4 +128,3 @@
       loop: "{{ wait_promote.results }}"
       when: "item.rc is defined and item.rc == 0"
 ...
-~         
