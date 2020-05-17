@@ -19,7 +19,7 @@
     - ../../conf/satperf.local.yaml
   vars:
     test_sync_repositories_count: 8
-    test_sync_repositories_url_template: "http://perf54.perf.lab.eng.bos.redhat.com/pub/pulpperf/"
+    test_sync_repositories_url_template: "http://repos.example.com/repo*"
     test_sync_repositories_product: "test_sync_repositories_product2"
     test_sync_repositories_le: "test_sync_repositories_le2"
     test_sync_repositories_repo_template: "test_sync_repositories_repo2*"
