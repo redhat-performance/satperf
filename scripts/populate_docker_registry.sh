@@ -21,13 +21,15 @@ for repo in $( seq $repos ); do
     for image in $( seq $images ); do
         doit "$registry_host/test_repo$repo:ver$image" &
 
-        # From https://stackoverflow.com/a/32464803/2229885
-        # Check how many background jobs there are, and if it
-        # is equal to the number of cores, wait for anyone to
-        # finish before continuing.
+        # If number of background processes raises to set concurency lvl,
+        # block untill some process ends
         background=( $(jobs -p) )
         if (( ${#background[@]} == $concurency )); then
-            wait -n   # wait for first to stop
+            new_background=( $(jobs -p) )
+            while [ "${background[*]}" = "${new_background[*]}" ]; do
+                new_background=( $(jobs -p) )
+                sleep 1
+            done
         fi
     done
 done
