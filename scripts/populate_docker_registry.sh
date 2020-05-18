@@ -14,7 +14,7 @@ function doit() {
     rc_push=$?
     docker rmi $tag
     rc_rmi=$?
-    echo "$( date -Ins ) $tag $rc_build $rc_push $rc_build" >>aaa.log
+    echo "$( date -Ins ) $tag $rc_build $rc_push $rc_build" >>populate_docker_registry.log
 }
 
 for repo in $( seq $repos ); do
