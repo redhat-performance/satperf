@@ -1,0 +1,17 @@
+FROM docker.io/fedora:latest
+MAINTAINER Jan Hutar <jhutar@redhat.com>
+
+RUN date -Ins >/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+RUN date -Ins >>/something
+
+ENV LANG en_US.utf8
+USER root
+CMD [ "/sbin/init" ]
