@@ -54,7 +54,7 @@
         label: "{{ test_sync_iso_repo_template|replace('*', item.item) }}"
     - name: "Wait for synces to finish"
       command:
-        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[6].split('.')[0] }}" "{{ test_sync_iso_url_templatetest_sync_iso_max_sync_secs }}"
+        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[6].split('.')[0] }}" "{{ test_sync_iso_max_sync_secs }}"
       loop: "{{ start_sync.results }}"
       loop_control:
         label: "{{ test_sync_iso_repo_template|replace('*', item.item) }}"
@@ -95,7 +95,7 @@
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
     - name: "Wait for publish to finish"
       command:
-        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_iso_url_templatetest_sync_iso_max_sync_secs }}"
+        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_iso_max_sync_secs }}"
       loop: "{{ start_publish.results }}"
       loop_control:
         label: "{{ test_sync_iso_cv_template|replace('*', item.item) }}"
@@ -114,7 +114,7 @@
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
     - name: "Wait for promote to finish"
       command:
-        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_iso_url_templatetest_sync_iso_max_sync_secs }}"
+        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{  test_sync_iso_max_sync_secs }}"
       loop: "{{ start_promote.results }}"
       loop_control:
         label: "{{ test_sync_iso_cv_template|replace('*', item.item) }}"
