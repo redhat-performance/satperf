@@ -36,3 +36,4 @@ e PublishContentViews $logs/10-test-sync-docker.log
 e PromoteContentViews $logs/10-test-sync-docker.log
 
 junit_upload
+~
