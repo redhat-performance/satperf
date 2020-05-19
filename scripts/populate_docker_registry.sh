@@ -1,4 +1,4 @@
-set -xe
+set -e
 
 repos=20
 images=100
@@ -8,13 +8,17 @@ registry_host=${REGISTRY_HOST:-registry.example.com:5000}
 
 function doit() {
     tag="$1"
-    docker build -f populate_docker_registry-Containerfile . --tag $tag --no-cache --rm=true
-    rc_build=$?
-    docker push $tag
-    rc_push=$?
-    docker rmi $tag
-    rc_rmi=$?
-    echo "$( date -Ins ) $tag $rc_build $rc_push $rc_build" >>populate_docker_registry.log
+    log="$( echo "$tag" | sed 's/[^a-zA-Z0-9-]/_/g' ).log"
+    echo "DEBUG: Started build of $tag with log in $log"
+    {
+        docker build -f populate_docker_registry-Containerfile . --tag $tag --no-cache --rm=true
+        rc_build=$?
+        docker push $tag
+        rc_push=$?
+        docker rmi $tag
+        rc_rmi=$?
+    } >$log
+    echo "$( date -Ins ) $tag $rc_build $rc_push $rc_build" >>aaa.log
 }
 
 for repo in $( seq $repos ); do
@@ -24,9 +28,11 @@ for repo in $( seq $repos ); do
         # If number of background processes raises to set concurency lvl,
         # block untill some process ends
         background=( $(jobs -p) )
-        if (( ${#background[@]} == $concurency )); then
+        if (( ${#background[@]} >= $concurency )); then
+            echo "DEBUG: Reached concurency level, waiting for some task to finish"
             new_background=( $(jobs -p) )
             while [ "${background[*]}" = "${new_background[*]}" ]; do
+                echo "DEBUG: Waiting: ${new_background[*]}"
                 new_background=( $(jobs -p) )
                 sleep 1
             done
@@ -34,4 +40,5 @@ for repo in $( seq $repos ); do
     done
 done
 
+echo "DEBUG: Waiting for ramaining tasks"
 wait
