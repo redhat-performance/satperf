@@ -34,5 +34,4 @@ e SyncRepositories $logs/10-test-sync-iso.log
 e PublishContentViews $logs/10-test-sync-iso.log
 e PromoteContentViews $logs/10-test-sync-iso.log
 
-junit_upload
-~             
+junit_upload        
