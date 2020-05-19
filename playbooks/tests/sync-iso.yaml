@@ -19,7 +19,7 @@
     - ../../conf/satperf.local.yaml
   vars:
     test_sync_repositories_count: 8
-    test_sync_repositories_url_template: "http://storage.example.com/iso-repos/"
+    test_sync_repositories_url_template: "http://storage.example.com/iso-repos*"
     test_sync_repositories_product: "test_sync_iso_product"
     test_sync_repositories_le: "test_sync_iso_le"
     test_sync_repositories_repo_template: "test_sync_iso_repo*"
