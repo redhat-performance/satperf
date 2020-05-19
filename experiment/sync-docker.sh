@@ -6,9 +6,9 @@ manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
-test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-https://registry-1.docker.io}"
-test_sync_repositories_max_sync_secs="${PARAM_test_sync_repositories_max_sync_secs:-600}"
+test_sync_docker_count="${PARAM_test_sync_docker_count:-8}"
+test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://registry-1.docker.io}"
+test_sync_docker_max_sync_secs="${PARAM_test_sync_docker_max_sync_secs:-600}"
 
 wait_interval=${PARAM_wait_interval:-50}
 
@@ -28,11 +28,11 @@ section "Checking environment"
 generic_environment_check
 
 section "Sync file repo"
-ap 10-test-sync-repositories.log playbooks/tests/sync-docker.yaml -e "test_sync_repositories_count=$test_sync_repositories_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs"
+ap 10-test-sync-docker.log playbooks/tests/sync-docker.yaml -e "test_sync_docker_count=$test_sync_docker_count test_sync_docker_url_template=$test_sync_docker_url_template test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs"
 
 section "Summary"
-e SyncRepositories $logs/10-test-sync-repositories.log
-e PublishContentViews $logs/10-test-sync-repositories.log
-e PromoteContentViews $logs/10-test-sync-repositories.log
+e SyncRepositories $logs/10-test-sync-docker.log
+e PublishContentViews $logs/10-test-sync-docker.log
+e PromoteContentViews $logs/10-test-sync-docker.log
 
 junit_upload
