@@ -19,7 +19,7 @@
     - ../../conf/satperf.local.yaml
   vars:
     test_sync_docker_count: 2
-    test_sync_docker_url_template: "https://registry-1.docker.io*"
+    test_sync_docker_url_template: "https://registry-1.docker.io/"
     test_sync_docker_product: "test_sync_docker_product"
     test_sync_docker_le: "test_sync_docker_le"
     test_sync_docker_repo_template: "test_sync_docker_repo*"
