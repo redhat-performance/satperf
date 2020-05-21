@@ -24,7 +24,7 @@
     test_sync_docker_le: "test_sync_docker_le"
     test_sync_docker_repo_template: "test_sync_docker_repo*"
     test_sync_docker_cv_template: "test_sync_docker_cv*"
-    test_sync_docker_upstream_template: "busybox"   # FIXME - no asterix here means all repos with same upstream repo
+    test_sync_docker_upstream_template: "test_repo*"   # FIXME - no asterix here means all repos with same upstream repo
     test_sync_docker_max_sync_secs: 3600
   roles:
     - wait-for-task-script
