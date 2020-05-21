@@ -23,7 +23,6 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
-
 section "Checking environment"
 generic_environment_check
 
