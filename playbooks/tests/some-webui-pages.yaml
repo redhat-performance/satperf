@@ -11,16 +11,16 @@
   tasks:
     - name: "Get authenticity token"
       shell:
-        curl --cookie-jar curl.cookies --silent --insecure -X GET https://localhost/users/login | grep 'name="authenticity_token"' | sed 's/.*value="\([^"]\+\)".*/\1/'
+        curl --cookie-jar /root/curl.cookies --silent --insecure -X GET https://localhost/users/login | grep 'name="csrf-token"' | sed 's/.*content="\([a-zA-Z0-9/+=]\+\)".*/\1/'
       register: authenticity_token_cmd
-    - name: "Log in and populate cookies cache"
+    - name: "Log in"
       shell:
         curl https://localhost/users/login -X POST --data "utf8=%E2%9C%93&authenticity_token={{ authenticity_token_cmd.stdout | urlencode }}&login%5Blogin%5D={{ sat_user }}&login%5Bpassword%5D={{ sat_pass }}&commit=Log+In" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location
     - name: "Run measurement"
       shell: |
         for i in $( seq "{{ ui_pages_reloads }}" ); do
             out="/tmp/curl-{{ item.uri | replace('/', '_') | default('dashboard', true) }}-$i.output"
-            curl "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location -o $out || exit 2
+            curl --silent "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location -o $out || exit 2
             if ! grep --quiet -z "{{ item.assert }}" $out; then
                 echo "DEBUG >>>>>"
                 cat $out
@@ -29,13 +29,14 @@
             fi
         done
       loop:
-              #    'h1[^>]\+>\s\+Job invocations\s\+</h1'
         - uri: ''
           assert: 'h1[^>]\+>\s\+Overview\s\+</h1'
         - uri: 'job_invocations'
           assert: 'h1[^>]\+>\s\+Job invocations\s\+</h1'
         - uri: 'foreman_tasks/tasks'
-          assert: 'h1[^>]\+>\s\+Tasks\s\+</h1'
+          assert: 'foremanTasksReactRoot'
+        - uri: 'foreman_tasks/api/tasks?include_permissions=true'
+          assert: '"total"'
         - uri: 'hosts'
           assert: 'h1[^>]\+>\s\+Hosts\s\+</h1'
         - uri: 'templates/provisioning_templates'
@@ -47,20 +48,22 @@
         - uri: 'domains'
           assert: 'h1[^>]\+>\s\+Domains\s\+</h1'
         - uri: 'audits'
-          assert: 'h1[^>]\+>\s*Audits\s*</h1'
-        #- uri: 'katello/api/v2/subscriptions?organization_id={{ sat_orgid }}'
-        #  assert: '.results.:'
-        #- uri: 'katello/api/v2/products?organization_id={{ sat_orgid }}'
-        #  assert: '.results.:'
-        #- uri: 'katello/api/v2/content_views?nondefault=true&organization_id={{ sat_orgid }}'
-        #  assert: '.results.:'
-        #- uri: 'katello/api/v2/packages?organization_id={{ sat_orgid }}'
-        #  assert: '.results.:'
+          assert: 'react'   # This not cool, but what else?
+        - uri: 'audits?page=1&per_page=20&search='
+          assert: '"auditable_id"'
+        - uri: 'katello/api/v2/subscriptions?organization_id={{ sat_orgid }}'
+          assert: '.results.:'
+        - uri: 'katello/api/v2/products?organization_id={{ sat_orgid }}'
+          assert: '.results.:'
+        - uri: 'katello/api/v2/content_views?nondefault=true&organization_id={{ sat_orgid }}'
+          assert: '.results.:'
+        - uri: 'katello/api/v2/packages?organization_id={{ sat_orgid }}'
+          assert: '.results.:'
       register: run_curl
       ignore_errors: true
     - name: "Print results"
       debug:
-        msg: "WebUIPage{{ ui_pages_reloads }}_{{ item.item.uri | replace('/', '_') | default('dashboard', true) }} {{ item.start }} to {{ item.end }}"
+        msg: "WebUIPage{{ ui_pages_reloads }}_{{ item.item.uri | regex_replace('[^a-zA-Z0-9]', '_') | default('dashboard', true) }} {{ item.start }} to {{ item.end }}"
       loop: "{{ run_curl.results }}"
       when: "item.rc is defined and item.rc == 0"
 ...
