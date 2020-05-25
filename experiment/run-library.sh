@@ -15,7 +15,7 @@ fi
 
 opts=${opts:-"--forks 100 -i conf/20170625-gprfc019.ini"}
 opts_adhoc=${opts_adhoc:-"$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"}
-logs="$marker"
+logs="$( pwd )/$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
 satellite_version="${satellite_version:-N/A}"   # will be determined automatically by run-bench.sh
