@@ -42,8 +42,16 @@
   - name: install the katello 3.15
     shell: yum -y install katello
 
+  - name: construct installer command
+    set_fact:
+      installer_command: "foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }}"
+
+  - name: show installer command
+    debug:
+      var: installer_command
+
   - name: configure the katello 3.15
-    command: foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }}
+    command: "{{ installer_command }}"
     
   - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
     replace:
