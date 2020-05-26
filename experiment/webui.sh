@@ -23,7 +23,7 @@ generic_environment_check
 section "WebUI test"
 ap 10-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
 s $wait_interval
-ap 15-siege-webui.log -e "siege_result_json_file=$logs/15-siege-webui.json" playbooks/tests/siege-webui.yaml
+ap 15-siege-webui.log -e "siege_result_json_file=../../$logs/15-siege-webui.json" playbooks/tests/siege-webui.yaml
 
 section "Summary"
 # Showing results for playbooks/tests/some-webui-pages.yaml
