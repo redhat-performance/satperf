@@ -31,7 +31,7 @@ section "Checking environment"
 generic_environment_check
 
 section "Sync mixed repo"
-ap 10-test-sync-mixed.log playbooks/tests/sync-mixed.yaml -e "test_sync_mixed_count=$test_sync_mixed_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_iso_url_template=$test_sync_iso_url_template test_sync_docker_url_template=$test_sync_docker_url_template test_sync_mixed_max_sync_secs=$test_sync_mixed_max_sync_secs"
+ap 10-test-sync-mixed.log playbooks/tests/sync-mixed-repos-two-cvs.yaml -e "test_sync_mixed_count=$test_sync_mixed_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_iso_url_template=$test_sync_iso_url_template test_sync_docker_url_template=$test_sync_docker_url_template test_sync_mixed_max_sync_secs=$test_sync_mixed_max_sync_secs"
 
 section "Summary"
 e SyncRepositoriesYum $logs/10-test-sync-mixed.log
