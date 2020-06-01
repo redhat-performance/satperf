@@ -158,19 +158,19 @@
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_yum_to_cv
-      loop: "{{ range(1, test_sync_mixed_count+1)|list }}"
+      loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add ISO repositories to content views"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_iso_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_iso_to_cv
-      loop: "{{ range(1, test_sync_mixed_count+1)|list }}"
+      loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add Docker repositories to content views"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_docker_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_docker_to_cv
-      loop: "{{ range(1, test_sync_mixed_count+1)|list }}"
+      loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
 
     - name: "Publish content views"
