@@ -21,7 +21,7 @@
     test_sync_docker_repo_template: "test_sync_docker_repo*"
     test_sync_iso_repo_template: "test_sync_iso_repo*"
   roles:
-    ###- wait-for-task-script
+    - wait-for-task-script
   tasks:
     - debug:
         var: test_sync_repositories_url_template
