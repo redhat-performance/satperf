@@ -67,7 +67,7 @@
     - name: "Start Yum repos sync asynchronously"
       command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --async
-      loop: "{{ range(1, test_sync_mixed_count+1)|list }}"
+      loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_yum
       ignore_errors: true
 
