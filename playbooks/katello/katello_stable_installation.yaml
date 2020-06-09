@@ -4,6 +4,7 @@
   gather_facts: yes
   vars:
     - installer_additional_ops: ''
+    - run_after_install: ''
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
@@ -65,5 +66,7 @@
      content: |
              ForemanTasks.dynflow.config.db_pool_size = 30
 
-
+  - name: run post-install script if provided
+    shell: "{{ run_after_install }}"
+    when: run_after_install != ''
 
