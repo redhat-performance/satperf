@@ -4,7 +4,6 @@
       - '!all'
       - hardware
 - include_tasks: remove_home_partition.yaml
-  when: "extend_root_partition == 'true'"
 - include_tasks: extend_root_partition.yaml
   when: "extend_root_partition == 'true'"
 ...
