@@ -1,0 +1,35 @@
+---
+- hosts: kvm-hosts
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+  tasks:
+    - name: "Collect only minimum of facts"
+      setup:
+        gather_subset:
+          - '!all'
+          - min
+
+    - include_role:
+        name: ../common/roles/remove-home-extend-root
+      vars:
+        extend_root_partition: 'false'
+
+    - name: "Move VG content from /dev/sdb1"
+      command: pvmove "{{ vms_storage_pvs }}"
+      register: pvmove_cmd
+      failed_when: pvmove_cmd.rc != 0 and 'No data to move for' not in pvmove_cmd.stderr
+
+    - name: "Remove /dev/sdb1 from VG"
+      command: vgreduce "{{ ansible_lvm.lvs.root.vg }}" "{{ vms_storage_pvs }}"
+
+    #- name: "Extend root to remaining space in VG"
+    #  lvol:
+    #    vg: "{{ ansible_lvm.lvs.root.vg }}"
+    #    lv: "root"
+    #    size: 100%PVS
+    #    resizefs: true
+...
