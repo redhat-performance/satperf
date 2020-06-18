@@ -18,7 +18,7 @@
     bootstrap_password: "{{ sat_pass }}"
     bootstrap_hostgroup: "{{ content_hostgroup }}"
     bootstrap_operatingsystem: "{{ content_operatingsystem }}"
-    bootstrap_additional_args: "--force"
+    bootstrap_additional_args: ""
     bootstrap_rex_args: ""   # use tag 'REM' to install remote execution ssh key via bootstrap.py, use 'REM_ONLY' to just add it to registered system
     bootstrap_puppet_args: "--skip-puppet"   # use tag 'PUP' to also install puppet via bootstrap.py, or 'PUP_ONLY' to just add it to registered system
     bootstrap_katello_args: "--skip katello-agent"   # use tag 'KAT' to also install katello-agent via bootstrap.py, or 'KAT_ONLY' to just add it to registered system
@@ -153,7 +153,7 @@
         bootstrap_rex_args: "--rex"
       tags: REM
     - name: "Run bootstrap.py"
-      shell: "set -x; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }}{% endraw %}"
+      shell: "set -x; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }} --force{% endraw %}"
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: reg

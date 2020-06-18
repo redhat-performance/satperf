@@ -8,6 +8,7 @@ private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 wait_interval=${PARAM_wait_interval:-50}
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
+bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
@@ -69,7 +70,7 @@ log "Going to register $sum hosts in total. Make sure there is enough hosts avai
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register' bootstrap_retries=0"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='HostGroup' grepper='Register' bootstrap_retries=0 bootstrap_additional_args='$bootstrap_additional_args'"
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
     s $wait_interval
