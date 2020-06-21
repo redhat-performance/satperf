@@ -16,29 +16,29 @@
     - ../common/roles/ntp
   tasks:
   - name: disable & enable repos
-    shell: "{{ item }}"
+    command: "{{ item }}"
     with_items:
-     - subscription-manager repos --disable "*"
-     - subscription-manager repos --enable rhel-7-server-rpms
-     - subscription-manager repos --enable rhel-7-server-optional-rpms
-     - subscription-manager repos --enable rhel-7-server-extras-rpms
-     - yum install -y yum-utils
+      - subscription-manager repos --disable "*"
+      - subscription-manager repos --enable rhel-7-server-rpms
+      - subscription-manager repos --enable rhel-7-server-optional-rpms
+      - subscription-manager repos --enable rhel-7-server-extras-rpms
+      - yum install -y yum-utils
     when: ansible_distribution == "RedHat"
 
   - name: settup the server for installation
-    shell: "{{ item }}"
+    command: "{{ item }}"
     with_items:
-    - yum -y localinstall https://yum.theforeman.org/releases/2.0/el7/x86_64/foreman-release.rpm
-    - yum -y localinstall https://fedorapeople.org/groups/katello/releases/yum/3.15/katello/el7/x86_64/katello-repos-latest.rpm
-    - yum -y localinstall https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
-    - yum -y localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-    - yum -y install foreman-release-scl
+     - yum -y localinstall https://yum.theforeman.org/releases/2.0/el7/x86_64/foreman-release.rpm
+     - yum -y localinstall https://fedorapeople.org/groups/katello/releases/yum/3.15/katello/el7/x86_64/katello-repos-latest.rpm
+     - yum -y localinstall https://yum.puppet.com/puppet6-release-el-7.noarch.rpm
+     - yum -y localinstall https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+     - yum -y install foreman-release-scl
 
   - name: make a entry of IP & hostname in /etc/hosts file
     lineinfile:
-     path: /etc/hosts
-     line: '{{ ansible_default_ipv4.address }} {{ ansible_hostname }}'
-     create: yes
+      path: /etc/hosts
+      line: '{{ ansible_default_ipv4.address }} {{ ansible_hostname }}'
+      create: yes
 
   - name: query repos we have
     command: yum repolist
@@ -48,7 +48,7 @@
       var: yum_repolist_cmd.stdout_lines
 
   - name: install the katello 3.15
-    shell: yum -y install katello
+    command: yum -y install katello
 
   - name: construct installer command
     set_fact:
@@ -60,17 +60,17 @@
 
   - name: configure the katello 3.15
     command: "{{ installer_command }}"
-    
+
   - name: change the 'pool' setting in database.yml file  #workaround for https://projects.theforeman.org/issues/29370
     replace:
-     path: /etc/foreman/database.yml
-     regexp: 'pool: 5$'
-     replace: 'pool: 30'
-    
+      path: /etc/foreman/database.yml
+      regexp: 'pool: 5$'
+      replace: 'pool: 30'
+
   - name: create a file with content  #workaround for https://projects.theforeman.org/issues/29370
     copy:
-     dest: /usr/share/foreman/config/initializers/foreman-tasks-db-pool-size.rb
-     content: |
+      dest: /usr/share/foreman/config/initializers/foreman-tasks-db-pool-size.rb
+      content: |
              ForemanTasks.dynflow.config.db_pool_size = 30
 
   - name: run post-install script if provided
