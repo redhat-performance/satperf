@@ -40,6 +40,13 @@
      line: '{{ ansible_default_ipv4.address }} {{ ansible_hostname }}'
      create: yes
 
+  - name: query repos we have
+    command: yum repolist
+    register: yum_repolist_cmd
+  - name: show repos we have
+    debug:
+      var: yum_repolist_cmd.stdout_lines
+
   - name: install the katello 3.15
     shell: yum -y install katello
 
