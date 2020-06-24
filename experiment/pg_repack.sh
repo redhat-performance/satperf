@@ -79,6 +79,20 @@ s $wait_interval
 
 # WebUI
 ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
+e WebUIPage10_dashboard $logs/62-some-webui-pages.log
+e WebUIPage10_job_invocations $logs/62-some-webui-pages.log
+e WebUIPage10_foreman_tasks_tasks $logs/62-some-webui-pages.log
+e WebUIPage10_foreman_tasks_api_tasks_include_permissions_true $logs/62-some-webui-pages.log
+e WebUIPage10_hosts $logs/62-some-webui-pages.log
+e WebUIPage10_templates_provisioning_templates $logs/62-some-webui-pages.log
+e WebUIPage10_hostgroups $logs/62-some-webui-pages.log
+e WebUIPage10_smart_proxies $logs/62-some-webui-pages.log
+e WebUIPage10_domains $logs/62-some-webui-pages.log
+e WebUIPage10_audits $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_subscriptions_organization_id_1 $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_products_organization_id_1 $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_content_views_nondefault_true_organization_id_1 $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_packages_organization_id_1 $logs/62-some-webui-pages.log
 s $wait_interval
 
 # Inventory upload
