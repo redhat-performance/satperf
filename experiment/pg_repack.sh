@@ -29,7 +29,7 @@ opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
-extended=false generic_environment_check
+generic_environment_check false
 a 00-restart.log satellite6 -m "shell" -a "foreman-maintain service restart"
 s $wait_interval
 
