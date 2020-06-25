@@ -34,8 +34,8 @@ fi
 function _vercmp() {
     # FIXME: This parser sucks. Would be better to have rpmdev-vercmp once
     # CID-5112 is resolved
-    ver1=$( echo "$1" | sed 's/^satellite-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
-    ver2=$( echo "$2" | sed 's/^satellite-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+    ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+    ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
     echo "Comparing $ver1 vs. $ver2"
     ver1_1=$( echo "$ver1" | cut -d '.' -f 1 )
     ver1_2=$( echo "$ver1" | cut -d '.' -f 2 )
@@ -98,6 +98,8 @@ function generic_environment_check() {
     katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
     a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
     satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
+    log "katello_version = $katello_version"
+    log "satellite_version = $satellite_version"
 
     set +e   # Quit "-e" mode as from now on failure is not fatal
     s $( expr 3 \* $wait_interval )
