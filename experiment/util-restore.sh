@@ -11,6 +11,6 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
-section "Backup"
-a 00-backup.log satellite6 -m "shell" -a "rm -rf /root/backup /tmp/backup; mkdir /tmp/backup; satellite-maintain backup offline --skip-pulp-content --assumeyes /tmp/backup; mv /tmp/backup /root/"
+section "Restore"
+a 00-backup.log satellite6 -m "shell" -a "rm -rf /tmp/backup; cp -r /root/backup /tmp/; satellite-maintain restore --assumeyes /tmp/backup/*; rm -rf /tmp/backup"
 a 00-hammer-ping.log satellite6 -m "shell" -a "hammer -u {{ sat_user }} -p {{ sat_pass }} ping"
