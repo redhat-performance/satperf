@@ -153,7 +153,7 @@
         bootstrap_rex_args: "--rex"
       tags: REM
     - name: "Run bootstrap.py"
-      shell: "set -x; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }} --force{% endraw %}"
+      shell: "set -x; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }} --force | tee /root/registration.log 2>&1{% endraw %}"
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: reg
