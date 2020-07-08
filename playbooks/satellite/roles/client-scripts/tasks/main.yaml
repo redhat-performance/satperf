@@ -5,10 +5,12 @@
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     register: content_operatingsystem_command
+    when: "content_operatingsystem is not defined"
   - name: "Set operating system we are going to hardcode into clients.yaml"
     set_fact:
         content_operatingsystem: "{{ content_operatingsystem_command.stdout }}"
     run_once: true
+    when: "content_operatingsystem is not defined"
 
   - name: "Distribute clients.yaml"
     template:
