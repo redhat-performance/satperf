@@ -12,6 +12,19 @@
     run_once: true
     when: "content_operatingsystem is not defined"
 
+  - name: "Make sure operating system exists in Satellite"
+    command:
+      hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" os list
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+    register: hammer_os_list_command
+  - name: "Create operating system on Satellite"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" os create --architectures x86_64 --family Redhat --name "{{ content_operatingsystem.split(' ')[0] }}" --major "{{ content_operatingsystem.split(' ')[1].split('.')[0] }}" --minor "{{ content_operatingsystem.split(' ')[1].split('.')[1] }}"
+    when: "',{{ content_operatingsystem }},' not in hammer_os_list_command.stdout"
+    delegate_to: "{{ groups['satellite6']|first }}"
+    run_once: true
+
   - name: "Distribute clients.yaml"
     template:
       src: "files/clients.yaml.j2"
