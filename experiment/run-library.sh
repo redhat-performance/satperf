@@ -2,7 +2,8 @@
 
 set -o pipefail
 ###set -x
-set -e
+# Disable `set -e` for today (see `date -d @1594369339` for timestamp interpretation)
+[ "$( date +%s )" -gt 1594369339 ] && set -e
 
 
 # We need to add an ID to run-bench runs to be able to filter out results from multiple runs. This ID will be appended as
