@@ -50,9 +50,15 @@
   - name: install the katello 3.15
     command: yum -y install katello
 
+  - name: configure the katello 3.14 for REX's
+    shell: "{{ item }}"
+    with_items:
+     - yum install epel-release -y
+     - yum install ansible -y
+
   - name: construct installer command
     set_fact:
-      installer_command: "foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }}"
+      installer_command: "foreman-installer --scenario katello --skip-checks-i-know-better --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }} {{ installer_additional_ops }} --enable-foreman-plugin-ansible --enable-foreman-proxy-plugin-ansible --enable-foreman-plugin-remote-execution --enable-foreman-proxy-plugin-remote-execution-ssh"
 
   - name: show installer command
     debug:
