@@ -83,7 +83,7 @@
     - name: "Remove unused Logical Volumes"
       lvol:
         lv: "{{ item }}"
-        vg: "{{ vm_vg }}"
+        vg: "{{ vms_vg }}"
         state: absent
         force: yes
       with_items: "{{ our_vms }}"
