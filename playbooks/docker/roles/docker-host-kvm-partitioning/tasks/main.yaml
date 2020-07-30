@@ -33,7 +33,9 @@
       lv: home
       state: absent
       force: yes
+    when: "ansible_lvm.lvs.home is defined"
   - name: "Set docker_host_vg for later"
     set_fact:
       docker_host_vg: "{{ ansible_lvm.lvs.home.vg }}"
+    when: "ansible_lvm.lvs.home is defined"
 ...
