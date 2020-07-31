@@ -64,7 +64,7 @@ s $wait_interval
 section "Synchronise capsules"
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
-for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
+for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v -e '1' ); do
     h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
 done
 s $wait_interval
@@ -135,7 +135,7 @@ s $wait_interval
 section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
-for capsule_id in $( echo $tmp | cut -d ',' -f 1 | grep -v '1' ); do
+for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
     h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
 done
 s $wait_interval
