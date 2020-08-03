@@ -62,10 +62,10 @@
     when: "'-r730xd.rdu.' in inventory_hostname"
 
   # Systems ...-1029p.rdu....
-  #   enp94s0f1 ... private
+  #   enp94s0f0 ... private
   #   eno1 ... public
   - shell: |
-      for nic in eno2 enp94s0f0 enp94s0f2 enp94s0f3 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
+      for nic in eno2 enp94s0f1 enp94s0f2 enp94s0f3 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
           ip addr del $addr dev $nic
