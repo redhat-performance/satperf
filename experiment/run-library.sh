@@ -150,6 +150,7 @@ function status_data_create() {
     sd_run="$8"
     sd_file="$sd_log.json"
     sd_additional="$9"
+    sd_hostname="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
 
     # Create status data file
     rm -f "$sd_file"
@@ -161,6 +162,7 @@ function status_data_create() {
         "parameters.version=$sd_sat_ver" \
         "parameters.version-y-stream=$sd_sat_ver_short" \
         "parameters.run=$sd_run" \
+        "parameters.hostname=$sd_hostname" \
         "results.log=$sd_log" \
         "results.rc=$sd_rc" \
         "results.duration=$sd_duration" \
@@ -221,6 +223,7 @@ function status_data_create() {
     echo "command: $sd_cli" >>$tmp
     echo "satellite version: $sd_sat_ver" >>$tmp
     echo "katello version: $sd_kat_ver" >>$tmp
+    echo "hostname: $sd_hostname" >>$tmp
     if [ "$sd_result" != 'ERROR' ]; then
         echo "result determination log:" >>$tmp
         cat "$sd_result_log" >>$tmp
