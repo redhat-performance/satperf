@@ -48,14 +48,18 @@
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_content_view_name }}" --organization-id "{{ sat_orgid }}"
     when: "sat_repos_sync == 'sync'"
 
+  - name: "List domains"
+    command:
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" --csv --no-headers domain list --organization "{{ sat_org }}" --location "{{ sat_location }}"
+    register: hammer_domain_list_cmd
   - name: "Create client domain (on 6.4+)"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}" --location "{{ sat_location }}"
-    when: "sat_version is version('6.3', '>')"
+    when: "sat_version is version('6.3', '>') and ','+client_domain not in hammer_domain_list_cmd.stdout"
   - name: "Create client domain (on 6.3-)"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" domain create --name "{{ client_domain }}" --organizations "{{ sat_org }}" --locations "{{ sat_location }}"
-    when: "sat_version is version('6.3', '<=')"
+    when: "sat_version is version('6.3', '<=') and ','+client_domain not in hammer_domain_list_cmd.stdout"
 
   - name: "Create host group"
     command:
