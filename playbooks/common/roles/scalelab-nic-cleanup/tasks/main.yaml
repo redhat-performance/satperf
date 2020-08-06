@@ -1,6 +1,6 @@
 ---
-  # Systems ...-6048r.rdu....
-  - shell: |
+  - name: "Cleaning systems ...-6048r.rdu...."
+    shell: |
       for nic in ens3f1 enp5s0f1 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -11,8 +11,8 @@
       done
     when: "'-6048r.rdu.' in inventory_hostname"
 
-  # Systems ...-r930.rdu....
-  - shell: |
+  - name: "Cleaning systems ...-r930.rdu...."
+    shell: |
       for nic in em2 p1p1 p1p2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -23,8 +23,8 @@
       done
     when: "'-r930.rdu.' in inventory_hostname"
 
-  # Systems ...-r630.rdu....
-  - shell: |
+  - name: "Cleaning systems ...-r630.rdu...."
+    shell: |
       for nic in p2p2 em2 em3 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -35,8 +35,8 @@
       done
     when: "'-r630.rdu.' in inventory_hostname"
 
-  # Systems ...-r620.rdu2....
-  - shell: |
+  - name: "Cleaning systems ...-r620.rdu2...."
+    shell: |
       for nic in p2p4 em1 em2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -47,10 +47,10 @@
       done
     when: "'-r620.rdu2.' in inventory_hostname"
 
-  # Systems ...-r730xd.rdu....
-  #   em1 ... private
-  #   em3 ... public
-  - shell: |
+  - name: "Cleaning systems ...-r730xd.rdu...."
+    # em1 ... private
+    # em3 ... public
+    shell: |
       for nic in p4p1 p4p2 em2 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -61,10 +61,10 @@
       done
     when: "'-r730xd.rdu.' in inventory_hostname"
 
-  # Systems ...-1029p.rdu2....
-  #   enp94s0f0 ... private
-  #   eno1 ... public
-  - shell: |
+  - name: "Cleaning systems ...-1029p.rdu2...."
+    # enp94s0f0 ... private
+    # eno1 ... public
+    shell: |
       for nic in eno2 enp94s0f1 enp94s0f2 enp94s0f3 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -75,10 +75,10 @@
       done
     when: "'-1029p.rdu2.' in inventory_hostname"
 
-    # Systems ...-r620.rdu2....
-    #   em1 ... private
-    #   em3 ... public
-  - shell: |
+  - name: "Cleaning systems ...-r620.rdu2...."
+    # em1 ... private
+    # em3 ... public
+    shell: |
       for nic in em2 em4 p2p1 p2p2 p2p3 p2p4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
         for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
@@ -89,18 +89,18 @@
       done
     when: "'-r620.rdu2.' in inventory_hostname"
 
-  - name: Check for interface file presence
+  - name: "Check for interface file presence"
     stat:
       path: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
     register: iffile_stat
 
-  - name: Create a new interface file
+  - name: "Create a new interface file"
     block:
     - name: Get the MAC address of the {{ nic_private }}
       command: cat /sys/class/net/{{ nic_private }}/address
       register: private_nic_mac_address
 
-    - name: Build a new interface file
+    - name: "Build a new interface file"
       template:
         src: templates/ifcfg-ethx.j2
         dest: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
@@ -111,22 +111,22 @@
     when:
       iffile_stat.stat.exists == False
 
-  - name: Ensure ONBOOT=yes
+  - name: "Ensure ONBOOT=yes"
     lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
       regexp: "^ONBOOT="
       line: "ONBOOT=yes"
-  - name: Ensure BOOTPROTO=static
+  - name: "Ensure BOOTPROTO=static"
     lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
       regexp: "^BOOTPROTO="
       line: "BOOTPROTO=static"
-  - name: Ensure correct IP address
+  - name: "Ensure correct IP address"
     lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
       regexp: "^IPADDR="
       line: "IPADDR={{ ip }}"
-  - name: Ensure correct netmask
+  - name: "Ensure correct netmask"
     lineinfile:
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
       regexp: "^NETMASK="
