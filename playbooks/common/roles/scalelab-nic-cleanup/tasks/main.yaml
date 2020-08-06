@@ -35,7 +35,7 @@
       done
     when: "'-r630.rdu.' in inventory_hostname"
 
-  # Systems ...-r620.rdu....
+  # Systems ...-r620.rdu2....
   - shell: |
       for nic in p2p4 em1 em2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
         ip link set $nic down
@@ -45,7 +45,7 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-r620.rdu.' in inventory_hostname"
+    when: "'-r620.rdu2.' in inventory_hostname"
 
   # Systems ...-r730xd.rdu....
   #   em1 ... private
@@ -61,7 +61,7 @@
       done
     when: "'-r730xd.rdu.' in inventory_hostname"
 
-  # Systems ...-1029p.rdu....
+  # Systems ...-1029p.rdu2....
   #   enp94s0f0 ... private
   #   eno1 ... public
   - shell: |
@@ -73,7 +73,7 @@
         rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
         ip link delete dev $nic || true
       done
-    when: "'-1029p.rdu.' in inventory_hostname"
+    when: "'-1029p.rdu2.' in inventory_hostname"
 
     # Systems ...-r620.rdu2....
     #   em1 ... private
@@ -111,29 +111,26 @@
     when:
       iffile_stat.stat.exists == False
 
-  - name: Ensure correct config options in the already existing interface file
-    block:
-    - name: Ensure ONBOOT=yes
-      lineinfile:
-        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-        regexp: "^ONBOOT="
-        line: "ONBOOT=yes"
-    - name: Ensure BOOTPROTO=static
-      lineinfile:
-        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-        regexp: "^BOOTPROTO="
-        line: "BOOTPROTO=static"
-    - name: Ensure correct IP address
-      lineinfile:
-        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-        regexp: "^IPADDR="
-        line: "IPADDR={{ ip }}"
-    - name: Ensure correct netmask
-      lineinfile:
-        dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
-        regexp: "^NETMASK="
-        line: "NETMASK=255.0.0.0"
-    when: iffile_created.changed == False
+  - name: Ensure ONBOOT=yes
+    lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+      regexp: "^ONBOOT="
+      line: "ONBOOT=yes"
+  - name: Ensure BOOTPROTO=static
+    lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+      regexp: "^BOOTPROTO="
+      line: "BOOTPROTO=static"
+  - name: Ensure correct IP address
+    lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+      regexp: "^IPADDR="
+      line: "IPADDR={{ ip }}"
+  - name: Ensure correct netmask
+    lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+      regexp: "^NETMASK="
+      line: "NETMASK=255.0.0.0"
 
   - name: "Kill all dhclients (network service was not restarting)"
     command:
