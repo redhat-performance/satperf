@@ -5,11 +5,6 @@
       that: "groups['satellite6']|length == 1"
       msg: "Satellite not specified or too many of them specified"
     when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
-  - name: "Make sure only one containerized server is specified"
-    assert:
-      that: "groups['containerized']|length == 1"
-      msg: "Containerized server not specified or too many of them specified"
-    when: "'containerized' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
 
   # Make sure we have key deployed
   - name: "Deploy key"
@@ -100,18 +95,6 @@
       port: 22
       timeout: 10
     when: "'satellite6' in groups and ( ( ignore_satellite is not defined or ignore_satellite != 'true' ) and hostvars[groups['satellite6']|first].ip is defined )"
-  - name: "We can ping containerized server"
-    wait_for:
-      host: "{{ groups['containerized']|first }}"
-      port: 22
-      timeout: 10
-    when: "'containerized' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
-  - name: "We can ping containerized server via special network"
-    wait_for:
-      host: "{{ hostvars[groups['containerized']|first].ip }}"
-      port: 22
-      timeout: 10
-    when: "'containerized' in groups and ( ( ignore_satellite is not defined or ignore_satellite != 'true' ) and hostvars[groups['containerized']|first].ip is defined )"
   - name: "We can ping NTP server"
     command:
       ping -c 3 "{{ ntp_server }}"
