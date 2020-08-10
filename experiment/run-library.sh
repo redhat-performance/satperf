@@ -120,13 +120,9 @@ function status_data_create() {
     # to historical storage (ElasticSearch) and add test result to
     # junit.xml for further analysis.
 
-    echo "DEBUG: PARAM_inventory = $PARAM_inventory ; hostname = $( hostname )"
-
     debug_log="$2.status_data_create_debug"
     (
     set -x
-
-    echo "DEBUG: PARAM_inventory = $PARAM_inventory ; hostname = $( hostname )"
 
     [ -z "$PARAM_elasticsearch_host" ] && return 0
 
@@ -137,8 +133,6 @@ function status_data_create() {
 
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
-
-    echo "DEBUG: PARAM_inventory = $PARAM_inventory ; hostname = $( hostname )"
 
     # Load variables
     sd_section=${SECTION:-default}
@@ -156,7 +150,9 @@ function status_data_create() {
     sd_run="$8"
     sd_file="$sd_log.json"
     sd_additional="$9"
-    sd_hostname="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    if [ -n "$PARAM_inventory" ]; then
+        sd_hostname="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    fi
 
     # Create status data file
     rm -f "$sd_file"
