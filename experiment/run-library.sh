@@ -120,9 +120,13 @@ function status_data_create() {
     # to historical storage (ElasticSearch) and add test result to
     # junit.xml for further analysis.
 
+    echo "DEBUG: PARAM_inventory = $PARAM_inventory ; hostname = $( hostname )"
+
     debug_log="$2.status_data_create_debug"
     (
     set -x
+
+    echo "DEBUG: PARAM_inventory = $PARAM_inventory ; hostname = $( hostname )"
 
     [ -z "$PARAM_elasticsearch_host" ] && return 0
 
@@ -133,6 +137,8 @@ function status_data_create() {
 
     # Activate tools virtualenv
     source insights-perf/venv/bin/activate
+
+    echo "DEBUG: PARAM_inventory = $PARAM_inventory ; hostname = $( hostname )"
 
     # Load variables
     sd_section=${SECTION:-default}
