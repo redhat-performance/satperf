@@ -1,102 +1,28 @@
 ---
-  - name: "Cleaning systems ...-6048r.rdu2...."
+  - name: "Generic cleanup"
     shell: |
-      for nic in ens3f1 enp5s0f1 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
+      for nic in $( ip l show | grep '^[0-9]' | sed 's/^[0-9]\+: \([^ ]\+\): .*$/\1/' ); do
+          if [ "$nic" -eq "lo" -o "$nic" -eq "{{ nic_private }}" -o "$nic" -eq "{{ nic_public }}" ]; then
+              echo "Skipping $nic as it is protected one"
+              continue
+          fi
+          ip link set "$nic" down
+          for addr in $( ip a show dev "$nic" scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
+              ip addr del "$addr" dev "$nic"
+          done
+          rm -rf "/etc/sysconfig/network-scripts/ifcfg-$nic"
+          ip link delete dev "$nic"
       done
-    when: "'-6048r.rdu2.' in inventory_hostname"
-
-  - name: "Cleaning systems ...-r930.rdu2...."
-    shell: |
-      for nic in em2 p1p1 p1p2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
-      done
-    when: "'-r930.rdu2.' in inventory_hostname"
-
-  - name: "Cleaning systems ...-r630.rdu2...."
-    shell: |
-      for nic in p2p2 em2 em3 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
-      done
-    when: "'-r630.rdu2.' in inventory_hostname"
-
-  - name: "Cleaning systems ...-r620.rdu2...."
-    shell: |
-      for nic in p2p4 em1 em2 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
-      done
-    when: "'-r620.rdu2.' in inventory_hostname"
-
-  - name: "Cleaning systems ...-r730xd.rdu2...."
-    # em1 ... private
-    # em3 ... public
-    shell: |
-      for nic in p4p1 p4p2 em2 em4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
-      done
-    when: "'-r730xd.rdu2.' in inventory_hostname"
-
-  - name: "Cleaning systems ...-1029p.rdu2...."
-    # enp94s0f0 ... private
-    # eno1 ... public
-    shell: |
-      for nic in eno2 enp94s0f1 enp94s0f2 enp94s0f3 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
-      done
-    when: "'-1029p.rdu2.' in inventory_hostname"
-
-  - name: "Cleaning systems ...-r620.rdu2...."
-    # em1 ... private
-    # em3 ... public
-    shell: |
-      for nic in em2 em4 p2p1 p2p2 p2p3 p2p4 $( ip a | grep '^[0-9]\+:' | sed 's/^[0-9]\+: \([^:]\+\):.*/\1/' | grep '\..*@' | cut -d '@' -f 1 ); do
-        ip link set $nic down
-        for addr in $( ip a show dev $nic scope global | grep '^\s\+inet ' | sed 's/\s\+inet \([0-9.]\+\/[0-9]\+\) .*/\1/' ); do
-          ip addr del $addr dev $nic
-        done
-        rm -rf /etc/sysconfig/network-scripts/ifcfg-$nic
-        ip link delete dev $nic || true
-      done
-    when: "'-r620.rdu2.' in inventory_hostname"
+      true
 
   - name: "Check for interface file presence"
     stat:
       path: "/etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}"
-    register: iffile_stat
+    register: if_file_stat
 
   - name: "Create a new interface file"
     block:
-    - name: Get the MAC address of the {{ nic_private }}
+    - name: "Get the MAC address of the {{ nic_private }}"
       command: cat /sys/class/net/{{ nic_private }}/address
       register: private_nic_mac_address
 
@@ -107,9 +33,9 @@
         owner: root
         group: root
       register:
-        iffile_created
+        if_file_created
     when:
-      iffile_stat.stat.exists == False
+      if_file_stat.stat.exists == False
 
   - name: "Ensure ONBOOT=yes"
     lineinfile:
