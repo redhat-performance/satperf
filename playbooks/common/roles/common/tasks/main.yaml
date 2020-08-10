@@ -56,6 +56,20 @@
       enabled: no
     when: firewalld_is_installed.rc == 0
 
+  # Disable iptables service
+  - name: "Check if iptables-services is installed"
+    command:
+      rpm -q iptables-services
+    register: iptables_is_installed
+    failed_when: iptables_is_installed.rc > 1
+    changed_when: no
+  - name: "Disable iptables service"
+    service:
+      name: iptables
+      state: stopped
+      enabled: no
+    when: iptables_is_installed.rc == 0
+
   # Check SELinux
   - name: "SELinux is in Enforcing with Tragetted policy"
     selinux:
