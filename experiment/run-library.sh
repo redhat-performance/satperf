@@ -73,7 +73,9 @@ function vercmp_ge() {
 
 function measurement_add() {
     python -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
-    status_data_create "$@"
+    if [ "$skip_measurement" != "true" ]; then
+        status_data_create "$@"
+    fi
 }
 function measurement_row_field() {
     python -c "import csv; import sys; reader=csv.reader(sys.stdin); print list(reader)[0][int(sys.argv[1])-1]" $1
