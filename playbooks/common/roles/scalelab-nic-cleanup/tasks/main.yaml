@@ -1,8 +1,13 @@
 ---
-  - name: "Generic cleanup"
+  - name: "Warn if we do not have NICs configured"
+    assert:
+      that:
+        - "nic_public is defined"
+        - "nic_private is defined"
+  - name: "Remove all the interfaces we do not know"
     shell: |
-      for nic in $( ip l show | grep '^[0-9]' | sed 's/^[0-9]\+: \([^ ]\+\): .*$/\1/' ); do
-          if [ "$nic" -eq "lo" -o "$nic" -eq "{{ nic_private }}" -o "$nic" -eq "{{ nic_public }}" ]; then
+      for nic in $( ip l show | grep '^[0-9]' | sed 's/^[0-9]\+: \([^@ ]\+\)\(@[^ ]\+\)\?: .*$/\1/' ); do
+          if [ "$nic" = "lo" -o "$nic" = "{{ nic_private }}" -o "$nic" = "{{ nic_public }}" ]; then
               echo "Skipping $nic as it is protected one"
               continue
           fi
