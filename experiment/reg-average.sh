@@ -33,7 +33,7 @@ for f in $@; do
         fi
         [ "$( expr $end - $begin )" -lt 50 ] \
           && echo "WARNING: On '$row', it took suspiciously little ($( expr $end - $begin ) seconds)"
-        let duration+=$( expr $end - $begin )
+        let duration+=$( expr $end - $begin ) || true
         let count+=1
     done
     echo "min in $f: $begin_min"
