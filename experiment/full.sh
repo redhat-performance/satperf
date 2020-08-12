@@ -30,6 +30,7 @@ opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 section "Checking environment"
 ###generic_environment_check
+set +e   # DELME
 
 
 section "Prepare for Red Hat content"
