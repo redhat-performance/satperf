@@ -178,7 +178,7 @@
   - name: "Docker storage related config ready to be recreated"
     shell: |
       rm -rf /var/lib/docker/*
-      rm -f /etc/sysconfig/docker-storage
+      rm -f /etc/sysconfig/docker-storage-setup
 
   # Configure docker storage
   - name: "docker-storage-setup configured to use Devicemapper direct LVM"
@@ -217,7 +217,7 @@
       line: "STORAGE_DRIVER='overlay'"
     when: "docker_host_storage_driver == 'overlay'"
 
-  # Configure docker storage - generate /etc/sysconfig/docker-storage
+  # Configure docker storage - generate /etc/sysconfig/docker-storage-setup
   - name: "docker-storage-setup"
     command:
       docker-storage-setup
