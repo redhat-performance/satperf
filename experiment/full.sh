@@ -24,7 +24,7 @@ ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 do="Default Organization"
 dl="Default Location"
 
-opts="--forks 100 -i $inventory --private-key $private_key"
+opts="-i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
