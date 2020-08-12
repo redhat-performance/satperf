@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    test_generate_applicability_repeats: 5
+    test_generate_applicability_repeats: 20
     test_generate_applicability_timeout: 100
   roles:
     - wait-for-task-script
