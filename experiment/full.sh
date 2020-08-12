@@ -143,7 +143,8 @@ section "Synchronise capsules again do not measure"   # We just added up2date co
 
 section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
-h 42-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
+h_out "--no-headers --csv domain list --search 'name = {{ client_domain }}'" | grep --quiet '^[0-9]\+,' \
+    || h 42-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
 tmp=$( mktemp )
 h_out "--no-headers --csv location list --organization '$do'" >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
