@@ -247,28 +247,4 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
 done
 
 
-###section "Formatting results"
-###table_row "01-manifest-upload-[0-9]\+.log" "Manifest upload"
-###table_row "12-repo-sync-rhel7.log" "Sync RHEL7 (immediate)"
-###table_row "12-repo-sync-rhel6.log" "Sync RHEL6 (on-demand)"
-###table_row "12-repo-sync-rhel7optional.log" "Sync RHEL7 Optional (on-demand)"
-###table_row "21-cv-all-publish.log" "Publish big CV"
-###table_row "23-cv-all-promote-[0-9]\+.log" "Promote big CV"
-###table_row "33-cv-filtered-publish.log" "Publish smaller filtered CV"
-###table_row "44-register-[0-9]\+.log" "Register bunch of containers" "Register"
-###table_row "52-rex-date.log" "ReX 'date' on all containers"
-###table_row "53-rex-sm-facts-update.log" "ReX 'subscription-manager facts --update' on all containers"
-###table_row "54-rex-katello-package-upload.log" "ReX 'katello-package-upload --force' on all containers"
-###table_row "60-generate-applicability.log" "Generate errata applicability on all profiles" "GenerateApplicability"
-###table_row "61-hammer-list.log" "Run hammer host list --per-page 100" "HammerHostList"
-###for i in dashboard job_invocations foreman_tasks_tasks hosts templates_provisioning_templates hostgroups smart_proxies domains; do
-###    table_row "62-some-webui-pages.log" "UI page reload on $i" "WebUIPage${ui_pages_reloads}_${i}"
-###done
-###for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -nu ); do
-###    table_row "$concurency-PuppetOne.*\.log" "Registering $concurency * <hosts> Puppet clients; scenario 'One'" "RegisterPuppet"
-###done
-###for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -nu ); do
-###    table_row "$concurency-PuppetBunch.*\.log" "Registering $concurency * <hosts> Puppet clients; scenario 'Bunch'" "RegisterPuppet"
-###done
-
 junit_upload
