@@ -7,7 +7,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    ui_pages_reloads: 10
+    ui_pages_reloads: 20
   tasks:
     - name: "Get authenticity token"
       shell:
