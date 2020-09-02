@@ -62,6 +62,11 @@
       dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
       regexp: "^NETMASK="
       line: "NETMASK=255.0.0.0"
+  - name: "Ensure bridge is not defined"
+    lineinfile:
+      dest: /etc/sysconfig/network-scripts/ifcfg-{{ nic_private }}
+      regexp: "^BRIDGE="
+      state: "absent"
 
   - name: "Kill all dhclients (network service was not restarting)"
     command:
