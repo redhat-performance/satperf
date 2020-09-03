@@ -148,6 +148,11 @@
     shell: |
       lvs --separator ':' "/dev/mapper/{{ docker_host_vg }}" | grep '^\s*docker-pool:' \
         && lvremove --force "/dev/mapper/{{ docker_host_vg }}-docker--pool" || true
+    when: "docker_host_storage_driver in ('devicemapper', 'overlay')"
+  - name: "Remove loopback mounted sparse file"
+    shell:
+      rm -rf /var/lib/docker/*
+    when: "docker_host_storage_driver in ('loopback')"
 
   # Cleanup Overlay FS configuration if present
   - name: "Check if we have an Overlay configured"
@@ -156,6 +161,7 @@
     register: overlay_present
     check_mode: no
     ignore_errors: True
+    when: "docker_host_storage_driver == 'overlay'"
   - name: "Unmount the partition"
     mount:
       name: "{{ item }}"
@@ -163,17 +169,17 @@
     with_items:
       - /var/lib/docker
       - "/dev/{{ docker_host_vg }}/docker"
-    when: overlay_present.stat.exists == true
+    when: "docker_host_storage_driver == 'overlay' and overlay_present.stat.exists == true"
   - name: "Cleanup /etc/fstab"
     lineinfile:
       name: /etc/fstab
       regexp: '^/dev/{{ docker_host_vg }}/docker'
       state: absent
-    when: overlay_present.stat.exists == true
+    when: "docker_host_storage_driver == 'overlay' and overlay_present.stat.exists == true"
   - name: "Remove overlay device"
     command:
       lvremove -f "{{ docker_host_vg }}"
-    when: overlay_present.stat.exists == true
+    when: "docker_host_storage_driver == 'overlay' and overlay_present.stat.exists == true"
 
   - name: "Docker storage related config ready to be recreated"
     shell: |
@@ -214,8 +220,22 @@
     lineinfile:
       dest: /etc/sysconfig/docker-storage-setup
       create: yes
+      regexp: "^STORAGE_DRIVER="
       line: "STORAGE_DRIVER='overlay'"
     when: "docker_host_storage_driver == 'overlay'"
+
+  # Configure docker storage - loopback mounted sparse file
+  - name: "Remove --selinux-enabled from docker config"
+    command:
+      sed -i '/OPTIONS=/s/--selinux-enabled//' /etc/sysconfig/docker
+    when: "docker_host_storage_driver == 'loopback'"
+  - name: "docker-storage-setup configured to use loopback mounted sparse file"
+    lineinfile:
+      dest: /etc/sysconfig/docker-storage-setup
+      create: yes
+      regexp: "^STORAGE_DRIVER="
+      line: "STORAGE_DRIVER=''"
+    when: "docker_host_storage_driver == 'loopback'"
 
   # Configure docker storage - generate /etc/sysconfig/docker-storage-setup
   - name: "docker-storage-setup"
