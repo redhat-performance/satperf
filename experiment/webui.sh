@@ -8,8 +8,7 @@ private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 wait_interval=${PARAM_wait_interval:-50}
 
-#ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
-ui_pages_reloads="20"
+ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 
 do="Default Organization"
 dl="Default Location"
