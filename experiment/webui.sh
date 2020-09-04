@@ -17,8 +17,8 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root"
 
 
-section "Checking environment"
-generic_environment_check
+#section "Checking environment"
+#generic_environment_check
 
 section "WebUI test"
 ap 10-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
