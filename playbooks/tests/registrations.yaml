@@ -113,6 +113,7 @@
       #  seconds: "{{ resting }}"
       command:
         sleep "{{ resting }}"
+      run_once: true
 
     # FIXME: Takes into account start/end time from only one (random) docker host (should from min(start) to max(end))
     - debug:
