@@ -39,11 +39,11 @@ opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 #s $wait_interval
 
 
-#section "Sync Tools repo"   # do not measure because of unpredictable network latency
-#h regs-30-sat-tools-product-create.log "product create --organization '$do' --name SatToolsProduct"
-#h regs-30-repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-#h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
-#s $wait_interval
+section "Sync Tools repo"   # do not measure because of unpredictable network latency
+h regs-30-sat-tools-product-create.log "product create --organization '$do' --name SatToolsProduct"
+h regs-30-repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
+h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
+s $wait_interval
 
 
 section "Prepare for registrations"
