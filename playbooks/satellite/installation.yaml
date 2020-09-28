@@ -15,7 +15,7 @@
     ###- satellite-ec2-partitioning
     - ../common/roles/remove-home-extend-root
     - setup
-    #- enable-remote-exec-by-ip
+    - enable-remote-exec-by-ip
     - ../common/roles/enlarge-arp-table
     - puppet-autosign
     - role: satellite-populate
