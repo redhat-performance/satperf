@@ -27,7 +27,7 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
-
+: '
 section "Checking environment"
 generic_environment_check
 
@@ -139,7 +139,7 @@ for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
     h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
 done
 s $wait_interval
-
+'
 
 section "Prepare for registrations"
 ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
