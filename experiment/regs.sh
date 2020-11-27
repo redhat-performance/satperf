@@ -49,16 +49,41 @@ s $wait_interval
 
 section "Prepare for registrations"
 ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
-h regs-40-hostgroup-create.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name HostGroup1 --query-organization '$do'"
-h regs-40-domain-create.log "domain create --name {{ client_domain }} --organizations '$do'"
-h regs-40-domain-update.log "domain update --name {{ client_domain }} --organizations '$do' --locations '$dl'"
-h regs-40-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey1 --organization '$do'"
+
+h_out "--no-headers --csv domain list --search 'name = {{ client_domain }}'" | grep --quiet '^[0-9]\+,' \
+    || h regs-40-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
+tmp=$( mktemp )
+h_out "--no-headers --csv location list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
+h regs-40-domain-update.log "domain update --name '{{ client_domain }}' --organizations '$do' --location-ids '$location_ids'"
+
+tmp=$( mktemp )
+h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+for row in $( cut -d ' ' -f 1 $tmp ); do
+    capsule_id=$( echo "$row" | cut -d ',' -f 1 )
+    capsule_name=$( echo "$row" | cut -d ',' -f 2 )
+    subnet_name="subnet-for-$capsule_name"
+    hostgroup_name="hostgroup-for-$capsule_name"
+    if [ "$capsule_id" -eq 1 ]; then
+        location_name="$dl"
+    else
+        location_name="Location for $capsule_name"
+    fi
+    h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
+        || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ client_domain }}' --organization '$do' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+    subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
+    a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+    h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
+        || h regs-41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
+done
+
+h regs-40-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
 h regs-40-subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
 tools_subs_id=$( tail -n 1 $logs/regs-40-subs-list-tools.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey1 --subscription-id '$tools_subs_id'"
+h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
 h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
 employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey1 --subscription-id '$employee_subs_id'"
+h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 
 section "Register more and more"
@@ -71,7 +96,7 @@ log "Going to register $sum hosts in total. Make sure there is enough hosts avai
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey1' bootstrap_hostgroup='HostGroup1' grepper='Register' bootstrap_retries=0 bootstrap_additional_args='$bootstrap_additional_args'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
     s $wait_interval
