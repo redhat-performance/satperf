@@ -6,6 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
+    - role: ../common/roles/common
     - role: docker-host-kvm-partitioning
       when: "docker_host_partitioning == 'kvm'"
     - role: docker-host-redocker-partitioning
