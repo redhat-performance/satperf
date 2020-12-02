@@ -45,7 +45,7 @@
       pool: "{{ rhsm_pool | regex_escape() }}"
     register: registering
     until: registering.changed
-    retries: 15
+    retries: 30
     delay: 10
 
   # Make sure only base RHEL repo is attached
