@@ -39,10 +39,10 @@
         repos:
           - name: cdn_stage.rhel-7-server-rpms.7Server.x86_64
             baseurl: http://cdn.stage.redhat.com/content/dist/rhel/server/7/7Server/x86_64/os/
-            gpgchek: no
+            gpgcheck: no
           - name: cdn_stage.rhel-7-server-extras-rpms.x86_64
             baseurl: http://cdn.stage.redhat.com/content/dist/rhel/server/7/7Server/x86_64/extras/os/
-            gpgchek: no
+            gpgcheck: no
     ###- role: upgrade-restart
     - role: docker-host-vg
       when: "docker_host_partitioning != 'skip_me'"
