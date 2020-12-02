@@ -32,7 +32,15 @@
     - role: ../common/roles/rhsm-satellite
       when: "docker_host_register_to == 'satellite'"
     - role: ../common/roles/rhsm
-      when: "docker_host_register_to != 'satellite'"
+      when: "docker_host_register_to == 'rhsm'"
+    - role: ../common/roles/static_repo
+      when: "docker_host_register_to == 'static_repo'"
+      vars:
+        repos:
+          - name: cdn_stage.rhel-7-server-rpms.7Server.x86_64
+            baseurl: http://cdn.stage.redhat.com/content/dist/rhel/server/7/7Server/x86_64/os/
+          - name: cdn_stage.rhel-7-server-extras-rpms.x86_64
+            baseurl: http://cdn.stage.redhat.com/content/dist/rhel/server/7/7Server/x86_64/extras/os/
     ###- role: upgrade-restart
     - role: docker-host-vg
       when: "docker_host_partitioning != 'skip_me'"

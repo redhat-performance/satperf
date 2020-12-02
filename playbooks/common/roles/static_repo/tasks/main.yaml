@@ -1,0 +1,10 @@
+---
+- name: "Add repository"
+  yum_repository:
+    name: "{{ item.name }}"
+    description: "Repo {{ item.name }}"
+    baseurl: "{{ item.baseurl }}"
+    gpgcheck: "{{ item.gpgcheck|default('yes') }}"
+    file: "{{ item.name|regex_replace('[^a-zA-Z0-9_-]', '_') }}"
+  loop: "{{ repos|default([]) }}"
+...
