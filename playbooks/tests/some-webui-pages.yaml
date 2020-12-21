@@ -9,6 +9,9 @@
   vars:
     ui_pages_reloads: 10
   tasks:
+    - name: "Show ui_pages_reloads setting"
+      debug:
+        msg: "ui_pages_reloads = {{ ui_pages_reloads }}"
     - name: "Get authenticity token"
       shell:
         curl --cookie-jar /root/curl.cookies --silent --insecure -X GET https://localhost/users/login | grep 'name="csrf-token"' | sed 's/.*content="\([a-zA-Z0-9/+=]\+\)".*/\1/'
@@ -20,7 +23,7 @@
       shell: |
         for i in $( seq "{{ ui_pages_reloads }}" ); do
             out="/tmp/curl-{{ item.uri | replace('/', '_') | default('dashboard', true) }}-$i.output"
-            curl --silent "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location -o $out || exit 2
+            curl --silent "https://localhost/{{ item.uri }}" --cookie /root/curl.cookies --cookie-jar /root/curl.cookies --insecure --location {{ item.curl_opts|default('') }} -o $out || exit 2
             if ! grep --quiet -z "{{ item.assert }}" $out; then
                 echo "DEBUG >>>>>"
                 cat $out
@@ -32,7 +35,7 @@
         - uri: ''
           assert: 'h1[^>]\+>\s\+Overview\s\+</h1'
         - uri: 'job_invocations'
-          assert: 'h1[^>]\+>\s\+Job invocations\s\+</h1'
+          assert: 'h1[^>]*>\s*Job [Ii]nvocations\s*</h1'
         - uri: 'foreman_tasks/tasks'
           assert: 'foremanTasksReactRoot'
         - uri: 'foreman_tasks/api/tasks?include_permissions=true'
@@ -42,7 +45,7 @@
         - uri: 'templates/provisioning_templates'
           assert: 'h1[^>]\+>\s\+Provisioning Templates\s\+</h1'
         - uri: 'hostgroups'
-          assert: 'h1[^>]\+>\s\+Host Groups\s\+</h1'
+          assert: 'h1[^>]*>\s*Host Groups\s*</h1'
         - uri: 'smart_proxies'
           assert: 'h1[^>]\+>\s\+Capsules\s\+</h1'
         - uri: 'domains'
@@ -51,6 +54,7 @@
           assert: 'react'   # This not cool, but what else?
         - uri: 'audits?page=1&per_page=20&search='
           assert: '"auditable_id"'
+          curl_opts: '-H "Accept: application/json"'
         - uri: 'katello/api/v2/subscriptions?organization_id={{ sat_orgid }}'
           assert: '.results.:'
         - uri: 'katello/api/v2/products?organization_id={{ sat_orgid }}'
@@ -65,5 +69,7 @@
       debug:
         msg: "WebUIPage{{ ui_pages_reloads }}_{{ item.item.uri | regex_replace('[^a-zA-Z0-9]', '_') | default('dashboard', true) }} {{ item.start }} to {{ item.end }}"
       loop: "{{ run_curl.results }}"
+      loop_control:
+        label: "{{ item.item.uri }}"
       when: "item.rc is defined and item.rc == 0"
 ...
