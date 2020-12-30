@@ -10,7 +10,7 @@
       shell:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host list --organization "{{ sat_org }}" --page 1 --per-page 100 >/dev/null
       register: run_hammer
-      loop: "{{ range(10)|list }}"
+      loop: "{{ range(30)|list }}"
       environment:
         TZ: UTC
     - name: "Print results"
