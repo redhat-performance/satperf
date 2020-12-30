@@ -54,7 +54,7 @@
         {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"], "environment_ids":["{{ environment_id }}"]}}
       status_code: 201
       body_format: json
-    when: "'Location for {{ inventory_hostname }}' not in locations.json.results|map(attribute='name')"
+    when: "'Location for ' + inventory_hostname not in locations.json.results|map(attribute='name')"
 
   - name: "Get updated list of locations if needed"
     uri:
@@ -69,7 +69,7 @@
   - name: "Determine location ID"
     set_fact:
       location_id: "{{ item.id }}"
-    when: "item.name == 'Location for {{ inventory_hostname }}'"
+    when: "item.name == 'Location for ' + inventory_hostname"
     with_items: "{{ locations.json.results }}"
 
   - name: "Move capsule's host to the location"
