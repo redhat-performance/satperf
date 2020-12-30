@@ -11,24 +11,7 @@
   roles:
     - wait-for-task-script
   tasks:
-    - name: "Measure generate applicability task"
-      shell: |
-        echo "ForemanTasks.async_task(::Actions::Katello::Host::GenerateApplicability, Host.all)" | foreman-rake console
-        task=$( hammer --output yaml -u "{{ sat_user }}" -p "{{ sat_pass }}" task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' | grep '^- ID:' | cut -d ' ' -f 3 )
-        /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "$task" "{{ test_generate_applicability_timeout }}"
-      loop: "{{ range(1, test_generate_applicability_repeats+1)|list }}"
-      register: run_applicability
-      environment:
-        TZ: UTC
-      ignore_errors: yes
-    - debug:
-        var: run_applicability
-    # Why are we printing it {{ count }} times? Because when we are
-    # constructing table in run-bench.sh, it assumes that every line
-    # is a attemot and if there are more lines, it includes number
-    # of attemots in the output, which is what I want
-    - name: "Print results"
-      debug:
-        msg: "GenerateApplicability {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
-      when: "item.rc is defined and item.rc == 0"
-      loop: "{{ run_applicability.results }}"
+    - name: "Include the task"
+      include_tasks:
+        file: includes/generate-applicability.yaml
+      loop: "{{ range(test_generate_applicability_repeats|int)|list }}"
