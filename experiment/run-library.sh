@@ -85,8 +85,8 @@ function generic_environment_check() {
     extended=${1:-true}
     skip_measurement='true' a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
     skip_measurement='true' a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
-    skip_measurement='true' a 00-info-ip-a.log satellite6,docker-hosts -m "shell" -a "ip a"
-    skip_measurement='true' a 00-check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
+    skip_measurement='true' a 00-info-ip-a.log satellite6,docker_hosts -m "shell" -a "ip a"
+    skip_measurement='true' a 00-check-ping-sat.log docker_hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
     skip_measurement='true' a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 
     if $extended; then

@@ -11,8 +11,8 @@ opts_adhoc="$opts --user root"
 log "===== Checking environment ====="
 a info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
 a info-hostname.log satellite6 -m "shell" -a "hostname"
-a check-ping-docker.log satellite6 -m "shell" -a "ping -c 3 {{ groups['docker-hosts']|first }}"
-a check-ping-sat.log docker-hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
+a check-ping-docker.log satellite6 -m "shell" -a "ping -c 3 {{ groups['docker_hosts']|first }}"
+a check-ping-sat.log docker_hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
 a check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer -u admin -p changeme ping | grep 'Status:' | grep -v 'ok$' )"
 a check-sat-content.log satellite6 -m "shell" -a "hammer -u admin -p changeme os info --id 1 | grep 'Family:\s\+Redhat'"
 set +e
@@ -31,13 +31,13 @@ s $sleep_time
 function reg_five() {
     # Register "$1 * 5 * number_of_docker_hosts" containers, do not change /root/container-used-count on docker hosts
     d=$( date --utc --iso-8601=seconds )
-    a $d-backup-used-containers-count.log -m shell -a "touch /root/container-used-count; cp /root/container-used-count{,.foobarbaz}" docker-hosts
+    a $d-backup-used-containers-count.log -m shell -a "touch /root/container-used-count; cp /root/container-used-count{,.foobarbaz}" docker_hosts
     for i in $( seq $1 ); do
         ap reg-$d-$i.log playbooks/tests/registrations.yaml -e "size=5 tags=untagged,REG,REM bootstrap_retries=3 grepper='Register'"
         log "$( ./reg-average.sh Register $logs/reg-$d-$i.log | tail -n 1 )"
         s $sleep_time
     done
-    a $d-restore-used-containers-count.log -m shell -a "cp /root/container-used-count{.foobarbaz,}" docker-hosts
+    a $d-restore-used-containers-count.log -m shell -a "cp /root/container-used-count{.foobarbaz,}" docker_hosts
 }
 
 function measure_one() {

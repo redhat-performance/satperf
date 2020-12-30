@@ -4,7 +4,7 @@
 # and /root/container-ips.shuffled to get list of containers
 
 # Get list of containers to use
-- hosts: docker-hosts
+- hosts: docker_hosts
   remote_user: root
   gather_facts: no
   vars_files:
@@ -83,7 +83,7 @@
 
 
 # Cleanup containers
-- hosts: docker-hosts
+- hosts: docker_hosts
   remote_user: root
   gather_facts: no
   vars_files:

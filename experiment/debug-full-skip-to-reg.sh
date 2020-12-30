@@ -216,7 +216,7 @@ fi
 section "Preparing Puppet environment"
 ap satellite-puppet-single-cv.log playbooks/tests/puppet-single-setup.yaml &
 ap satellite-puppet-big-cv.log playbooks/tests/puppet-big-setup.yaml &
-a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker-hosts &
+a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker_hosts &
 wait
 s $wait_interval
 

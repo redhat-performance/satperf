@@ -1,5 +1,5 @@
 ---
-  # Thist role is used when we are recreating docker-hosts in Bagl
+  # Thist role is used when we are recreating docker_hosts in Bagl
 
   #- name: "Cleanup possible existing VGs and PVs"
   #  shell: |

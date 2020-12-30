@@ -87,7 +87,7 @@ h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organizati
 
 
 section "Register more and more"
-ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker-hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
 for b in $registrations_batches; do
     let sum+=$( expr $b \* $ansible_docker_hosts )

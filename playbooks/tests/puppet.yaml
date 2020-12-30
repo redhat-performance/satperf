@@ -4,7 +4,7 @@
 # and /root/container-ips.shuffled to get list of containers
 
 # Finally run the puppet!
-- hosts: docker-hosts
+- hosts: docker_hosts
   remote_user: root
   gather_facts: no
   vars_files:
