@@ -34,7 +34,7 @@ function reg_five() {
     a $d-backup-used-containers-count.log -m shell -a "touch /root/container-used-count; cp /root/container-used-count{,.foobarbaz}" docker_hosts
     for i in $( seq $1 ); do
         ap reg-$d-$i.log playbooks/tests/registrations.yaml -e "size=5 tags=untagged,REG,REM bootstrap_retries=3 grepper='Register'"
-        log "$( ./reg-average.sh Register $logs/reg-$d-$i.log | tail -n 1 )"
+        log "$( ./reg-average.py Register $logs/reg-$d-$i.log | tail -n 1 )"
         s $sleep_time
     done
     a $d-restore-used-containers-count.log -m shell -a "cp /root/container-used-count{.foobarbaz,}" docker_hosts
@@ -47,9 +47,9 @@ function measure_one() {
 
     reg_five $host_fives
     ap $concurency-PuppetOne.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_SINGLE -e "size=$concurency"
-    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
-    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
-    log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    log "$( ./reg-average.py RegisterPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    log "$( ./reg-average.py SetupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
+    log "$( ./reg-average.py PickupPuppet $logs/$concurency-PuppetOne.log | tail -n 1 )"
     s $sleep_time
 }
 
@@ -72,9 +72,9 @@ function measure_lots() {
     log "===== Register and apply bunch of modules with concurency ====="
 
     ap $concurency-PuppetBunch.log playbooks/tests/puppet-big-test.yaml --tags REGISTER,DEPLOY_BUNCH -e "size=$concurency"
-    log "$( ./reg-average.sh RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
-    log "$( ./reg-average.sh SetupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
-    log "$( ./reg-average.sh PickupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
+    log "$( ./reg-average.py RegisterPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
+    log "$( ./reg-average.py SetupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
+    log "$( ./reg-average.py PickupPuppet $logs/$concurency-PuppetBunch.log | tail -n 1 )"
     s $sleep_time
 }
 

@@ -52,7 +52,7 @@ function measure() {
     ###measure_pmps $d 12
 
     log "Showing average duration of 10 'puppet agent --test' runs"
-    ./reg-average.sh 'Puppet agent run' $d/*/puppet.log
+    ./reg-average.py 'Puppet agent run' $d/*/puppet.log
 
     log "Finish scenario $1 on $2"
 }

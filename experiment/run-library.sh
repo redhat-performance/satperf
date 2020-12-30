@@ -405,11 +405,11 @@ function h_out() {
 }
 
 function e() {
-    # Examine log for specific measure using reg-average.sh
+    # Examine log for specific measure using reg-average.py
     local grepper="$1"
     local log="$2"
     local log_report="$( echo "$log" | sed "s/\.log$/-$grepper.log/" )"
-    experiment/reg-average.sh "$grepper" "$log" &>$log_report
+    experiment/reg-average.py "$grepper" "$log" &>$log_report
     local rc=$?
     local started_ts=$( grep "^min in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
     local ended_ts=$( grep "^max in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
@@ -418,7 +418,7 @@ function e() {
     local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
     measurement_add \
-        "experiment/reg-average.sh '$grepper' '$log'" \
+        "experiment/reg-average.py '$grepper' '$log'" \
         "$log_report" \
         "$rc" \
         "$started_ts" \
@@ -445,7 +445,7 @@ function t() {
     head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
     log "Examined task $task_id and if have $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
     measurement_add \
-        "experiment/reg-average.sh '$grepper' '$log'" \
+        "experiment/reg-average.py '$grepper' '$log'" \
         "$log_report" \
         "$rc" \
         "$started_ts" \
@@ -486,7 +486,7 @@ function table_row() {
         fi
         if [ -n "$grepper" ]; then
             local log="$( echo "$row" | measurement_row_field 2 )"
-            local out=$( experiment/reg-average.sh "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
+            local out=$( experiment/reg-average.py "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
             local passed=$( echo "$out" | cut -d ' ' -f 6 )
             [ -z "$note" ] && note="Number of passed:"
             local note="$note $passed"

@@ -20,13 +20,13 @@ for grepper in "PuppetOne" "PuppetBunch"; do
 
         # Data
         tmp=$( mktemp )
-        ./reg-average.sh RegisterPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
+        ./reg-average.py RegisterPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
         dataA1=$( cut -d ' ' -f 8 $tmp )
         dataA2=$( cut -d ' ' -f 6 $tmp )
-        ./reg-average.sh SetupPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
+        ./reg-average.py SetupPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
         dataB1=$( cut -d ' ' -f 8 $tmp )
         dataB2=$( cut -d ' ' -f 6 $tmp )
-        ./reg-average.sh PickupPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
+        ./reg-average.py PickupPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
         dataC1=$( cut -d ' ' -f 8 $tmp )
         dataC2=$( cut -d ' ' -f 6 $tmp )
 

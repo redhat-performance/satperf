@@ -105,7 +105,7 @@ done
 section "Summary"
 iter=1
 for batch in $registrations_batches; do
-    log "$( experiment/reg-average.sh Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
+    log "$( experiment/reg-average.py Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
     let iter+=1
 done
 

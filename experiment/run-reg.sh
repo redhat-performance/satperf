@@ -20,7 +20,7 @@ function measure() {
     ap $1/reg-20.log playbooks/tests/registrations.yaml -e "size=20 resting=0"
 
     log "Showing average registration time"
-    ./reg-average.sh 'Register' $1/reg-*.log
+    ./reg-average.py 'Register' $1/reg-*.log
 
     log "Finish scenario $1"
 }
