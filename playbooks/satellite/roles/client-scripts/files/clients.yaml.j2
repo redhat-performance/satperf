@@ -309,6 +309,8 @@
       shell:
         /usr/bin/puppet agent --test --noop --tags no_such_tag --waitforcert 10
       register: reg
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
       tags:
         - PUP_ONLY
         - PUP_REG_ONLY
@@ -354,6 +356,8 @@
       command:
         /usr/bin/puppet agent --onetime --no-daemonize
       register: pickup
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
       tags: PUPDEPLOY
     - name: "Pickup puppet action - timings"
       debug:
@@ -363,6 +367,8 @@
       action: command
         cat "{% raw %}{{ content_puppet_module_file }}{% endraw %}"
       register: deployed
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
       until: "deployed.rc is defined and deployed.rc == 0"
       retries: 30
       delay: 1
