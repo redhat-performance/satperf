@@ -12,6 +12,8 @@
     shell:
       ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --extra-vars "server='{{ tests_registration_target|default(groups['satellite6']|first) }}' content_puppet_env='{{ content_puppet_env }}' content_puppet_module_name='{{ content_puppet_module_name }}'" --tags "SETUP" puppet-big-client.yaml &> "{{ setup_cmd_log }}"
     register: setup_cmd
+    environment:
+      TZ: UTC
     ###ignore_errors: true
 
   - import_tasks: includes/show_grepper.yaml
@@ -27,6 +29,8 @@
     shell:
       ansible-playbook --private-key /root/id_rsa_key -f "{{ forks|default(size) }}" -i clients.ini --tags "DEPLOY" puppet-big-client.yaml &> "{{ deploy_cmd_log }}"
     register: deploy_cmd
+    environment:
+      TZ: UTC
     ignore_errors: true
 
   - import_tasks: includes/show_grepper.yaml

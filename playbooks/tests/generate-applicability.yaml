@@ -18,6 +18,8 @@
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "$task" "{{ test_generate_applicability_timeout }}"
       loop: "{{ range(1, test_generate_applicability_repeats+1)|list }}"
       register: run_applicability
+      environment:
+        TZ: UTC
       ignore_errors: yes
     - debug:
         var: run_applicability
