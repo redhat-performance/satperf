@@ -1,0 +1,39 @@
+---
+# This is supposed to excercise manifest upload, reload and delete functionality
+#
+# Expects that /root/manifest-auto.zip file is available on a Satellite host
+
+- name: "Upload manifest"
+  shell:
+    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'
+  environment:
+    TZ: UTC
+  register: manifest_upload
+- name: "Print upload results"
+  debug:
+    msg: "ManifestUpload {{ manifest_upload.start }} to {{ manifest_upload.end }}"
+
+- name: "Upload refresh"
+  shell:
+    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription refresh-manifest --organization '{{ sat_org }}'
+  environment:
+    TZ: UTC
+  register: manifest_refresh
+- name: "Print refresh results"
+  debug:
+    msg: "ManifestRefresh {{ manifest_refresh.start }} to {{ manifest_refresh.end }}"
+
+#- name: "Wait few seconds"
+#  pause:
+#    minutes: 0.2
+
+- name: "Delete manifest"
+  shell:
+    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ sat_org }}'
+  environment:
+    TZ: UTC
+  register: manifest_delete
+- name: "Print delete results"
+  debug:
+    msg: "ManifestDelete {{ manifest_delete.start }} to {{ manifest_delete.end }}"
+...

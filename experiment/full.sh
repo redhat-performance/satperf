@@ -34,17 +34,11 @@ generic_environment_check
 
 section "Prepare for Red Hat content"
 h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
-a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-count=5
-for i in $( seq $count ); do
-    h 01-manifest-upload-$i.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
-    s $wait_interval
-    if [ $i -lt $count ]; then
-        h 02-manifest-delete-$i.log "subscription delete-manifest --organization '$do'"
-        s $wait_interval
-    fi
-done
-h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
+ap 01-manifest-excercise.log playbooks/tests/manifest-excercise.yaml -e "manifest=../../$manifest"
+e ManifestUpload $logs/01-manifest-excercise.log
+e ManifestRefresh $logs/01-manifest-excercise.log
+e ManifestDelete $logs/01-manifest-excercise.log
+h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
 s $wait_interval
 
 

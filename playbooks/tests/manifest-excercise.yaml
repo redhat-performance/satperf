@@ -1,0 +1,26 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    source_manifest: "{{ manifest|default('../../conf/contperf/manifest.zip') }}"
+  tasks:
+    - name: "Deploy manifest {{ source_manifest }} to remote host"
+      copy:
+        src: "{{ source_manifest }}"
+        dest: /root/manifest-auto.zip
+        force: yes
+
+    - name: "Include tasks to be executed"
+      include_tasks:
+        file: includes/manifest-excercise.yaml
+      loop: "{{ range(5)|list }}"
+      ignore_errors: yes
+
+    - name: "Cleanup manifest if it is there"
+      shell:
+        hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ sat_org }}'
+      ignore_errors: yes
