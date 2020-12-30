@@ -1,6 +1,0 @@
----
-  - include_tasks: enable_repo.yaml
-
-  - include_tasks: enable_repo.yaml
-    when: enable_repo.rc is not defined or enable_repo.rc != 0
-...

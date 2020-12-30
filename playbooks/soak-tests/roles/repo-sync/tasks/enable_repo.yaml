@@ -1,9 +1,0 @@
----
-  - name: "Enable {{ item.product }} -> {{ item.reposet }} ({{ ansible_architecture }})"
-    command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository-set enable --product '{{ item.product }}' --name '{{ item.reposet }}' --basearch '{{ ansible_architecture }}' --organization '{{ sat_org }}' {%if item.releasever is defined %} --releasever '{{ item.releasever }}' {% endif %}
-    ignore_errors: True
-    register: enable_repo
-  - debug: var=enable_repo
-    when: "enable_repo.rc is not defined or enable_repo.rc != 0"
-...
