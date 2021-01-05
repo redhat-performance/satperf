@@ -1,21 +1,29 @@
+#!/bin/bash
+
+# This script generates updateinfo.xml file for your repodata
+#
+#    $ bash ../scripts/build-lots-of-packages-updateinfo.sh >updateinfo.xml
+#    $ modifyrepo updateinfo.xml repodata/
+
 echo '<?xml version="1.0"?>'
 echo '<updates>'
 
+name='foo'
 ver='0.1'
 ver_new='0.2'
 rel='50'
 arch='x86_64'
 
 i=1
-for f in $( ls *.rpm | grep "foo[0-9]\+-$ver-$rel\.$arch\.rpm" ); do
+for f in $( ls *.rpm | grep "$name[0-9]\+-$ver-$rel\.$arch\.rpm" ); do
     name=$( echo "$f" | cut -d '-' -f 1 )
 
 echo "<update from='katello-qa-list@redhat.com' status='stable' type='security' version='1'>
-  <id>RHBA-2018:$( printf '%04d' $i )</id>
+  <id>RHBA-$( date +'%Y' ):$( printf '%04d' $i )</id>
   <title>Foo$i erratum title</title>
   <release>1</release>
   <issued date='$( date +'%Y-%m-%d %H:%M:%S' )'/>
-  <description>Foo$i erratum description</description>
+  <description>$name erratum description</description>
   <severity>critical</severity>
   <pkglist>
     <collection short=''>
@@ -31,7 +39,7 @@ echo "<update from='katello-qa-list@redhat.com' status='stable' type='security' 
 </update>"
 
     let i+=1
-    break
+    ###break
 done
 
 echo '</updates>'
