@@ -15,7 +15,7 @@
 #
 # Run it and then copy it somewhere containers can reach it:
 #
-#   scp $( find . -name \*.x86_64.rpm ) root@<...>:/var/www/html/pub/<...>
+#   scp $( find . -name /tmp/\*.x86_64.rpm ) root@<...>:/var/www/html/pub/<...>
 #
 # Then create repo from these and prepare repofile and add womething like
 # this into Dockerfile:
@@ -33,6 +33,7 @@ import rpmfluff
 #   rpm -q --requires $( rpm -qa | sort -R | head -n 100 ) | wc -l
 #   rpm -qa --qf "%{SOURCERPM}\n" | sort -u | wc -l; rpm -qa | wc -l
 
+NAME = 'foo'
 PACKAGES = 1000
 SUBPACKAGES = 1
 CHANGELOGS = 50
@@ -42,25 +43,25 @@ REQUIRES = 20
 VERSION = "0.1"
 
 for p in range(PACKAGES):
-    foo = rpmfluff.SimpleRpmBuild("foo%s" % p, VERSION, str(CHANGELOGS))
-    foo.add_summary('This is summary for foo%s' % p)
-    foo.add_description('This is descriptive description for foo%s' % p)
+    foo = rpmfluff.SimpleRpmBuild("%s%s" % (NAME, p), VERSION, str(CHANGELOGS))
+    foo.add_summary('This is summary for %s%s' % (NAME, p))
+    foo.add_description('This is descriptive description for %s%s' % (NAME, p))
     for c in range(CHANGELOGS):
-        foo.add_changelog_entry('This is entry %s for package foo%s' % (c, p), VERSION, str(c))
+        foo.add_changelog_entry('This is entry %s for package %s%s' % (c, NAME, p), VERSION, str(c))
     for f in range(FILES):
         foo.add_simple_payload_file_random()
     for d in range(PROVIDES):
-        foo.add_provides("foo%s_provided%s" % (p, d))
+        foo.add_provides("%s%s_provided%s" % (NAME, p, d))
     for s in range(SUBPACKAGES):
         for d in range(PROVIDES):
-            foo.add_requires("foo%s_sub%s_required%s" % (p, s, d))
+            foo.add_requires("%s%s_sub%s_required%s" % (NAME, p, s, d))
     for d in range(REQUIRES - (SUBPACKAGES * PROVIDES)):
         foo.add_requires("/bin/bash")
     for s in range(SUBPACKAGES):
         sub = foo.add_subpackage('sub%s' % s)
-        sub.add_summary('This is summary for foo%s-sub%s' % (p, s))
-        sub.add_description('This is descriptive description for foo%s-sub%s' % (p, s))
+        sub.add_summary('This is summary for %s%s-sub%s' % (NAME, p, s))
+        sub.add_description('This is descriptive description for %s%s-sub%s' % (NAME, p, s))
         for d in range(PROVIDES):
-            sub.add_provides("foo%s_sub%s_required%s" % (p, s, d))
-            sub.add_requires("foo%s_provided%s" % (p, d))
+            sub.add_provides("%s%s_sub%s_required%s" % (NAME, p, s, d))
+            sub.add_requires("%s%s_provided%s" % (NAME, p, d))
     foo.make()
