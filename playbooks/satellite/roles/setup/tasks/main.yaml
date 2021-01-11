@@ -92,7 +92,6 @@
     yum:
       name: "{{ sat_installer_pkg }}"
       state: present
-    register: installing
   - name: "Determine installer options for <=6.5"
     set_fact:
       sat_installer_options: "--foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
@@ -109,7 +108,6 @@
           date
           {{ sat_installer_cmd }} {{ sat_installer_options }}
       fi
-    when: installing.changed
     environment:
       LANG: "en_US.UTF-8"
       LC_ALL: "en_US.UTF-8"
