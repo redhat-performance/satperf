@@ -134,7 +134,7 @@ function status_data_create() {
     fi
 
     # Activate tools virtualenv
-    source insights-perf/venv/bin/activate
+    source venv/bin/activate
 
     # Load variables
     sd_section=${SECTION:-default}
@@ -158,7 +158,7 @@ function status_data_create() {
 
     # Create status data file
     rm -f "$sd_file"
-    insights-perf/status_data.py --status-data-file $sd_file --set \
+    status_data.py --status-data-file $sd_file --set \
         "name=$sd_section/$sd_name" \
         "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
         "parameters.katello_version=$sd_kat_ver" \
@@ -178,7 +178,7 @@ function status_data_create() {
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
-        insights-perf/status_data.py -d --status-data-file $sd_file \
+        status_data.py -d --status-data-file $sd_file \
             --additional "$PARAM_cluster_read_config" \
             --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
             --grafana-host "$PARAM_grafana_host" \
@@ -194,7 +194,7 @@ function status_data_create() {
     sd_result_log=$( mktemp )
     if [ "$sd_rc" -eq 0 ]; then
         # FIXME: Once we have bunch of runs with parameters.version-y-stream, we can stop using `--data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*"` here and just use new variable
-        insights-perf/data_investigator.py --data-from-es \
+        data_investigator.py --data-from-es \
             --data-from-es-matcher "results.rc=0" "name=$sd_name" \
             --data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*" \
             --es-host $PARAM_elasticsearch_host \
@@ -213,14 +213,14 @@ function status_data_create() {
     fi
 
     # Add result to the status data so it is complete
-    insights-perf/status_data.py --status-data-file $sd_file --set "result=$sd_result"
+    status_data.py --status-data-file $sd_file --set "result=$sd_result"
 
     # Upload status data to ElasticSearch
     curl --silent -H "Content-Type: application/json" -X POST \
         "http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/satellite_perf_index/cpt/" \
         --data "@$sd_file" \
             | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] == 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
-    ###insights-perf/status_data.py --status-data-file $sd_file --info
+    ###status_data.py --status-data-file $sd_file --info
 
     # Enhance log file
     tmp=$( mktemp )
@@ -236,10 +236,10 @@ function status_data_create() {
     cat "$sd_log" >>$tmp
 
     # Create junit.xml file
-    insights-perf/junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
+    junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
         --name "$sd_name" --result "$sd_result" --out "$tmp" \
         --start "$sd_start" --end "$sd_end"
-    ###insights-perf/junit_cli.py --file $logs/junit.xml print
+    ###junit_cli.py --file $logs/junit.xml print
 
     # Deactivate tools virtualenv
     deactivate
