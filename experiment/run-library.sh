@@ -274,6 +274,11 @@ function junit_upload() {
                 || echo "Failed to upload junit" >&2
     rm -f "$zip_name"
     cp "$logs/junit.xml" latest-junit.xml   # so Jenkins can find it easilly on the same path every time
+    rc=$?
+    echo "DEBUG: cp $logs/junit.xml latest-junit.xml: $rc"
+    echo "DEBUG: pwd: $( pwd )"
+    echo "DEBUG: ls: $( ls -al $logs/junit.xml latest-junit.xml )"
+    echo "DEBUG: date: $( date )"
 }
 
 function log() {
