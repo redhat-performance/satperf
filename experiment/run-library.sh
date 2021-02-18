@@ -159,6 +159,7 @@ function status_data_create() {
     # Create status data file
     rm -f "$sd_file"
     status_data.py --status-data-file $sd_file --set \
+        "id=$sd_run" \
         "name=$sd_section/$sd_name" \
         "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
         "parameters.katello_version=$sd_kat_ver" \
