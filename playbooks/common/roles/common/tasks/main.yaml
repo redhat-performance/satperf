@@ -101,7 +101,7 @@
     wait_for:
       host: "{{ groups['satellite6']|first }}"
       port: 22
-      timeout: 10
+      timeout: 50
     when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
   - name: "We can ping Satellite via special network"
     wait_for:
