@@ -90,9 +90,9 @@ function generic_environment_check() {
     skip_measurement='true' a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 
     if $extended; then
-        skip_measurement='true' ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
-        skip_measurement='true' ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
-        skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
+        #skip_measurement='true' ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
+        #skip_measurement='true' ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
+        #skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi
 
     skip_measurement='true' a 00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
