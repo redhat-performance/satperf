@@ -1,0 +1,22 @@
+[
+    {
+        "_id": "716c8cf0-2e67-11ea-bfca-3fb30f912ea8",
+        "_meta": {
+            "savedObjectVersion": 2
+        },
+        "_migrationVersion": {
+            "visualization": "6.7.2"
+        },
+        "_source": {
+            "description": "",
+            "kibanaSavedObjectMeta": {
+                "searchSourceJSON": "{\"index\":\"293cb4b0-272c-11ea-bfca-3fb30f912ea8\",\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[{\"query\":{\"wildcard\":{\"parameters.version.keyword\":\"*-6.9.*\"}},\"meta\":{\"negate\":false,\"index\":\"293cb4b0-272c-11ea-bfca-3fb30f912ea8\",\"disabled\":false,\"alias\":null,\"type\":\"custom\",\"key\":\"query\",\"value\":\"{\\\"wildcard\\\":{\\\"parameters.version.keyword\\\":\\\"*-6.9.*\\\"}}\"},\"$state\":{\"store\":\"appState\"}}]}"
+            },
+            "title": "Sat 6.9 run to version",
+            "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
+            "version": 1,
+            "visState": "{\"title\":\"Sat 6.9 run to version\",\"type\":\"table\",\"params\":{\"perPage\":5,\"showPartialRows\":true,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{\"customLabel\":\"Number of results\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"parameters.run.keyword\",\"size\":15,\"order\":\"desc\",\"orderBy\":\"_key\",\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\",\"customLabel\":\"Test run ID\"}},{\"id\":\"4\",\"enabled\":true,\"type\":\"significant_terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"parameters.version.keyword\",\"size\":1,\"customLabel\":\"Satellite version\"}}]}"
+        },
+        "_type": "visualization"
+    }
+]
