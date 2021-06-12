@@ -296,4 +296,20 @@
     yum:
       name: screen
       state: installed
+      
+  # Sinkhole setup
+  - name: "Install"
+    shell: |
+      yum install -y https://negativo17.org/repos/multimedia/epel-7/x86_64/kmod-nullfsvfs-0.5-1.el7.x86_64.rpm
+      
+  - name: "Create directory"
+    ansible.builtin.file:
+      path: /sinkhole/
+      state: directory
+      mode: '0777'
+      
+  - name: "Mount"
+    shell: |
+      insmod /lib/modules/3.10.0-1160.11.1.el7.x86_64/extra/nullfsvfs/nullfs.ko
+      mount -t nullfs none /sinkhole/
 ...
