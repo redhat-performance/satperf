@@ -310,6 +310,7 @@
       
   - name: "Mount"
     shell: |
+      chmod a+w /sinkhole
       insmod /lib/modules/3.10.0-1160.11.1.el7.x86_64/extra/nullfsvfs/nullfs.ko
       mount -t nullfs none /sinkhole/
 ...
