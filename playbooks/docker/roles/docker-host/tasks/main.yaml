@@ -297,20 +297,15 @@
       name: screen
       state: installed
       
-  # Sinkhole setup
-  - name: "Install"
-    shell: |
-      yum install -y https://negativo17.org/repos/multimedia/epel-7/x86_64/kmod-nullfsvfs-0.5-1.el7.x86_64.rpm
+  # Download test folder
       
   - name: "Create directory"
     ansible.builtin.file:
-      path: /sinkhole/
+      path: /test-folder
       state: directory
       mode: '0777'
       
   - name: "Mount"
     shell: |
-      chmod a+w /sinkhole
-      insmod /lib/modules/3.10.0-1160.11.1.el7.x86_64/extra/nullfsvfs/nullfs.ko
-      mount -t nullfs none /sinkhole/
+      chmod a+w /test-folder
 ...
