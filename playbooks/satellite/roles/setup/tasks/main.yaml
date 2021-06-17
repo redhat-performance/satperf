@@ -57,24 +57,24 @@
       - sat_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
 
   # Get potential additional repo files from a remote URL
-  - name: "Install additional repo files if defined"
+  - name: "Install additional remote repo files if defined"
     get_url:
       url: '{{ item.repo_file_url }}'
       dest: '/etc/yum.repos.d/{{ item.target_repo_filename }}'
     when:
       - additional_repo_files is defined
-      - additional_repo_files
+      - additional_repo_files|bool
       - item.repo_file_url is search("^(https?|s?ftps?):\/\/")
     with_items: '{{ additional_repo_files }}'
 
   # Get potential additional repo files from a local filepath
-  - name: "Install additional repo files if defined"
+  - name: "Install additional local repo files if defined"
     copy:
       src: '{{ item.repo_file_url }}'
       dest: '/etc/yum.repos.d/{{ item.target_repo_filename }}'
     when:
       - additional_repo_files is defined
-      - additional_repo_files
+      - additional_repo_files|bool
       - item.repo_file_url is search("^(?!(https?|s?ftps?):\/\/)")
     with_items: '{{ additional_repo_files }}'
 
