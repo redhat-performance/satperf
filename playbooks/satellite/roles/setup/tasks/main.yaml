@@ -92,6 +92,10 @@
     yum:
       name: "{{ sat_installer_pkg }}"
       state: present
+  - name: "Ensure sat_version is string to avoid hard to detect issues"
+    assert:
+      that: sat_version is string
+      fail_msg: "Variable 'sat_version' have to be string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
   - name: "Determine installer options for <=6.5"
     set_fact:
       sat_installer_options: "--foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
