@@ -57,24 +57,24 @@
       - sat_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
 
   # Get potential additional repo files from a remote URL
-  - name: "Install additional repo files if defined"
+  - name: "Install additional remote repo files if defined"
     get_url:
       url: '{{ item.repo_file_url }}'
       dest: '/etc/yum.repos.d/{{ item.target_repo_filename }}'
     when:
       - additional_repo_files is defined
-      - additional_repo_files
+      - additional_repo_files|bool
       - item.repo_file_url is search("^(https?|s?ftps?):\/\/")
     with_items: '{{ additional_repo_files }}'
 
   # Get potential additional repo files from a local filepath
-  - name: "Install additional repo files if defined"
+  - name: "Install additional local repo files if defined"
     copy:
       src: '{{ item.repo_file_url }}'
       dest: '/etc/yum.repos.d/{{ item.target_repo_filename }}'
     when:
       - additional_repo_files is defined
-      - additional_repo_files
+      - additional_repo_files|bool
       - item.repo_file_url is search("^(?!(https?|s?ftps?):\/\/)")
     with_items: '{{ additional_repo_files }}'
 
@@ -92,6 +92,10 @@
     yum:
       name: "{{ sat_installer_pkg }}"
       state: present
+  - name: "Ensure sat_version is string to avoid hard to detect issues"
+    assert:
+      that: sat_version is string
+      fail_msg: "Variable 'sat_version' have to be string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
   - name: "Determine installer options for <=6.5"
     set_fact:
       sat_installer_options: "--foreman-admin-email {{ sat_email }} --foreman-admin-username {{ sat_user }} --foreman-admin-password {{ sat_pass }}"
@@ -103,10 +107,13 @@
   - name: "Satellite configured"
     shell: |
       {{ sat_installer_cmd }} {{ sat_installer_options }}
-      if [ $? -ne 0 -a $( date +%s ) -lt $( date -d "2020-10-10" +%s ) ]; then
+      rc=$?
+      if [ $rc -ne 0 -a $( date +%s ) -lt $( date -d "2020-10-10" +%s ) ]; then
           echo "INFO: Previous installation attempt failed, trying again"
           date
           {{ sat_installer_cmd }} {{ sat_installer_options }}
+      else
+          exit $rc
       fi
     environment:
       LANG: "en_US.UTF-8"

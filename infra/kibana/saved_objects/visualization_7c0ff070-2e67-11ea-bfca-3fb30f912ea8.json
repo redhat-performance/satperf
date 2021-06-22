@@ -1,22 +1,33 @@
 [
     {
-        "_id": "7c0ff070-2e67-11ea-bfca-3fb30f912ea8",
-        "_meta": {
-            "savedObjectVersion": 2
-        },
-        "_migrationVersion": {
-            "visualization": "6.7.2"
-        },
-        "_source": {
+        "attributes": {
             "description": "",
             "kibanaSavedObjectMeta": {
-                "searchSourceJSON": "{\"index\":\"293cb4b0-272c-11ea-bfca-3fb30f912ea8\",\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[{\"meta\":{\"index\":\"293cb4b0-272c-11ea-bfca-3fb30f912ea8\",\"negate\":false,\"disabled\":false,\"alias\":null,\"type\":\"phrase\",\"key\":\"parameters.version-y-stream\",\"value\":\"6.7\",\"params\":{\"query\":6.7,\"type\":\"phrase\"}},\"query\":{\"match\":{\"parameters.version-y-stream\":{\"query\":6.7,\"type\":\"phrase\"}}},\"$state\":{\"store\":\"appState\"}}]}"
+                "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"lucene\"},\"filter\":[{\"meta\":{\"negate\":false,\"disabled\":false,\"alias\":null,\"type\":\"phrase\",\"key\":\"parameters.version-y-stream\",\"value\":\"6.7\",\"params\":{\"query\":6.7,\"type\":\"phrase\"},\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.filter[0].meta.index\"},\"query\":{\"match\":{\"parameters.version-y-stream\":{\"query\":6.7,\"type\":\"phrase\"}}},\"$state\":{\"store\":\"appState\"}}],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\"}"
             },
             "title": "Sat 6.7 run to version",
             "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
             "version": 1,
             "visState": "{\"title\":\"Sat 6.7 run to version\",\"type\":\"table\",\"params\":{\"perPage\":5,\"showPartialRows\":true,\"showMetricsAtAllLevels\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"showTotal\":false,\"totalFunc\":\"sum\"},\"aggs\":[{\"id\":\"1\",\"enabled\":true,\"type\":\"count\",\"schema\":\"metric\",\"params\":{\"customLabel\":\"Number of results\"}},{\"id\":\"2\",\"enabled\":true,\"type\":\"terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"parameters.run.keyword\",\"size\":15,\"order\":\"desc\",\"orderBy\":\"_key\",\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\",\"customLabel\":\"Test run ID\"}},{\"id\":\"4\",\"enabled\":true,\"type\":\"significant_terms\",\"schema\":\"bucket\",\"params\":{\"field\":\"parameters.version.keyword\",\"size\":1,\"customLabel\":\"Satellite version\"}}]}"
         },
-        "_type": "visualization"
+        "id": "7c0ff070-2e67-11ea-bfca-3fb30f912ea8",
+        "migrationVersion": {
+            "visualization": "7.10.0"
+        },
+        "references": [
+            {
+                "id": "293cb4b0-272c-11ea-bfca-3fb30f912ea8",
+                "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
+                "type": "index-pattern"
+            },
+            {
+                "id": "293cb4b0-272c-11ea-bfca-3fb30f912ea8",
+                "name": "kibanaSavedObjectMeta.searchSourceJSON.filter[0].meta.index",
+                "type": "index-pattern"
+            }
+        ],
+        "type": "visualization",
+        "updated_at": "2021-06-20T20:12:16.152Z",
+        "version": "WzU0MjQ0LDE0XQ=="
     }
 ]
