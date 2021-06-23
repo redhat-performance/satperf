@@ -308,4 +308,10 @@
   - name: "Mount"
     shell: |
       chmod a+w /test-folder
+      
+  # Feel the Need to have calculator to find difference between start and end time
+  - name: Download bc
+    yum:
+      name: bc
+      state: installed
 ...
