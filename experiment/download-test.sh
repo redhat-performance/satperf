@@ -91,9 +91,9 @@ h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization 
 h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
 employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
 h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
-h regs-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = \"down_test_repo\"'"
+h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = \"down_test_repo\"'"
 down_test_subs_id=$( tail -n 1 $logs/regs-subs-list-downtest.log | cut -d ',' -f 1 )
-h regs-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
+h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
 
 
 section "Register more and more"
@@ -109,6 +109,9 @@ for batch in $registrations_batches; do
     ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
+    ap downrepo-50-clean-$iter-$batch.log playbooks/tests/cleanfolder.yaml
+    ap downrepo-50-$iter-$batch.log playbooks/tests/downloadtest.yaml
+    ap downrepo-50-time-$iter-$batch.log playbooks/tests/calculatetime.yaml
     s $wait_interval
 done
 
