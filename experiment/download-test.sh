@@ -14,7 +14,7 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
-repo_download_test="http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo1/"
+repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo1/}"
 
 do="Default Organization"
 dl="Default Location"
