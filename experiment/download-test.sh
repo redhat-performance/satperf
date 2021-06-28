@@ -7,7 +7,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 wait_interval=${PARAM_wait_interval:-50}
-registrations_batches="${PARAM_registrations_batches:-1 2 3}"
+download_test_batches="${PARAM_download_test_batches:-1 2 3}"
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
@@ -99,27 +99,27 @@ h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organizati
 section "Register more and more"
 ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
-for b in $registrations_batches; do
+for b in $download_test_batches; do
     let sum+=$( expr $b \* $ansible_docker_hosts )
 done
 log "Going to register $sum hosts in total. Make sure there is enough hosts available."
 
 iter=1
-for batch in $registrations_batches; do
+sum=0
+for batch in $download_test_batches; do
     ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
-    ap downrepo-50-clean-$iter-$batch.log playbooks/tests/cleanfolder.yaml
-    ap downrepo-50-$iter-$batch.log playbooks/tests/downloadtest.yaml
-    ap downrepo-50-time-$iter-$batch.log playbooks/tests/calculatetime.yaml
+    let sum=$(($sum + $batch))
+    ap downrepo-50-$iter-$sum.log playbooks/tests/downloadtest.yaml
     s $wait_interval
 done
 
 section "Summary"
-iter=1
-for batch in $registrations_batches; do
-    log "$( experiment/reg-average.py Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
-    let iter+=1
-done
+# iter=1
+# for batch in $registrations_batches; do
+#     log "$( experiment/reg-average.py Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
+#     let iter+=1
+# done
 
 junit_upload
