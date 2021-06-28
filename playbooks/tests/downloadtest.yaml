@@ -24,4 +24,8 @@
         end_t=$(cat /test-folder/end_file)
         download_time=$( echo "$end_t - $start_t" | bc -l )
         echo $download_time
+      register: cmd
+    - name: "Show calculated time"
+      debug:
+        var: cmd.stdout_lines
 
