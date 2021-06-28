@@ -5,5 +5,5 @@
   tasks:
     - name: "Start download job"
       shell:
-        cmd: hammer job-invocation create --dynamic --search-query 'satperf004container10.usersys.redhat.com' --job-template 'Run Command - SSH Default' --inputs "command='echo \`date +%s.%N\` >> /test-folder/start_file; yumdownloader --destdir=\"/test-folder/\`hostname\`\" fooa*; echo \`date +%s.%N\` > /test-folder/end_file'"
+        cmd: hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='echo \`date +%s.%N\` >> /test-folder/start_file; yumdownloader --destdir=\"/test-folder/\`hostname\`\" fooa*; echo \`date +%s.%N\` > /test-folder/end_file'"
 
