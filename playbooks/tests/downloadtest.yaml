@@ -1,0 +1,27 @@
+---
+- hosts: docker_hosts
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Clean test-folder for download test"
+      shell: rm -rf /test-folder/*
+
+- hosts: satellite6
+  gather_facts: no
+  remote_user: root
+  tasks:
+    - name: "Start yum download job"
+      shell:
+        cmd: hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='echo \`date +%s.%N\` >> /test-folder/start_file; yumdownloader --destdir=\"/test-folder/\`hostname\`\" foo*; echo \`date +%s.%N\` > /test-folder/end_file'"
+
+- hosts: docker_hosts
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Calculate time from time files"
+      shell: |
+        start_t=$(cat /test-folder/start_file | head -n 1)
+        end_t=$(cat /test-folder/end_file)
+        download_time=$( echo "$end_t - $start_t" | bc -l )
+        echo $download_time
+
