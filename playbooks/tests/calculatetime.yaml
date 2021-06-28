@@ -8,7 +8,7 @@
   tasks:
     - name: "Calculate time from time files"
       shell: |
-        start_t=$(cat /test-folder/start_file)
+        start_t=$(cat /test-folder/start_file | head -n 1)
         end_t=$(cat /test-folder/end_file)
         download_time=$( echo "$end_t - $start_t" | bc -l )
         echo $download_time
