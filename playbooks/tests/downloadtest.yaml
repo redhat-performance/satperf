@@ -13,7 +13,7 @@
     - name: "Start yum download job"
       shell:
         cmd: set -e; hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" foo*'"
-      register: job-details
+      register: job_details
     - name: "Output time taken for job-invocation (delta)"
       debug:
-        var: job-details.delta
+        var: job_details.delta
