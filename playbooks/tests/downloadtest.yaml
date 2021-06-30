@@ -12,20 +12,8 @@
   tasks:
     - name: "Start yum download job"
       shell:
-        cmd: set -e; hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='echo \`date +%s.%N\` >> /test-folder/start_file; yumdownloader --destdir=\"/test-folder/\`hostname\`\" foo*; echo \`date +%s.%N\` > /test-folder/end_file'"
-
-- hosts: docker_hosts
-  remote_user: root
-  gather_facts: no
-  tasks:
-    - name: "Calculate time from time files"
-      shell: |
-        start_t=$(cat /test-folder/start_file | head -n 1)
-        end_t=$(cat /test-folder/end_file)
-        download_time=$( echo "$end_t - $start_t" | bc -l )
-        echo $download_time
-      register: cmd
-    - name: "Show calculated time"
+        cmd: hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" foo*'"
+      register: job_details
+    - name: "Output time taken for job-invocation (delta)"
       debug:
-        var: cmd.stdout_lines
-
+        var: job_details.delta
