@@ -92,7 +92,7 @@ h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' -
 employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
 h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'"
-down_test_subs_id=$( tail -n 1 $logs/regs-subs-list-downtest.log | cut -d ',' -f 1 )
+down_test_subs_id=$( tail -n 1 $logs/regs-40-subs-list-downtest.log | cut -d ',' -f 1 )
 h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
 
 
