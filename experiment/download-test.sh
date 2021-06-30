@@ -106,11 +106,13 @@ log "Going to register $sum hosts in total. Make sure there is enough hosts avai
 
 iter=1
 sum=0
+totalclients=0
 for batch in $download_test_batches; do
     ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     let sum=$(($sum + $batch))
-    ap downrepo-50-$iter-$sum.log playbooks/tests/downloadtest.yaml
+    let totalclients=$( expr $sum \* ansible_docker_hosts )
+    ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml
     let iter+=1
     s $wait_interval
 done
