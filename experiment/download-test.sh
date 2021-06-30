@@ -49,9 +49,9 @@ h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '
 s $wait_interval
 
 section "Sync Download Test repo"
-h product-create-downtest.log "product create --organization '$do' --name down_test_product"
-h repository-create-downtest.log "repository create --organization '$do' --product down_test_product --name down_test_repo --content-type yum --url '$repo_download_test'"
-h repo-sync-downtest.log "repository synchronize --organization '$do' --product down_test_product --name down_test_repo"
+h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
+h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
+h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
 s $wait_interval
 
 section "Prepare for registrations"
@@ -91,7 +91,7 @@ h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization 
 h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
 employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
 h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
-h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = down_test_product'"
+h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'"
 down_test_subs_id=$( tail -n 1 $logs/regs-subs-list-downtest.log | cut -d ',' -f 1 )
 h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
 
