@@ -11,19 +11,19 @@
     download_test_repo_template: "download_test_repo*"
   tasks:
     - name: "Create product"
-      command:
-        hammer product create --organization "{{ dorg }}" --name "{{ download_test_product }}"
+      shell:
+        cmd: hammer product create --organization "{{ dorg }}" --name "{{ download_test_product }}"
       register: create_product
       failed_when: "create_product.rc != 0 and 'Name has already been taken for a product in this organization' not in create_product.stderr"
       changed_when: "create_product.rc == 0 and 'Product created' in create_product.stdout"
     - name: "Create repos"
-      command:
-        hammer repository create --organization "{{ dorg }}" --product "{{ download_test_product }}" --content-type yum --name "{{ download_test_repo_template|replace('*', item) }}" --url "{{ repo_download_test|replace('*', item) }}"
+      shell:
+        cmd: hammer repository create --organization "{{ dorg }}" --product "{{ download_test_product }}" --content-type yum --name "{{ download_test_repo_template|replace('*', item) }}" --url "{{ repo_download_test|replace('*', item) }}"
       register: create_repo
       loop: "{{ range(1, repo_count_download_test|int+1)|list }}"
     - name: "Start sync"
-      command:
-        hammer repository synchronize --organization "{{ dorg }}" --product "{{ download_test_product }}" --name "{{ download_test_repo_template|replace('*', item) }}"
+      shell:
+        cmd: hammer repository synchronize --organization "{{ dorg }}" --product "{{ download_test_product }}" --name "{{ download_test_repo_template|replace('*', item) }}"
       loop: "{{ range(1, repo_count_download_test|int+1)|list }}"
       register: start_sync
       ignore_errors: true
