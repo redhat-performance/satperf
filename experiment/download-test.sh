@@ -52,7 +52,7 @@ s $wait_interval
 
 section "Sync Download Test repo"
 #h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
-ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test package_name_download_test=$package_name_download_test dorg=$do"
+ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test dorg=$do"
 # h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
 # h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
 s $wait_interval
@@ -115,7 +115,7 @@ for batch in $download_test_batches; do
     e Register $logs/regs-50-register-$iter-$batch.log
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_docker_hosts )
-    ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml
+    ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test"
     let iter+=1
     s $wait_interval
 done
