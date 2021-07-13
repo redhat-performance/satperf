@@ -21,7 +21,7 @@
   tasks:
     - name: "Start yum download job"
       shell:
-        cmd: hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" foo*'"
+        cmd: hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}'"
       register: job_details
     - name: "Output time taken for job-invocation (delta)"
       debug:
