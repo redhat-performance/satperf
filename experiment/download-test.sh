@@ -51,7 +51,7 @@ h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '
 s $wait_interval
 
 section "Sync Download Test repo"
-h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
+#h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
 ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test package_name_download_test=$package_name_download_test dorg=$do"
 # h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
 # h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
