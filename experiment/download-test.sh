@@ -14,7 +14,9 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
-repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo1/}"
+repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo*}"
+repo_count_download_test="${PARAM_repo_count_download_test:-8}"
+package_name_download_test="${PARAM_package_name_download_test:-foo*}"
 
 do="Default Organization"
 dl="Default Location"
@@ -50,8 +52,9 @@ s $wait_interval
 
 section "Sync Download Test repo"
 h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
-h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
-h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
+ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test package_name_download_test=$package_name_download_test dorg=$do"
+# h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
+# h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
 s $wait_interval
 
 section "Prepare for registrations"
