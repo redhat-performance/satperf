@@ -25,4 +25,4 @@
       register: job_details
     - name: "Output time taken for job-invocation (delta)"
       debug:
-        var: job_details.delta
+        msg: "Start= {{ job_details.start }}  End= {{ job_details.end }}  Delta= {{ job_details.delta }}"
