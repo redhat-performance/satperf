@@ -7,6 +7,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 wait_interval=${PARAM_wait_interval:-50}
+download_wait_interval=${PARAM_download_wait_interval:-30}
 download_test_batches="${PARAM_download_test_batches:-1 2 3}"
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
 
@@ -113,6 +114,7 @@ totalclients=0
 for batch in $download_test_batches; do
     ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
+    s $download_wait_interval
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_docker_hosts )
     ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test"
