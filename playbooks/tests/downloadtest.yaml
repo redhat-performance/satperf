@@ -20,9 +20,37 @@
   remote_user: root
   tasks:
     - name: "Start yum download job"
+      shell: |
+        hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}'" --randomized-ordering true --effective-user root --async &
+        sleep 15
+    - name: "Get last job ID"
       shell:
-        cmd: hammer job-invocation create --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}'" --randomized-ordering true --effective-user root
-      register: job_details
-    - name: "Output time taken for job-invocation (delta)"
+        hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
+      register: last_job_id_cmd
+    - debug: var=last_job_id_cmd
+    - name: "Set last job ID"
+      set_fact:
+        last_job_id: "{{ last_job_id_cmd.stdout_lines[0]|int }}"
+    - name: "Distribute private key"
+      copy:
+        src: files/wait-for-job.py
+        dest: /root/wait-for-job.py
+        mode: "u=rwx,g=rx,o=rx"
+        force: yes
+    - name: "Wait for job {{ last_job_id }} to finish"
+      shell:
+        /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}/" "{{ last_job_id }}"
+      register: wait_for_job_cmd
+    - name: "Parse script result"
+      set_fact:
+        pass_count:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[2]|int }}"
+        total_count:  "{{ ((wait_for_job_cmd.stdout_lines|last).split())[4]|int }}"
+        start_time:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[6]|int }}"
+        end_time:     "{{ ((wait_for_job_cmd.stdout_lines|last).split())[8]|int }}"
+        avg_duration: "{{ ((wait_for_job_cmd.stdout_lines|last).split())[10]|int }}"
+    - name: "Show what we have parsed"
       debug:
-        msg: "Start= {{ job_details.start }}  End= {{ job_details.end }}  Delta= {{ job_details.delta }}"
+        msg: "RESULT: pass_count: {{ pass_count }}; total_count: {{ total_count }}; start_time: {{ start_time }}; end_time: {{ end_time }}; avg_duration: {{ avg_duration }}"
+    - name: "Give server some time to rest"
+      pause:
+        seconds: "{{ resting }}"
