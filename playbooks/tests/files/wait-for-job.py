@@ -1,7 +1,7 @@
 #!/usr/bin/env python
 # -*- coding: UTF-8 -*-
 
-import json
+import json as simplejson
 from simplejson.scanner import JSONDecodeError
 import sys
 import time
