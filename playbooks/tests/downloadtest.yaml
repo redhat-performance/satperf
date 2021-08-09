@@ -40,6 +40,9 @@
         dest: /root/wait-for-job.py
         mode: "u=rwx,g=rx,o=rx"
         force: yes
+    - name: Install simpleJson
+      pip:
+        name: simpleJson
     - name: "Wait for job {{ last_job_id }} to finish"
       shell:
         /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}/" "{{ last_job_id }}"
