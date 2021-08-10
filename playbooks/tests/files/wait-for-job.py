@@ -88,7 +88,7 @@ while True:
     if 'pending_count' in dynflow_task_info['output']:
         hanged_tasks = []
         now = datetime.datetime.utcnow()
-        for page in range(dynflow_task_info['output']['pending_count'] / PER_PAGE + 1):
+        for page in range(int(dynflow_task_info['output']['pending_count'] / PER_PAGE) + 1):
             data = (page+1, PER_PAGE, requests.utils.quote("parent_task_id = %s AND state != stopped" % dynflow_task_id))
             sub_tasks = get_json(URL + "/foreman_tasks/api/tasks?page=%s&per_page=%s&search=%s" % data)
             ###pprint.pprint(sub_tasks)
