@@ -54,10 +54,11 @@
         total_count:  "{{ ((wait_for_job_cmd.stdout_lines|last).split())[4]|int }}"
         start_time:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[6]|int }}"
         end_time:     "{{ ((wait_for_job_cmd.stdout_lines|last).split())[8]|int }}"
-        avg_duration: "{{ ((wait_for_job_cmd.stdout_lines|last).split())[10]|int }}"
+        test_time:    "{{ ((wait_for_job_cmd.stdout_lines|last).split())[11]|int }}"
+        avg_duration: "{{ ((wait_for_job_cmd.stdout_lines|last).split())[13]|int }}"
     - name: "Show what we have parsed"
       debug:
-        msg: "RESULT: pass_count: {{ pass_count }}; total_count: {{ total_count }}; start_time: {{ start_time }}; end_time: {{ end_time }}; avg_duration: {{ avg_duration }}"
+        msg: "RESULT: pass_count: {{ pass_count }}; total_count: {{ total_count }}; start_time: {{ start_time }}; end_time: {{ end_time }}; test_time: {{ test_time }}; avg_duration: {{ avg_duration }}"
     - name: "Give server some time to rest"
       pause:
         seconds: "{{ resting }}"
