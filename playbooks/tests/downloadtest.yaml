@@ -61,4 +61,4 @@
         msg: "RESULT: pass_count: {{ pass_count }}; total_count: {{ total_count }}; start_time: {{ start_time }}; end_time: {{ end_time }}; test_time: {{ test_time }}; avg_duration: {{ avg_duration }}"
     - name: "Give server some time to rest"
       pause:
-        seconds: "{{ resting }}"
+        seconds: 30
