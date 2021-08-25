@@ -22,7 +22,7 @@
     - role: docker-host-scalelab6048r-partitioning
       when: "'-6048r.' in inventory_hostname and docker_host_partitioning != 'skip_me'"
     - role: docker-host-scalelab5039r-partitioning
-      when: "'-5039r.' in inventory_hostname and docker_host_partitioning != 'skip_me'"
+      when: "( '-5039r.' in inventory_hostname or '-5039ms.' in inventory_hostname ) and docker_host_partitioning != 'skip_me'"
     - role: docker-host-scalelab6018r-partitioning
       when: "'-6018r.' in inventory_hostname and docker_host_partitioning != 'skip_me'"
     - role: docker-host-scalelabr930-partitioning
