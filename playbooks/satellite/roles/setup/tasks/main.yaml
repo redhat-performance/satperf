@@ -106,7 +106,7 @@
     when: "sat_version is version('6.6', '>=')"
   - name: "Satellite configured"
     shell: |
-      {{ sat_installer_cmd }} {{ sat_installer_options }}
+      {{ sat_installer_cmd }} {{ sat_installer_options }} {{ sat_installer_aditional_ops | default(omit) }}
     environment:
       LANG: "en_US.UTF-8"
       LC_ALL: "en_US.UTF-8"
