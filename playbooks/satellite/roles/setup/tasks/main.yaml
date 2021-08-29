@@ -106,15 +106,7 @@
     when: "sat_version is version('6.6', '>=')"
   - name: "Satellite configured"
     shell: |
-      {{ sat_installer_cmd }} {{ sat_installer_options }}
-      rc=$?
-      if [ $rc -ne 0 -a $( date +%s ) -lt $( date -d "2020-10-10" +%s ) ]; then
-          echo "INFO: Previous installation attempt failed, trying again"
-          date
-          {{ sat_installer_cmd }} {{ sat_installer_options }}
-      else
-          exit $rc
-      fi
+      {{ sat_installer_cmd }} {{ sat_installer_options }} {{ sat_installer_aditional_ops | default(omit) }}
     environment:
       LANG: "en_US.UTF-8"
       LC_ALL: "en_US.UTF-8"
