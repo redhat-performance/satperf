@@ -113,7 +113,7 @@ function get_repo_id() {
     local product="$1"
     local repo="$2"
     h_out "--output yaml repository info --organization '$do' --product '$product' --name '$repo'" >$tmp
-    grep '^ID:' $tmp | cut -d ' ' -f 2
+    grep '^I[Dd]:' $tmp | cut -d ' ' -f 2
 }
 
 function status_data_create() {
