@@ -92,11 +92,11 @@
     yum:
       name: "{{ sat_installer_pkg }}"
       state: present
-      retries: 5
-      delay: 5
-      register: yum_install_satellite_cmd
-      until: yum_install_satellite_cmd.rc == 0
-      ignore_errors: yes
+    retries: 5
+    delay: 5
+    register: yum_install_satellite_cmd
+    until: yum_install_satellite_cmd.rc == 0
+    ignore_errors: yes
   - name: "Show installation result"
     debug:
       var: yum_install_satellite_cmd
