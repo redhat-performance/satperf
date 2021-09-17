@@ -44,6 +44,7 @@
       force: yes
     when:
       - sat_install_source is match("repo")
+      - sat_repo_file != ""
       - sat_repo_file is search("^(https?|s?ftps?):\/\/")
 
   # Get repofile from a local source
@@ -54,6 +55,7 @@
       force: yes
     when:
       - sat_install_source is match("repo")
+      - sat_repo_file != ""
       - sat_repo_file is search("^(?!(https?|s?ftps?):\/\/)")
 
   # Get potential additional repo files from a remote URL

@@ -1,0 +1,52 @@
+# You need to `ansible-galaxy collection install community.general` before running this
+
+---
+- name: Install webserver that mirror repos
+  delegate_to: 127.0.0.1
+  yum:
+    name: yum-utils , createrepo
+    state: latest
+
+- name: Creates directory
+  delegate_to: 127.0.0.1
+  file:
+   path: /tmp/sat_repos
+   state: directory
+
+- name: Sync packages from sat repo
+  delegate_to: 127.0.0.1
+  shell: |
+    reposync --nogpgcheck --repoid={{ item }} --download-path=/tmp/sat_repos/{{ item }} --norepopath
+    createrepo -v /tmp/sat_repos/{{ item }}
+  loop: "{{ workaround_local_sat_repo_repos }}"
+
+- name: Compress directory sat repos
+  delegate_to: 127.0.0.1
+  community.general.archive:
+   path: /tmp/sat_repos
+   dest: /tmp/sat_repos.tgz
+
+- name: Copy sat_repos file to remote location
+  copy:
+   src: /tmp/sat_repos.tgz
+   dest: /tmp/sat_repos.tgz
+
+- name: Extract
+  ansible.builtin.unarchive:
+    src: /tmp/sat_repos.tgz
+    dest: /tmp/
+
+- name: Configure the local repo
+  copy:
+    dest: /etc/yum.repos.d/workaround-local-sat-repo-{{ item }}.repo
+    content: |
+      [workaround-local-sat-repo-{{ item }}]
+      name = workaround-local-sat-repo-{{ item }}
+      baseurl = file:///tmp/sat_repos/{{ item }}
+      gpgcheck = 0
+  loop: "{{ workaround_local_sat_repo_repos }}"
+
+- name: Remove sat repo
+  set_fact:
+    sat_repo_file: ""
+...
