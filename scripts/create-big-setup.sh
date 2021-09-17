@@ -100,7 +100,7 @@ for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}
 done
 wait
 
-for from_to in "Library ${ORG}-le1" "${ORG}-le1 ${ORG}-le2" "${ORG}-le2 ${ORG}-le3"; do
+for from_to in "Library ${ORG}-le1"; do
     from=$( echo "$from_to" | cut -d ' ' -f 1 )
     to=$( echo "$from_to" | cut -d ' ' -f 2 )
     for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
