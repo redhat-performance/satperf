@@ -109,4 +109,7 @@ for from_to in "Library ${ORG}-le1"; do
     wait
 done
 
+# Do not sync Smart Proxies after Content View promotion
+hammer_logged settings set --name foreman_proxy_content_auto_sync --value false
+
 done
