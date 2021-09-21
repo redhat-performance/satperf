@@ -10,8 +10,8 @@
 - name: Creates directory
   delegate_to: 127.0.0.1
   file:
-   path: /tmp/sat_repos
-   state: directory
+    path: /tmp/sat_repos
+    state: directory
 
 - name: Sync packages from sat repo
   delegate_to: 127.0.0.1
@@ -23,13 +23,13 @@
 - name: Compress directory sat repos
   delegate_to: 127.0.0.1
   community.general.archive:
-   path: /tmp/sat_repos
-   dest: /tmp/sat_repos.tgz
+    path: /tmp/sat_repos
+    dest: /tmp/sat_repos.tgz
 
 - name: Copy sat_repos file to remote location
   copy:
-   src: /tmp/sat_repos.tgz
-   dest: /tmp/sat_repos.tgz
+    src: /tmp/sat_repos.tgz
+    dest: /tmp/sat_repos.tgz
 
 - name: Extract
   ansible.builtin.unarchive:
