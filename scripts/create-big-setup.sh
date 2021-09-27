@@ -14,6 +14,12 @@ function hammer_logged() {
     log "DEBUG Command 'hammer $@' finished in $( expr $after - $before ) seconds with exit code $rc"
 }
 
+function get_id() {
+    hammer --output csv --no-headers repository list --organization ${ORG} | grep "^[0-9]\+,$1," | cut -d ',' -f 1
+}
+
+hammer_logged settings set --name foreman_proxy_content_auto_sync --value false
+
 for ORG in org1 org2 org3 org4 org5; do
 
 hammer_logged organization create --name ${ORG} --locations "Location for gprfc031-vm1.usersys.redhat.com"
@@ -38,10 +44,6 @@ hammer_logged repository-set enable --name 'Red Hat Enterprise Linux 8 for x86_6
 hammer_logged repository-set enable --name 'Red Hat Satellite Tools 6.9 (for RHEL 7 Server) (RPMs)' --basearch x86_64 --organization ${ORG}
 hammer_logged repository-set enable --name 'Red Hat Satellite Tools 6.9 for RHEL 8 x86_64 (RPMs)' --basearch x86_64 --organization ${ORG}
 hammer_logged repository-set enable --name 'Red Hat Software Collections RPMs for Red Hat Enterprise Linux 7 Server' --basearch x86_64 --releasever 7Server --organization ${ORG}
-
-function get_id() {
-    hammer --output csv --no-headers repository list --organization ${ORG} | grep "^[0-9]\+,$1," | cut -d ',' -f 1
-}
 
 rhel7=$( get_id "Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server" )
 rhel7_ansible=$( get_id "Red Hat Ansible Engine 2.9 RPMs for Red Hat Enterprise Linux 7 Server x86_64" )
