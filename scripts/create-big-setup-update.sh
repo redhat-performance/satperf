@@ -41,17 +41,15 @@ done
 wait
 
 for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
-    hammer_logged content-view publish --name $ccv --organization ${ORG} &
+    hammer_logged content-view publish --name $ccv --organization ${ORG}
 done
-wait
 
 for from_to in "${ORG}-le2 ${ORG}-le3" "${ORG}-le1 ${ORG}-le2" "Library ${ORG}-le1"; do
     from=$( echo "$from_to" | cut -d ' ' -f 1 )
     to=$( echo "$from_to" | cut -d ' ' -f 2 )
     for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
-        hammer_logged content-view version promote --content-view $ccv --from-lifecycle-environment $from --to-lifecycle-environment $to --organization ${ORG} &
+        hammer_logged content-view version promote --content-view $ccv --from-lifecycle-environment $from --to-lifecycle-environment $to --organization ${ORG}
     done
-    wait
 done
 
 done
