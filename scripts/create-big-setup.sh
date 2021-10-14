@@ -18,8 +18,6 @@ function get_id() {
     hammer --output csv --no-headers repository list --organization ${ORG} | grep "^[0-9]\+,$1," | cut -d ',' -f 1
 }
 
-hammer_logged settings set --name foreman_proxy_content_auto_sync --value false
-
 for ORG in org1 org2 org3 org4 org5; do
 
 hammer_logged organization create --name ${ORG} --locations "Location for gprfc031-vm1.usersys.redhat.com"
@@ -111,7 +109,7 @@ for from_to in "Library ${ORG}-le1"; do
     wait
 done
 
+done
+
 # Do not sync Smart Proxies after Content View promotion
 hammer_logged settings set --name foreman_proxy_content_auto_sync --value false
-
-done
