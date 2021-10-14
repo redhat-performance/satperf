@@ -2,6 +2,8 @@
 
 set -ex
 
+LOC_CAPSULE="$( hammer --output csv --no-headers location list --fields title | grep -v 'Default Location' | head -n 1 )"
+
 function log() {
     echo "$( date --utc -Ins ) $@" | tee -a /root/create-big-setup-${ORG}.log >&2
 }
@@ -20,7 +22,7 @@ function get_id() {
 
 for ORG in org1 org2 org3 org4 org5; do
 
-hammer_logged organization create --name ${ORG} --locations "Location for gprfc031-vm1.usersys.redhat.com"
+hammer_logged organization create --name ${ORG} --locations "${LOC_CAPSULE}"
 hammer_logged organization add-smart-proxy --name ${ORG} --smart-proxy gprfc031-vm1.usersys.redhat.com
 
 hammer_logged subscription upload --organization ${ORG} --file ~/manifest_jhutar-2021-09-10-${ORG}_*.zip
