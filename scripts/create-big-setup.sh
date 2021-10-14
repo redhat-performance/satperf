@@ -3,6 +3,7 @@
 set -ex
 
 LOC_CAPSULE="$( hammer --output csv --no-headers location list --fields title | grep -v 'Default Location' | head -n 1 )"
+CAPSULE="$( hammer --output csv --no-headers capsule list --fields name | grep -v $( hostname ) | head -n 1 )"
 
 function log() {
     echo "$( date --utc -Ins ) $@" | tee -a /root/create-big-setup-${ORG}.log >&2
@@ -23,7 +24,7 @@ function get_id() {
 for ORG in org1 org2 org3 org4 org5; do
 
 hammer_logged organization create --name ${ORG} --locations "${LOC_CAPSULE}"
-hammer_logged organization add-smart-proxy --name ${ORG} --smart-proxy gprfc031-vm1.usersys.redhat.com
+hammer_logged organization add-smart-proxy --name ${ORG} --smart-proxy "${CAPSULE}"
 
 hammer_logged subscription upload --organization ${ORG} --file ~/manifest_jhutar-2021-09-10-${ORG}_*.zip
 
@@ -31,9 +32,9 @@ hammer_logged lifecycle-environment create --name ${ORG}-le1 --prior Library --o
 hammer_logged lifecycle-environment create --name ${ORG}-le2 --prior ${ORG}-le1 --organization ${ORG}
 hammer_logged lifecycle-environment create --name ${ORG}-le3 --prior ${ORG}-le2 --organization ${ORG}
 
-hammer_logged capsule content add-lifecycle-environment --lifecycle-environment ${ORG}-le1 --name gprfc031-vm1.usersys.redhat.com --organization ${ORG}
-hammer_logged capsule content add-lifecycle-environment --lifecycle-environment ${ORG}-le2 --name gprfc031-vm1.usersys.redhat.com --organization ${ORG}
-hammer_logged capsule content add-lifecycle-environment --lifecycle-environment ${ORG}-le3 --name gprfc031-vm1.usersys.redhat.com --organization ${ORG}
+hammer_logged capsule content add-lifecycle-environment --lifecycle-environment ${ORG}-le1 --name "${CAPSULE}" --organization ${ORG}
+hammer_logged capsule content add-lifecycle-environment --lifecycle-environment ${ORG}-le2 --name "${CAPSULE}" --organization ${ORG}
+hammer_logged capsule content add-lifecycle-environment --lifecycle-environment ${ORG}-le3 --name "${CAPSULE}" --organization ${ORG}
 
 hammer_logged repository-set enable --name 'Red Hat Ansible Engine 2.9 for RHEL 8 x86_64 (RPMs)' --basearch x86_64 --organization ${ORG}
 hammer_logged repository-set enable --name 'Red Hat Ansible Engine 2.9 RPMs for Red Hat Enterprise Linux 7 Server' --basearch x86_64 --organization ${ORG}
