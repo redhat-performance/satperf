@@ -71,6 +71,11 @@ hammer_logged content-view create --auto-publish false --name ${ORG}-cv-rhel8_ba
 hammer_logged content-view create --auto-publish false --name ${ORG}-cv-rhel8_sattools --repository-ids "$rhel8_sattools" --organization ${ORG}
 hammer_logged content-view create --auto-publish false --name ${ORG}-cv-rhel8_supp --repository-ids "$rhel8_supp" --organization ${ORG}
 
+for cv in ${ORG}-cv-rhel7 ${ORG}-cv-rhel7_ansible ${ORG}-cv-rhel7_sattools ${ORG}-cv-rhel7_scl ${ORG}-cv-rhel8_ansible ${ORG}-cv-rhel8_appstream ${ORG}-cv-rhel8_baseos ${ORG}-cv-rhel8_sattools ${ORG}-cv-rhel8_supp; do
+    hammer content-view filter create --organization ${ORG} --name TIME --content-view $cv --inclusion true --type erratum
+    hammer content-view filter rule create --organization ${ORG} --content-view-filter TIME --content-view $cv --end-date 2021-09-01
+done
+
 hammer_logged content-view create --auto-publish false --name ${ORG}-ccv-rhel7-min --composite --organization ${ORG}
 hammer_logged content-view component add --composite-content-view ${ORG}-ccv-rhel7-min --component-content-view ${ORG}-cv-rhel7 --organization ${ORG} --latest
 hammer_logged content-view component add --composite-content-view ${ORG}-ccv-rhel7-min --component-content-view ${ORG}-cv-rhel7_sattools --organization ${ORG} --latest
