@@ -98,23 +98,23 @@ hammer_logged content-view component add --composite-content-view ${ORG}-ccv-rhe
 hammer_logged content-view component add --composite-content-view ${ORG}-ccv-rhel8-max --component-content-view ${ORG}-cv-rhel8_ansible --organization ${ORG} --latest
 hammer_logged content-view component add --composite-content-view ${ORG}-ccv-rhel8-max --component-content-view ${ORG}-cv-rhel8_supp --organization ${ORG} --latest
 
-for cv in ${ORG}-cv-rhel7 ${ORG}-cv-rhel7_ansible ${ORG}-cv-rhel7_sattools ${ORG}-cv-rhel7_scl ${ORG}-cv-rhel8_ansible ${ORG}-cv-rhel8_appstream ${ORG}-cv-rhel8_baseos ${ORG}-cv-rhel8_sattools ${ORG}-cv-rhel8_supp; do
-    hammer_logged content-view publish --name $cv --organization ${ORG} &
-done
-wait
+for to_le in "${ORG}-le3" "${ORG}-le2" "${ORG}-le1"; do
 
-for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
-    hammer_logged content-view publish --name $ccv --organization ${ORG} &
-done
-wait
-
-for from_to in "Library ${ORG}-le1"; do
-    from=$( echo "$from_to" | cut -d ' ' -f 1 )
-    to=$( echo "$from_to" | cut -d ' ' -f 2 )
-    for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
-        hammer_logged content-view version promote --content-view $ccv --from-lifecycle-environment $from --to-lifecycle-environment $to --organization ${ORG} &
+    for cv in ${ORG}-cv-rhel7 ${ORG}-cv-rhel7_ansible ${ORG}-cv-rhel7_sattools ${ORG}-cv-rhel7_scl ${ORG}-cv-rhel8_ansible ${ORG}-cv-rhel8_appstream ${ORG}-cv-rhel8_baseos ${ORG}-cv-rhel8_sattools ${ORG}-cv-rhel8_supp; do
+        hammer_logged content-view publish --name $cv --organization ${ORG} &
     done
     wait
+
+    for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
+        hammer_logged content-view publish --name $ccv --organization ${ORG} &
+    done
+    wait
+
+    for ccv in ${ORG}-ccv-rhel7-min ${ORG}-ccv-rhel7-max ${ORG}-ccv-rhel8-min ${ORG}-ccv-rhel8-max; do
+        hammer_logged content-view version promote --content-view $ccv --from-lifecycle-environment Library --to-lifecycle-environment $to_le --organization ${ORG} &
+    done
+    wait
+
 done
 
 done
