@@ -38,7 +38,7 @@ wait
 for cv in ${ORG}-cv-rhel7 ${ORG}-cv-rhel7_ansible ${ORG}-cv-rhel7_sattools ${ORG}-cv-rhel7_scl ${ORG}-cv-rhel8_ansible ${ORG}-cv-rhel8_appstream ${ORG}-cv-rhel8_baseos ${ORG}-cv-rhel8_sattools ${ORG}-cv-rhel8_supp; do
     rule_id=$( hammer --output csv --no-headers content-view filter rule list --organization ${ORG} --content-view-filter TIME --content-view $cv --fields "Rule ID" | head -n 1 )
     end_date=$( hammer --output csv --no-headers content-view filter rule info --organization ${ORG} --content-view-filter TIME --content-view $cv --id $rule_id --fields "End Date" )
-    new_end_date=$( date -d "$end_date + 1 day" +"%Y-%m-%d" )
+    new_end_date=$( date -d "$end_date - 30 day" +"%Y-%m-%d" )
     hammer content-view filter rule update --organization ${ORG} --content-view-filter TIME --content-view $cv --id $rule_id --end-date $new_end_date
     hammer_logged content-view publish --name $cv --organization ${ORG} &
 done
