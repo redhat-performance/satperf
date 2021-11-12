@@ -9,6 +9,7 @@ private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
+all_rex=${PARAM_all_rex:-false}
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
@@ -88,5 +89,17 @@ a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/fore
 h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
 
+if [ "$all_rex" != "false" ]; then
+    h 52-rex-ssh-subs.log "job-invocation create --inputs \"command='subscription-manager refresh'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+    s $wait_interval
+    h 52-rex-ssh-sleep.log "job-invocation create --inputs \"command='sleep 300'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+    s $wait_interval
+    h 52-rex-ans-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
+    s $wait_interval
+    h 52-rex-ans-subs.log "job-invocation create --inputs \"command='subscription-manager refresh'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
+    s $wait_interval
+    h 52-rex-ans-sleep.log "job-invocation create --inputs \"command='sleep 300'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
+    s $wait_interval
+fi
 
 junit_upload
