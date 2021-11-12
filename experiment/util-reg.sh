@@ -86,10 +86,10 @@ done
 section "Util: Remote execution"
 h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
-h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-s $wait_interval
 
 if [ "$all_rex" != "false" ]; then
+    h 52-rex-ssh-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+    s $wait_interval
     h 52-rex-ssh-subs.log "job-invocation create --inputs \"command='subscription-manager refresh'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
     s $wait_interval
     h 52-rex-ssh-sleep.log "job-invocation create --inputs \"command='sleep 300'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
