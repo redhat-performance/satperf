@@ -118,6 +118,11 @@ for batch in $download_test_batches; do
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_docker_hosts )
     ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test"
+    curl --insecure $logs/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:' > tmp1.txt
+    sed 's/\;//g' tmp1.txt > tmp2.txt
+    st=$(cut -d " " -f 12 tmp2.txt)
+    en=$(cut -d " " -f 14 tmp2.txt)
+    log "Passed: $(date -d @$st -u +'%Y-%m-%d %T')  End time: $(date -d @$en -u +'%Y-%m-%d %T')"
     let iter+=1
     s $wait_interval
 done
