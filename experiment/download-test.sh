@@ -18,6 +18,8 @@ repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tool
 repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo*}"
 repo_count_download_test="${PARAM_repo_count_download_test:-8}"
 package_name_download_test="${PARAM_package_name_download_test:-foo*}"
+workdir_url="${PARAM_workdir_url:-https://workdir-exporter-jenkins-csb-perf.psi.redhat.com/workspace}"
+job_name="${PARAM_job_name:-Sat_Experiment}"
 
 do="Default Organization"
 dl="Default Location"
@@ -118,7 +120,7 @@ for batch in $download_test_batches; do
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_docker_hosts )
     ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test"
-    curl --insecure $logs/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:' > tmp.txt
+    curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:' > tmp.txt
     sed -i 's/\;//g' tmp.txt
     log "$(cat tmp.txt)"
     st=$(cut -d " " -f 12 tmp.txt)
