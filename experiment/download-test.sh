@@ -123,7 +123,7 @@ for batch in $download_test_batches; do
     log "$(cat tmp.txt)"
     st=$(cut -d " " -f 12 tmp.txt)
     en=$(cut -d " " -f 14 tmp.txt)
-    log "Passed: $(date -d @$st -u +'%Y-%m-%d %T')  End time: $(date -d @$en -u +'%Y-%m-%d %T')"
+    log "Start time: $(date -d @$st -u +'%Y-%m-%d %T')  End time: $(date -d @$en -u +'%Y-%m-%d %T')"
     let iter+=1
     s $wait_interval
 done
