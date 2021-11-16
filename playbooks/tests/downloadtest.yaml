@@ -24,7 +24,7 @@
   tasks:
     - name: "Start yum download job"
       shell: |
-        hammer job-invocation create --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}'" async &
+        hammer job-invocation create --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}'" --async &
         sleep 15
     - name: "Get last job ID"
       shell:
