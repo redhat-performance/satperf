@@ -14,6 +14,9 @@
         path: "{{ item.path }}"
         state: absent
       with_items: "{{ dirs_to_delete.files }}"
+      register: clean_download_folder
+      until: clean_download_folder is not failed
+      retries: 5
 
 - hosts: satellite6
   gather_facts: no
