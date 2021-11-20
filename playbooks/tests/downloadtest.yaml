@@ -54,6 +54,7 @@
       ignore_errors: yes
       until: wait_for_job_cmd is not failed
       retries: 5
+      delay: 60
     - name: "Parse script result"
       set_fact:
         pass_count:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[2]|int }}"
