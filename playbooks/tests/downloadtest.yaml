@@ -17,6 +17,7 @@
       register: clean_download_folder
       until: clean_download_folder is not failed
       retries: 5
+      delay: 20
 
 - hosts: satellite6
   gather_facts: no
