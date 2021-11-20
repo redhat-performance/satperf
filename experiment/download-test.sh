@@ -120,21 +120,20 @@ for batch in $download_test_batches; do
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_docker_hosts )
     ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test"
-    curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:' > tmp.txt
-    sed -i 's/\;//g' tmp.txt
-    log "$(cat tmp.txt)"
-    st=$(cut -d " " -f 12 tmp.txt)
-    en=$(cut -d " " -f 14 tmp.txt)
-    log "Start time: $(date -d @$st -u +'%Y-%m-%d %T')  End time: $(date -d @$en -u +'%Y-%m-%d %T')"
+    log "$(curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:')"
     let iter+=1
     s $wait_interval
 done
 
 section "Summary"
-# iter=1
-# for batch in $registrations_batches; do
-#     log "$( experiment/reg-average.py Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
-#     let iter+=1
-# done
+iter=1
+sum=0
+totalclients=0
+for batch in $download_test_batches; do
+    let sum=$(($sum + $batch))
+    let totalclients=$( expr $sum \* $ansible_docker_hosts )
+    log "$(curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:')"
+    let iter+=1
+done
 
 junit_upload
