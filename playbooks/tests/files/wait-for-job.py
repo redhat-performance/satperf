@@ -135,8 +135,8 @@ for page in range(int(job_info['total'] / PER_PAGE) + 1):
 data = {
     'pass_count': pass_count,
     'total_count': job_info['total'],
-    'start_at': to_timestamp(start_at),
-    'end_at': to_timestamp(last_ended),
+    'start_at': start_at,
+    'end_at': last_ended,
     'total_test_time': to_timestamp(last_ended)-to_timestamp(start_at),
     'avg_duration': int(round(float(pass_sum_seconds) / pass_count))}
 print("RESULT passed {pass_count} of {total_count} started {start_at} ended {end_at} Total time {total_test_time} avg {avg_duration} seconds".format(**data))
