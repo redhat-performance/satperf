@@ -28,7 +28,7 @@
     - name: "Start yum download job"
       shell: |
         hammer job-invocation create --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}'" --async &
-        sleep 15
+        sleep 30
     - name: "Get last job ID"
       shell:
         hammer --csv job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
@@ -51,6 +51,9 @@
       shell:
         /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}"
       register: wait_for_job_cmd
+      ignore_errors: yes
+      until: wait_for_job_cmd is not failed
+      retries: 5
     - name: "Parse script result"
       set_fact:
         pass_count:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[2]|int }}"
