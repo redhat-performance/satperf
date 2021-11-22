@@ -18,6 +18,7 @@ USERNAME = sys.argv[1]
 PASSWORD = sys.argv[2]
 URL = sys.argv[3]
 JOB_ID = int(sys.argv[4])
+MAX_AGE_TASK = int(sys.argv[5])
 
 # URL for the API to your deployed Satellite 6 server
 SAT_API = "%s/api/v2/" % URL
@@ -67,7 +68,7 @@ def post_json(location, json_data):
 
 PER_PAGE = 20
 STARTED_AT_FMT = "%Y-%m-%d %H:%M:%S %Z"
-MAX_AGE = datetime.timedelta(0, 1200)
+MAX_AGE = datetime.timedelta(0, MAX_AGE_TASK)
 SLEEP = 15
 
 hanged_tasks = []
