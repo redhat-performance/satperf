@@ -20,7 +20,7 @@ repo_count_download_test="${PARAM_repo_count_download_test:-8}"
 package_name_download_test="${PARAM_package_name_download_test:-foo*}"
 workdir_url="${PARAM_workdir_url:-https://workdir-exporter-jenkins-csb-perf.psi.redhat.com/workspace}"
 job_name="${PARAM_job_name:-Sat_Experiment}"
-max_age_input="{PARAM_max_age_input:-19000}"
+max_age_input="${PARAM_max_age_input:-19000}"
 do="Default Organization"
 dl="Default Location"
 
