@@ -18,6 +18,7 @@ USERNAME = sys.argv[1]
 PASSWORD = sys.argv[2]
 URL = sys.argv[3]
 JOB_ID = int(sys.argv[4])
+MAX_AGE_TASK = int(sys.argv[5])
 
 # URL for the API to your deployed Satellite 6 server
 SAT_API = "%s/api/v2/" % URL
@@ -67,7 +68,7 @@ def post_json(location, json_data):
 
 PER_PAGE = 20
 STARTED_AT_FMT = "%Y-%m-%d %H:%M:%S %Z"
-MAX_AGE = datetime.timedelta(0, 1200)
+MAX_AGE = datetime.timedelta(0, MAX_AGE_TASK)
 SLEEP = 15
 
 hanged_tasks = []
@@ -135,8 +136,8 @@ for page in range(int(job_info['total'] / PER_PAGE) + 1):
 data = {
     'pass_count': pass_count,
     'total_count': job_info['total'],
-    'start_at': to_timestamp(start_at),
-    'end_at': to_timestamp(last_ended),
+    'start_at': start_at,
+    'end_at': last_ended,
     'total_test_time': to_timestamp(last_ended)-to_timestamp(start_at),
     'avg_duration': int(round(float(pass_sum_seconds) / pass_count))}
 print("RESULT passed {pass_count} of {total_count} started {start_at} ended {end_at} Total time {total_test_time} avg {avg_duration} seconds".format(**data))
