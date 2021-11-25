@@ -171,7 +171,10 @@ def investigate_task(args):
     lane = -1
     for worker, threads in workers_threads.items():
         worker_label_space = 50
-        worker_name = worker.replace('/pulp/api/v3/workers/', '').replace('/', '')
+        if worker is None:
+            worker_name = 'Unknown'
+        else:
+            worker_name = worker.replace('/pulp/api/v3/workers/', '').replace('/', '')
         x = 15
         y = 50 * (lane + 1)
         element = svgwrite.text.Text(worker_name, insert=(x, y), style="font-size: 30;", transform=f"rotate(90, {x}, {y})")
