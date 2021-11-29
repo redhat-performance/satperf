@@ -207,38 +207,4 @@ if vercmp_ge "$katello_version" "3.14.0" || vercmp_ge "$satellite_version" "6.7.
 fi
 
 
-section "Preparing Puppet environment"
-ap satellite-puppet-single-cv.log playbooks/tests/puppet-single-setup.yaml &
-ap satellite-puppet-big-cv.log playbooks/tests/puppet-big-setup.yaml &
-a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker_hosts &
-wait
-s $wait_interval
-
-
-section "Apply one module with different concurency"
-for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u ); do
-    iterations=$( echo "$puppet_one_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
-    for iteration in $( seq $iterations ); do
-        ap $concurency-PuppetOne-$iteration.log playbooks/tests/puppet-big-test.yaml --tags SINGLE -e "size=$concurency"
-        e RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log
-        e SetupPuppet $logs/$concurency-PuppetOne-$iteration.log
-        e PickupPuppet $logs/$concurency-PuppetOne-$iteration.log
-        s $wait_interval
-    done
-done
-
-
-section "Apply bunch of modules with different concurency"
-for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u ); do
-    iterations=$( echo "$puppet_bunch_concurency" | tr " " "\n" | grep "^$concurency$" | wc -l | cut -d ' ' -f 1 )
-    for iteration in $( seq $iterations ); do
-        ap $concurency-PuppetBunch-$iteration.log playbooks/tests/puppet-big-test.yaml --tags BUNCH -e "size=$concurency"
-        e RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log 
-        e SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log 
-        e PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log
-        s $wait_interval
-    done
-done
-
-
 junit_upload
