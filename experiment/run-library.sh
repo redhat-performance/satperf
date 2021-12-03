@@ -193,16 +193,12 @@ function status_data_create() {
 
     # Based on historical data, determine result of this test
     sd_result_log=$( mktemp )
-    if [ "$sd_rc" -eq 0 ]; then
-        # FIXME: Once we have bunch of runs with parameters.version-y-stream, we can stop using `--data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*"` here and just use new variable
-        data_investigator.py --data-from-es \
-            --data-from-es-matcher "results.rc=0" "name=$sd_name" \
-            --data-from-es-wildcard "parameters.version=*$sd_sat_ver_short*" \
-            --es-host $PARAM_elasticsearch_host \
-            --es-port $PARAM_elasticsearch_port \
-            --es-index satellite_perf_index \
-            --es-type cpt \
-            --test-from-status "$sd_file" &>$sd_result_log \
+    if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
+        export sd_section
+        export sd_name
+        pass_or_fail.py --debug \
+            --config "$PARAM_investigator_config" \
+            --current-file "$sd_file" &>$sd_result_log \
             && di_rc=$? || di_rc=$?
         if [ "$di_rc" -eq 0 ]; then
             sd_result='PASS'
