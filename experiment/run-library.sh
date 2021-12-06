@@ -236,7 +236,6 @@ function status_data_create() {
     junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
         --name "$sd_name" --result "$sd_result" --out "$tmp" \
         --start "$sd_start" --end "$sd_end"
-    ###junit_cli.py --file $logs/junit.xml print
 
     # Deactivate tools virtualenv
     deactivate
@@ -250,6 +249,9 @@ function junit_upload() {
 
     [ -z "$PARAM_reportportal_host" ] && return 0
 
+    # Activate tools virtualenv
+    source venv/bin/activate
+
     # Determine ReportPortal launch name
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
     if echo "$launch_name" | grep --quiet '%sat_ver%'; then
@@ -259,23 +261,21 @@ function junit_upload() {
     fi
     launch_name="$( echo "$launch_name" | sed "s/[^a-zA-Z0-9._-]/_/g" )"
 
-    # Create and upload zip to ReportPortal
-    zip_name="$launch_name.zip"
-    rm -f $zip_name
-    zip --quiet "$zip_name" "$logs/junit.xml"
-    curl --silent --insecure -X POST --header 'Accept: application/json' \
-        --header "Authorization: bearer $PARAM_reportportal_token" \
-        --form "file=@$zip_name" \
-        "https://$PARAM_reportportal_host/api/v1/$PARAM_reportportal_project/launch/import" \
-            | grep --quiet 'Launch with id = [0-9a-f]\+ is successfully imported' \
-                || echo "Failed to upload junit" >&2
-    rm -f "$zip_name"
-    cp "$logs/junit.xml" latest-junit.xml   # so Jenkins can find it easilly on the same path every time
-    rc=$?
-    echo "DEBUG: cp $logs/junit.xml latest-junit.xml: $rc"
-    echo "DEBUG: pwd: $( pwd )"
-    echo "DEBUG: ls: $( ls -al $logs/junit.xml latest-junit.xml )"
-    echo "DEBUG: date: $( date )"
+    # Show content and upload to ReportPortal
+    junit_cli.py --file $logs/junit.xml print
+    junit_cli.py --file $logs/junit.xml upload \
+        --host $PARAM_reportportal_host \
+        --project $PARAM_reportportal_project \
+        --token $PARAM_reportportal_token \
+        --launch $launch_name \
+        --noverify \
+        --properties jenkins_build_url=$BUILD_URL run_id=$marker
+
+    # Deactivate tools virtualenv
+    deactivate
+
+    # Make the file available for Jenkins on the same path every time
+    cp "$logs/junit.xml" latest-junit.xml
 }
 
 function log() {
