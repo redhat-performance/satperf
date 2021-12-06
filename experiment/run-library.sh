@@ -198,7 +198,7 @@ function status_data_create() {
         export sd_name
         pass_or_fail.py --debug \
             --config "$PARAM_investigator_config" \
-            --current-file "$sd_file" &>$sd_result_log \
+            --current-file "$sd_file" 2>&1 | tee $sd_result_log \
             && pof_rc=$? || pof_rc=$?
         if [ "$pof_rc" -eq 0 ]; then
             sd_result='PASS'
