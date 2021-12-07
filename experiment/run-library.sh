@@ -196,7 +196,7 @@ function status_data_create() {
     if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
         export sd_section
         export sd_name
-        pass_or_fail.py --debug \
+        pass_or_fail.py \
             --config "$PARAM_investigator_config" \
             --current-file "$sd_file" 2>&1 | tee $sd_result_log \
             && pof_rc=$? || pof_rc=$?
