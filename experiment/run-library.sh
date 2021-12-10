@@ -175,6 +175,7 @@ function status_data_create() {
         "results.jenkins.node_name=${NODE_NAME:-NA}" \
         "started=$sd_start" \
         "ended=$sd_end" \
+        "golden=${GOLDEN:-false}" \
         $sd_additional
 
     # Add monitoring data to the status data file
