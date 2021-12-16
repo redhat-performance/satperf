@@ -122,8 +122,9 @@ for batch in $download_test_batches; do
     s $download_wait_interval
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_docker_hosts )
-    ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test max_age_task=$max_age_input"
-    log "$(curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:')"
+    ap clean-downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest-cleanup.yaml
+    ap downrepo-50-$iter-$sum-$totalclients-Download.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test max_age_task=$max_age_input"
+    log "$(curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients-Download.log | grep -i 'result:')"
     let iter+=1
     s $wait_interval
 done
