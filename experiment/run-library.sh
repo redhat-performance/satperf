@@ -402,6 +402,12 @@ function h() {
     a "$log_relative" -m shell -a "hammer $hammer_opts $@" satellite6
 }
 
+function h_drop() {
+    # Run hammer command as usual, but drop its stdout
+    local log_relative=$1; shift
+    a "$log_relative" -m shell -a "hammer $hammer_opts $@ >/dev/null" satellite6
+}
+
 function h_out() {
     # Just run the hammer command via ansible. No output processing, action logging or measurements
     a_out -m shell -a "hammer $hammer_opts $@" satellite6
