@@ -32,7 +32,7 @@ skip_measurement='true' a 00-configure-work_mem-lineinfile.log satellite6,capsul
 a 01-configure-work_mem-restart.log satellite6,capsules -u root -m command -a 'satellite-maintain service restart'
 
 section "Checking environment for work_mem"
-generic_environment_check
+generic_environment_check false
 
 section "Setup for work_mem"
 ORG="test-work_mem-$RANDOM"
@@ -78,3 +78,6 @@ h_drop 41-package-list-all.log "package list --content-view $ORG-cv-big --lifecy
 
 section "Cleanup for work_mem"
 h 50-delete-org.log "organization delete --name $ORG"
+
+
+junit_upload
