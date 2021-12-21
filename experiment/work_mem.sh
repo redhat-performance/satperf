@@ -6,20 +6,11 @@ manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
-registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
 
-puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
-puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
-cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
-
-ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
+work_mem_value="${PARAM_test_work_mem_value:-4MB}"
 
 do="Default Organization"
 dl="Default Location"
@@ -28,7 +19,7 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 section "Configure for work_mem"
-skip_measurement='true' a 00-configure-work_mem-lineinfile.log satellite6,capsules -u root -m lineinfile -a 'path="/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf" regexp="^work_mem\s*=" line="work_mem = 4MB"'
+skip_measurement='true' a 00-configure-work_mem-lineinfile.log satellite6,capsules -u root -m lineinfile -a "path='/var/opt/rh/rh-postgresql12/lib/pgsql/data/postgresql.conf' regexp='^work_mem\s*=' line='work_mem = $work_mem_value'"
 a 01-configure-work_mem-restart.log satellite6,capsules -u root -m command -a 'satellite-maintain service restart'
 
 section "Checking environment for work_mem"
@@ -53,7 +44,7 @@ h 20-repo-sync-rhel7-validated.log "repository synchronize --organization '$ORG'
 h 20-repo-sync-rhel8-b-validated.log "repository synchronize --organization '$ORG' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' --validate-contents true" &
 h 20-repo-sync-rhel8-b-validated.log "repository synchronize --organization '$ORG' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' --validate-contents true" &
 wait
-s 30
+s $wait_interval
 h 21-repo-sync-rhel6-nonvalidated.log "repository synchronize --organization '$ORG' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' --validate-contents false" &
 h 21-repo-sync-rhel7-nonvalidated.log "repository synchronize --organization '$ORG' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --validate-contents false" &
 h 21-repo-sync-rhel8-b-nonvalidated.log "repository synchronize --organization '$ORG' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' --validate-contents false" &
