@@ -102,6 +102,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '$do' --name '
 s $wait_interval
 
 
+export skip_measurement='true'   # FIXME: I think this masks errors in this section so they do not appear in junit, but why do they appear at a first place?
 section "Sync from CDN do not measure"   # do not measure becasue of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
 h 10b-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
@@ -112,6 +113,7 @@ h 12b-repo-sync-rhel6.log "repository synchronize --organization '$do' --product
 h 12b-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" &
 wait
 s $wait_interval
+unset skip_measurement
 
 
 section "Sync Tools repo"
@@ -126,6 +128,7 @@ wait
 s $wait_interval
 
 
+export skip_measurement='true'
 section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
@@ -133,6 +136,7 @@ for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
     h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$do' --id '$capsule_id'"
 done
 s $wait_interval
+unset skip_measurement
 
 
 section "Prepare for registrations"
