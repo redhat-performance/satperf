@@ -1,0 +1,17 @@
+- hosts: satellite6
+  remote_user: root
+  tasks:
+   - name: create a dir for backup & give full Permission to postgres user on /backup directory
+     file:
+      path: "{{ item }}"
+      state: directory
+      mode: 0775
+      owner: postgres
+     loop:
+      - /backup-offline
+      - /backup-online
+   - name: execute the Satellite offline & online backup
+     command: "{{ item }}"
+     with_items:
+      - satellite-maintain backup offline -y /backup-offline/
+      - satellite-maintain backup offline -y /backup-online/
