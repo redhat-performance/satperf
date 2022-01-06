@@ -144,7 +144,7 @@ function status_data_create() {
     sd_rc="$3"
     sd_start="$( date --utc -d @$4 -Iseconds )"
     sd_end="$( date --utc -d @$5 -Iseconds )"
-    sd_duration="$( expr $5 - $4 )"
+    sd_duration="$( expr $( date -d @$5 +%s ) - $( date -d @$4 +%s ) )"
     sd_kat_ver="$6"
     sd_kat_ver_short=$( echo "$sd_kat_ver" | sed 's/^katello-//' | sed 's/[^0-9.]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
     sd_sat_ver="$7"
