@@ -17,7 +17,7 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 section "BackupTest"
-ap 00-backup.log playbooks/tests/sat-backup.yaml
+skip_measurement='true' ap 00-backup.log playbooks/tests/sat-backup.yaml
 e BackupOnline $logs/00-backup.log
 e BackupOffline $logs/00-backup.log
 

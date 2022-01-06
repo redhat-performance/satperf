@@ -211,4 +211,10 @@ if vercmp_ge "$katello_version" "3.14.0" || vercmp_ge "$satellite_version" "6.7.
 fi
 
 
+section "BackupTest"
+skip_measurement='true' ap 70-backup.log playbooks/tests/sat-backup.yaml
+e BackupOnline $logs/70-backup.log
+e BackupOffline $logs/70-backup.log
+
+
 junit_upload
