@@ -13,6 +13,8 @@
 
     - name: execute the Satellite online backup
       command: satellite-maintain backup online -y /backup-online/
+      environment:
+        TZ: UTC
       register: backup_online_cmd
 
     - name: print online backup duration
@@ -22,6 +24,8 @@
 
     - name: execute the Satellite offline backup
       command: satellite-maintain backup offline -y /backup-offline/
+      environment:
+        TZ: UTC
       register: backup_offline_cmd
 
     - name: print offline backup duration
