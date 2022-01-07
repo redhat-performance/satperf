@@ -37,6 +37,7 @@
       shell: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
       environment:
         TZ: UTC
+        LANG: en_US.utf-8
       register: restore_cmd
 
     - name: print restore duration
