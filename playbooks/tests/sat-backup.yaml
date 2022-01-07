@@ -34,7 +34,7 @@
       when: "backup_offline_cmd.rc is defined and backup_offline_cmd.rc == 0"
 
     - name: run the restoration script
-      command: satellite-maintain restore -y /backup-online/backup_directory
+      shell: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
       environment:
         TZ: UTC
       register: restore_cmd
