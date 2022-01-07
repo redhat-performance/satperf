@@ -32,23 +32,23 @@
       debug:
         msg: "BackupOffline {{ backup_offline_cmd.start }} to {{ backup_offline_cmd.end }}"
       when: "backup_offline_cmd.rc is defined and backup_offline_cmd.rc == 0"
-      
+
     - name: copy the backup data to Satellite Server’s local file system
-      copy: 
+      copy:
        src: /backup-online/
        dest: /var/
-       
+
     - name: run the restoration script
       command: satellite-maintain restore -y /var/backup_directory
       environment:
         TZ: UTC
       register: restore_cmd
-      
+
     - name: print restore duration
       debug:
         msg: "restore {{ restore_cmd.start }} to {{ restore_cmd.end }}"
       when: "restore_cmd.rc is defined and restore_cmd.rc == 0"
-      
+
     - name: cleanup directory
       file:
         path: "{{ item }}"
