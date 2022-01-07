@@ -215,6 +215,7 @@ section "BackupTest"
 skip_measurement='true' ap 70-backup.log playbooks/tests/sat-backup.yaml
 e BackupOnline $logs/70-backup.log
 e BackupOffline $logs/70-backup.log
+e Restore $logs/70-backup.log
 
 
 junit_upload

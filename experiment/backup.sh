@@ -20,5 +20,6 @@ section "BackupTest"
 ap 00-backup.log playbooks/tests/sat-backup.yaml
 e BackupOnline $logs/00-backup.log
 e BackupOffline $logs/00-backup.log
+e Restore $logs/00-backup.log
 
 junit_upload
