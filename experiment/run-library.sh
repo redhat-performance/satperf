@@ -75,6 +75,8 @@ function measurement_add() {
     python -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
     if [ "$skip_measurement" != "true" ]; then
         status_data_create "$@"
+    else
+        log "DEBUG: Skipping investigation of this '$1' result because skip_measurement variable is 'true'"
     fi
 }
 function measurement_row_field() {
