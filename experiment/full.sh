@@ -178,7 +178,6 @@ skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscripti
 section "Register"
 for i in $( seq $registrations_iterations ); do
     skip_measurement='true' ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/44-register-docker-host-client-logs'"
-    e Register $logs/44-register-$i.log
     s $wait_interval
 done
 grep Register $logs/44-register-*.log >$logs/44-register-overall.log
