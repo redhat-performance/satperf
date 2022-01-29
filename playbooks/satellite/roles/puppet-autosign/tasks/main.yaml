@@ -15,7 +15,7 @@
   - name: "If file exist on 7.0, it is enabled"
     stat:
       path: /etc/puppetlabs/puppet/autosign.conf
-      register: stat_result
+    register: stat_result
     when: "sat_version is version('7.0', '>=')"
 
   - name: "Add '*' autosign entry (Satellite 7.0 and above)"
