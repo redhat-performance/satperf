@@ -33,7 +33,7 @@ generic_environment_check
 
 
 section "Prepare for Red Hat content"
-h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
+skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
 skip_measurement='true' ap 01-manifest-excercise.log playbooks/tests/manifest-excercise.yaml -e "manifest=../../$manifest"
 e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
