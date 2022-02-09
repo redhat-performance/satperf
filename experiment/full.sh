@@ -204,7 +204,14 @@ s $wait_interval
 skip_measurement='true' ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
 e HammerHostList $logs/61-hammer-list.log
 s $wait_interval
-ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
+skip_measurement='true' ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
+e WebUIPage10_foreman_tasks_api_tasks_include_permissions_true $logs/62-some-webui-pages.log
+e WebUIPage10_audits $logs/62-some-webui-pages.log
+e WebUIPage10_audits_page_1_per_page_20_search_ $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_subscriptions_organization_id_1 $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_products_organization_id_1 $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_content_views_nondefault_true_organization_id_1 $logs/62-some-webui-pages.log
+e WebUIPage10_katello_api_v2_packages_organization_id_1 $logs/62-some-webui-pages.log
 s $wait_interval
 if vercmp_ge "$katello_version" "3.14.0" || vercmp_ge "$satellite_version" "6.7.0"; then
     a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake foreman_inventory_upload:report:generate"
