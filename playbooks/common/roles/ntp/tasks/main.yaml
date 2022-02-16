@@ -1,17 +1,14 @@
 ---
-  - name: "ntp is installed"
-    yum:
-      name=ntp
-      state=present
-  - name: "ntpd is stopped"
-    service:
-     name=ntpd
-     state=stopped
-  - name: "Time is synchronized"
-    command:
-      ntpdate "{{ ntp_server }}"
-  - name: "ntpd is started"
-    service:
-     name=ntpd
-     state=started
+- name: "Detect RHEL release"
+  setup:
+    filter: ansible_distribution_major_version
+  when: ansible_distribution_major_version is not defined
+
+- name: 'This is RHEL7'
+  import_tasks: rhel7.yaml
+  when: ansible_distribution_major_version == 7
+
+- name: 'This is RHEL8'
+  import_tasks: rhel8.yaml
+  when: ansible_distribution_major_version == 8
 ...
