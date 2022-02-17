@@ -1,0 +1,8 @@
+---
+- name: "Register Satellite"
+  include_role:
+    name: rhsm_helper
+  vars:
+    registration_options: "{{ satellite_registration_options }}"
+  when: "inventory_hostname in groups['satellite6']"
+...
