@@ -60,5 +60,5 @@
         - 'rhel-8-for-x86_64-baseos-rpms'
         - 'rhel-8-for-x86_64-appstream-rpms'
       purge: True
-    when: ansible_distribution_major_version == 7 and registering.changed
+    when: ansible_distribution_major_version == 8 and registering.changed
 ...
