@@ -86,6 +86,14 @@
       subscription-manager repos --enable "{{ sat_cdn_reponame }}"
     when: "sat_install_source == 'cdn'"
 
+  # RHEL8 workaround
+  - name: "Sat 7.0 on RHEL8 workaround: dnf -y module enable ruby:2.7"
+    command: dnf -y module enable ruby:2.7
+    when: "ansible_distribution_major_version == 8"
+  - name: "Sat 7.0 on RHEL8 workaround: dnf -y module enable pki-core"
+    command: dnf -y module enable pki-core
+    when: "ansible_distribution_major_version == 8"
+
   # Now, finally install required packages
   - name: "Package satellite installed"
     yum:
