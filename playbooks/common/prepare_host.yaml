@@ -11,5 +11,5 @@
     - ../common/roles/remove-home-extend-root
     - ../common/roles/epel-not-present
     - ../common/roles/rhsm
-    - ../common/roles/ntp
+    - linux-system-roles.timesync
 ...

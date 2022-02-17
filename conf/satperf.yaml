@@ -153,6 +153,10 @@ ntp_server: clock.redhat.com
 # EPEL
 epel_release_rpm: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
 
+# Variables needed by linux-system-roles.timesync Ansible role
+timesync_ntp_servers:
+  - hostname: "{{ ntp_server }}"
+
 # Product names to be created
 tests_products: perf-gen1 perf-gen2 perf-gen3 perf-gen4 perf-gen5 perf-gen6 perf-gen7 perf-gen8
 tests_backup_path: /home/backup
