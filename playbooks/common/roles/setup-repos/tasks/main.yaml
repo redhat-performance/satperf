@@ -1,0 +1,19 @@
+---
+- name: "Add repos from config"
+  yum_repository:
+    name: "{{ item.name }}"
+    description: "{{ item.description }}"
+    baseurl: "{{ item.baseurl }}"
+    gpgcheck: "{{ item.gpgcheck|default(true)|bool }}"
+  when: "'baseurl' in item"
+  loop: "{{ additional_repos }}"
+
+- name: "Add repos from files"
+  get_url:
+    url: "{{ item.from_file }}"
+    dest: "/etc/yum.repos.d/{{ item.from_file|regex_replace('[^a-zA-Z0-9]+', '_') }}.repo"
+    timeout: 30
+    force: yes
+  when: "'from_file' in item"
+  loop: "{{ additional_repos }}"
+...
