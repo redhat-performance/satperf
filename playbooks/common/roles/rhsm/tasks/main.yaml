@@ -32,13 +32,18 @@
   ###    state: absent
 
   # Make sure configuration matches hosted servers.
-  # Maybe we had the system registered to some satellite before? Clenup
-  - name: "Make sure configuration matches hosted servers"
-    command:
-      subscription-manager config --server.hostname=subscription.rhsm.redhat.com --server.port=443 --server.prefix=/subscription --rhsm.baseurl=https://cdn.redhat.com --rhsm.ca_cert_dir=/etc/rhsm/ca/ --rhsm.repo_ca_cert=/etc/rhsm/ca/redhat-uep.pem
+  # Maybe we had the system registered to some satellite before? Cleanup
+  - name: "Ensure we don't have any previous registration"
+    redhat_subscription:
+      state: absent
 
   - name: "Register the system with RHSM"
     redhat_subscription:
+      server_hostname: 'subscription.rhsm.redhat.com'
+      server_port: 443
+      server_prefix: '/subscription'
+      rhsm_baseurl: 'https://cdn.redhat.com'
+      rhsm_repo_ca_cert: '/etc/rhsm/ca/redhat-uep.pem'
       username: "{{ rhsm_user }}"
       password: "{{ rhsm_pass }}"
       force_register: true
