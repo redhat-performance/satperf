@@ -10,7 +10,9 @@
       when: '"scalelab" in inventory_hostname'
     - role: ../common/roles/common
     - role: ../common/roles/epel-not-present
-    - role: ../common/roles/rhsm_v2
+    - role: rhsm_helper
+      vars:
+        registration_options: "{{ satellite_registration_options }}"
     - role: linux-system-roles.timesync
     ###- role: upgrade-restart
     ###- role: satellite-ec2-partitioning
