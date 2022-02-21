@@ -156,6 +156,9 @@ epel_release_rpm: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ 
 # Variables needed by linux-system-roles.timesync Ansible role
 timesync_ntp_servers:
   - hostname: "{{ ntp_server }}"
+    iburst: yes
+    prefer: yes
+    trust: yes
 
 # Product names to be created
 tests_products: perf-gen1 perf-gen2 perf-gen3 perf-gen4 perf-gen5 perf-gen6 perf-gen7 perf-gen8

@@ -33,6 +33,10 @@ Ansible is used to perform most of the work. There are playbooks for:
 
 You need Ansible installed.
 
+For some playbooks, you might need some "Linux system roles":
+
+    ansible-galaxy role install linux-system-roles.timesync
+
 ### Configuration
 
 1. Before running satellite-performance, check `conf/satperf.yaml`, and create `conf/satperf.local.yaml`
