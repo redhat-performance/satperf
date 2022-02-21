@@ -11,7 +11,7 @@
     - ../common/roles/common
     - ../common/roles/epel-not-present
     - ../common/roles/rhsm
-    - ../common/roles/ntp
+    - linux-system-roles.timesync
     ###- upgrade-restart
     ###- satellite-ec2-partitioning
     - ../common/roles/remove-home-extend-root
