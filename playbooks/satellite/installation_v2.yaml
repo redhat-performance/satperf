@@ -1,0 +1,29 @@
+---
+- hosts: satellite6
+  remote_user: root
+  ###gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - role: ../common/roles/scalelab-nic-cleanup
+      when: '"scalelab" in inventory_hostname'
+    - role: ../common/roles/common
+    - role: ../common/roles/epel-not-present
+    - role: ../common/roles/rhsm_v2
+    - role: linux-system-roles.timesync
+    ###- role: upgrade-restart
+    ###- role: satellite-ec2-partitioning
+    - role: ../common/roles/remove-home-extend-root
+    - role: ../common/roles/setup-repos
+      vars:
+        additional_repos: "{{ satellite_additional_repos }}"
+    - role: setup_v2
+    - role: enable-remote-exec-by-ip
+    - role: ../common/roles/enlarge-arp-table
+    - role: puppet-autosign
+    - role: satellite-populate
+      tags: satellite-populate
+    - role: client-content
+      tags: client-content
+...
