@@ -33,10 +33,9 @@ Ansible is used to perform most of the work. There are playbooks for:
 
 You need Ansible installed.
 
-For some playbooks, you might need some "Linux system roles":
+For some playbooks, you might need extra roles installed:
 
-    ansible-galaxy role install linux-system-roles.firewall
-    ansible-galaxy role install linux-system-roles.timesync
+    ansible-galaxy role install -r requirements.yml
 
 ### Configuration
 
