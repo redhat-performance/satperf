@@ -43,26 +43,6 @@
   command:
     restorecon -vR /etc/hosts
 
-# Disable firewalld
-# TODO do not disable, but configure firewalld properly
-- name: "Collect facts about system services"
-  service_facts:
-  register: services_state
-
-- name: "Disable firewalld"
-  service:
-    name: firewalld
-    state: stopped
-    enabled: no
-  when: "'firewalld.service' in services_state.ansible_facts.services"
-
-- name: "Disable iptables service"
-  service:
-    name: iptables
-    state: stopped
-    enabled: no
-  when: "'iptables.service' in services_state.ansible_facts.services"
-
 # Check SELinux
 - name: "SELinux is in Enforcing with Tragetted policy"
   selinux:

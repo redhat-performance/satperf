@@ -3,6 +3,16 @@
   - assert:
       that: "capsule_install_source == 'repo' or capsule_install_source == 'cdn'"
       msg: "Capsule install source (capsule_install_source) have to be either 'repo' or 'cdn' (current value is '{{ capsule_install_source }}')"
+
+  # Configure firewall
+  - name: "Configure Capsule firewall rules"
+    ansible.builtin.import_role:
+      name: linux-system-roles.firewall
+    vars:
+      firewall:
+        - service: "RH-Satellite-6-capsule"
+          state: enabled
+
   # See https://access.redhat.com/solutions/1230493
   - name: "Make sure Satellite have Capsule in /etc/hosts"
     lineinfile:
