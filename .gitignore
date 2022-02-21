@@ -1,3 +1,9 @@
+ansible-container-host-mgr
+ansible-kvm-host-mgr
+conf/contperf*
+satellite-monitoring
+OLD
+
 *.pyc
 *~
 
