@@ -35,6 +35,7 @@ You need Ansible installed.
 
 For some playbooks, you might need some "Linux system roles":
 
+    ansible-galaxy role install linux-system-roles.firewall
     ansible-galaxy role install linux-system-roles.timesync
 
 ### Configuration

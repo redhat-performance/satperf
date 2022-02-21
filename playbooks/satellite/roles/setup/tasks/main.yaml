@@ -4,6 +4,15 @@
       that: "sat_install_source == 'repo' or sat_install_source == 'cdn'"
       msg: "Satellite install source (sat_install_source) have to be either 'repo' or 'cdn' (current value is '{{ sat_install_source }}')"
 
+  # Configure firewall
+  - name: "Configure Satellite firewall rules"
+    ansible.builtin.import_role:
+      name: linux-system-roles.firewall
+    vars:
+      firewall:
+        - service: "RH-Satellite-6"
+          state: enabled
+
   # We will need base RHEL and Software Collections for sure,
   # repo with Satellite packages (either custom repo or CDN repo
   # will be configured lower)
