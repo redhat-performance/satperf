@@ -9,6 +9,9 @@
         dest: /root/getIP.sh
         mode: "u=rwx,g=rx,o=rx"
         force: yes
+    - name: "Create inventory of containers"
+      shell:
+        ./getIP.sh
     - name: "Copy copycrt yaml"
       copy:
         src: files/copycrt.yaml
