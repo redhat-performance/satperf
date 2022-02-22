@@ -1,0 +1,16 @@
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: copy crt to containers
+      copy:
+        src: /etc/pki/product-default/69.pem
+        dest: /etc/pki/product/69.pem
+        owner: root
+        group: root
+        mode: '0644'
+    - name: refresh subscription-manager
+      shell: |
+        subscription-manager refresh
+        yum repolist
+

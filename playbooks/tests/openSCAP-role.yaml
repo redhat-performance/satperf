@@ -1,0 +1,38 @@
+---
+- hosts: satellite6
+  gather_facts: no
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: "Start openSCAP job"
+      shell: |
+        hammer job-invocation create --search-query 'container' --job-template 'Ansible Roles - Ansible Default' --async &
+        sleep 30
+    - name: "Get last job ID"
+      shell:
+        hammer --csv job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
+      register: last_job_id_cmd
+    - debug: var=last_job_id_cmd
+    - name: "Set last job ID"
+      set_fact:
+        last_job_id: "{{ last_job_id_cmd.stdout_lines[0]|int }}"
+    - name: "Copy script"
+      copy:
+        src: files/wait-for-job.py
+        dest: /root/wait-for-job.py
+        mode: "u=rwx,g=rx,o=rx"
+        force: yes
+    - name: Install simpleJson
+      pip:
+        name: simpleJson
+        executable: pip3
+    - name: "Wait for job {{ last_job_id }} to finish"
+      shell:
+        /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}" "{{ max_age_task }}"
+      register: wait_for_job_cmd
+      ignore_errors: yes
+      until: wait_for_job_cmd is not failed
+      retries: 5
+      delay: 60
