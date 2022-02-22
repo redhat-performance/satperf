@@ -1,5 +1,5 @@
 ---
-- hosts: docker_hosts
+- hosts: docker_hosts container_hosts
   remote_user: root
   gather_facts: no
   vars_files:
@@ -117,7 +117,7 @@
 
     # FIXME: Takes into account start/end time from only one (random) docker host (should from min(start) to max(end))
     - debug:
-        msg: "Graphs: http://{{ grafana_host|default('N/A') }}:{{ grafana_port|default('N/A') }}/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node={{ ansible_hostname|replace('.','_') }}"
+        msg: "Graphs: http://{{ grafana_host|default('N/A') }}:{{ grafana_port|default('N/A') }}/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node={{ inventory_hostname|replace('.','_') }}"
       run_once: true
       ignore_errors: true
 ...

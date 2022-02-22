@@ -53,8 +53,8 @@
     - name: "Make sure /etc/hosts contains all capsules"
       shell: |
         {% for item in groups['satellite6'] + groups['capsules'] %}
-          {% if hostvars[item].ip is defined %}
-            grep {{ item }} /etc/hosts || echo "{{ hostvars[item].ip }} {{ item }}">>/etc/hosts
+          {% if hostvars[item].private_ip is defined %}
+            grep {{ item }} /etc/hosts || echo "{{ hostvars[item].private_ip }} {{ item }}">>/etc/hosts
           {% endif %}
         {% endfor %}
 

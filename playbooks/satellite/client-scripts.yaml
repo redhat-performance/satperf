@@ -1,10 +1,18 @@
 ---
-- hosts: docker_hosts
+- hosts: docker_hosts container_hosts
   remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - client-scripts
+    - role: client-scripts
+    - role: ../common/roles/setup-repos
+      vars:
+        additional_repos: "{{ container_host_additional_repos }}"
+  tasks:
+    - name: "Install Ansible"
+      package:
+        name: ansible
+        state: present
 ...

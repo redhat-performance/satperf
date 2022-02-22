@@ -87,12 +87,17 @@ function generic_environment_check() {
     extended=${1:-true}
     skip_measurement='true' a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
     skip_measurement='true' a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
-    skip_measurement='true' a 00-info-ip-a.log satellite6,docker_hosts -m "shell" -a "ip a"
-    skip_measurement='true' a 00-check-ping-sat.log docker_hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
+    skip_measurement='true' a 00-info-ip-a.log satellite6,capsules,docker_hosts,container_hosts -m "shell" -a "ip a"
+    skip_measurement='true' a 00-check-ping-sat.log docker_hosts,container_hosts -m "shell" -a "ping -c 3 {{ groups['satellite6']|first }}"
     skip_measurement='true' a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 
     if $extended; then
-        skip_measurement='true' ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
+        ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+        if [ "$ansible_container_hosts" -gt 0 ]; then
+            skip_measurement='true' ap 00-recreate-containers.log -e @conf/satperf.local.yaml ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
+        else
+            skip_measurement='true' ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
+        fi
         skip_measurement='true' ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
         skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi
