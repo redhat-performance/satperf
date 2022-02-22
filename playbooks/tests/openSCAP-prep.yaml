@@ -22,7 +22,7 @@
       shell:
         ansible-playbook --private-key /root/id_rsa_key -i cont.ini copycrt.yaml
 
-- hosts: satellite
+- hosts: satellite6
   remote_user: root
   gather_facts: no
   tasks:
@@ -30,7 +30,7 @@
       shell: |
         yum info scap-security-guide
         hammer scap-content bulk-upload --type default
-        hammer ansible roles import --proxy-id "{{ proxy_id }}"" --role-names theforeman.foreman_scap_client
-        hammer ansible roles sync --proxy-id "{{ proxy_id }}"" --role-names theforeman.foreman_scap_client
+        hammer ansible roles import --proxy-id "{{ proxy_id }}" --role-names theforeman.foreman_scap_client
+        hammer ansible roles sync --proxy-id "{{ proxy_id }}" --role-names theforeman.foreman_scap_client
         hammer hostgroup update --id 1 --content-source-id 1 --openscap-proxy-id 1 --ansible-roles theforeman.foreman_scap_client
         hammer policy create --deploy-by 'ansible' --name 'openSCAP-test' --scap-content 'Red Hat rhel7 default content' --scap-content-profile-id 31 --period monthly --day-of-month 1 --hostgroup-ids 1
