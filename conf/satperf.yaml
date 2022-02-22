@@ -136,13 +136,6 @@ capsule_additional_repos:
   #  baseurl: ...
   #  gpgcheck: ...
 
-# Docker hosts
-docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
-docker_host_containers: 50
-docker_host_partitioning: kvm
-docker_host_storage_driver: devicemapper   # which storage driver should Docker use, "devicemapper" or "overlay"
-docker_host_vg: docker   # name of the VG to be used when using Devicemapper direct LVM; when empty, use first VG you find
-
 # Puppet 4 Repos
 puppet4_repo: Sat6-CI_Satellite_6_3_Composes_Satellite_6_3_Puppet_4_RHEL7
 install_puppet4: True

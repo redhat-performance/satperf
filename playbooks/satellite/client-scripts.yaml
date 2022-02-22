@@ -1,5 +1,5 @@
 ---
-- hosts: docker_hosts container_hosts
+- hosts: container_hosts
   remote_user: root
   gather_facts: no
   vars_files:
@@ -14,5 +14,12 @@
     - name: "Install Ansible"
       package:
         name: ansible
+        state: present
+
+    - name: "Ansible should not check host keys"
+      lineinfile:
+        dest: /etc/ansible/ansible.cfg
+        regexp: '^.*host_key_checking'
+        line: 'host_key_checking = False'
         state: present
 ...

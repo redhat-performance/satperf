@@ -89,10 +89,10 @@ h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organizati
 
 
 section "Register more and more"
-ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
 for b in $registrations_batches; do
-    let sum+=$( expr $b \* $ansible_docker_hosts )
+    let sum+=$( expr $b \* $ansible_container_hosts )
 done
 log "Going to register $sum hosts in total. Make sure there is enough hosts available."
 
@@ -100,7 +100,7 @@ export skip_measurement='false'
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
     s $wait_interval
