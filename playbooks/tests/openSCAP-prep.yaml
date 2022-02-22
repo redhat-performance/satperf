@@ -1,0 +1,36 @@
+---
+- hosts: docker_hosts
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Copy getIP script"
+      copy:
+        src: files/getIP.sh
+        dest: /root/getIP.sh
+        mode: "u=rwx,g=rx,o=rx"
+        force: yes
+    - name: "Create inventory of containers"
+      shell:
+        ./getIP.sh
+    - name: "Copy copycrt yaml"
+      copy:
+        src: files/copycrt.yaml
+        dest: /root/copycrt.yaml
+        mode: "u=rw,g=rw,o=r"
+        force: yes
+    - name: "Copy rhel7 repo crt to all containers"
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -i cont.ini copycrt.yaml
+
+- hosts: satellite
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Prep satellite for openSCAP test"
+      shell: |
+        yum info scap-security-guide
+        hammer scap-content bulk-upload --type default
+        hammer ansible roles import --proxy-id "{{ proxy_id }}"" --role-names theforeman.foreman_scap_client
+        hammer ansible roles sync --proxy-id "{{ proxy_id }}"" --role-names theforeman.foreman_scap_client
+        hammer hostgroup update --id 1 --content-source-id 1 --openscap-proxy-id 1 --ansible-roles theforeman.foreman_scap_client
+        hammer policy create --deploy-by 'ansible' --name 'openSCAP-test' --scap-content 'Red Hat rhel7 default content' --scap-content-profile-id 31 --period monthly --day-of-month 1 --hostgroup-ids 1

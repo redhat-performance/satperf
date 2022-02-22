@@ -1,0 +1,42 @@
+---
+- hosts: satellite6
+  gather_facts: no
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: "Start openSCAP job"
+      shell: |
+        hammer job-invocation create --search-query 'container' --job-template 'Run OpenSCAP scans' --async &
+        sleep 30
+    - name: "Get last job ID"
+      shell:
+        hammer --csv job-invocation list  | cut -d ',' -f 1 | grep '^[0-9]*$' | sort -n | tail -n 1
+      register: last_job_id_cmd
+    - debug: var=last_job_id_cmd
+    - name: "Set last job ID"
+      set_fact:
+        last_job_id: "{{ last_job_id_cmd.stdout_lines[0]|int }}"
+    - name: "Wait for job {{ last_job_id }} to finish"
+      shell:
+        /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}" "{{ max_age_task }}"
+      register: wait_for_job_cmd
+      ignore_errors: yes
+      until: wait_for_job_cmd is not failed
+      retries: 5
+      delay: 60
+    - name: "Parse script result"
+      set_fact:
+        pass_count:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[2]|int }}"
+        total_count:  "{{ ((wait_for_job_cmd.stdout_lines|last).split())[4]|int }}"
+        start_time:   "{{ ((wait_for_job_cmd.stdout_lines|last).split())[6] + ' ' + ((wait_for_job_cmd.stdout_lines|last).split())[7] }}"
+        end_time:     "{{ ((wait_for_job_cmd.stdout_lines|last).split())[9] + ' ' + ((wait_for_job_cmd.stdout_lines|last).split())[10] }}"
+        test_time:    "{{ ((wait_for_job_cmd.stdout_lines|last).split())[13]|int }}"
+        avg_duration: "{{ ((wait_for_job_cmd.stdout_lines|last).split())[15]|int }}"
+    - name: "Show what we have parsed"
+      debug:
+        msg: "RESULT: pass_count: {{ pass_count }}; total_count: {{ total_count }}; start_time: {{ start_time }}; end_time: {{ end_time }}; test_time: {{ test_time }}; avg_duration: {{ avg_duration }}"
+    - name: "Give server some time to rest"
+      pause:
+        seconds: 30
