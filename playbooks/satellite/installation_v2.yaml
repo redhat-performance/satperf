@@ -17,7 +17,7 @@
     ###- role: upgrade-restart
     ###- role: satellite-ec2-partitioning
     - role: ../common/roles/remove-home-extend-root
-    - role: ../common/roles/setup-repos
+    - role: repo_setup
       vars:
         additional_repos: "{{ satellite_additional_repos }}"
     - role: linux-system-roles.firewall
