@@ -6,21 +6,27 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - role: ../common/roles/scalelab-nic-cleanup
-      when: '"scalelab" in inventory_hostname'
-    - ../common/roles/common
-    - ../common/roles/epel-not-present
-    - ../common/roles/rhsm
-    - linux-system-roles.timesync
-    ###- upgrade-restart
-    ###- satellite-ec2-partitioning
-    - ../common/roles/remove-home-extend-root
-#     - role: workaround-local-sat-repo
-#       when: workaround_local_sat_repo is defined and workaround_local_sat_repo
-    - setup
-    - enable-remote-exec-by-ip
-    - ../common/roles/enlarge-arp-table
-    - puppet-autosign
+    - role: ../common/roles/common
+    - role: ../common/roles/epel-not-present
+    - role: rhsm_helper
+      vars:
+        registration_options: "{{ satellite_registration_options }}"
+    - role: linux-system-roles.timesync
+    ###- role: upgrade-restart
+    ###- role: satellite-ec2-partitioning
+    - role: ../common/roles/remove-home-extend-root
+    - role: repo_setup
+      vars:
+        additional_repos: "{{ satellite_additional_repos }}"
+    - role: linux-system-roles.firewall
+      vars:
+        firewall:
+          - service: "RH-Satellite-6"
+            state: enabled
+    - role: setup
+    - role: enable-remote-exec-by-ip
+    - role: ../common/roles/enlarge-arp-table
+    - role: puppet-autosign
     - role: satellite-populate
       tags: satellite-populate
     - role: client-content
