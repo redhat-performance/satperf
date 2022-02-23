@@ -27,6 +27,4 @@
     - role: enable-remote-exec-by-ip
     - role: ../common/roles/enlarge-arp-table
     - role: puppet-autosign
-    - role: satellite-populate
-      tags: satellite-populate
 ...
