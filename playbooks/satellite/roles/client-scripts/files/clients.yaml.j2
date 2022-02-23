@@ -27,8 +27,6 @@
 
     marker: "{% raw %}{{ marker }}{% endraw %}"
 
-    recorder_server: "{{ recorder_server }}"
-
   tasks:
     - name: "Make sure server was set (on command line with '-e server=...' or in 'vars:' section here)"
       assert:
