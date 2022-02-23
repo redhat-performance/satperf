@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   tasks:
-    - name: "Start openSCAP job"
+    - name: "Install openSCAP client"
       shell: |
         hammer job-invocation create --search-query 'container' --job-template 'Ansible Roles - Ansible Default' --async &
         sleep 30

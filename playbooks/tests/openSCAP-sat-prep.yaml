@@ -1,27 +1,4 @@
 ---
-- hosts: docker_hosts
-  remote_user: root
-  gather_facts: no
-  tasks:
-    - name: "Copy getIP script"
-      copy:
-        src: files/getIP.sh
-        dest: /root/getIP.sh
-        mode: "u=rwx,g=rx,o=rx"
-        force: yes
-    - name: "Create inventory of containers"
-      shell:
-        ./getIP.sh
-    - name: "Copy copycrt yaml"
-      copy:
-        src: files/copycrt.yaml
-        dest: /root/copycrt.yaml
-        mode: "u=rw,g=rw,o=r"
-        force: yes
-    - name: "Copy rhel7 repo crt to all containers"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -i /root/cont.ini /root/copycrt.yaml -v &> /root/copycrt.log
-
 - hosts: satellite6
   remote_user: root
   gather_facts: no
