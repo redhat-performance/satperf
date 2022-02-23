@@ -1,0 +1,17 @@
+---
+foreman_repositories_version: nightly
+foreman_repository_base: "http://koji.katello.org/releases/yum/foreman-{{ foreman_repositories_version }}/RHEL/{{ ansible_distribution_major_version }}/x86_64/"
+foreman_plugin_repository_base: "http://koji.katello.org/releases/yum/foreman-plugins-{{ foreman_repositories_version }}/RHEL/{{ ansible_distribution_major_version }}/x86_64/"
+katello_repositories_version: nightly
+katello_repositories_pulp_version: 2.15
+katello_repositories_pulp_release: stable
+epel_repo_installer: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
+katello_installer_cmd: foreman-installer --scenario katello
+katello_user: admin
+katello_password: changeme
+katello_ports:
+  - 80/tcp
+  - 443/tcp
+  - 5647/tcp
+  - 9090/tcp
+...
