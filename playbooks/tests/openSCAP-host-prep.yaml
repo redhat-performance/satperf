@@ -1,0 +1,14 @@
+---
+- hosts: docker_hosts
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Copy copycrt yaml"
+      copy:
+        src: files/copycrt.yaml
+        dest: /root/copycrt.yaml
+        mode: "u=rw,g=rw,o=r"
+        force: yes
+    - name: "Copy rhel7 repo crt to all containers"
+      shell:
+        ansible-playbook --private-key /root/id_rsa_key -i clients.ini copycrt.yaml -v &> /root/copycrt.log
