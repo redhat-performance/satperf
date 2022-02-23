@@ -98,16 +98,6 @@ katello_ports:
   - 5647/tcp
   - 9090/tcp
 
-# Content for client testing (RHEL repo with erratas and Satellite tools repo)
-content_rhel_name: RHEL7 x86_64 Base
-content_rhel_label: rhel7-x86_64-base
-content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
-content_sattools_name: Sat Tools
-content_sattools_label: sat-x86_64-tools
-content_sattools_url: http://repos.example.com/released/SatTools/7Server/x86_64/os/
-content_content_view_name: SatPerfContentView
-content_hostgroup: "SatperfHostGroup"
-content_activationkey: "SatperfActivationKey"
 client_domain: "example.com"
 client_environment: "production"
 client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
