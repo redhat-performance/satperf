@@ -20,7 +20,7 @@
         force: yes
     - name: "Copy rhel7 repo crt to all containers"
       shell:
-        ansible-playbook --private-key /root/id_rsa_key -i cont.ini copycrt.yaml
+        ansible-playbook --private-key /root/id_rsa_key -i /root/cont.ini /root/copycrt.yaml -v &> /root/copycrt.log
 
 - hosts: satellite6
   remote_user: root
