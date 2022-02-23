@@ -29,6 +29,4 @@
     - role: puppet-autosign
     - role: satellite-populate
       tags: satellite-populate
-    - role: client-content
-      tags: client-content
 ...
