@@ -17,6 +17,7 @@ repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tool
 workdir_url="${PARAM_workdir_url:-https://workdir-exporter-jenkins-csb-perf.apps.ocp-c1.prod.psi.redhat.com/workspace}"
 job_name="${PARAM_job_name:-Sat_Experiment}"
 max_age_input="${PARAM_max_age_input:-19000}"
+proxy_id="${PARAM_proxy_id:-set-in-doit-sh}"
 
 do="Default Organization"
 dl="Default Location"
@@ -91,7 +92,7 @@ employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' 
 h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 section "Prepare env for openSCAP test"
-ap openSCAP-prep.log playbooks/tests/openSCAP-prep.yaml -e "proxy_id='1-{{ PARAM_grafana_node }}'"
+ap openSCAP-prep.log playbooks/tests/openSCAP-prep.yaml -e "proxy_id=$proxy_id"
 
 section "Register more and more"
 ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
