@@ -95,9 +95,11 @@
 
 - name: "We can ping NTP server"
   command:
-    ping -c 3 "{{ timesync_ntp_servers|first.hostname }}"
+    ping -c 3 "{{ (timesync_ntp_servers|first).hostname }}"
 
 # Sanity check yum config
 - name: "Command yum repolist returns"
   command: yum repolist
+  args:
+    warn: false
 ...
