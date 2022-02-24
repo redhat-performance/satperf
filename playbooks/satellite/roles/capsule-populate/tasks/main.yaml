@@ -1,24 +1,21 @@
 ---
-- name: "Assign Library"
-  command:
-    "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name {{ item }} --organization '{{ sat_org }}' --environment Library"
+- name: "Assign Library lifecycle environment"
+  shell: |
+    if hammer --no-headers --output csv -u {{ sat_user }} -p {{ sat_pass }} capsule content lifecycle-environments --name '{{ item }}' --organization '{{ sat_org }}' --fields name | grep '^Library$'; then
+      echo "Library already present in {{ item }}"
+    else
+      hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name '{{ item }}' --organization '{{ sat_org }}' --lifecycle-environment Library
+    fi
   delegate_to: "{{ groups['satellite6']|first }}"
   run_once: true
-  with_items: "{{ groups['capsules'] }}"
-  ignore_errors: true
-- name: "Syncing in async mode"
-  command:
-    "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library --async"
-  delegate_to: "{{ groups['satellite6']|first }}"
-  run_once: true
-  with_items: "{{ groups['capsules'] }}"
-  when: "capsule_repos_sync == 'async'"
+  loop: "{{ groups['capsules'] }}"
+  register: hammer_add_le_to_capsule_cmd
+  changed_when: "hammer_add_le_to_capsule_cmd.rc is defined and hammer_add_le_to_capsule_cmd.rc == 0 and 'Library already present in ' + item not in hammer_add_le_to_capsule_cmd.stdout"
 
-- name: "Syncing in sync mode"
+- name: "Sync the content"
   command:
-    "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library"
+    "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --lifecycle-environment Library"
   delegate_to: "{{ groups['satellite6']|first }}"
   run_once: true
-  with_items: "{{ groups['capsules'] }}"
-  when: "capsule_repos_sync == 'sync'"
+  loop: "{{ groups['capsules'] }}"
 ...
