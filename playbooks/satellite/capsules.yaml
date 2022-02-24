@@ -8,7 +8,6 @@
   roles:
     - role: ../common/roles/common
     - role: ../common/roles/epel-not-present
-    ###- ../common/roles/rhsm-satellite
     - role: rhsm_helper
       vars:
         registration_options: "{{ capsule_registration_options }}"
