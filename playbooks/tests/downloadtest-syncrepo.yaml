@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    repo_count_download_test: 10
+    repo_count_download_test: 1
     download_test_product: "DownTestProduct"
     download_test_repo_template: "download_test_repo*"
     dorg: "Default Organization"
@@ -22,6 +22,11 @@
         cmd: hammer repository create --organization "{{ dorg }}" --product "{{ download_test_product }}" --content-type yum --name "{{ download_test_repo_template|replace('*', item) }}" --url "{{ repo_download_test|replace('*', item) }}"
       register: create_repo
       loop: "{{ range(1, repo_count_download_test|int+1)|list }}"
+    - name: "Immediate"
+      shell:
+        cmd: hammer repository update --organization "{{ dorg }}" --product "{{ download_test_product }}" --name "{{ download_test_repo_template|replace('*', item) }}" --download-policy 'immediate'
+      loop: "{{ range(1, repo_count_download_test|int+1)|list }}"
+      ignore_errors: true
     - name: "Start sync"
       shell:
         cmd: hammer repository synchronize --organization "{{ dorg }}" --product "{{ download_test_product }}" --name "{{ download_test_repo_template|replace('*', item) }}"
