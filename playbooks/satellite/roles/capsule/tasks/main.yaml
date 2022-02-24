@@ -1,118 +1,118 @@
 ---
-  # Install packages required for capsule
-  - name: "Install capsule package"
-    yum:
-      name: "satellite-capsule"
-      state: present
+# Install packages required for capsule
+- name: "Install capsule package"
+  yum:
+    name: "satellite-capsule"
+    state: present
 
-  # Prepare for 6.2 capsule installation
-  - name: "Run capsule-certs-generate on Satellite <=6.2"
-    shell:
-      "capsule-certs-generate --capsule-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    with_items: "{{ groups['capsules'] }}"
-    when: "sat_version is version('6.2', '<=')"
+# Prepare for 6.2 capsule installation
+- name: "Run capsule-certs-generate on Satellite <=6.2"
+  shell:
+    "capsule-certs-generate --capsule-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
+  delegate_to: "{{ groups['satellite6']|first }}"
+  run_once: true
+  with_items: "{{ groups['capsules'] }}"
+  when: "sat_version is version('6.2', '<=')"
 
-  # Prepare for 6.3 capsule installation
-  # NOTE: The change of --capsule-fqdn to --foreman-proxy-fqdn for Sat6.3
-  - name: "Run capsule-certs-generate on Satellite >=6.3"
-    shell:
-      "capsule-certs-generate --foreman-proxy-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    with_items: "{{ groups['capsules'] }}"
-    when: "sat_version is version('6.3', '>=')"
-    # Output of this command looks like this:
-    # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
-    # Installing             Done                                               [100%] [..........]
-    #   Success!
-    # 
-    #   To finish the installation, follow these steps:
-    # 
-    #   1. Ensure that the foreman-installer-katello package is installed on the system.
-    #   2. Copy aaa.tar to the system capsule.example.com
-    #   3. Run the following commands on the capsule (possibly with the customized
-    #      parameters, see foreman-installer --scenario capsule --help and
-    #      documentation for more info on setting up additional services):
-    # 
-    #   yum -y localinstall http://sat.example.com/pub/katello-ca-consumer-latest.noarch.rpm
-    #   subscription-manager register --org "Default_Organization"
-    #   satellite-installer --scenario capsule\
-    #                       --parent-fqdn                         "sat.example.com"\
-    #                       --register-in-foreman                 "true"\
-    #                       --foreman-base-url                    "https://sat.example.com"\
-    #                       --trusted-hosts                       "sat.example.com"\
-    #                       --trusted-hosts                       "capsule.example.com"\
-    #                       --oauth-consumer-key                  "ZpFxdhmWhArPmdV5dXn98uuZZzqEMJxc"\
-    #                       --oauth-consumer-secret               "4xaW6ZvyP8sJeHyhehEhzt7nspDq6k3W"\
-    #                       --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
-    #                       --certs-tar                           "aaa.tar"
-    #   The full log is at /var/log/capsule-certs-generate.log
+# Prepare for 6.3 capsule installation
+# NOTE: The change of --capsule-fqdn to --foreman-proxy-fqdn for Sat6.3
+- name: "Run capsule-certs-generate on Satellite >=6.3"
+  shell:
+    "capsule-certs-generate --foreman-proxy-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
+  delegate_to: "{{ groups['satellite6']|first }}"
+  run_once: true
+  with_items: "{{ groups['capsules'] }}"
+  when: "sat_version is version('6.3', '>=')"
+  # Output of this command looks like this:
+  # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
+  # Installing             Done                                               [100%] [..........]
+  #   Success!
+  # 
+  #   To finish the installation, follow these steps:
+  # 
+  #   1. Ensure that the foreman-installer-katello package is installed on the system.
+  #   2. Copy aaa.tar to the system capsule.example.com
+  #   3. Run the following commands on the capsule (possibly with the customized
+  #      parameters, see foreman-installer --scenario capsule --help and
+  #      documentation for more info on setting up additional services):
+  # 
+  #   yum -y localinstall http://sat.example.com/pub/katello-ca-consumer-latest.noarch.rpm
+  #   subscription-manager register --org "Default_Organization"
+  #   satellite-installer --scenario capsule\
+  #                       --parent-fqdn                         "sat.example.com"\
+  #                       --register-in-foreman                 "true"\
+  #                       --foreman-base-url                    "https://sat.example.com"\
+  #                       --trusted-hosts                       "sat.example.com"\
+  #                       --trusted-hosts                       "capsule.example.com"\
+  #                       --oauth-consumer-key                  "ZpFxdhmWhArPmdV5dXn98uuZZzqEMJxc"\
+  #                       --oauth-consumer-secret               "4xaW6ZvyP8sJeHyhehEhzt7nspDq6k3W"\
+  #                       --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
+  #                       --certs-tar                           "aaa.tar"
+  #   The full log is at /var/log/capsule-certs-generate.log
 
-  - name: "Download tarball created by capsule-certs-generate"
-    get_url:
-      url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-certs.tar"
-      dest: "/root/{{ inventory_hostname }}-certs.tar"
-      force: yes
+- name: "Download tarball created by capsule-certs-generate"
+  get_url:
+    url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-certs.tar"
+    dest: "/root/{{ inventory_hostname }}-certs.tar"
+    force: yes
 
-  - name: "Download output produced by capsule-certs-generate"
-    get_url:
-      url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-out.raw"
-      dest: "/root/{{ inventory_hostname }}-out.raw"
-      force: yes
+- name: "Download output produced by capsule-certs-generate"
+  get_url:
+    url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-out.raw"
+    dest: "/root/{{ inventory_hostname }}-out.raw"
+    force: yes
 
-  - name: "Get only commands we need to run"
-    shell: |
-      sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" \
-        | grep \
-          -e '^\s\+satellite-installer ' \
-          -e '^\s\+foreman-installer ' \
-          -e '^\s\+capsule-installer ' \
-          -e '^\s\+--' \
-        | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
-        > "/root/{{ inventory_hostname }}-script.sh"
-    args:
-      warn: false
+- name: "Get only commands we need to run"
+  shell: |
+    sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" \
+      | grep \
+        -e '^\s\+satellite-installer ' \
+        -e '^\s\+foreman-installer ' \
+        -e '^\s\+capsule-installer ' \
+        -e '^\s\+--' \
+      | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
+      > "/root/{{ inventory_hostname }}-script.sh"
+  args:
+    warn: false
 
-  - name: "Fix certificate tarball path"
-    shell:
-      sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+- name: "Fix certificate tarball path"
+  shell:
+    sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
 
-  - name: "Fix scenario (workaround for bug 1726151)"
-    shell:
-      sed -i 's|foreman-installer\s\+--scenario\s\+foreman-proxy-content|satellite-installer --scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
-    when: "sat_version is version('6.6', '=')"
+- name: "Fix scenario (workaround for bug 1726151)"
+  shell:
+    sed -i 's|foreman-installer\s\+--scenario\s\+foreman-proxy-content|satellite-installer --scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
+  when: "sat_version is version('6.6', '=')"
 
-  # Fix for BZ 1458749
-  - name: "Fix the capsule scenario"
-    shell:
-      sed -i 's|--scenario foreman-proxy-content|--scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
-    when: "sat_version == '6.3'"
+# Fix for BZ 1458749
+- name: "Fix the capsule scenario"
+  shell:
+    sed -i 's|--scenario foreman-proxy-content|--scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
+  when: "sat_version == '6.3'"
 
-  # Make sure remote execution plugin is enabled
-  # https://bugzilla.redhat.com/show_bug.cgi?id=1402240
-  - name: "Make sure remote execution plugin is enabled"
-    lineinfile:
-      dest: "/root/{{ inventory_hostname }}-script.sh"
-      line: '                    --enable-foreman-proxy-plugin-remote-execution-ssh\'
-      insertafter: '.*-installer .*'
+# Make sure remote execution plugin is enabled
+# https://bugzilla.redhat.com/show_bug.cgi?id=1402240
+- name: "Make sure remote execution plugin is enabled"
+  lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --enable-foreman-proxy-plugin-remote-execution-ssh\'
+    insertafter: '.*-installer .*'
 
-  - name: "Make sure Ansible plugin is enabled"
-    lineinfile:
-      dest: "/root/{{ inventory_hostname }}-script.sh"
-      line: '                    --enable-foreman-proxy-plugin-ansible\'
-      insertafter: '.*-installer .*'
+- name: "Make sure Ansible plugin is enabled"
+  lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --enable-foreman-proxy-plugin-ansible\'
+    insertafter: '.*-installer .*'
 
-  # Finally install capsule
-  - name: "Run Capsule configuration"
-    command:
-      bash "/root/{{ inventory_hostname }}-script.sh"
-    environment:
-      LANG: "en_US.UTF-8"
-      LC_ALL: "en_US.UTF-8"
-    register: configuration
-    until: "{{ configuration.rc }} == 0"
-    retries: 5
-    delay: 10
+# Finally install capsule
+- name: "Run Capsule configuration"
+  command:
+    bash "/root/{{ inventory_hostname }}-script.sh"
+  environment:
+    LANG: "en_US.UTF-8"
+    LC_ALL: "en_US.UTF-8"
+  register: configuration
+  until: "{{ configuration.rc }} == 0"
+  retries: 5
+  delay: 10
 ...
