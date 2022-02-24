@@ -16,19 +16,21 @@
     domain_id: "{{ domain_info.json.id }}"
   run_once: true
 
-###- name: "Get id of an environment"
-###  uri:
-###    url: "https://{{ groups['satellite6']|first }}/api/environments/{{ client_environment }}"
-###    method: GET
-###    user: "{{ sat_user }}"
-###    password: "{{ sat_pass }}"
-###    force_basic_auth: yes
-###    validate_certs: no
-###  register: environment_info
-###  run_once: true
-###- name: "Determine environment ID"
-###  set_fact:
-###    environment_id: "{{ environment_info.json.id }}"
+- name: "Get id of an environment"
+  uri:
+    url: "https://{{ groups['satellite6']|first }}/api/environments/production"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: environment_info
+  run_once: true
+  when: "sat_version is version('7.0', '<')"
+- name: "Determine environment ID"
+  set_fact:
+    environment_id: "{{ environment_info.json.id }}"
+  when: "sat_version is version('7.0', '<')"
 
 - name: "Get list of locations"
   uri:
@@ -41,6 +43,16 @@
   register: locations
   run_once: true
 
+- name: "Compose location creation request body for Sat <7.0"
+  set_fact:
+    location_body: "{{ {'location': {'name': 'Location for ' + inventory_hostname, 'domain_ids': [domain_id], 'environment_ids': [environment_id]}} }}"
+  when: "sat_version is version('7.0', '<')"
+
+- name: "Compose location creation request body for Sat >=7.0"
+  set_fact:
+    location_body: "{{ {'location': {'name': 'Location for ' + inventory_hostname, 'domain_ids': [domain_id]}} }}"
+  when: "sat_version is version('7.0', '>=')"
+
 - name: "Create location for our capsule if it is not already there"
   uri:
     url: "https://{{ groups['satellite6']|first }}/api/locations"
@@ -52,10 +64,7 @@
     headers:
       Content-Type: application/json
       Accept: application/json
-    ###body: >
-    ###  {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"], "environment_ids":["{{ environment_id }}"]}}
-    body: >
-      {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"]}}
+    body: "{{ location_body }}"
     status_code: 201
     body_format: json
   when: "'Location for ' + inventory_hostname not in locations.json.results|map(attribute='name')"
