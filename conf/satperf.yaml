@@ -30,7 +30,9 @@ satellite_registration_options: {}
 satellite_additional_repos: []
 
 # Capsules setup
-# TODO
+capsule_registration_options: {}
+capsule_additional_repos: []
+capsule_domain: satcpt.lan
 
 # VMs provisioning
 vms_vg: default
