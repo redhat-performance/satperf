@@ -1,124 +1,12 @@
 ---
-  # Check variables
-  - assert:
-      that: "capsule_install_source == 'repo' or capsule_install_source == 'cdn'"
-      msg: "Capsule install source (capsule_install_source) have to be either 'repo' or 'cdn' (current value is '{{ capsule_install_source }}')"
-
-  # Configure firewall
-  - name: "Configure Capsule firewall rules"
-    ansible.builtin.import_role:
-      name: linux-system-roles.firewall
-    vars:
-      firewall:
-        - service: "RH-Satellite-6-capsule"
-          state: enabled
-
-  # See https://access.redhat.com/solutions/1230493
-  - name: "Make sure Satellite have Capsule in /etc/hosts"
-    lineinfile:
-      dest: /etc/hosts
-      regexp: '{{ hostvars[item].ip }}\s+{{ item }}'
-      line: '{{ hostvars[item].ip }} {{ item }}'
-    when: "hostvars[item].ip is defined"
-    with_items: "{{ groups['capsules'] }}"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-  - name: "Make sure Satellite can ping Capsule"
-    command:
-      ping -c 3 "{{ inventory_hostname }}"
-    delegate_to: "{{ groups['satellite6']|first }}"
-  - name: "Make sure Satellite can resolve Capsule hostname"
-    lineinfile:
-      dest: /etc/hosts
-      regexp: '{{ ip }}\s+{{ inventory_hostname }}'
-      line: '{{ ip }} {{ inventory_hostname }}'
-    delegate_to: "{{ groups['satellite6']|first }}"
-    when: "ip is defined"
-
-  # We have ran into issues when we have mistakenly broken context on the satellite, so make sure it is OK
-  - name: "File /etc/hosts on Satellite have correct SELinux context (had issues before)"
-    command:
-      restorecon -vR /etc/hosts
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-
-  - name: "Attach Capsule subscription and enable repos"
-    block:
-      # We will need base RHEL and Software Collections for sure,
-      # repo with Satellite packages (either custom repo or CDN repo
-      # will be configured lower)
-      - name: "Determine pool we are going to attach to"
-        command:
-          subscription-manager list --available --all --matches "{{ sat_capsule_pool }}" --pool-only
-        register: querying
-        until: "querying.rc == 0"
-        retries: 5
-        delay: 10
-      - debug:
-          var: querying
-      - name: "Attach to the pool"
-        command:
-          subscription-manager attach --pool "{{ querying.stdout_lines|first }}"
-        when: "querying.stdout != ''"
-        register: attaching
-        until: "attaching.rc == 0"
-        retries: 5
-        delay: 10
-        failed_when: "attaching.rc != 0 and 'This unit has already had the subscription matching pool ID' not in attaching.stdout"
-      - name: "Disable all RHSM repos"
-        shell:
-          subscription-manager repos --disable '*'
-      - name: "Enable all SM repos required for installation"
-        shell:
-          subscription-manager repos --enable "{{ item }}"
-        with_items: "{{ capsule_installation_repos }}"
-    when: "sat_capsule_pool != ''"
-
-  - name: "Custom Capsule repo downloaded"
-    get_url:
-      url: "{{ capsule_repo_file }}"
-      dest: /etc/yum.repos.d/capsule_repo_file.repo
-      force: yes
-    when:
-      - "capsule_install_source is match('repo')"
-      - "capsule_repo_file is search('^(https?|s?ftps?)://')"
-  - name: "Custom Capsule repo deployed"
-    copy:
-      src: "{{ capsule_repo_file }}"
-      dest: /etc/yum.repos.d/
-      force: yes
-    when:
-      - "capsule_install_source is match('repo')"
-      - "capsule_repo_file is search('^(?!(https?|s?ftps?)://)')"
-  - name: "Satellite Capsule repository enabled"
-    command:
-      subscription-manager repos --enable '{{ capsule_cdn_reponame }}'
-    when: "capsule_install_source == 'cdn'"
-    register: enabling
-    until: "{{ enabling.rc }} == 0"
-    retries: 5
-    delay: 10
-
-  # Deploy additional repositories
-  - name: "Deploy additional repositories"
-    yum_repository:
-      name: "{{ item.name }}"
-      description: "{{ item.description if item.description is defined else item.name }}"
-      baseurl: "{{ item.baseurl }}"
-      gpgcheck: "{{ item.gpgcheck }}"
-    loop: "{{ capsule_additional_repos }}"
-
   # Install packages required for capsule
-  - name: "Make sure we have clean repodata"
-    shell:
-      rm -rf /var/cache/yum/*
-  - name: "Install capsule package {{ capsule_installer_pkg }}"
+  - name: "Install capsule package"
     yum:
-      name: "{{ capsule_installer_pkg }}"
+      name: "satellite-capsule"
       state: present
 
   # Prepare for 6.2 capsule installation
-  - name: "Run capsule-certs-generate on Satellite"
+  - name: "Run capsule-certs-generate on Satellite <=6.2"
     shell:
       "capsule-certs-generate --capsule-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
     delegate_to: "{{ groups['satellite6']|first }}"
@@ -128,7 +16,7 @@
 
   # Prepare for 6.3 capsule installation
   # NOTE: The change of --capsule-fqdn to --foreman-proxy-fqdn for Sat6.3
-  - name: "Run capsule-certs-generate on Satellite"
+  - name: "Run capsule-certs-generate on Satellite >=6.3"
     shell:
       "capsule-certs-generate --foreman-proxy-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
     delegate_to: "{{ groups['satellite6']|first }}"
@@ -161,22 +49,36 @@
     #                       --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
     #                       --certs-tar                           "aaa.tar"
     #   The full log is at /var/log/capsule-certs-generate.log
+
   - name: "Download tarball created by capsule-certs-generate"
     get_url:
-      url="http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-certs.tar"
-      dest="/root/{{ inventory_hostname }}-certs.tar"
-      force=yes
+      url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-certs.tar"
+      dest: "/root/{{ inventory_hostname }}-certs.tar"
+      force: yes
+
   - name: "Download output produced by capsule-certs-generate"
     get_url:
-      url="http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-out.raw"
-      dest="/root/{{ inventory_hostname }}-out.raw"
-      force=yes
+      url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-out.raw"
+      dest: "/root/{{ inventory_hostname }}-out.raw"
+      force: yes
+
   - name: "Get only commands we need to run"
-    shell:
-      sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" | grep -e '^\s\+satellite-installer ' -e '^\s\+foreman-installer ' -e '^\s\+capsule-installer ' -e '^\s\+--' | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' > "/root/{{ inventory_hostname }}-script.sh"
+    shell: |
+      sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" \
+        | grep \
+          -e '^\s\+satellite-installer ' \
+          -e '^\s\+foreman-installer ' \
+          -e '^\s\+capsule-installer ' \
+          -e '^\s\+--' \
+        | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
+        > "/root/{{ inventory_hostname }}-script.sh"
+    args:
+      warn: false
+
   - name: "Fix certificate tarball path"
     shell:
       sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+
   - name: "Fix scenario (workaround for bug 1726151)"
     shell:
       sed -i 's|foreman-installer\s\+--scenario\s\+foreman-proxy-content|satellite-installer --scenario capsule|' "/root/{{ inventory_hostname }}-script.sh"
