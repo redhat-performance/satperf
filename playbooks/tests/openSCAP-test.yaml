@@ -8,7 +8,7 @@
   tasks:
     - name: "Start openSCAP job"
       shell: |
-        hammer job-invocation create --search-query 'container' --job-template 'Run OpenSCAP scans' &
+        hammer job-invocation create --search-query 'container' --job-template 'Run OpenSCAP scans' --async &
         sleep 30
     - name: "Get last job ID"
       shell:
