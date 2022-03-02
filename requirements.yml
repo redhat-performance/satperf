@@ -4,6 +4,8 @@ roles:
 
   - name: linux-system-roles.firewall
 
+  - name: linux-system-roles.network
+
   - name: rhsm_helper
     src: https://github.com/jhutar/ansible-role-rhsm_helper.git
     version: origin/main

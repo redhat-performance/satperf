@@ -6,18 +6,19 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   roles:
-    - role: ../common/roles/common
     - role: ../common/roles/epel-not-present
     - role: rhsm_helper
       vars:
         registration_options: "{{ satellite_registration_options }}"
+    - role: repo_setup
+      vars:
+        additional_repos: "{{ satellite_additional_repos }}"
+    - role: ../common/roles/plain-network
+    - role: ../common/roles/common
     - role: linux-system-roles.timesync
     ###- role: upgrade-restart
     ###- role: satellite-ec2-partitioning
     - role: ../common/roles/remove-home-extend-root
-    - role: repo_setup
-      vars:
-        additional_repos: "{{ satellite_additional_repos }}"
     - role: linux-system-roles.firewall
       vars:
         firewall:
