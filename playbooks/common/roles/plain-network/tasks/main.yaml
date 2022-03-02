@@ -1,0 +1,36 @@
+---
+- name: "Make sure we have basic facts needed by linux-system-roles.network"
+  setup:
+    gather_subset: min
+  when: ansible_python is not defined
+
+- name: "Showing config"
+  debug:
+    msg:
+      - "Public network: {{ public_nic }} with DHCP"
+      - "Private network: {{ private_nic }} with {{ (private_ip + '/' + private_netmask) | ipaddr('host/prefix') }}"
+
+- name: "Setup networking"
+  include_role:
+    name: linux-system-roles.network
+  vars:
+    network_allow_restart: yes
+    network_connections:
+      - name: public
+        type: ethernet
+        interface_name: "{{ public_nic }}"
+        autoconnect: yes
+        ip:
+          dhcp4: yes
+        state: up
+      - name: private
+        type: ethernet
+        interface_name: "{{ private_nic }}"
+        autoconnect: yes
+        ip:
+          dhcp4: no
+          address:
+            - "{{ (private_ip + '/' + private_netmask) | ipaddr('host/prefix') }}"
+        state: up
+      - persistent_state: absent   # remove all other profiles
+...
