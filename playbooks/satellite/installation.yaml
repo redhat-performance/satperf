@@ -24,6 +24,30 @@
         firewall:
           - service: "RH-Satellite-6"
             state: enabled
+    - role: ../common/roles/partition-new-storage
+      vars:
+        storage_pools:
+         - name: satellite_data
+           disks:
+             - "{{ storage_pools_disk }}"
+           volumes:
+             - name: opt
+               size: 3G
+               fs_type: xfs
+               mount_point: /opt
+             - name: postgresql
+               size: 20G
+               fs_type: xfs
+               mount_point: /var/opt/rh/rh-postgresql12
+             - name: pulp
+               size: 300G
+               fs_type: xfs
+               mount_point: /var/lib/pulp
+             - name: qpidd
+               size: 1G
+               fs_type: xfs
+               mount_point: /var/lib/qpidd
+      when: partition_new_storage is defined and partition_new_storage == True
     - role: setup
     - role: enable-remote-exec-by-ip
     - role: ../common/roles/enlarge-arp-table

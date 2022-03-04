@@ -10,6 +10,10 @@ timesync_ntp_servers:
     prefer: yes
     trust: yes
 
+# Partition an additional disk where all the Satellite/capsule data will be stored
+partition_new_storage: False
+storage_pools_disk: sdb
+
 # Containers setup
 containers_host_registration_options: {}
 containers_host_additional_repos: []
