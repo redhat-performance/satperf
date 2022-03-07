@@ -96,7 +96,7 @@ function generic_environment_check() {
         else
             skip_measurement='true' ap 00-recreate-containers.log playbooks/docker/docker-tierdown.yaml playbooks/docker/docker-tierup.yaml
         fi
-        skip_measurement='true' ap 00-recreate-client-scripts.log -e @conf/satperf.local.yaml playbooks/satellite/client-scripts.yaml
+        skip_measurement='true' ap 00-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "content_activationkey='SatperfActivationKey' content_hostgroup='SatperfHostGroup'"
         skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi
 
