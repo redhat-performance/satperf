@@ -6,7 +6,11 @@ roles:
 
   - name: linux-system-roles.network
 
+  # Workaround for https://github.com/linux-system-roles/storage/issues/258
+  ###- name: linux-system-roles.storage
   - name: linux-system-roles.storage
+    src: git+https://github.com/jhutar/storage.git
+    version: origin/fix1
 
   - name: rhsm_helper
     src: git+https://github.com/jhutar/ansible-role-rhsm_helper.git
