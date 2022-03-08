@@ -54,7 +54,7 @@ s $wait_interval
 
 
 section "Prepare for registrations"
-ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
+ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "content_sattools_name='Sat Tools' content_rhel_name='RHEL7 x86_64 Base' content_activationkey='SatperfActivationKey' content_hostgroup='SatperfHostGroup'"  # this detects OS, so need to run after we synces one
 
 h_out "--no-headers --csv domain list --search 'name = {{ client_domain }}'" | grep --quiet '^[0-9]\+,' \
     || h regs-40-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
