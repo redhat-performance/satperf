@@ -9,7 +9,7 @@
     - role: client-scripts
     - role: repo_setup
       vars:
-        additional_repos: "{{ container_host_additional_repos }}"
+        additional_repos: "{{ containers_host_additional_repos }}"
   tasks:
     - name: "Install Ansible"
       package:
