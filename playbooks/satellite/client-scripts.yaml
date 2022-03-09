@@ -5,6 +5,15 @@
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
+  vars:
+    content_activationkey: 'SatperfActivationKey'
+    content_hostgroup: 'SatperfHostGroup'
+    content_operatingsystem: ''   # will be autodetected in playbooks/satellite/roles/client-scripts/ role
+    #content_rhel_name: ''
+    #content_sattools_name: ''
+    #content_puppet_env: ''
+    #content_puppet_module_name: ''
+    #content_puppet_module_file: ''
   roles:
     - role: client-scripts
     - role: repo_setup
