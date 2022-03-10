@@ -165,24 +165,6 @@
       tags: REG
 
     ##################################################
-    # Fix registration if needed
-    ##################################################
-    - name: "Fix registration if said so"
-      shell: |
-        if ! yum repolist | grep 'Default_Organization_RHEL7_x86_64_Base_rhel7-x86_64-base'; then
-          subscription-manager clean
-          yum --disablerepo=\* -y remove katello-ca-consumer-\*
-          rpm -Uvh "http://{% raw %}{{ server }}{% endraw %}/pub/katello-ca-consumer-latest.noarch.rpm"
-          subscription-manager register --org "{{ sat_orglabel }}" --environment Library --username "{{ sat_user }}" --password "{{ sat_pass }}" --force
-          pool=$( subscription-manager list --available --all --matches "{{ content_rhel_name }}" --pool-only )
-          subscription-manager attach --pool "$pool"
-          pool=$( subscription-manager list --available --all --matches "{{ content_sattools_name }}" --pool-only )
-          subscription-manager attach --pool "$pool"
-        fi
-      tags:
-        - FIXREG
-
-    ##################################################
     # Make sure katello-agent is clean installed
     # and not already present.
     ##################################################
