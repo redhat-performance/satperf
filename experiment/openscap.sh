@@ -95,10 +95,10 @@ section "Prepare env for openSCAP test"
 ap openSCAP-sat-prep.log playbooks/tests/openSCAP-sat-prep.yaml -e "proxy_id=$proxy_id"
 
 section "Register more and more"
-ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
 for b in $registrations_batches; do
-    let sum+=$( expr $b \* $ansible_docker_hosts )
+    let sum+=$( expr $b \* $ansible_container_hosts )
 done
 log "Going to register $sum hosts in total. Make sure there is enough hosts available."
 
@@ -112,7 +112,7 @@ for batch in $registrations_batches; do
     e Register $logs/regs-50-register-$iter-$batch.log
     s $wait_interval
     let sum=$(($sum + $batch))
-    let totalclients=$( expr $sum \* $ansible_docker_hosts )
+    let totalclients=$( expr $sum \* $ansible_container_hosts )
     ap openSCAP-host-prep-$iter-$totalclients.log playbooks/tests/openSCAP-host-prep.yaml
     ap openSCAP-role-$iter-$totalclients.log playbooks/tests/openSCAP-role.yaml -e "max_age_task=$max_age_input"
     ap openSCAP-test-$iter-$totalclients.log playbooks/tests/openSCAP-test.yaml -e "max_age_task=$max_age_input"
