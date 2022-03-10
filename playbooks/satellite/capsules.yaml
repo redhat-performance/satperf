@@ -22,6 +22,26 @@
         firewall:
           - service: "RH-Satellite-6-capsule"
             state: enabled
+    - role: ../common/roles/partition-new-storage
+      vars:
+        storage_pools:
+         - name: satellite_data
+           disks:
+             - "{{ storage_pools_disk }}"
+           volumes:
+             - name: opt
+               size: 500M
+               fs_type: xfs
+               mount_point: /opt
+             - name: postgresql
+               size: 10G
+               fs_type: xfs
+               mount_point: /var/opt/rh/rh-postgresql12
+             - name: pulp
+               size: 300G
+               fs_type: xfs
+               mount_point: /var/lib/pulp
+      when: partition_new_storage is defined and partition_new_storage == True
     - role: capsule
     - role: capsule-location
     - role: ../common/roles/enlarge-arp-table
