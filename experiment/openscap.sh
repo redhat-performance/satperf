@@ -108,7 +108,7 @@ sum=0
 totalclients=0
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     s $wait_interval
     let sum=$(($sum + $batch))
@@ -129,7 +129,7 @@ sum=0
 totalclients=0
 for batch in $registrations_batches; do
     let sum=$(($sum + $batch))
-    let totalclients=$( expr $sum \* $ansible_docker_hosts )
+    let totalclients=$( expr $sum \* $ansible_container_hosts )
     log "$(curl --insecure $workdir_url/$job_name/$marker/openSCAP-test-$iter-$totalclients.log | grep -i 'result:')"
     let iter+=1
 done
