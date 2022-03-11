@@ -21,7 +21,7 @@
     bootstrap_additional_args: ""
     bootstrap_rex_args: ""   # use tag 'REM' to install remote execution ssh key via bootstrap.py, use 'REM_ONLY' to just add it to registered system
     bootstrap_puppet_args: "--skip-puppet"   # use tag 'PUP' to also install puppet via bootstrap.py, or 'PUP_ONLY' to just add it to registered system
-    bootstrap_katello_args: "--skip katello-agent"   # use tag 'KAT' to also install katello-agent via bootstrap.py, or 'KAT_ONLY' to just add it to registered system
+    bootstrap_katello_args: "--skip katello-agent --skip katello-host-tools"   # use tag 'KAT' to also install katello-agent via bootstrap.py, or 'KAT_ONLY' to just add it to registered system
     bootstrap_target_path: /root/bootstrap.py
     bootstrap_retries: 1
 
@@ -120,13 +120,13 @@
         url: "{% raw %}{{ bootstrap_download_method }}://{{ bootstrap_foreman_fqdn }}/pub/bootstrap.py{% endraw %}"
       tags: REG
 
-    - name: "WORKAROUND: We are not using normal RHEL, so pretend it is not installed"
-      file:
-        path: "{% raw %}{{ item }}{% endraw %}"
-        state: absent
-      with_items:
-        - /etc/pki/product-default/69.pem
-        - /etc/pki/product/69.pem
+    ###- name: "WORKAROUND: We are not using normal RHEL, so pretend it is not installed"
+    ###  file:
+    ###    path: "{% raw %}{{ item }}{% endraw %}"
+    ###    state: absent
+    ###  with_items:
+    ###    - /etc/pki/product-default/69.pem
+    ###    - /etc/pki/product/69.pem
     - name: "WORKAROUND: Disable product id checks in yum"
       lineinfile:
         dest: /etc/yum/pluginconf.d/product-id.conf
@@ -151,7 +151,7 @@
         bootstrap_rex_args: "--rex"
       tags: REM
     - name: "Run bootstrap.py"
-      shell: "set -x; set -o pipefail; subscription-manager clean; rm -f /etc/pki/product*/*.pem; {% raw %}python {{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }} --force | tee /root/registration.log 2>&1{% endraw %}"
+      shell: "set -x; set -o pipefail; subscription-manager clean; {% if 'RedHat 8' in content_operatingsystem %}/usr/libexec/platform-python{% else %}python{% endif %} {% raw %}{{ bootstrap_target_path }} {{ bootstrap_args }} {{ bootstrap_foreman_args }} {{ bootstrap_puppet_args }} {{ bootstrap_katello_args}} {{ bootstrap_rex_args }} {{ bootstrap_additional_args }} --force | tee /root/registration.log 2>&1{% endraw %}"
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: reg

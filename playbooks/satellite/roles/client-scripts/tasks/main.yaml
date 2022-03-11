@@ -1,7 +1,19 @@
 ---
+  - name: "Guess container's operating system major"
+    set_fact:
+      os_major: "{% if 'rhel8' in containers_image %}8{% else %}7{% endif %}"
+    run_once: yes
+    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
+  - name: "Guess container's operating system ID"
+    shell:
+      hammer --output csv --no-headers os list --search "major={{ os_major }}" --fields id | sort -n | head -n 1
+    delegate_to: "{{ groups['satellite6']|first }}"
+    register: os_id_cmd
+    run_once: yes
+    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
   - name: "Discover operating system we are going to use"
     shell:
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os info --id 1 | grep '^Title' | sed 's/^.*:\s\+\(.*\)$/\1/'
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os info --id "{{ os_id_cmd.stdout }}" | grep '^Title' | sed 's/^.*:\s\+\(.*\)$/\1/'
     delegate_to: "{{ groups['satellite6']|first }}"
     run_once: true
     register: content_operatingsystem_command
@@ -10,7 +22,7 @@
     set_fact:
         content_operatingsystem: "{{ content_operatingsystem_command.stdout }}"
     run_once: true
-    when: "content_operatingsystem is not defined"
+    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
 
   - name: "Make sure operating system exists in Satellite"
     command:
