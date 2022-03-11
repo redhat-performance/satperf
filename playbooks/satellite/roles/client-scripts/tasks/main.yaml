@@ -1,4 +1,7 @@
 ---
+  - name: "Create in case it is not there"
+    shell: |
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os create --architectures x86_64 --family Redhat --major 8 --minor 5 --name RedHat || true
   - name: "Guess container's operating system major"
     set_fact:
       os_major: "{% if 'rhel8' in containers_image %}8{% else %}7{% endif %}"
