@@ -5,28 +5,9 @@
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
-  vars:
-    content_activationkey: 'SatperfActivationKey'
-    content_hostgroup: 'SatperfHostGroup'
-    content_operatingsystem: ''   # will be autodetected in playbooks/satellite/roles/client-scripts/ role
-    #content_puppet_env: ''
-    #content_puppet_module_name: ''
-    #content_puppet_module_file: ''
   roles:
-    - role: client-scripts
     - role: repo_setup
       vars:
         additional_repos: "{{ containers_host_additional_repos }}"
-  tasks:
-    - name: "Install Ansible"
-      package:
-        name: ansible
-        state: present
-
-    - name: "Ansible should not check host keys"
-      lineinfile:
-        dest: /etc/ansible/ansible.cfg
-        regexp: '^.*host_key_checking'
-        line: 'host_key_checking = False'
-        state: present
+    - role: client-scripts
 ...
