@@ -1,0 +1,91 @@
+---
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  vars:
+  tasks:
+    - name: "Register"
+      shell: |
+        (
+
+        set +e
+
+        # Remove old repo files
+        rm -f /etc/yum.repos.d/*.repo
+
+        # Download Sat CA cert
+        curl \
+            --silent --show-error \
+            --insecure \
+            -o /etc/rhsm/ca/katello-server-ca.pem \
+            https://{{ server }}/pub/katello-server-ca.crt
+
+        # Configure
+        subscription-manager config \
+            --server.hostname="{{ server }}" \
+            --server.port="443" \
+            --server.prefix="/rhsm" \
+            --rhsm.repo_ca_cert="/etc/rhsm/ca/katello-server-ca.pem" \
+            --rhsm.baseurl="https://{{ server }}/pulp/content" \
+            --rhsm.full_refresh_on_yum=1
+        subscription-manager config --rhsm.package_profile_on_trans=1 > /dev/null 2>&1 || true
+        subscription-manager config --rhsm.report_package_profile=1 > /dev/null 2>&1 || true
+
+        # Register
+        subscription-manager register --org='{{ organization }}' --activationkey='{{ activationkey }}'
+        UUID=$( subscription-manager identity | head -1 | awk '{print $3}' )
+
+        # Setup cleanup
+        exit_and_cancel_build() {
+          curl \
+              --silent --show-error \
+              -X POST \
+              --data 'Host initial configuration failed.' \
+              "http://{{ server }}/unattended/failed?token=$UUID"
+          exit 1
+        }
+        trap 'exit_and_cancel_build' ERR
+
+        # ReX key
+        mkdir -p ~/.ssh
+        curl \
+            --silent --show-error \
+            --cacert /etc/rhsm/ca/katello-server-ca.pem \
+            https://{{ server }}:9090/ssh/pubkey \
+            >> ~/.ssh/authorized_keys
+        chmod 0700 ~/.ssh
+        chmod 0600 ~/.ssh/authorized_keys
+        chown -R root: ~/.ssh
+
+        ## Insights client
+        #yum install -y insights-client
+        #insights-client --test-connection
+        #insights-client --register
+
+        # Refresh subs data
+        subscription-manager refresh
+
+        # Quit build process
+        curl \
+            --silent --show-error \
+            "http://{{ server }}/unattended/built?token=$UUID"
+
+        # Update facts
+        subscription-manager facts --update
+
+        ) | tee /root/registration.log 2>&1
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
+      register: reg
+
+    - name: "Register - output"
+      debug:
+        msg:
+          - "{{ reg.stdout }}"
+          - "{{ reg.stderr }}"
+
+    - name: "Register - timings"
+      debug:
+        msg="Register {{ reg.start }} to {{ reg.end }}"
+      when: "reg.rc == 0"
+...

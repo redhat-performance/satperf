@@ -1,59 +1,19 @@
 ---
-  - name: "Create in case it is not there"
-    shell: |
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os create --architectures x86_64 --family Redhat --major 8 --minor 5 --name RedHat || true
-  - name: "Guess container's operating system major"
-    set_fact:
-      os_major: "{% if 'rhel8' in containers_image %}8{% else %}7{% endif %}"
-    run_once: yes
-    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
-  - name: "Guess container's operating system ID"
-    shell:
-      hammer --output csv --no-headers os list --search "major={{ os_major }}" --fields id | sort -n | head -n 1
-    delegate_to: "{{ groups['satellite6']|first }}"
-    register: os_id_cmd
-    run_once: yes
-    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
-  - name: "Discover operating system we are going to use"
-    shell:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os info --id "{{ os_id_cmd.stdout }}" | grep '^Title' | sed 's/^.*:\s\+\(.*\)$/\1/'
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    register: content_operatingsystem_command
-    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
-  - name: "Set operating system we are going to hardcode into clients.yaml"
-    set_fact:
-        content_operatingsystem: "{{ content_operatingsystem_command.stdout }}"
-    run_once: true
-    when: "content_operatingsystem is not defined or content_operatingsystem|length == 0"
+- name: "Distribute clients.yaml"
+  copy:
+    src: "files/clients.yaml"
+    dest: "/root/clients.yaml"
+    force: yes
 
-  - name: "Make sure operating system exists in Satellite"
-    command:
-      hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" os list
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    register: hammer_os_list_command
-  - name: "Create operating system on Satellite"
-    command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" os create --architectures x86_64 --family Redhat --name "{{ content_operatingsystem.split(' ')[0] }}" --major "{{ content_operatingsystem.split(' ')[1].split('.')[0] }}" --minor "{{ content_operatingsystem.split(' ')[1].split('.')[1] }}"
-    when: "',' + content_operatingsystem + ',' not in hammer_os_list_command.stdout"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
+- name: "Install Ansible"
+  package:
+    name: ansible
+    state: present
 
-  - name: "Distribute clients.yaml"
-    template:
-      src: "files/clients.yaml.j2"
-      dest: "/root/clients.yaml"
-      force: yes
-  - name: "Please check these are hosts you need in /etc/hosts"
-    debug:
-      var:
-        "groups['satellite6'] + groups['capsules']"
-    run_once: yes
-  - name: "Distribute private key"
-    copy:
-      src: "../../{{ client_private_key }}"
-      dest: /root/id_rsa_key
-      mode: "u=rw,g=,o="
-      force: yes
+- name: "Ansible should not check host keys"
+  lineinfile:
+    dest: /etc/ansible/ansible.cfg
+    regexp: '^.*host_key_checking'
+    line: 'host_key_checking = False'
+    state: present
 ...

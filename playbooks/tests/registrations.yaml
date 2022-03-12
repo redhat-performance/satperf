@@ -6,112 +6,87 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    # TODO: Move these variables into conf/satperf.yaml
-    tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM"   # Register systems with client timeout tweak and setup ReX
-    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,KAT..."   # Register systems and setup katello-agent
-    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,PUP..."   # Register systems and setup Puppet
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
-    use_only_fresh: true   # should we use only containers which were not registered yet?
-    update_used: true
-    forks: "{{ size }}"
     resting: 0
-    bootstrap_retries: 10
-    bootstrap_activationkey: "SatperfActivationKey"
-    bootstrap_hostgroup: "SatperfHostGroup"
-    bootstrap_additional_args: ""
-    grepper: ''
     registration_logs: "registration_logs"
   tasks:
-    - name: "Ansible on container host configured to ignore host keys"
-      lineinfile:
-        path: '/etc/ansible/ansible.cfg'
-        regexp: '^\s*host_key_checking\s*='
-        line: 'host_key_checking = False'
-
     - name: "Load number of already registered containers"
       command:
         cat /root/container-used-count
       register: containers_used_count_cmd
       ignore_errors: true
-      when: "use_only_fresh|bool"
+
     - name: "Set number of used containers to 0"
       set_fact:
         containers_used_count: 0
+      when: "containers_used_count_cmd.failed"
+
     - name: "Set number of used containers based on file"
       set_fact:
         containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
-      when: "use_only_fresh|bool and (containers_used_count_cmd.rc is defined and containers_used_count_cmd.rc == 0)"
+      when: "not containers_used_count_cmd.failed"
+
+    - name: "Ensure we have enough free containers"
+      assert:
+        that: "containers_used_count|int + size|int <= containers_count|int"
 
     - name: "Generate list of containers we are going to use"
       shell:
         head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
-    - name: "Determine marker for recorder"
-      set_fact:
-        marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
-      run_once: yes
+
     - name: "Determine log name"
       set_fact:
-        clients_yaml_cmd_log: "/root/out-{{ marker }}.log"
+        clients_yaml_cmd_log: "/root/out-{{ lookup('pipe', 'date --utc --iso-8601=seconds') | regex_replace('[^A-Za-z0-9-]', '_') }}.log"
       run_once: yes
-    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }}; tags = {{ tags }})"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}' bootstrap_retries={{ bootstrap_retries|default(10) }} bootstrap_activationkey='{{ bootstrap_activationkey }}' bootstrap_hostgroup='{{ bootstrap_hostgroup }}' bootstrap_additional_args='{{ bootstrap_additional_args }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
+
+    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }})"
+      shell: |
+        ansible-playbook \
+          --private-key /root/id_rsa_key \
+          --forks "{{ size }}" \
+          -i clients.ini \
+          -e "server={{ groups['satellite6']|first }}" \
+          -e "activationkey='ActivationKey'" \
+          -e "organization='{{ sat_orglabel }}'" \
+          clients.yaml \
+          &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
+
     - name: "Fetch client logs"
       fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ registration_logs }}"
       ignore_errors: true
 
-    - name: "Get how long '{{ grepper }}' took"
+    - name: "Get how long registration took"
       shell:
-        grep '"msg". "{{ grepper }}' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
+        grep '"msg". "Register' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_grepper_timings
-      when: "grepper != ''"
-    - name: "Append '{{ grepper }}' timings to central list"
+
+    - name: "Append registration timings to central list"
       set_fact:
         grepper_times: "{{ grepper_times|default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
       with_items: "{{ ansible_play_batch }}"
       run_once: true
-      when: "grepper != ''"
-    - name: "Show how long '{{ grepper }}' took"
+
+    - name: "Show how long registration took"
       debug:
         var: grepper_times
       run_once: true
-      when: "grepper != ''"
-    - name: "Show number of successful '{{ grepper }}' events"
+
+    - name: "Show number of successful registration events"
       debug:
         var: grepper_times|length
       run_once: true
-      when: "grepper != ''"
 
     - name: "Increment number of already registered containers"
-      shell:   # FIXME: Use lineinfile or so
-        echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
-      when: "update_used|bool"
-
-    ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
-    ###  delegate_to: 127.0.0.1
-    ###  run_once: true
-    - name: "Determine timezone"
-      command:
-        date +%z
-      register: date_z_cmd
-    - set_fact:
-        start_time: "{{ lookup('pipe', 'date --utc -d \"{{ clients_yaml_cmd.start }} {{ date_z_cmd.stdout }}\" +%s') }}"
-    - set_fact:
-        end_time: "{{ lookup('pipe', 'date --utc -d \"{{ clients_yaml_cmd.end }} {{ date_z_cmd.stdout }}\" +%s') }}"
-
-    - name: "DEBUG: result of clients.yaml"
-      debug:
-        msg: "rc:{{ clients_yaml_cmd.rc }} size:{{ size }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
+      lineinfile:
+        path: /root/container-used-count
+        regexp: .*
+        line: "{{ containers_used_count|int + size|int }}"
 
     - name: "Give server some time to rest"
-      # To workaround https://github.com/ansible/ansible/pull/42217
-      #pause:
-      #  seconds: "{{ resting }}"
-      command:
-        sleep "{{ resting }}"
-      run_once: true
+      pause:
+        seconds: "{{ resting }}"
 ...

@@ -145,7 +145,7 @@ unset skip_measurement
 
 
 section "Prepare for registrations"
-skip_measurement='true' ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
+skip_measurement='true' ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
     || skip_measurement='true' h 42-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$do'"
 tmp=$( mktemp )
@@ -182,7 +182,7 @@ skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscripti
 
 section "Register"
 for i in $( seq $registrations_iterations ); do
-    skip_measurement='true' ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/44-register-docker-host-client-logs'"
+    skip_measurement='true' ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts registration_logs='../../$logs/44-register-docker-host-client-logs'"
     s $wait_interval
 done
 grep Register $logs/44-register-*.log >$logs/44-register-overall.log
