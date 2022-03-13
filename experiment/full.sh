@@ -112,6 +112,7 @@ s $wait_interval
 export skip_measurement='true'
 section "Sync from CDN do not measure"   # do not measure becasue of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name '$do' --redhat-repository-url '$cdn_url_full'"
+h 00b-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
 h 12b-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'" &
 h 12b-repo-sync-rhel6.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" &
 h 12b-repo-sync-rhel7optional.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" &
