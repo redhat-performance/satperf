@@ -33,13 +33,13 @@ generic_environment_check
 
 
 section "Prepare for Red Hat content"
-skip_measurement='true' h 00-simple-content-access-disable.log "simple-content-access disable --organization '$do'"
 skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '$do' --location '$dl'"
 skip_measurement='true' ap 01-manifest-excercise.log playbooks/tests/manifest-excercise.yaml -e "manifest=../../$manifest"
 e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
 e ManifestDelete $logs/01-manifest-excercise.log
 skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
+skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '$do'"
 s $wait_interval
 
 
