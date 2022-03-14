@@ -16,4 +16,11 @@
     regexp: '^.*host_key_checking'
     line: 'host_key_checking = False'
     state: present
+
+- name: "Distribute private key"
+  copy:
+    src: "../../{{ client_private_key }}"
+    dest: /root/id_rsa_key
+    mode: "u=rw,g=,o="
+    force: yes
 ...
