@@ -28,6 +28,10 @@
       pip:
         name: simpleJson
         executable: pip3
+    - name: Install requests
+      pip:
+        name: requests
+        executable: pip3
     - name: "Wait for job {{ last_job_id }} to finish"
       shell:
         /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}" "{{ max_age_task }}"
