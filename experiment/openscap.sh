@@ -54,7 +54,7 @@ s $wait_interval
 
 
 section "Prepare for registrations"
-ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
+ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
 
 h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
     || h regs-40-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$do'"
@@ -108,7 +108,7 @@ sum=0
 totalclients=0
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     s $wait_interval
     let sum=$(($sum + $batch))
