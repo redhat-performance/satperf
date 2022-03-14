@@ -35,6 +35,7 @@ section "Upload manifest"
 h regs-10-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
 a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
+skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '$do'"
 s $wait_interval
 
 
