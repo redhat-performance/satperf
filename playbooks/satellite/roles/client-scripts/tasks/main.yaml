@@ -1,9 +1,71 @@
 ---
+- name: "Determine organization ID"
+  uri:
+    url: https://{{ groups['satellite6']|first }}/katello/api/organizations
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    body_format: form-urlencoded
+    body:
+      search: 'name = "{{ sat_org }}"'
+  register: organizations
+  run_once: yes
+
+- name: "Set organization ID"
+  set_fact:
+    organization_id: "{{ organizations.json.results[0].id }}"
+  run_once: yes
+
+- name: "Determine location ID"
+  uri:
+    url: https://{{ groups['satellite6']|first }}/api/locations
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    body_format: form-urlencoded
+    body:
+      search: 'name = "{{ sat_location }}"'
+  register: locations
+  run_once: yes
+
+- name: "Set location ID"
+  set_fact:
+    location_id: "{{ locations.json.results[0].id }}"
+  run_once: yes
+
+- name: "Determine hostgroup ID"
+  uri:
+    url: https://{{ groups['satellite6']|first }}/api/organizations/{{ organization_id }}/hostgroups
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    body_format: form-urlencoded
+    body:
+      search: 'name = "{{ registration_hostgroup }}"'
+  register: hostgroups
+  run_once: yes
+  when: "registration_hostgroup is defined"
+
+- name: "Set hostgroup ID"
+  set_fact:
+    hostgroup_id: "{{ hostgroups.json.results[0].id }}"
+  run_once: yes
+  when: "registration_hostgroup is defined"
+
 - name: "Distribute clients.yaml"
-  copy:
-    src: "files/clients.yaml"
-    dest: "/root/clients.yaml"
+  template:
+    src: "files/{{ item }}.j2"
+    dest: "/root/{{ item }}"
     force: yes
+  loop:
+    - "clients.yaml"
+    - "clients-register.yaml"
 
 - name: "Install Ansible"
   package:
