@@ -85,6 +85,7 @@
         path: /root/container-used-count
         regexp: .*
         line: "{{ containers_used_count|int + size|int }}"
+        create: yes
 
     - name: "Give server some time to rest"
       pause:
