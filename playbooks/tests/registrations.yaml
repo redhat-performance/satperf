@@ -6,6 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
+    method: "clients.yaml"
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     resting: 0
     registration_logs: "registration_logs"
@@ -52,6 +53,24 @@
           &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
+      when: "method == 'clients.yaml'"
+
+    - name: "Run clients-register.yaml (log = {{ clients_yaml_cmd_log }})"
+      shell: |
+        ansible-playbook \
+          --private-key /root/id_rsa_key \
+          --forks "{{ size }}" \
+          -i clients.ini \
+          -e "server={{ groups['satellite6']|first }}" \
+          -e "sat_user={{ sat_user }}" \
+          -e "sat_pass={{ sat_pass }}" \
+          -e "activationkey='ActivationKey'" \
+          -e "organization='{{ sat_orglabel }}'" \
+          clients-register.yaml \
+          &> "{{ clients_yaml_cmd_log }}"
+      register: clients_yaml_cmd
+      ignore_errors: true
+      when: "method == 'clients-register.yaml'"
 
     - name: "Fetch client logs"
       fetch:

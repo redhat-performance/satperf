@@ -1,3 +1,4 @@
+{% raw %}
 ---
 - hosts: all
   remote_user: root
@@ -89,3 +90,4 @@
         msg="Register {{ reg.start }} to {{ reg.end }}"
       when: "reg.rc == 0"
 ...
+{% endraw %}

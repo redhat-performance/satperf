@@ -1,0 +1,42 @@
+{% raw %}
+---
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  vars:
+{% endraw %}
+    organization_id: {{ organization_id }}
+    location_id: {{ location_id }}
+    hostgroup_id: {{ hostgroup_id }}
+{% raw %}
+  tasks:
+    - name: "Register"
+      shell: |
+        (
+
+        rm -rf /etc/yum.repos.d/*.repo
+
+        curl \
+            -sS --insecure \
+            -u "{{ sat_user }}:{{ sat_pass }}" \
+            'https://{{ server }}/register?hostgroup_id={{ hostgroup_id }}&lifecycle_environment_id=1&location_id={{ location_id }}&organization_id={{ organization_id }}&setup_insights=false&update_packages=false' \
+            | sed "s|https://[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+/|https://{{ server }}/|g" \
+            | bash
+
+        ) | tee /root/registration.log 2>&1
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
+      register: reg
+
+    - name: "Register - output"
+      debug:
+        msg:
+          - "{{ reg.stdout }}"
+          - "{{ reg.stderr }}"
+
+    - name: "Register - timings"
+      debug:
+        msg="Register {{ reg.start }} to {{ reg.end }}"
+      when: "reg.rc == 0"
+...
+{% endraw %}
