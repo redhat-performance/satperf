@@ -55,7 +55,7 @@ s $wait_interval
 
 
 section "Prepare for registrations"
-ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
+ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
 
 h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
     || h regs-40-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$do'"
@@ -63,6 +63,14 @@ tmp=$( mktemp )
 h_out "--no-headers --csv location list --organization '$do'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
 h regs-40-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$do' --location-ids '$location_ids'"
+
+h regs-40-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
+h regs-40-subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
+tools_subs_id=$( tail -n 1 $logs/regs-40-subs-list-tools.log | cut -d ',' -f 1 )
+h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
+h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)\"'"
+employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
+h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
@@ -81,16 +89,8 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
     subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
     a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-        || h regs-41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
+        || h regs-41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name' --group-parameters-attributes 'name=kt_activation_keys,value=ActivationKey'"
 done
-
-h regs-40-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
-h regs-40-subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
-tools_subs_id=$( tail -n 1 $logs/regs-40-subs-list-tools.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
-h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)\"'"
-employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 section "Prepare env for openSCAP test"
 ap openSCAP-sat-prep.log playbooks/tests/openSCAP-sat-prep.yaml -e "proxy_id=$proxy_id"
@@ -109,7 +109,7 @@ sum=0
 totalclients=0
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs' method=clients-register.yaml"
     e Register $logs/regs-50-register-$iter-$batch.log
     s $wait_interval
     let sum=$(($sum + $batch))
