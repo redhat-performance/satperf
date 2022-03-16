@@ -27,7 +27,7 @@ opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
-generic_environment_check
+# generic_environment_check
 
 export skip_measurement='true'
 
