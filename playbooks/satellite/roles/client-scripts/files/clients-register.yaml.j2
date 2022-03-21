@@ -26,7 +26,7 @@
             | sed "s|https://[0-9]\+\.[0-9]\+\.[0-9]\+\.[0-9]\+/|https://{{ server }}/|g" \
             | bash
 
-        ) | tee /root/registration.log 2>&1
+        ) 2>&1 | tee /root/registration.log
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: reg
