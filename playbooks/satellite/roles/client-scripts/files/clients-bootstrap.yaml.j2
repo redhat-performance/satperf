@@ -32,7 +32,7 @@
             --skip puppet-enable \
             --skip katello-host-tools
 
-        ) | tee /root/registration.log 2>&1
+        ) 2>&1 | tee /root/registration.log
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: reg
