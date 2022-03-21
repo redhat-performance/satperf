@@ -12,6 +12,8 @@
   tasks:
     - name: "Register"
       shell: |
+        set -e
+
         (
 
         rm -rf /etc/yum.repos.d/*.repo
