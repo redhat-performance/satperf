@@ -7,7 +7,7 @@
 {% endraw %}
     organization_id: {{ organization_id }}
     location_id: {{ location_id }}
-    hostgroup_id: {{ hostgroup_id }}
+    hostgroup_id: {{ hostgroup_id|default(0) }}
 {% raw %}
   tasks:
     - name: "Register"
