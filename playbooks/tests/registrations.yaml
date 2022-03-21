@@ -72,6 +72,25 @@
       ignore_errors: true
       when: "method == 'clients-register.yaml'"
 
+    - name: "Run clients-bootstrap.yaml (log = {{ clients_yaml_cmd_log }})"
+      shell: |
+        ansible-playbook \
+          --private-key /root/id_rsa_key \
+          --forks "{{ size }}" \
+          -i clients.ini \
+          -e "server={{ groups['satellite6']|first }}" \
+          -e "user={{ sat_user }}" \
+          -e "pass={{ sat_pass }}" \
+          -e "activationkey='ActivationKey'" \
+          -e "organization='{{ sat_org }}'" \
+          -e "location='{{ sat_location }}'" \
+          -e "hostgroup='{{ registration_hostgroup }}'" \
+          clients-bootstrap.yaml \
+          &> "{{ clients_yaml_cmd_log }}"
+      register: clients_yaml_cmd
+      ignore_errors: true
+      when: "method == 'clients-bootstrap.yaml'"
+
     - name: "Fetch client logs"
       fetch:
         src: "{{ clients_yaml_cmd_log }}"
