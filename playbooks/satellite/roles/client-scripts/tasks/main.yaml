@@ -58,7 +58,7 @@
   run_once: yes
   when: "registration_hostgroup is defined"
 
-- name: "Distribute clients.yaml"
+- name: "Distribute client scripts"
   template:
     src: "files/{{ item }}.j2"
     dest: "/root/{{ item }}"
@@ -66,6 +66,7 @@
   loop:
     - "clients.yaml"
     - "clients-register.yaml"
+    - "clients-bootstrap.yaml"
 
 - name: "Install Ansible"
   package:
