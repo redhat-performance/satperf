@@ -7,9 +7,9 @@
   tasks:
     - name: "Register"
       shell: |
-        (
+        set -e
 
-        set +e
+        (
 
         # Remove old repo files
         rm -f /etc/yum.repos.d/*.repo
