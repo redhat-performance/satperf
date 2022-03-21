@@ -1,0 +1,48 @@
+{% raw %}
+---
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  vars:
+  tasks:
+    - name: "Register"
+      shell: |
+        (
+
+        rm -rf /etc/yum.repos.d/*.repo
+
+        type python && INTERPRETER=python || INTERPRETER=/usr/libexec/platform-python
+
+        curl -sS -o /root/bootstrap.py \
+            'http://{{ server }}/pub/bootstrap.py'
+
+        $INTERPRETER /root/bootstrap.py \
+            --server {{ server }} \
+            --organization '{{ organization }}' \
+            --location '{{ location }}' \
+            --hostgroup '{{ hostgroup }}' \
+            --activationkey '{{ activationkey }}' \
+            --login '{{ user }}' \
+            --password '{{ pass }}' \
+            --force \
+            --skip puppet \
+            --skip puppet-enable \
+            --skip katello-host-tools
+
+        ) | tee /root/registration.log 2>&1
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
+      register: reg
+
+    - name: "Register - output"
+      debug:
+        msg:
+          - "{{ reg.stdout }}"
+          - "{{ reg.stderr }}"
+
+    - name: "Register - timings"
+      debug:
+        msg="Register {{ reg.start }} to {{ reg.end }}"
+      when: "reg.rc == 0"
+...
+{% endraw %}
