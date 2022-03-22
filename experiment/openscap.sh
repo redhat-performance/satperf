@@ -110,7 +110,7 @@ sum=0
 totalclients=0
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs' method=clients-register.yaml"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs' method=clients.yaml"
     e Register $logs/regs-50-register-$iter-$batch.log
     s $wait_interval
     let sum=$(($sum + $batch))
