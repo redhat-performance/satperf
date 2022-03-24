@@ -24,6 +24,6 @@
     - name: Add role to hostgroup
       shell:
         hammer hostgroup update --id "{{ hostgroup_id.stdout }}" --content-source-id 1 --openscap-proxy-id 1 --ansible-roles theforeman.foreman_scap_client
-    - name: Create policy for rhel8 container
+    - name: Create policy for rhel container
       task:
         hammer policy create --deploy-by 'ansible' --name 'openSCAP-test' --scap-content 'Red Hat rhel7 default content' --scap-content-profile-id 31 --period monthly --day-of-month 1 --hostgroup-ids "{{ hostgroup_id.stdout }}"
