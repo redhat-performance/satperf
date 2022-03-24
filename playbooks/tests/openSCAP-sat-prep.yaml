@@ -2,6 +2,9 @@
 - hosts: satellite6
   remote_user: root
   gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   tasks:
     - name: "Prep satellite for openSCAP test"
       shell: |
@@ -9,5 +12,18 @@
         hammer scap-content bulk-upload --type default
         hammer ansible roles import --proxy-id "{{ proxy_id }}" --role-names theforeman.foreman_scap_client
         hammer ansible roles sync --proxy-id "{{ proxy_id }}" --role-names theforeman.foreman_scap_client
-        hammer hostgroup update --id 1 --content-source-id 1 --openscap-proxy-id 1 --ansible-roles theforeman.foreman_scap_client
-        hammer policy create --deploy-by 'ansible' --name 'openSCAP-test' --scap-content 'Red Hat rhel7 default content' --scap-content-profile-id 31 --period monthly --day-of-month 1 --hostgroup-ids 1
+    - name: "Guess container's operating system major"
+      set_fact:
+        os_major: "{% if 'rhel8' in containers_image %}8{% else %}7{% endif %}"
+      run_once: yes
+    - name: "Get hostgroup id"
+      shell:
+        hammer --csv --no-headers hostgroup list | grep "{{ hostgroup_name }}" | sort -n | head -n 1 | awk -F ',' '{ print $1 }'
+      register: hostgroup_id
+    run_once: yes
+    - name: Add role to hostgroup
+      shell:
+        hammer hostgroup update --id "{{ hostgroup_id.stdout }}" --content-source-id 1 --openscap-proxy-id 1 --ansible-roles theforeman.foreman_scap_client
+    - name: Create policy for rhel8 container
+      task:
+        hammer policy create --deploy-by 'ansible' --name 'openSCAP-test' --scap-content 'Red Hat rhel7 default content' --scap-content-profile-id 31 --period monthly --day-of-month 1 --hostgroup-ids "{{ hostgroup_id.stdout }}"
