@@ -1,0 +1,9 @@
+---
+- hosts: docker_hosts
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: "Create /etc/cron.d folder"
+      shell:
+        ansible all --private-key /root/id_rsa_key -i clients.ini -m file -a "name=/etc/cron.d state=directory"
+ 
