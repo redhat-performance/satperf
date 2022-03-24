@@ -2,6 +2,9 @@
 - hosts: satellite6
   remote_user: root
   gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
   tasks:
     - name: "Guess container's operating system major"
       set_fact:
