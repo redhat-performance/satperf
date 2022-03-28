@@ -123,7 +123,7 @@ for batch in $registrations_batches; do
     s $wait_interval
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_container_hosts )
-    ap openSCAP-role-$iter-$totalclients.log playbooks/tests/openSCAP-host-prep.yaml
+    ap openSCAP-host-$iter-$totalclients.log playbooks/tests/openSCAP-host-prep.yaml
     ap openSCAP-role-$iter-$totalclients.log playbooks/tests/openSCAP-role.yaml -e "max_age_task=$max_age_input"
     s $wait_interval
     ap openSCAP-test-$iter-$totalclients.log playbooks/tests/openSCAP-test.yaml -e "max_age_task=$max_age_input"
