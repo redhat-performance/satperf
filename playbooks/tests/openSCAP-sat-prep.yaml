@@ -20,7 +20,7 @@
       shell:
         hammer --csv --no-headers hostgroup list | grep "{{ hostgroup_name }}" | sort -n | head -n 1 | awk -F ',' '{ print $1 }'
       register: hostgroup_id
-    run_once: yes
+      run_once: yes
     - name: Add role to hostgroup
       shell:
         hammer hostgroup update --id "{{ hostgroup_id.stdout }}" --content-source-id 1 --openscap-proxy-id 1 --ansible-roles theforeman.foreman_scap_client
