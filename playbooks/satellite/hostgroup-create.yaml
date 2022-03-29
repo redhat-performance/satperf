@@ -6,16 +6,9 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   tasks:
-    - name: "Guess container's operating system major"
-      set_fact:
-        os_major: "{% if 'rhel8' in containers_image %}8{% else %}7{% endif %}"
-      run_once: yes
-    - name: "Guess container's operating system"
+    - name: "Create OS"
       shell:
-        hammer --output csv --no-headers os list --search "major={{ os_major }}" --fields title | sort -n | head -n 1
-      register: os_title_cmd
-      run_once: yes
+        hammer os create --architectures x86_64 --family Redhat --name "{{ containers_os.name }}" --major "{{ containers_os.major }}" --minor "{{ containers_os.minor }}"
     - name: "Create Hostgroup"
       shell:
-        hammer hostgroup create --content-view "{{ Default_Organization }} View" --lifecycle-environment Library --name "{{ hostgroup_name }}" --query-organization "{{ Default_Organization }}" --subnet "{{ subnet_name }}" --operatingsystem "{{ os_title_cmd.stdout }}" --group-parameters-attributes "name=kt_activation_keys\,value=ActivationKey"
-
+    hammer hostgroup create --content-view "{{ Default_Organization }} View" --lifecycle-environment Library --name "{{ hostgroup_name }}" --query-organization "{{ Default_Organization }}" --subnet "{{ subnet_name }}" --operatingsystem "{{ containers_os.name }} {{ containers_os.major}}.{{containers_os.minor}}" --group-parameters-attributes "name=kt_activation_keys\,value=ActivationKey"
