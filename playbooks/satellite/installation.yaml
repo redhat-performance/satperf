@@ -89,10 +89,9 @@
                size: 1G
                fs_type: xfs
                mount_point: /var/lib/qpidd
-     when:
-       - partition_new_storage is defined and partition_new_storage == True
-       - sat_version is version('6.10', '>=')
-      when: partition_new_storage is defined and partition_new_storage == True
+      when:
+        - partition_new_storage is defined and partition_new_storage == True
+        - sat_version is version('6.10', '>=')
     - role: setup
     - role: enable-remote-exec-by-ip
     - role: ../common/roles/enlarge-arp-table
