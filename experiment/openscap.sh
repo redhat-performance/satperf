@@ -46,12 +46,10 @@ h regs-20-repo-immediate-rhel7.log "repository update --organization '$do' --pro
 skip_measurement='false' h regs-20-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
 s $wait_interval
 h regs-20-reposet-enable-rhel8baseos.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
-h regs-20-repo-immediate-rhel8baseos.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --download-policy 'immediate'"
-skip_measurement='false' h regs-20-repo-sync-rhel8baseos.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)'"
+skip_measurement='false' h regs-20-repo-sync-rhel8baseos.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
 s $wait_interval
 h regs-20-reposet-enable-rhel8appstream.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
-h regs-20-repo-immediate-rhel8appstream.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --download-policy 'immediate'"
-skip_measurement='false' h regs-20-repo-sync-rhel8appstream.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)'"
+skip_measurement='false' h regs-20-repo-sync-rhel8appstream.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
 s $wait_interval
 
 section "Sync Tools repo"   # do not measure because of unpredictable network latency
