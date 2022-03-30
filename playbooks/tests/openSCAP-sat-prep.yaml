@@ -19,7 +19,7 @@
       run_once: yes
     - name: "Get hostgroup id"
       shell:
-        hammer --csv --no-headers hostgroup list | grep "{{ hostgroup_name }}" | sort -n | head -n 1 | awk -F ',' '{ print $1 }'
+        hammer --csv --no-headers hostgroup list | grep "{{ tests_registration_target|default(groups['satellite6']|first) }}" | sort -n | head -n 1 | awk -F ',' '{ print $1 }'
       register: hostgroup_id
       run_once: yes
     - name: Add role to hostgroup
