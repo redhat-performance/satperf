@@ -11,8 +11,44 @@ timesync_ntp_servers:
     trust: yes
 
 # Partition an additional disk where all the Satellite/capsule data will be stored
-partition_new_storage: False
-storage_pools_disk: sdb
+satellite_storage_pools: []
+capsule_storage_pools: []
+# Partition sizes recommended for {{ sat_version }}
+# Don't forget to keep the info updated
+#satellite_storage_pools:
+#  - name: satellite_data
+#    disks:
+#      - sdb
+#    volumes:
+#      - name: opt
+#        size: 3G
+#        mount_point: /opt
+#      - name: postgresql
+#        size: 20G
+#        mount_point: /var/opt/rh/rh-postgresql12/lib/pgsql
+#      - name: pulp
+#        size: 300G
+#        mount_point: /var/lib/pulp
+#      - name: puppetlabs
+#        size: 500M
+#        mount_point: /opt/puppetlabs
+#      - name: qpidd
+#        size: 1G
+#        mount_point: /var/lib/qpidd
+#capsule_storage_pools:
+#  - name: capsule_data
+#    disks:
+#      - sdb
+#    volumes:
+#      - name: opt
+#        size: 500M
+#        mount_point: /opt
+#      - name: postgresql
+#        size: 10G
+#        mount_point: /var/opt/rh/rh-postgresql12/lib/pgsql
+#      - name: pulp
+#        size: 300G
+#        mount_point: /var/lib/pulp
 
 # Containers setup
 containers_host_registration_options: {}
