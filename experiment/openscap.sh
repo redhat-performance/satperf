@@ -125,7 +125,7 @@ for batch in $registrations_batches; do
     ap openSCAP-role-$iter-$totalclients.log playbooks/tests/openSCAP-role.yaml -e "max_age_task=$max_age_input"
     s $wait_interval
     ap openSCAP-test-$iter-$totalclients.log playbooks/tests/openSCAP-test.yaml -e "max_age_task=$max_age_input"
-    log "$(curl --insecure $workdir_url/$job_name/$marker/openSCAP-test-$iter-$totalclients.log | grep -i 'result:')"
+    log "$(curl --insecure $workdir_url/$job_name/$logs/openSCAP-test-$iter-$totalclients.log | grep -i 'result:')"
     let iter+=1
     s $wait_interval
 done
@@ -137,7 +137,7 @@ totalclients=0
 for batch in $registrations_batches; do
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_container_hosts )
-    log "$(curl --insecure $workdir_url/$job_name/$marker/openSCAP-test-$iter-$totalclients.log | grep -i 'result:')"
+    log "$(curl --insecure $workdir_url/$job_name/$logs/openSCAP-test-$iter-$totalclients.log | grep -i 'result:')"
     let iter+=1
 done
 
