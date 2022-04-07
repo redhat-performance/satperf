@@ -20,5 +20,9 @@ roles:
     src: git+https://github.com/jhutar/ansible-role-repo_setup.git
     version: origin/main
 
+  - name: sosreport_gatherer
+    src: git+https://github.com/jhutar/ansible-role-sosreport_gatherer.git
+    version: origin/main
+
 collections: []
 ...
