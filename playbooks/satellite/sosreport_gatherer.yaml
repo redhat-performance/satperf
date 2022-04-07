@@ -1,0 +1,6 @@
+---
+- hosts: satellite6
+  gather_facts: yes
+  roles:
+    - name: sosreport_gatherer
+
