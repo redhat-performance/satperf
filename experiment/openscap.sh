@@ -138,6 +138,7 @@ for batch in $registrations_batches; do
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_container_hosts )
     log "$(curl --insecure $workdir_url/$job_name/$logs/openSCAP-test-$iter-$totalclients.log | grep -i 'result:')"
+    log "$(grep 'RESULT:' $logs/openSCAP-test-$iter-$totalclients.log)"
     let iter+=1
 done
 
