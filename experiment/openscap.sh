@@ -140,7 +140,7 @@ for batch in $registrations_batches; do
     let iter+=1
 done
 
-ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir=$logs/"
+ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml #-e "sosreport_gatherer_local_dir=$logs/"
 
 junit_upload
 
