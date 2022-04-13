@@ -64,7 +64,7 @@ if [ "$skip_down_setup" != "true" ]; then
     s $wait_interval
 
     section "Prepare for registrations"
-    ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
+    ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml  -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"  # this detects OS, so need to run after we synces one
 
     h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
         || h regs-40-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$do'"
@@ -72,6 +72,17 @@ if [ "$skip_down_setup" != "true" ]; then
     h_out "--no-headers --csv location list --organization '$do'" | grep '^[0-9]\+,' >$tmp
     location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
     h regs-40-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$do' --location-ids '$location_ids'"
+
+    h regs-40-ak-create.log "activation-key create --content-view '$do View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
+    h_out "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
+    tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
+    skip_measurement='true' h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
+    h_out "--csv subscription list --organization '$do' --search 'name = \"Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)\"'" >$logs/subs-list-rhel.log
+    rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
+    skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$rhel_subs_id'"
+    h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'" >$logs/subs-list-downrepo.log
+    down_test_subs_id=$( tail -n 1 $logs/subs-list-downrepo.log | cut -d ',' -f 1 )
+    h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
 
     tmp=$( mktemp )
     h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
@@ -90,26 +101,18 @@ if [ "$skip_down_setup" != "true" ]; then
         subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
         a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
         h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-            || h regs-41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
+            || ap regs-41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "Default_Organization='$do' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
     done
 
-    h regs-40-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
-    h regs-40-subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
-    tools_subs_id=$( tail -n 1 $logs/regs-40-subs-list-tools.log | cut -d ',' -f 1 )
-    h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
-    h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
-    employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
-    h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
-    h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'"
-    down_test_subs_id=$( tail -n 1 $logs/regs-40-subs-list-downtest.log | cut -d ',' -f 1 )
-    h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
 fi
 
+skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
+
 section "Register more and more"
-ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
 for b in $download_test_batches; do
-    let sum+=$( expr $b \* $ansible_docker_hosts )
+    let sum+=$( expr $b \* $ansible_container_hosts )
 done
 log "Going to register $sum hosts in total. Make sure there is enough hosts available."
 
@@ -117,14 +120,14 @@ iter=1
 sum=0
 totalclients=0
 for batch in $download_test_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
     e Register $logs/regs-50-register-$iter-$batch.log
     s $download_wait_interval
     let sum=$(($sum + $batch))
-    let totalclients=$( expr $sum \* $ansible_docker_hosts )
+    let totalclients=$( expr $sum \* $ansible_container_hosts )
     ap clean-downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest-cleanup.yaml
     ap downrepo-50-$iter-$sum-$totalclients-Download.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test max_age_task=$max_age_input"
-    log "$(curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients-Download.log | grep -i 'result:')"
+    log "$(grep 'RESULT:' $logs/downrepo-50-$iter-$sum-$totalclients-Download.log)"
     let iter+=1
     s $wait_interval
 done
@@ -135,8 +138,8 @@ sum=0
 totalclients=0
 for batch in $download_test_batches; do
     let sum=$(($sum + $batch))
-    let totalclients=$( expr $sum \* $ansible_docker_hosts )
-    log "$(curl --insecure $workdir_url/$job_name/$marker/downrepo-50-$iter-$sum-$totalclients.log | grep -i 'result:')"
+    let totalclients=$( expr $sum \* $ansible_container_hosts )
+    log "$(grep 'RESULT:' $logs/downrepo-50-$iter-$sum-$totalclients-Download.log)"
     let iter+=1
 done
 
