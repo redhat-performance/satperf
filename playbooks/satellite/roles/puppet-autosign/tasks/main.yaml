@@ -6,21 +6,21 @@
       line: "*"
     when: "sat_version is version('6.3', '<=')"
 
-  - name: "Add '*' autosign entry (Satellite from 6.4 but below 7.0)"
+  - name: "Add '*' autosign entry (Satellite from 6.4 but below 6.11)"
     lineinfile:
       path: "/etc/puppetlabs/puppet/autosign.conf"
       line: "*"
-    when: "sat_version is version('6.4', '>=') and sat_version is version('7.0', '<')"
+    when: "sat_version is version('6.4', '>=') and sat_version is version('6.11', '<')"
 
-  - name: "If file exist on 7.0, it is enabled"
+  - name: "If file exist on 6.11, it is enabled"
     stat:
       path: /etc/puppetlabs/puppet/autosign.conf
     register: stat_result
-    when: "sat_version is version('7.0', '>=')"
+    when: "sat_version is version('6.11', '>=')"
 
-  - name: "Add '*' autosign entry (Satellite 7.0 and above)"
+  - name: "Add '*' autosign entry (Satellite 6.11 and above)"
     lineinfile:
       path: "/etc/puppetlabs/puppet/autosign.conf"
       line: "*"
-    when: "sat_version is version('7.0', '>=') and stat_result.stat.exists"
+    when: "sat_version is version('6.11', '>=') and stat_result.stat.exists"
 ...
