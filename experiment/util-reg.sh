@@ -10,6 +10,7 @@ registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
 all_rex=${PARAM_all_rex:-false}
+skip_util_reg_setup=${PARAM_skip_util_reg_setup:-false}
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
@@ -23,7 +24,6 @@ if [ "$skip_util_reg_setup" != "false" ]; then
     section "Util: Checking environment"
     generic_environment_check
 
-
     section "Util: Prepare for Red Hat content"
     h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
     a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
@@ -31,7 +31,6 @@ if [ "$skip_util_reg_setup" != "false" ]; then
     h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
     skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '$do'"
     s $wait_interval
-
 
     section "Util: Sync Tools repo"
     h product-create.log "product create --organization '$do' --name SatToolsProduct"
