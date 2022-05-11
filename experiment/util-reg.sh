@@ -19,25 +19,26 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
-
-section "Util: Checking environment"
-generic_environment_check
-
-
-section "Util: Prepare for Red Hat content"
-h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
-a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h 01-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
-h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
-skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '$do'"
-s $wait_interval
+if [ "$skip_util_reg_setup" != "false" ]; then
+    section "Util: Checking environment"
+    generic_environment_check
 
 
-section "Util: Sync Tools repo"
-h product-create.log "product create --organization '$do' --name SatToolsProduct"
-h repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-h repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
-s $wait_interval
+    section "Util: Prepare for Red Hat content"
+    h 00-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
+    a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
+    h 01-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
+    h 03-manifest-refresh.log "subscription refresh-manifest --organization '$do'"
+    skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '$do'"
+    s $wait_interval
+
+
+    section "Util: Sync Tools repo"
+    h product-create.log "product create --organization '$do' --name SatToolsProduct"
+    h repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
+    h repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
+    s $wait_interval
+fi
 
 
 section "Util: Prepare for registrations"
