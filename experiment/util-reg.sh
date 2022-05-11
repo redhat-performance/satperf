@@ -79,7 +79,7 @@ done
 
 section "Util: Register"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/44-register-docker-host-client-logs' method=clients-bootstrap.yaml registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts registration_logs='../../$logs/44-register-docker-host-client-logs'"
     e Register $logs/44-register-$i.log
     s $wait_interval
 done
@@ -92,15 +92,11 @@ a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/fore
 if [ "$all_rex" != "false" ]; then
     h 52-rex-ssh-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
     s $wait_interval
-    h 52-rex-ssh-subs.log "job-invocation create --inputs \"command='subscription-manager refresh'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+    h 52-rex-ssh-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
     s $wait_interval
-    h 52-rex-ssh-sleep.log "job-invocation create --inputs \"command='sleep 300'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+    h 52-rex-ssh--package-upload.log "job-invocation create --inputs \"command='katello-package-upload --force'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
     s $wait_interval
-    h 52-rex-ans-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
-    s $wait_interval
-    h 52-rex-ans-subs.log "job-invocation create --inputs \"command='subscription-manager refresh'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
-    s $wait_interval
-    h 52-rex-ans-sleep.log "job-invocation create --inputs \"command='sleep 300'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
+    h 52-rex-ansible-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
     s $wait_interval
 fi
 
