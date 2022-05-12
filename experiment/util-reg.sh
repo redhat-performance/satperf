@@ -6,7 +6,7 @@ manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
+registrations_per_container_hosts=${PARAM_registrations_per_container_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
 all_rex=${PARAM_all_rex:-false}
@@ -81,7 +81,7 @@ skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/cl
 
 section "Util: Register"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts registration_logs='../../$logs/44-register-docker-host-client-logs'"
+    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_container_hosts registration_logs='../../$logs/44-register-container-host-client-logs'"
     e Register $logs/44-register-$i.log
     s $wait_interval
 done
