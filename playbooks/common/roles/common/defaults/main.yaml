@@ -1,0 +1,4 @@
+---
+system_selinux_policy: targeted
+system_selinux_state: enforcing
+...

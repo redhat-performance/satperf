@@ -50,10 +50,10 @@
     restorecon -vR /etc/hosts
 
 # Check SELinux
-- name: "SELinux is in Enforcing with Tragetted policy"
+- name: "SELinux is in {{ system_selinux_state }} with {{ system_selinux_policy }} policy"
   selinux:
-    policy: targeted
-    state: enforcing
+    policy: "{{ system_selinux_policy }}"
+    state: "{{ system_selinux_state }}"
 
 # Make sure hostname is set
 - name: "Set hostname"
