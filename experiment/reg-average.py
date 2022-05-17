@@ -6,6 +6,16 @@ import datetime
 import logging
 import re
 
+
+def parse_time(time_str):
+    try:
+        time_obj = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S.%f')
+    except ValueError:
+        time_obj = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+
+    return time_obj.replace(tzinfo=datetime.timezone.utc)
+
+
 parser = argparse.ArgumentParser(description='Compute average from log')
 parser.add_argument('matcher',
                     help='String to identify log file lines with timestamps')
@@ -31,8 +41,8 @@ for line in args.log_file:
         logging.debug("Processing line %d: %s" % (count, line.strip()))
         m = re.match('^.*"%s (?P<start>[0-9:. -]+) to (?P<end>[0-9:. -]+)".*$' % args.matcher, line)
 
-        start = datetime.datetime.strptime(m.group('start'), '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=datetime.timezone.utc)
-        end = datetime.datetime.strptime(m.group('end'), '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=datetime.timezone.utc)
+        start = parse_time(m.group('start'))
+        end = parse_time(m.group('end'))
         diff = end - start
         logging.debug("Parsed start, end, diff times on line %d: %s, %s, %s" % (count, start, end, diff))
 
