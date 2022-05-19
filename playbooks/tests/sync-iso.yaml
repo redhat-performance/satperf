@@ -4,7 +4,7 @@
 # To cleanup:
 #
 # hammer lifecycle-environment delete --name test_sync_iso_le --organization-id 1
-# for cv_id in $( hammer --output csv --no-headers content-view list --search 'label ~ test_sync_repositories_cv' | cut -d ',' -f 1 ); do
+# for cv_id in $( hammer --output csv --no-headers content-view list --search 'label ~ test_sync_iso_cv' | cut -d ',' -f 1 ); do
 #     hammer content-view remove-from-environment --id $cv_id --lifecycle-environment Library --organization-id 1
 #     hammer content-view delete --id $cv_id --organization-id 1
 # done
