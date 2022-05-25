@@ -31,6 +31,4 @@ opts_adhoc="$opts --user root"
 section "Checking environment"
 generic_environment_check false
 
-ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
-
 junit_upload
