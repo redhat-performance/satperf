@@ -96,7 +96,7 @@ if [ "$all_rex" != "false" ]; then
     s $wait_interval
     h 52-rex-ssh-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
     s $wait_interval
-    h 52-rex-ssh-katello-package-upload.log "job-invocation create --inputs \"command='katello-package-upload --force'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+    h 52-rex-ssh-uploadprofile.log "job-invocation create --inputs \"command='dnf uploadprofile --force-upload'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
     s $wait_interval
     h 52-rex-ansible-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
     s $wait_interval

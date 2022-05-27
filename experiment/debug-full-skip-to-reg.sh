@@ -194,7 +194,7 @@ h 52-rex-date-ansible.log "job-invocation create --inputs \"command='date'\" --j
 s $wait_interval
 h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
-h 54-rex-katello-package-upload.log "job-invocation create --inputs \"command='katello-package-upload --force'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+h 54-rex-uploadprofile.log "job-invocation create --inputs \"command='dnf uploadprofile --force-upload'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
 s $wait_interval
 
 
