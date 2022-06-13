@@ -1,19 +1,26 @@
 ---
-  # TODO: Investigate if after reboot of system on EC2 it is still accessible
-  # Upgrade system
-  - name: "Upgrade system"
-    command:
-      yum upgrade -y
-  - name: "Restart machine"
-    shell:
-      sleep 2 && shutdown -r now "Ansible updates triggered"
-    async: 1
-    poll: 0
-    ignore_errors: true
-  - name: "Waiting for server to come back"
-    local_action: wait_for
-      host={{ inventory_hostname }}
-      state=started
-      delay=30
-      timeout=300
+- name: "Upgrade"
+  yum:
+    name: '*'
+    state: latest
+  register: yum_upgrade_cmd
+
+- name: "Show upgrade result"
+  debug:
+    var: yum_upgrade_cmd
+
+- name: "Make sure we have needs-restarting utility"
+  yum:
+    name: yum-utils
+    state: present
+
+- name: "Check if reboot is necessary"
+  command: needs-restarting -r
+  register: needs_restarting_cmd
+  changed_when: false
+  failed_when: "needs_restarting_cmd.rc not in [0, 1]"
+
+- name: "Reboot"
+  reboot:
+  when: "needs_restarting_cmd.rc == 1"
 ...

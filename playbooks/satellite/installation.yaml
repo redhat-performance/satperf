@@ -16,7 +16,7 @@
     - role: ../common/roles/plain-network
     - role: ../common/roles/common
     - role: linux-system-roles.timesync
-    ###- role: upgrade-restart
+    - role: upgrade-restart
     ###- role: satellite-ec2-partitioning
     - role: ../common/roles/remove-home-extend-root
     - role: linux-system-roles.firewall
