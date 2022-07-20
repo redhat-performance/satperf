@@ -73,6 +73,10 @@
     name: ansible
     state: present
 
+- name: default config file
+  shell: |
+    ansible-config init --disabled > /etc/ansible/ansible.cfg
+
 - name: "Ansible should not check host keys"
   lineinfile:
     dest: /etc/ansible/ansible.cfg
