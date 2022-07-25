@@ -73,14 +73,18 @@
     name: ansible
     state: present
 
-- name: default config file
-  shell: |
-    ansible-config init --disabled > /etc/ansible/ansible.cfg
+- name: "Ensure we have Ansible config with default section"
+  ansible.builtin.lineinfile:
+    dest: /etc/ansible/ansible.cfg
+    insertafter: EOF
+    line: '[defaults]'
+    state: present
 
 - name: "Ansible should not check host keys"
   lineinfile:
     dest: /etc/ansible/ansible.cfg
     regexp: '^.*host_key_checking'
+    insertafter: '[defaults]'
     line: 'host_key_checking = False'
     state: present
 
