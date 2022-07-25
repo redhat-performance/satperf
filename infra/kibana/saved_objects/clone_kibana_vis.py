@@ -36,6 +36,14 @@ def _setup_logger(app_name, stderr_log_lvl):
     return logging.getLogger(app_name)
 
 
+def json_set_in(logger, data, key, value):
+    """
+    Dump value to JSON string and set it into the document key
+    """
+    value_json = json.dumps(value, sort_keys=True, separators=(",", ":"))
+    dpath.util.set(data, key, value_json)
+
+
 def text_set_in(logger, data, key, text_new):
     """
     Set given path in the dict to given value
@@ -52,7 +60,11 @@ def text_replace_in(logger, data, key, text_from, text_to):
     """
     Modify given path in the dict using replacing substring from/to
     """
-    text = dpath.util.get(data, key)
+    try:
+        text = dpath.util.get(data, key)
+    except KeyError:
+        logger.warning(f"Failed to load path {key}, skipping")
+        return
     logger.debug(f"Loaded {key}: {text}")
 
     text_new = text.replace(text_from, text_to)
@@ -62,37 +74,100 @@ def text_replace_in(logger, data, key, text_from, text_to):
         dpath.util.set(data, key, text_new)
 
 
-def doit(logger, args):
+def modify_searchSourceJSON_value(logger, args, document_source, path):
     """
-    Create a clone of input document, modyfying it as requested
+    Modify filter/1/meta/value content if it is JSON string
+
+    See:
+    cat visualization-....json | jq --raw-output '.[0].attributes.kibanaSavedObjectMeta.searchSourceJSON' | jq -S
     """
-    with open(args.filename, "r") as fp:
-        document = json.load(fp)
-        logger.debug(f"Loaded {args.filename}: {document}")
+    # Load the document, for some visualizations it is not JSON string
+    # and we can skip it
+    try:
+        document_json = dpath.util.get(document_source, path)
+    except KeyError:
+        logger.warning(f"Failed to load path {path}, skipping")
+        return
+    try:
+        document = json.loads(document_json)
+    except json.decoder.JSONDecodeError:
+        logger.warning(f"Path {path} is not a JSON document")
+        return
 
-    assert (
-        len(document) == 1
-    ), f"There should be exactly one document in {args.filename}"
-
-    if args.new_uuid is None:
-        document_uuid = str(uuid.uuid4())
-    else:
-        document_uuid = args.new_uuid
-
-    path_searchSourceJSON = "0/attributes/kibanaSavedObjectMeta/searchSourceJSON"
-    path_searchSourceJSON_value = "filter/1/meta/value"
-    path_visState = "0/attributes/visState"
-
-    document_searchSourceJSON = json.loads(
-        dpath.util.get(document, path_searchSourceJSON)
-    )
-    document_searchSourceJSON_value = json.loads(
-        dpath.util.get(document_searchSourceJSON, path_searchSourceJSON_value)
-    )
-    document_visState = json.loads(
-        dpath.util.get(document, path_visState)
+    # Modify the value
+    text_replace_in(
+        logger,
+        document,
+        "wildcard/parameters.version.keyword",
+        *args.change_version_wildcard,
     )
 
+    # Put the modified document back
+    json_set_in(logger, document_source, path, document)
+
+def modify_searchSourceJSON(logger, args, document_source, path):
+    """
+    Modify 0/attributes/kibanaSavedObjectMeta/searchSourceJSON JSON scring content
+    """
+    # Load document
+    document_json = dpath.util.get(document_source, path)
+    document = json.loads(document_json)
+
+    for i in range(len(document["filter"])):
+        # Modify the value
+        text_replace_in(
+            logger,
+            document,
+            f"filter/{i}/query/wildcard/parameters.version.keyword",
+            *args.change_version_wildcard,
+        )
+        text_replace_in(
+            logger,
+            document,
+            f"filter/{i}/query/match/parameters.version.keyword/query",
+            *args.change_version_match,
+        )
+        text_replace_in(
+            logger,
+            document,
+            f"filter/{i}/meta/params/query",
+            *args.change_version_match,
+        )
+        text_replace_in(
+            logger,
+            document,
+            f"filter/{i}/meta/params/value",
+            *args.change_version_match,
+        )
+
+        # More modifications
+        modify_searchSourceJSON_value(logger, args, document, f"filter/{i}/meta/value")
+
+    # Put the modified document back
+    json_set_in(logger, document_source, path, document)
+
+
+def modify_visState(logger, args, document_source, path):
+    """
+    Modify  JSON scring content 0/attributes/visState
+    """
+    # Load document
+    document_json = dpath.util.get(document_source, path)
+    document = json.loads(document_json)
+
+    # Modify the value
+    text_replace_in(
+        logger,
+        document,
+        "title",
+        *args.change_text,
+    )
+
+    # Put the modified document back
+    json_set_in(logger, document_source, path, document)
+
+
+def modify_main(logger, args, document, document_uuid):
     text_set_in(
         logger,
         document,
@@ -112,55 +187,32 @@ def doit(logger, args):
         *args.change_text,
     )
 
-    text_replace_in(
-        logger,
-        document_searchSourceJSON,
-        "filter/1/query/wildcard/parameters.version.keyword",
-        *args.change_version,
-    )
+    modify_searchSourceJSON(logger, args, document, "0/attributes/kibanaSavedObjectMeta/searchSourceJSON")
+    modify_visState(logger, args, document, "0/attributes/visState")
 
-    text_replace_in(
-        logger,
-        document_searchSourceJSON_value,
-        "wildcard/parameters.version.keyword",
-        *args.change_version,
-    )
 
-    text_replace_in(
-        logger,
-        document_visState,
-        "title",
-        *args.change_text,
-    )
+def doit(logger, args):
+    """
+    Create a clone of input document, modyfying it as requested
+    """
+    with open(args.filename, "r") as fp:
+        document = json.load(fp)
+        logger.debug(f"Loaded {args.filename}: {document}")
 
-    dpath.util.set(
-        document_searchSourceJSON,
-        path_searchSourceJSON_value,
-        json.dumps(
-            document_searchSourceJSON_value,
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-    )
-    dpath.util.set(
-        document,
-        path_searchSourceJSON,
-        json.dumps(
-            document_searchSourceJSON,
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-    )
-    dpath.util.set(
-        document,
-        path_visState,
-        json.dumps(
-            document_visState,
-            sort_keys=True,
-            separators=(",", ":"),
-        ),
-    )
+    assert (
+        len(document) == 1
+    ), f"There should be exactly one document in {args.filename}"
 
+    # Determine UUID for new document
+    if args.new_uuid is None:
+        document_uuid = str(uuid.uuid4())
+    else:
+        document_uuid = args.new_uuid
+
+    # Modify the document
+    modify_main(logger, args, document, document_uuid)
+
+    # Save the modified document
     document_new_json = f"new-{document_uuid}.json"
     document_new_ndjson = f"new-{document_uuid}.ndjson"
     with open(document_new_json, "w") as fp:
@@ -184,10 +236,16 @@ def main():
         help="Substring to change in textual fields and its new value",
     )
     parser.add_argument(
-        "--change-version",
+        "--change-version-wildcard",
         required=True,
         nargs=2,
         help="Version expression to change from and to",
+    )
+    parser.add_argument(
+        "--change-version-match",
+        required=True,
+        nargs=2,
+        help="Simplified version like 6.10.z to change from and to",
     )
     args = parser.parse_args()
 
