@@ -8,6 +8,7 @@ private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 wait_interval=${PARAM_wait_interval:-50}
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
+registrations_config_server_server_timeout="${PARAM_registrations_config_server_server_timeout:-}"   # empty means to use default
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
@@ -106,7 +107,10 @@ export skip_measurement='false'
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml \
+        -e "size=$batch" \
+        -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
+        -e "config_server_server_timeout=$registrations_config_server_server_timeout"
 #     ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-container-host-client-logs' method=clients-bootstrap.yaml registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1

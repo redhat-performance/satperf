@@ -28,6 +28,7 @@
             --server.hostname="{{ server }}" \
             --server.port="443" \
             --server.prefix="/rhsm" \
+            {% if config_server_server_timeout != '' %}--server.server_timeout="{{ config_server_server_timeout }}" \ {% endif -%}
             --rhsm.repo_ca_cert="/etc/rhsm/ca/katello-server-ca.pem" \
             --rhsm.baseurl="https://{{ server }}/pulp/content" \
             --rhsm.full_refresh_on_yum=1

@@ -49,6 +49,7 @@
           -e "server={{ groups['satellite6']|first }}" \
           -e "activationkey='ActivationKey'" \
           -e "organization='{{ sat_orglabel }}'" \
+          -e "config_server_server_timeout='{{ config_server_server_timeout|default('') }}'" \
           clients.yaml \
           &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
