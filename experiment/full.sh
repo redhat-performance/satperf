@@ -197,13 +197,19 @@ e Register $logs/44-register-overall.log
 section "Remote execution"
 skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 skip_measurement='true' a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
-h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+job_tamplate_ansible_default='Run Command - Ansible Default'
+if vercmp_ge "$satellite_version" "6.12.0"; then
+    job_tamplate_ssh_default='Run Command - Script Default'
+else
+    job_tamplate_ssh_default='Run Command - SSH Default'
+fi
+h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
 s $wait_interval
-h 52-rex-date-ansible.log "job-invocation create --inputs \"command='date'\" --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
+h 52-rex-date-ansible.log "job-invocation create --inputs \"command='date'\" --job-template '$job_tamplate_ansible_default' --search-query 'name ~ container'"
 s $wait_interval
-h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
 s $wait_interval
-h 54-rex-uploadprofile.log "job-invocation create --inputs \"command='dnf uploadprofile --force-upload'\" --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
+h 54-rex-uploadprofile.log "job-invocation create --inputs \"command='dnf uploadprofile --force-upload'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
 s $wait_interval
 
 
