@@ -33,22 +33,22 @@
         msg: "BackupOffline {{ backup_offline_cmd.start }} to {{ backup_offline_cmd.end }}"
       when: "backup_offline_cmd.rc is defined and backup_offline_cmd.rc == 0"
 
-    ###- name: run the restoration script
-    ###  shell: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
-    ###  environment:
-    ###    TZ: UTC
-    ###    LANG: en_US.utf-8
-    ###  register: restore_cmd
+    - name: run the restoration script
+      shell: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: restore_cmd
 
-    ###- name: print restore duration
-    ###  debug:
-    ###    msg: "Restore {{ restore_cmd.start }} to {{ restore_cmd.end }}"
-    ###  when: "restore_cmd.rc is defined and restore_cmd.rc == 0"
+    - name: print restore duration
+      debug:
+        msg: "Restore {{ restore_cmd.start }} to {{ restore_cmd.end }}"
+      when: "restore_cmd.rc is defined and restore_cmd.rc == 0"
 
-    ###- name: cleanup directory
-    ###  file:
-    ###    path: "{{ item }}"
-    ###    state: absent
-    ###  loop:
-    ###    - /backup-offline
-    ###    - /backup-online
+    - name: cleanup directory
+      file:
+        path: "{{ item }}"
+        state: absent
+      loop:
+        - /backup-offline
+        - /backup-online
