@@ -24,8 +24,5 @@ section "WebUI test"
 rm -f /tmp/status-data-webui-pages.json
 skip_measurement='true' ap 10-webui-pages.log -e "ui_pages_concurrency=$ui_pages_concurrency ui_pages_duration=$ui_pages_duration" playbooks/tests/webui-pages.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/10-webui-pages.log
-s $wait_interval
-ap 15-siege-webui.log -e "siege_result_json_file=../../$logs/15-siege-webui.json" playbooks/tests/siege-webui.yaml
-log "Siege results: $( cat $logs/15-siege-webui.json )"
 
 junit_upload
