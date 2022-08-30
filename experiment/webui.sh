@@ -18,7 +18,7 @@ opts_adhoc="$opts --user root"
 
 
 section "Checking environment"
-extended=false generic_environment_check
+generic_environment_check false
 
 section "WebUI test"
 rm -f /tmp/status-data-webui-pages.json
