@@ -19,7 +19,8 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
 
-ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
+ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
+ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 
 do="Default Organization"
 dl="Default Location"
@@ -220,14 +221,9 @@ s $wait_interval
 skip_measurement='true' ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
 e HammerHostList $logs/61-hammer-list.log
 s $wait_interval
-skip_measurement='true' ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
-e WebUIPage10_foreman_tasks_api_tasks_include_permissions_true $logs/62-some-webui-pages.log
-e WebUIPage10_audits $logs/62-some-webui-pages.log
-e WebUIPage10_audits_page_1_per_page_20_search_ $logs/62-some-webui-pages.log
-e WebUIPage10_katello_api_v2_subscriptions_organization_id_1 $logs/62-some-webui-pages.log
-e WebUIPage10_katello_api_v2_products_organization_id_1 $logs/62-some-webui-pages.log
-e WebUIPage10_katello_api_v2_content_views_nondefault_true_organization_id_1 $logs/62-some-webui-pages.log
-e WebUIPage10_katello_api_v2_packages_organization_id_1 $logs/62-some-webui-pages.log
+rm -f /tmp/status-data-webui-pages.json
+skip_measurement='true' ap 62-webui-pages.log -e "ui_pages_concurrency=$ui_pages_concurrency ui_pages_duration=$ui_pages_duration" playbooks/tests/webui-pages.yaml
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
 s $wait_interval
 if vercmp_ge "$satellite_version" "6.9.0"; then
     a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"

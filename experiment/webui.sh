@@ -21,27 +21,11 @@ section "Checking environment"
 extended=false generic_environment_check
 
 section "WebUI test"
-ap 10-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
+rm -f /tmp/status-data-webui-pages.json
+skip_measurement='true' ap 10-webui-pages.log -e "ui_pages_concurrency=$ui_pages_concurrency ui_pages_duration=$ui_pages_duration" playbooks/tests/webui-pages.yaml
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/10-webui-pages.log
 s $wait_interval
 ap 15-siege-webui.log -e "siege_result_json_file=../../$logs/15-siege-webui.json" playbooks/tests/siege-webui.yaml
-
-section "Summary"
-# Showing results for playbooks/tests/some-webui-pages.yaml
-e WebUIPage10_dashboard $logs/10-some-webui-pages.log
-e WebUIPage10_job_invocations $logs/10-some-webui-pages.log
-e WebUIPage10_foreman_tasks_tasks $logs/10-some-webui-pages.log
-e WebUIPage10_foreman_tasks_api_tasks_include_permissions_true $logs/10-some-webui-pages.log
-e WebUIPage10_hosts $logs/10-some-webui-pages.log
-e WebUIPage10_templates_provisioning_templates $logs/10-some-webui-pages.log
-e WebUIPage10_hostgroups $logs/10-some-webui-pages.log
-e WebUIPage10_smart_proxies $logs/10-some-webui-pages.log
-e WebUIPage10_domains $logs/10-some-webui-pages.log
-e WebUIPage10_audits $logs/10-some-webui-pages.log
-e WebUIPage10_katello_api_v2_subscriptions_organization_id_1 $logs/10-some-webui-pages.log
-e WebUIPage10_katello_api_v2_products_organization_id_1 $logs/10-some-webui-pages.log
-e WebUIPage10_katello_api_v2_content_views_nondefault_true_organization_id_1 $logs/10-some-webui-pages.log
-e WebUIPage10_katello_api_v2_packages_organization_id_1 $logs/10-some-webui-pages.log
-# Showing results for playbooks/tests/siege-webui.yaml
 log "Siege results: $( cat $logs/15-siege-webui.json )"
 
 junit_upload

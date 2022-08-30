@@ -152,14 +152,18 @@ function status_data_create() {
     sd_sat_ver="$7"
     sd_sat_ver_short=$( echo "$sd_sat_ver" | sed 's/^satellite-//' | sed 's/[^0-9.]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
     sd_run="$8"
-    sd_file="$sd_log.json"
     sd_additional="$9"
+    if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
+        sd_file=$STATUS_DATA_FILE
+    else
+        sd_file="$sd_log.json"
+        rm -f "$sd_file"
+    fi
     if [ -n "$PARAM_inventory" ]; then
         sd_hostname="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     fi
 
     # Create status data file
-    rm -f "$sd_file"
     status_data.py --status-data-file $sd_file --set \
         "id=$sd_run" \
         "name=$sd_section/$sd_name" \
