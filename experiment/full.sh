@@ -215,9 +215,6 @@ s $wait_interval
 
 
 section "Misc simple tests"
-skip_measurement='true' ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
-e GenerateApplicability $logs/60-generate-applicability.log
-s $wait_interval
 skip_measurement='true' ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
 e HammerHostList $logs/61-hammer-list.log
 s $wait_interval
