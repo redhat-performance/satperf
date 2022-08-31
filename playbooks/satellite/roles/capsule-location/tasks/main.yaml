@@ -43,14 +43,24 @@
   register: locations
   run_once: true
 
+- name: "Set location name (if location is defined)"
+  ansible.builtin.set_fact:
+    location: "{{ hostvars[inventory_hostname].location }}"
+  when: "hostvars[inventory_hostname].location is defined"
+
+- name: "Set location name (if location is not defined)"
+  ansible.builtin.set_fact:
+    location: "Location for {{ inventory_hostname }}"
+  when: "hostvars[inventory_hostname].location is not defined"
+
 - name: "Compose location creation request body for Sat <6.11"
   set_fact:
-    location_body: "{{ {'location': {'name': 'Location for ' + inventory_hostname, 'domain_ids': [domain_id], 'environment_ids': [environment_id]}} }}"
+    location_body: "{{ {'location': {'name': location, 'domain_ids': [domain_id], 'environment_ids': [environment_id]}} }}"
   when: "sat_version is version('6.11', '<')"
 
 - name: "Compose location creation request body for Sat >=6.11"
   set_fact:
-    location_body: "{{ {'location': {'name': 'Location for ' + inventory_hostname, 'domain_ids': [domain_id]}} }}"
+    location_body: "{{ {'location': {'name': location, 'domain_ids': [domain_id]}} }}"
   when: "sat_version is version('6.11', '>=')"
 
 - name: "Create location for our capsule if it is not already there"
@@ -67,7 +77,7 @@
     body: "{{ location_body }}"
     status_code: 201
     body_format: json
-  when: "'Location for ' + inventory_hostname not in locations.json.results|map(attribute='name')"
+  when: "location not in locations.json.results|map(attribute='name')"
 
 - name: "Get updated list of locations if needed"
   uri:
@@ -82,7 +92,7 @@
 - name: "Determine location ID"
   set_fact:
     location_id: "{{ item.id }}"
-  when: "item.name == 'Location for ' + inventory_hostname"
+  when: "item.name == location"
   with_items: "{{ locations.json.results }}"
 
 - name: "Move capsule's host to the location"
