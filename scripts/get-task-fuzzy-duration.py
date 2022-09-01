@@ -72,7 +72,7 @@ def print_result(output_format, data):
         data['head'] = data['head'].total_seconds()
         data['tail'] = data['tail'].total_seconds()
         for k, v in data.items():
-            print("results.tasks.%s=\"%s\"" % (k, v))
+            print("results.tasks.%s=\"%s\"" % (k, v.isoformat(timespec="microseconds") if isinstance(v, datetime.datetime) else v))
     else:
         raise Exception("Do not know how to prin in %s" % output_format)
 
