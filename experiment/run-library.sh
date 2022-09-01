@@ -487,18 +487,13 @@ function t() {
 function j() {
     # Parse job invocation ID from the log, get parent task ID and examine it
     local log="$1"
-    echo "DEBUG: log=$log"
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [ -z "$job_invocation_id" ] && return 1
-    echo "DEBUG: job_invocation_id=$job_invocation_id"
     local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
-    echo "DEBUG: satellite_host=$satellite_host"
     local satellite_creds="$( ansible $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
     [ -z "$satellite_creds" ] && return 2
-    echo "DEBUG: satellite_creds=$satellite_creds"
     local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
-    echo "DEBUG: task_id=$task_id"
 
     task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
 }
