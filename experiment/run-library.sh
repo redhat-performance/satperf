@@ -167,6 +167,7 @@ function status_data_create() {
     fi
 
     # Create status data file
+    set -x
     status_data.py --status-data-file $sd_file --set \
         "id=$sd_run" \
         "name=$sd_section/$sd_name" \
@@ -186,6 +187,7 @@ function status_data_create() {
         "ended=$sd_end" \
         "golden=${GOLDEN:-false}" \
         $sd_additional
+    set +x
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
