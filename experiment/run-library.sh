@@ -452,7 +452,7 @@ function task_examine() {
     local log="$1"
     local task_id="$2"
     [ -z "$task_id" ] && return 1
-    local satellite_host="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
     local log_report="$( echo "$log" | sed "s/\.log$/-duration.log/" )"
 
@@ -490,10 +490,10 @@ function j() {
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [ -z "$job_invocation_id" ] && return 1
     echo "DEBUG: job_invocation_id=$job_invocation_id"
-    local satellite_host="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
     echo "DEBUG: satellite_host=$satellite_host"
-    local satellite_creds="$( set -x; ansible -i "$PARAM_inventory" $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
+    local satellite_creds="$( ansible $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
     [ -z "$satellite_creds" ] && return 2
     echo "DEBUG: satellite_creds=$satellite_creds"
     local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
