@@ -444,10 +444,10 @@ function e() {
         "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
-function t() {
+function task_examine() {
     # Show task duration without outliners
     local log="$1"
-    local task_id="$( extract_task "$log" )"
+    local task_id="$2"
     [ -z "$task_id" ] && return 1
     local satellite_host="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
@@ -471,12 +471,49 @@ function t() {
         "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
 }
 
+function t() {
+    # Parse task ID from the log and examine the task
+    local log="$1"
+    local task_id="$( extract_task "$log" )"
+    [ -z "$task_id" ] && return 1
+
+    task_examine "$log" $task_id
+}
+
+function j() {
+    # Parse job invocation ID from the log, get parent task ID and examine it
+    local log="$1"
+    local job_invocation_id="$( extract_job_invocation "$log" )"
+    [ -z "$job_invocation_id" ] && return 1
+    local satellite_host="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    [ -z "$satellite_host" ] && return 2
+    local satellite_creds="$( ansible -i "$PARAM_inventory" $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
+    [ -z "$satellite_creds" ] && return 2
+    local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
+
+    task_examine "$log" $task_id
+}
+
 function extract_task() {
     # Take log with hammer run log and extract task ID from it. Do not return
     # anything if more task IDs are found or in case of any other error.
     log="$1"
     candidates=$( grep '^Task [0-9a-zA-Z-]\+ running' "$log" | cut -d ' ' -f 2 | uniq )
     # Only print f we have exactly one task ID
+    if [ $( echo "$candidates" | wc -l | cut -d ' ' -f 1 ) -eq 1 ]; then
+        echo "$candidates"
+        return 0
+    fi
+    return 1
+}
+
+function extract_job_invocation() {
+    # Take log with hammer job-invocation create --async output and extract
+    # job invocation ID from it. Do not return anything if more IDs are found
+    # or in case of any other error.
+    log=$1
+    candidates=$( grep '^Job invocation [0-9]\+ created' "$log" | cut -d ' ' -f 3 | uniq )
+    # Only print if we have exactly one job invocation ID
     if [ $( echo "$candidates" | wc -l | cut -d ' ' -f 1 ) -eq 1 ]; then
         echo "$candidates"
         return 0

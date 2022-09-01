@@ -117,8 +117,12 @@ def investigate_task(args):
     duration = end - start
 
     to_remove = round((args.percentage / 100) * count)
-    starts_cleaned = starts[to_remove:]
-    ends_cleaned = ends[:-to_remove]
+    if to_remove > 0:
+        starts_cleaned = starts[to_remove:]
+        ends_cleaned = ends[:-to_remove]
+    else:
+        starts_cleaned = starts
+        ends_cleaned = ends
 
     start_cleaned = min(starts_cleaned)
     end_cleaned = max(ends_cleaned)

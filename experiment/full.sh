@@ -204,13 +204,17 @@ if vercmp_ge "$satellite_version" "6.12.0"; then
 else
     job_tamplate_ssh_default='Run Command - SSH Default'
 fi
-h 52-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 55-rex-date.log "job-invocation create --inputs \"command='date'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+j $logs/55-rex-date.log
 s $wait_interval
-h 52-rex-date-ansible.log "job-invocation create --inputs \"command='date'\" --job-template '$job_tamplate_ansible_default' --search-query 'name ~ container'"
+skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --inputs \"command='date'\" --job-template '$job_tamplate_ansible_default' --search-query 'name ~ container'"
+j $logs/56-rex-date-ansible.log
 s $wait_interval
-h 53-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --inputs \"command='subscription-manager facts --update'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+j $logs/57-rex-sm-facts-update.log
 s $wait_interval
-h 54-rex-uploadprofile.log "job-invocation create --inputs \"command='dnf uploadprofile --force-upload'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --inputs \"command='dnf uploadprofile --force-upload'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+j $logs/58-rex-uploadprofile.log
 s $wait_interval
 
 
