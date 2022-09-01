@@ -452,6 +452,7 @@ function task_examine() {
     local log="$1"
     local task_id="$2"
     [ -z "$task_id" ] && return 1
+    local command="${3:-N/A}"
     local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
     local log_report="$( echo "$log" | sed "s/\.log$/-duration.log/" )"
@@ -463,7 +464,7 @@ function task_examine() {
     head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
     log "Examined task $task_id and if have $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
     measurement_add \
-        "experiment/reg-average.py '$grepper' '$log'" \
+        "$command" \
         "$log_report" \
         "$rc" \
         "$started_ts" \
@@ -480,7 +481,7 @@ function t() {
     local task_id="$( extract_task "$log" )"
     [ -z "$task_id" ] && return 1
 
-    task_examine "$log" $task_id
+    task_examine "$log" $task_id "Investigating task $task_id"
 }
 
 function j() {
@@ -499,7 +500,7 @@ function j() {
     local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
     echo "DEBUG: task_id=$task_id"
 
-    task_examine "$log" $task_id
+    task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
 }
 
 function extract_task() {
