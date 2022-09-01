@@ -464,7 +464,7 @@ function task_examine() {
     started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
     ended_ts="$( date -d "$( grep '^results.tasks.end=' $log_report | cut -d '"' -f 2 )" +%s )"
     head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
-    log "Examined task $task_id and if have $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
+    log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
     measurement_add \
         "$command" \
         "$log_report" \
