@@ -73,6 +73,13 @@ def print_result(output_format, data):
         data['tail'] = data['tail'].total_seconds()
         for k, v in data.items():
             print("results.tasks.%s=\"%s\"" % (k, v.isoformat(timespec="microseconds") if isinstance(v, datetime.datetime) else v))
+    elif output_format == 'json':
+        data['duration'] = data['duration'].total_seconds()
+        data['duration_cleaned'] = data['duration_cleaned'].total_seconds()
+        data['head'] = data['head'].total_seconds()
+        data['tail'] = data['tail'].total_seconds()
+        data = {k: v.isoformat(timespec="microseconds") if isinstance(v, datetime.datetime) else v for k, v in data.items()}
+        print(json.dumps(data))
     else:
         raise Exception("Do not know how to prin in %s" % output_format)
 
@@ -175,7 +182,7 @@ def doit():
     parser.add_argument('--percentage', type=float, default=3,
                         help='How many %% of earliest and latest starts and ends to drop')
     parser.add_argument('-o', '--output', default='plain',
-                        choices=['plain', 'bash', 'status-data'],
+                        choices=['plain', 'bash', 'status-data', 'json'],
                         help='Format how to present output')
     parser.add_argument('--cache',
                         help='Cache sub-tasks data to this file. Do not cache when option is not provided. Meant for debugging as it does not care about other parameters, it just returns cache content.')
