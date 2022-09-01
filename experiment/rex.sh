@@ -16,7 +16,7 @@ opts_adhoc="$opts --user root"
 
 
 section "Checking environment"
-generic_environment_check false
+generic_environment_check false false
 
 section "Remote execution"
 skip_measurement='true' h 10-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"

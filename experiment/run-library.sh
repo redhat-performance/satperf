@@ -83,6 +83,7 @@ function measurement_row_field() {
 
 function generic_environment_check() {
     extended=${1:-true}
+    restarted=${2:-true}
     skip_measurement='true' a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
     skip_measurement='true' a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
     skip_measurement='true' a 00-info-ip-a.log satellite6,capsules,docker_hosts,container_hosts -m "shell" -a "ip a"
@@ -97,7 +98,9 @@ function generic_environment_check() {
         skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi
 
-    skip_measurement='true' a 00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
+    if $restarted; then
+        skip_measurement='true' a 00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
+    fi
 
     skip_measurement='true' a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
     katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
@@ -483,13 +486,18 @@ function t() {
 function j() {
     # Parse job invocation ID from the log, get parent task ID and examine it
     local log="$1"
+    echo "DEBUG: log=$log"
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [ -z "$job_invocation_id" ] && return 1
+    echo "DEBUG: job_invocation_id=$job_invocation_id"
     local satellite_host="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
+    echo "DEBUG: satellite_host=$satellite_host"
     local satellite_creds="$( ansible -i "$PARAM_inventory" $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
     [ -z "$satellite_creds" ] && return 2
+    echo "DEBUG: satellite_creds=$satellite_creds"
     local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
+    echo "DEBUG: task_id=$task_id"
 
     task_examine "$log" $task_id
 }
