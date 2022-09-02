@@ -1,5 +1,16 @@
 #!/usr/bin/env python3
 
+"""
+Satellite API doc:
+
+    https://<hostname>/apidoc/v2
+
+Using the API:
+
+    curl --silent --insecure -u <user>:<pass> -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost/api/v2/job_invocations/6
+    curl --silent --insecure -u <user>:<pass> -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost/foreman_tasks/api/tasks/a1845242-34cc-44b7-ae24-f8a1c5748641
+"""
+
 import logging
 import sys
 import os.path
