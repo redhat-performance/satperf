@@ -225,8 +225,10 @@ function status_data_create() {
     status_data.py --status-data-file $sd_file --set "result=$sd_result"
 
     # Upload status data to ElasticSearch
+    url="http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/${PARAM_elasticsearch_index:-satellite_perf_index}/${PARAM_elasticsearch_mapping:-_doc}/"
+    echo "INFO: POSTing '$sd_file' to '$url'"
     curl --silent -H "Content-Type: application/json" -X POST \
-        "http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/${PARAM_elasticsearch_index:-satellite_perf_index}/${PARAM_elasticsearch_mapping:-_doc}/" \
+        "$url" \
         --data "@$sd_file" \
             | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
     ###status_data.py --status-data-file $sd_file --info
