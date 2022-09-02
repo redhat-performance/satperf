@@ -17,12 +17,12 @@
 
 - name: "Fix firewalld config"
   shell: |
-    lock=/root/fix-firewalld-config.lock
+    lock=/root/.fix-firewalld-config.lock
     if [ -f "$lock" ]; then
       echo "Firewalld config seem to be already fixed"
     else
       if rpm -q firewalld; then
-        systemctl mask firewalld.service
+        systemctl unmask firewalld.service
         firewall-cmd --add-service ssh
         rpm -q iptables-services && dnf remove -y iptables-services
       fi
