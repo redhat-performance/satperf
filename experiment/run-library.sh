@@ -261,6 +261,9 @@ function status_data_create() {
 function junit_upload() {
     # Upload junit.xml into ReportPortal for test result investigation
 
+    # Make the file available for Jenkins on the same path every time
+    cp "$logs/junit.xml" latest-junit.xml
+
     [ -z "$PARAM_reportportal_host" ] && return 0
 
     # Activate tools virtualenv
@@ -287,9 +290,6 @@ function junit_upload() {
 
     # Deactivate tools virtualenv
     deactivate
-
-    # Make the file available for Jenkins on the same path every time
-    cp "$logs/junit.xml" latest-junit.xml
 }
 
 function log() {
