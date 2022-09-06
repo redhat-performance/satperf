@@ -10,8 +10,7 @@
     - role: ../common/roles/scalelab-generic-cleanup
       when: '"scalelab" in inventory_hostname'
     - role: ../common/roles/plain-network
-      when:
-        - configure_plain_network == True
+      when: 'configure_plain_network == True'
     - role: ../common/roles/common
     - role: rhsm_helper
       vars:
