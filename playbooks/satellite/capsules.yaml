@@ -7,6 +7,8 @@
     - ../../conf/satperf.local.yaml
   roles:
     - role: ../common/roles/epel-not-present
+    - role: ../common/roles/scalelab-generic-cleanup
+      when: '"scalelab" in inventory_hostname'
     - role: ../common/roles/plain-network
     - role: ../common/roles/common
     - role: rhsm_helper

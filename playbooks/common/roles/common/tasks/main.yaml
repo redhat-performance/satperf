@@ -13,12 +13,6 @@
     key: "{{ lookup('file', '../../../../../'+satperf_private_key+'.pub') }}"
     manage_dir: yes
 
-# Cleanup ScaleLab systems
-- name: "Cleanup ScaleLab systems"
-  ansible.builtin.import_role:
-    name: ../common/roles/scalelab-generic-cleanup
-  when: '"scalelab" in inventory_hostname'
-
 # Check default in /etc/hosts file
 - name: "We need localhost (IPv4) in hosts file"
   lineinfile:
