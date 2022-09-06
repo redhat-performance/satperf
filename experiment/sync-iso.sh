@@ -24,7 +24,7 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 section "Checking environment"
-generic_environment_check
+generic_environment_check false
 
 section "Sync file repo"
 ap 10-test-sync-iso.log playbooks/tests/sync-iso.yaml -e "test_sync_iso_count=$test_sync_iso_count test_sync_iso_url_template=$test_sync_iso_url_template test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs"
@@ -34,4 +34,4 @@ e SyncRepositories $logs/10-test-sync-iso.log
 e PublishContentViews $logs/10-test-sync-iso.log
 e PromoteContentViews $logs/10-test-sync-iso.log
 
-junit_upload        
+junit_upload
