@@ -1,0 +1,11 @@
+---
+- hosts: satellite6 capsules container_hosts
+  remote_user: root
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  roles:
+    - role: ../common/roles/epel-not-present
+    - role: ../common/roles/plain-network
+    - role: ../common/roles/common
+...
