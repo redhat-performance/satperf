@@ -3,6 +3,9 @@
 satperf_private_key: conf/id_rsa
 client_private_key: conf/id_rsa
 
+# Variables needed for host configuration
+configure_plain_network: True
+
 # Variables needed by linux-system-roles.timesync Ansible role
 timesync_ntp_servers:
   - hostname: "clock.redhat.com"
