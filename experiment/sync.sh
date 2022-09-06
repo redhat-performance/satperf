@@ -33,4 +33,7 @@ e SyncRepositories $logs/10-test-sync-repositories.log
 e PublishContentViews $logs/10-test-sync-repositories.log
 e PromoteContentViews $logs/10-test-sync-repositories.log
 
+section "Sosreport"
+skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+
 junit_upload
