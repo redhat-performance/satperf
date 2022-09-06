@@ -49,6 +49,7 @@
       assert:
         that: "'Repository is being synchronized in task' in item.stdout"
         msg: 'Pass'
+        quiet: yes
       loop: "{{ start_sync.results }}"
       loop_control:
         label: "{{ test_sync_iso_repo_template|replace('*', item.item) }}"
