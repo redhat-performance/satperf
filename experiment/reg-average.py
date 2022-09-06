@@ -5,6 +5,7 @@ import argparse
 import datetime
 import logging
 import re
+import sys
 
 
 def parse_time(time_str):
@@ -53,6 +54,10 @@ for line in args.log_file:
         count += 1
         total += diff.total_seconds()
 
-print("min in %s: %s" % (args.log_file.name, start_min.timestamp()))
-print("max in %s: %s" % (args.log_file.name, end_max.timestamp()))
-print("%s in %s: %f / %d = %f" %(args.matcher, args.log_file.name, total, count, total / count))
+if count == 0:
+    logging.error("No matcher %s found in log %s" % (args.matcher, args.log_file.name))
+    sys.exit(1)
+else:
+    print("min in %s: %s" % (args.log_file.name, start_min.timestamp()))
+    print("max in %s: %s" % (args.log_file.name, end_max.timestamp()))
+    print("%s in %s: %f / %d = %f" %(args.matcher, args.log_file.name, total, count, total / count))
