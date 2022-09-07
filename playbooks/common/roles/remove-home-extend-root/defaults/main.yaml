@@ -1,3 +1,4 @@
 ---
-extend_root_partition: no
+extend_root_partition: False
+remove_home_partition: False
 ...
