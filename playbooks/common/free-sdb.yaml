@@ -16,7 +16,7 @@
     - include_role:
         name: ../common/roles/remove-home-extend-root
       vars:
-        extend_root_partition: 'false'
+        extend_root_partition: False
 
     - name: "Move VG content from /dev/sdb1"
       command: pvmove "{{ vms_storage_pvs }}"

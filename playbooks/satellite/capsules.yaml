@@ -20,6 +20,7 @@
         additional_repos: "{{ capsule_additional_repos }}"
     - role: linux-system-roles.timesync
     - role: ../common/roles/remove-home-extend-root
+      when: 'remove_home_partition|bool == True or extend_root_partition|bool == True'
     - role: linux-system-roles.firewall
       vars:
         firewall:
