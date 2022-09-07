@@ -8,7 +8,7 @@
   debug:
     msg:
       - "Public network: {{ public_nic }} with DHCP"
-      - "Private network: {{ private_nic }} with {{ (private_ip + '/' + private_netmask) | ipaddr('host/prefix') }}"
+      - "Private network: {{ private_nic }} with {{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('host/prefix') }}"
 
 - name: "Setup networking"
   include_role:
@@ -30,7 +30,7 @@
         ip:
           dhcp4: no
           address:
-            - "{{ (private_ip + '/' + private_netmask) | ipaddr('host/prefix') }}"
+            - "{{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('host/prefix') }}"
         state: up
       - persistent_state: absent   # remove all other profiles
 ...
