@@ -33,9 +33,12 @@ Ansible is used to perform most of the work. There are playbooks for:
 
 You need Ansible installed.
 
-For some playbooks, you might need extra roles installed:
+For some playbooks, you might need extra roles and collections installed:
 
-    ansible-galaxy role install -r requirements.yml
+```
+$ ansible-galaxy role install -r requirements.yml
+$ ansible-galaxy collection install -r requirements.yml
+```
 
 ### Configuration
 
