@@ -96,9 +96,7 @@ e WebUIPage10_katello_api_v2_packages_organization_id_1 $logs/62-some-webui-page
 s $wait_interval
 
 # Inventory upload
-if vercmp_ge "$katello_version" "3.14.0" || vercmp_ge "$satellite_version" "6.7.0"; then
-    a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake foreman_inventory_upload:report:generate"
-    s $wait_interval
-fi
+a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake foreman_inventory_upload:report:generate"
+s $wait_interval
 
 junit_upload
