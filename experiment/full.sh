@@ -188,22 +188,22 @@ e Register $logs/44-register-overall.log
 section "Remote execution"
 skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 skip_measurement='true' a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
-job_tamplate_ansible_default='Run Command - Ansible Default'
+job_template_ansible_default='Run Command - Ansible Default'
 if vercmp_ge "$satellite_version" "6.12.0"; then
-    job_tamplate_ssh_default='Run Command - Script Default'
+    job_template_ssh_default='Run Command - Script Default'
 else
-    job_tamplate_ssh_default='Run Command - SSH Default'
+    job_template_ssh_default='Run Command - SSH Default'
 fi
-skip_measurement='true' h 55-rex-date.log "job-invocation create --async --inputs \"command='date'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 55-rex-date.log "job-invocation create --async --inputs \"command='date'\" --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/55-rex-date.log
 s $wait_interval
-skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --inputs \"command='date'\" --job-template '$job_tamplate_ansible_default' --search-query 'name ~ container'"
+skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --inputs \"command='date'\" --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
 j $logs/56-rex-date-ansible.log
 s $wait_interval
-skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --inputs \"command='subscription-manager facts --update'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --inputs \"command='subscription-manager facts --update'\" --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/57-rex-sm-facts-update.log
 s $wait_interval
-skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --inputs \"command='dnf uploadprofile --force-upload'\" --job-template '$job_tamplate_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --inputs \"command='dnf uploadprofile --force-upload'\" --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/58-rex-uploadprofile.log
 s $wait_interval
 
@@ -216,12 +216,8 @@ rm -f /tmp/status-data-webui-pages.json
 skip_measurement='true' ap 62-webui-pages.log -e "ui_pages_concurrency=$ui_pages_concurrency ui_pages_duration=$ui_pages_duration" playbooks/tests/webui-pages.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
 s $wait_interval
-if vercmp_ge "$satellite_version" "6.9.0"; then
-    a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
-elif vercmp_ge "$katello_version" "3.14.0" || vercmp_ge "$satellite_version" "6.7.0"; then
-    a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake foreman_inventory_upload:report:generate"
-    s $wait_interval
-fi
+a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
+s $wait_interval
 
 
 section "BackupTest"
