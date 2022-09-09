@@ -20,7 +20,6 @@
         additional_repos: "{{ satellite_additional_repos }}"
     - role: linux-system-roles.timesync
     - role: upgrade-restart
-    ###- role: satellite-ec2-partitioning
     - role: ../common/roles/remove-home-extend-root
       when: 'remove_home_partition|bool == True or extend_root_partition|bool == True'
     - role: linux-system-roles.firewall
