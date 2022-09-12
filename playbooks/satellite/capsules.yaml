@@ -30,6 +30,7 @@
     - role: ../common/roles/partition-new-storage
       vars:
         storage_pools: "{{ capsule_storage_pools }}"
+        storage_safe_mode: False
       when:
         - capsule_storage_pools is defined and capsule_storage_pools|length > 0
     - role: capsule
