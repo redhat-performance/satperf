@@ -30,13 +30,24 @@
 
 # Make sure we have private IPs in /etc/hosts
 # Taken from https://gist.github.com/rothgar/8793800
-- name: "Build hosts file"
+- name: "Build hosts file (using private network IPs)"
   lineinfile:
     dest: /etc/hosts
     regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].private_ip }} {{ item }}"
     state: present
   when: "hostvars[item].private_ip is defined"
+  with_items: "{{ groups['satellite6'] + groups['capsules'] }}"
+
+- name: "Build hosts file (using public network IPs)"
+  lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].public_ip }} {{ item }}"
+    state: present
+  when:
+    - hostvars[item].public_ip is defined
+    - hostvars[item].private_ip is not defined
   with_items: "{{ groups['satellite6'] + groups['capsules'] }}"
 
 - name: "File /etc/hosts have correct SELinux context (had issues before)"
