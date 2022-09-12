@@ -71,9 +71,9 @@
   shell: |
     sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" \
       | grep \
-        -e '^\s\+satellite-installer ' \
-        -e '^\s\+foreman-installer ' \
-        -e '^\s\+capsule-installer ' \
+        -e '^\s\+satellite-installer\s*' \
+        -e '^\s\+foreman-installer\s*' \
+        -e '^\s\+capsule-installer\s*' \
         -e '^\s\+--' \
       | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
       > "/root/{{ inventory_hostname }}-script.sh"
@@ -97,17 +97,25 @@
 
 # Make sure remote execution plugin is enabled
 # https://bugzilla.redhat.com/show_bug.cgi?id=1402240
-- name: "Make sure remote execution plugin is enabled"
+- name: "Make sure remote execution plugin is enabled on Satellite <=6.11"
   lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-remote-execution-ssh\'
-    insertafter: '.*-installer .*'
+    insertafter: '.*--scenario capsule.*'
+  when: "sat_version is version('6.11', '<=')"
+
+- name: "Make sure remote execution plugin is enabled on Satellite >=6.12"
+  lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
+    insertafter: '.*--scenario capsule.*'
+  when: "sat_version is version('6.12', '>=')"
 
 - name: "Make sure Ansible plugin is enabled"
   lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-ansible\'
-    insertafter: '.*-installer .*'
+    insertafter: '.*--scenario capsule.*'
 
 # Finally install capsule
 - name: "Run Capsule configuration"
