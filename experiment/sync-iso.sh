@@ -15,8 +15,6 @@ wait_interval=${PARAM_wait_interval:-50}
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-PARAM_iso_repos=${PARAM_iso_repos:-http://storage.example.com/iso-repos/}
-
 do="Default Organization"
 dl="Default Location"
 
