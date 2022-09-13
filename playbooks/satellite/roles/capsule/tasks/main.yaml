@@ -125,7 +125,10 @@
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
   register: configuration
-  until: "{{ configuration.rc }} == 0"
+  until: "configuration.rc == 0"
   retries: 5
   delay: 10
+- name: "Print capsule installer run duration"
+  debug:
+    msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"
 ...
