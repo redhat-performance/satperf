@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 import collections
+import csv
 import logging
 import os
 import re
@@ -12,7 +13,7 @@ import ansible_parser.play
 # Description of the issue and regexp on how to find it in the error message
 issues = [
     {
-        "name": "PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"katello_available_module_streams_name_stream_context\"",
+        "name": 'PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint "katello_available_module_streams_name_stream_context"',
         "regexp": r"PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \\\"katello_available_module_streams_name_stream_context\\\"",
     },
     {
@@ -66,27 +67,35 @@ def stats_for_file(filename, target_task_name="Register"):
                 continue
             logging.debug(f"Processing task task_name = {task_name}")
             for result in task_content.results:
-                logging.debug(f"Processing result host = {result['host']}; status = {result['status']}; len(failure_message) = {len(result['failure_message'])}")
-                if len(result['failure_message']) == 0:
+                logging.debug(
+                    f"Processing result host = {result['host']}; status = {result['status']}; len(failure_message) = {len(result['failure_message'])}"
+                )
+                if len(result["failure_message"]) == 0:
                     results["OK"] += 1
                 else:
                     matched = False
                     for issue in issues:
-                        match = re.search(issue["regexp"], result['failure_message'])
+                        match = re.search(issue["regexp"], result["failure_message"])
                         if match:
                             logging.debug(f"Found match on rule {issue['name']}")
                             if matched:
-                                raise Exception(f"Rule '{issue['name']}' matched domething that was matched by some other rule before on this failure: {result['failure_message']}")
+                                raise Exception(
+                                    f"Rule '{issue['name']}' matched domething that was matched by some other rule before on this failure: {result['failure_message']}"
+                                )
                             results[issue["name"]] += 1
                             matched = True
                     if not matched:
-                        logging.error(f"No rule matched on this error: {result['failure_message']}")
+                        logging.error(
+                            f"No rule matched on this error: {result['failure_message']}"
+                        )
                         results["TODO"] += 1
     return results
 
 
 def print_stats(results):
-    for issue_name, result in sorted(results.items(), reverse=True, key=lambda item: item[1]):
+    for issue_name, result in sorted(
+        results.items(), reverse=True, key=lambda item: item[1]
+    ):
         print(f"\t{result}\t{issue_name}")
 
 
@@ -111,36 +120,78 @@ def find_log_files(dirname):
     for dirname_host, dirnames, _ in os.walk(dirname):
         if "root" in dirnames:
             hostname = dirname_host.split("/")[-1]
-            for dirname_final, dn, filenames in os.walk(os.path.join(dirname_host, "root")):
+            for dirname_final, dn, filenames in os.walk(
+                os.path.join(dirname_host, "root")
+            ):
                 for f in filenames:
-                    if f.startswith("out-") and os.path.splitext(f)[1] == '.log':
+                    if f.startswith("out-") and os.path.splitext(f)[1] == ".log":
                         filename = os.path.join(dirname_final, f)
                         results[hostname].append(filename)
                 results[hostname].sort()
     return results
 
 
+def gather_stats(log_files):
+    results = collections.defaultdict(list)
+    for host, logs in log_files.items():
+        logging.info(f"Processing {host}, which has {len(logs)} logs")
+        for log_id, log in zip(range(len(logs)), logs):
+            results[host].append(stats_for_file(log))
+    return results
+
+
+def summary_print(results, iterations):
+    # Show stats per host
+    print()
+    for host, result_set in results.items():
+        print(f"Stats for host {host}")
+        print_stats(merge_results(*result_set))
+
+    # Show stats per iteration
+    print()
+    for iteration in range(iterations):
+        print(f"Stats for iteration {iteration + 1}")
+        print_stats(
+            merge_results(*[stats_set[iteration] for stats_set in results.values()])
+        )
+
+    # Show stats overall
+    print()
+    print("Stats overall")
+    print_stats(
+        merge_results(*[stats for stats_set in results.values() for stats in stats_set])
+    )
+
+
+def summary_dump_csv(results, iterations, output_file):
+    header = set()
+    for host, stats_set in results.items():
+        for stats in stats_set:
+            header = header | set(stats.keys())  # This "|" is union
+
+    per_iteration = []
+    for iteration in range(iterations):
+        row = {"iteration": iteration + 1}
+        row.update(
+            merge_results(*[stats_set[iteration] for stats_set in results.values()])
+        )
+        per_iteration.append(row)
+
+    with open(output_file, "w") as fd:
+        header.discard("OK")
+        header.discard("TODO")
+        w = csv.DictWriter(
+            fd,
+            fieldnames=["iteration", "OK"] + sorted(header) + ["TODO"],
+            restval=0,
+        )
+        w.writeheader()
+        for row in per_iteration:
+            w.writerow(row)
+
+
 log_files = find_log_files(sys.argv[1])
-
-results = collections.defaultdict(list)
-for host, logs in log_files.items():
-    logging.info(f"Processing {host}, which has {len(logs)} logs")
-    for log_id, log in zip(range(len(logs)), logs):
-        results[host].append(stats_for_file(log))
-
-# Show stats per host
-print()
-for host, result_set in results.items():
-    print(f"Stats for host {host}")
-    print_stats(merge_results(*result_set))
-
-# Show stats per iteration
-print()
-for iteration in range(len(list(log_files.values())[0])):
-    print(f"Stats for iteration {iteration + 1}")
-    print_stats(merge_results(*[stats_set[iteration] for stats_set in results.values()]))
-
-# Show stats overall
-print()
-print("Stats overall")
-print_stats(merge_results(*[stats for stats_set in results.values() for stats in stats_set]))
+iterations = len(list(log_files.values())[0])
+results = gather_stats(log_files)
+summary_print(results, iterations)
+summary_dump_csv(results, iterations, "file.csv")
