@@ -12,7 +12,7 @@
             attempt=0
             while ! hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host delete --id "$i"; do
                 if [ $attempt -gt 3 ]; then
-                    echo "ERROR: Fiving up with $i" >&2
+                    echo "ERROR: Giving up with $i" >&2
                     break
                 fi
                 let attempt+=1
