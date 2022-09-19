@@ -19,6 +19,9 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
 
+repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
+repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
+
 ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 
 do="Default Organization"
@@ -121,6 +124,15 @@ generic_environment_check false
 ###wait
 ###s $wait_interval
 ###
+###section "Sync Client repos"
+###h regs-30-sat-client-product-create.log "product create --organization '$do' --name SatClientProduct"
+###h regs-30-repository-create-sat-client_7.log "repository create --organization '$do' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
+###h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient7Repo"
+###s $wait_interval
+###h regs-30-repository-create-sat-client_8.log "repository create --organization '$do' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
+###h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient8Repo"
+###s $wait_interval
+###
 ###
 ###section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
 ###tmp=$( mktemp )
@@ -159,12 +171,15 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
         || h 41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
 done
 h 43-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
-h subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
+h 43-subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-h ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
-h subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
+h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
+h 43-subs-list-client.log "--csv subscription list --organization '$do' --search 'name = SatClientProduct'"
+client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
+h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$client_subs_id'"
+h 43-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
 employee_subs_id=$( tail -n 1 $logs/subs-list-employee.log | cut -d ',' -f 1 )
-h ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
+h 43-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
 
 
 section "Register"

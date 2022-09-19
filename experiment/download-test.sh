@@ -15,6 +15,9 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
+repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
+repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
+
 repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo*}"
 repo_count_download_test="${PARAM_repo_count_download_test:-8}"
 package_name_download_test="${PARAM_package_name_download_test:-foo*}"
@@ -56,6 +59,15 @@ if [ "$skip_down_setup" != "true" ]; then
     h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
     s $wait_interval
 
+    section "Sync Client repos"   # do not measure because of unpredictable network latency
+    h regs-30-sat-client-product-create.log "product create --organization '$do' --name SatClientProduct"
+    h regs-30-repository-create-sat-client_7.log "repository create --organization '$do' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
+    h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient7Repo"
+    s $wait_interval
+    h regs-30-repository-create-sat-client_8.log "repository create --organization '$do' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
+    h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient8Repo"
+    s $wait_interval
+
     section "Sync Download Test repo"
     #h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
     ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test"
@@ -80,6 +92,9 @@ if [ "$skip_down_setup" != "true" ]; then
     h_out "--csv subscription list --organization '$do' --search 'name = \"Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)\"'" >$logs/subs-list-rhel.log
     rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
     skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$rhel_subs_id'"
+    h_out "--csv subscription list --organization '$do' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
+    client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
+    skip_measurement='true' h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$client_subs_id'"
     h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'" >$logs/subs-list-downrepo.log
     down_test_subs_id=$( tail -n 1 $logs/subs-list-downrepo.log | cut -d ',' -f 1 )
     h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
