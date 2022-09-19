@@ -35,11 +35,16 @@
   set_fact:
     sat_installer_options: "--foreman-initial-admin-email {{ sat_email }} --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}"
   when: "sat_version is version('6.6', '>=')"
+- name: "Determine Installer command line"
+  set_fact:
+    satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_aditional_ops | default() }}"
+- name: "Show Installer command line"
+  debug:
+    msg: "{{ satellite_installer_cmd_line }}"
 
 # Run the installer
 - name: "Satellite configured"
-  shell: |
-    satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_aditional_ops | default() }}
+  shell: "{{ satellite_installer_cmd_line }}"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
