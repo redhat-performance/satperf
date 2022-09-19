@@ -14,6 +14,9 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
+repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
+repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
+
 workdir_url="${PARAM_workdir_url:-https://workdir-exporter-jenkins-csb-perf.apps.ocp-c1.prod.psi.redhat.com/workspace}"
 job_name="${PARAM_job_name:-Sat_Experiment}"
 max_age_input="${PARAM_max_age_input:-19000}"
@@ -58,6 +61,15 @@ h regs-30-repository-create-sat-tools.log "repository create --organization '$do
 skip_measurement='false' h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
 s $wait_interval
 
+section "Sync Client repos"   # do not measure because of unpredictable network latency
+h regs-30-sat-client-product-create.log "product create --organization '$do' --name SatClientProduct"
+h regs-30-repository-create-sat-client_7.log "repository create --organization '$do' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
+skip_measurement='false' h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient7Repo"
+s $wait_interval
+h regs-30-repository-create-sat-client_8.log "repository create --organization '$do' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
+skip_measurement='false' h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient8Repo"
+s $wait_interval
+
 
 section "Prepare for registrations"
 ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
@@ -76,6 +88,9 @@ skip_measurement='true' h 43-ak-add-subs-tools.log "activation-key add-subscript
 h_out "--csv subscription list --organization '$do' --search 'name = \"Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
 skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$rhel_subs_id'"
+h_out "--csv subscription list --organization '$do' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
+client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
+skip_measurement='true' h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$client_subs_id'"
 
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
