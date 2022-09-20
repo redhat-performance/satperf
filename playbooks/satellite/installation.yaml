@@ -24,9 +24,7 @@
       when: 'remove_home_partition|bool == True or extend_root_partition|bool == True'
     - role: linux-system-roles.firewall
       vars:
-        firewall:
-          - service: "RH-Satellite-6"
-            state: enabled
+        firewall: "{{ satellite_firewall }}"
     - role: ../common/roles/partition-new-storage
       vars:
         storage_pools: "{{ satellite_storage_pools }}"
