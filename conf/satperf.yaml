@@ -14,6 +14,14 @@ timesync_ntp_servers:
     prefer: yes
     trust: yes
 
+# Required firewall rules to be applied
+satellite_firewall:
+  - service: "RH-Satellite-6"
+    state: enabled
+capsule_firewall:
+  - service: "RH-Satellite-6-capsule"
+    state: enabled
+
 # Partition an additional disk where all the Satellite/capsule data will be stored
 satellite_storage_pools: []
 capsule_storage_pools: []
