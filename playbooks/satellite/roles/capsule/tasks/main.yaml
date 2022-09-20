@@ -111,6 +111,15 @@
     insertafter: '.*--scenario capsule.*'
   when: "sat_version is version('6.12', '>=')"
 
+- name: "Configure MQTT transport for remote execution on Satellite >=6.12"
+  lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --foreman-proxy-plugin-remote-execution-script-mode=pull-mqtt\'
+    insertafter: '.*--enable-foreman-proxy-plugin-remote-execution-script'
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+
 - name: "Make sure Ansible plugin is enabled"
   lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
