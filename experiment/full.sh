@@ -226,7 +226,7 @@ s $wait_interval
 
 
 section "Misc simple tests"
-skip_measurement='true' ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
+ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
 e HammerHostList $logs/61-hammer-list.log
 s $wait_interval
 rm -f /tmp/status-data-webui-pages.json
