@@ -1,0 +1,39 @@
+---
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+    - name: "Get subnet from inventory (using private network IPs)"
+      ansible.builtin.set_fact:
+        capsule_subnet: "{{ (hostvars[host_name].private_ip  + '/' + hostvars[host_name].private_netmask) | ansible.utils.ipaddr('network/prefix') }}"
+        capsule_network: "{{ (hostvars[host_name].private_ip  + '/' + hostvars[host_name].private_netmask) | ansible.utils.ipaddr('network') }}"
+        capsule_netmask: "{{ hostvars[host_name].private_netmask }}"
+      when:
+        - "hostvars[host_name].private_ip is defined and hostvars[host_name].private_netmask is defined"
+    
+    - name: "Get subnet from inventory (using public network IPs)"
+      ansible.builtin.set_fact:
+        capsule_subnet: "{{ (hostvars[host_name].public_ip  + '/' + hostvars[host_name].public_netmask) | ansible.utils.ipaddr('network/prefix') }}"
+        capsule_network: "{{ (hostvars[host_name].public_ip  + '/' + hostvars[host_name].public_netmask) | ansible.utils.ipaddr('network') }}"
+        capsule_netmask: "{{ hostvars[host_name].public_netmask }}"
+      when:
+        - "hostvars[host_name].private_ip is not defined and hostvars[host_name].private_netmask is not defined"
+        - "hostvars[host_name].public_ip is defined and hostvars[host_name].public_netmask is defined"
+    
+    - name: "Create subnet for {{ capsule_subnet }}"
+      ansible.builtin.shell:
+        hammer subnet create \
+          --organization "{{ organization }}" \
+          --name "Subnet for {{ capsule_subnet }}" \
+          --network {{ capsule_network }} \
+          --mask {{ capsule_netmask }} \
+          --ipam None \
+          --domains {{ domain }}
+      register: cmd
+      failed_when: "cmd.rc != 0 and 'Name has already been taken' not in cmd.stderr"
+      changed_when: "cmd.rc == 0"
+
+...
