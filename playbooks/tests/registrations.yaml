@@ -40,6 +40,24 @@
         clients_yaml_cmd_log: "/root/out-{{ lookup('pipe', 'date --utc --iso-8601=seconds') | regex_replace('[^A-Za-z0-9-]', '_') }}.log"
       run_once: yes
 
+    - name: "Download host registration script from Satellite"
+      ansible.builtin.get_url:
+        url: http://{{ groups['satellite6'] | first }}/pub/host-registration_{{ tests_registration_target }}.sh
+        dest: /root/clients_host-registration.sh
+      when: "method == 'clients_host-registration'"
+
+    - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
+      shell: |
+        ansible-playbook \
+          --private-key /root/id_rsa_key \
+          --forks "{{ size }}" \
+          -i clients.ini \
+          clients_host-registration.yaml \
+          &> "{{ clients_yaml_cmd_log }}"
+      register: clients_yaml_cmd
+      ignore_errors: true
+      when: "method == 'clients_host-registration'"
+
     - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }})"
       shell: |
         ansible-playbook \

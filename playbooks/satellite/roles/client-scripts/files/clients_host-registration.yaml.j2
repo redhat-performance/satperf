@@ -1,0 +1,27 @@
+{% raw %}
+---
+- hosts: all
+  remote_user: root
+  gather_facts: no
+  tasks:
+    - name: Cleanup
+      shell:
+        rm -rf /etc/yum.repos.d/*.repo
+
+    - name: Register
+      ansible.builtin.script:
+        cmd: /root/clients_host-registration.sh 2>&1 | tee /root/registration.log
+      register: reg
+
+    - name: "Register - output"
+      debug:
+        msg:
+          - "{{ reg.stdout }}"
+          - "{{ reg.stderr }}"
+
+    - name: "Register - timings"
+      debug:
+        msg="Register {{ reg.start }} to {{ reg.end }}"
+      when: "reg.rc == 0"
+...
+{% endraw %}

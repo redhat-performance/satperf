@@ -67,6 +67,7 @@
     - "clients.yaml"
     - "clients-register.yaml"
     - "clients-bootstrap.yaml"
+    - "clients_host-registration.yaml"
 
 - name: "Install Ansible"
   package:
