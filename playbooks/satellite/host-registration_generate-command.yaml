@@ -1,0 +1,33 @@
+---
+- hosts: satellite6:capsules
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  vars:
+    hgrg: "host-registration generate-command --organization-id {{ sat_orgid }} --activation-key {{ ak }} --insecure true --force true"
+  tasks:
+    - name: "Check if running in a capsule"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --smart-proxy {{ inventory_hostname }}"
+      when: "'capsules' in group_names"
+
+    - name: "Check if MQTT REX mode is needed"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --setup-remote-execution-pull true"
+      when: "hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'"
+
+    - name: "Generate the host registration command"
+      ansible.builtin.command:
+        hammer -u {{ sat_user}} -p {{ sat_pass }} {{ hgrg }}
+      register: cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: Copy the output of the the host registration command to the Apache pub directory
+      ansible.builtin.copy:
+        content: "{{ cmd.stdout }}"
+        dest: "/var/www/html/pub/host-registration_{{ inventory_hostname }}.sh"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      when: "cmd.rc == 0"
+...
