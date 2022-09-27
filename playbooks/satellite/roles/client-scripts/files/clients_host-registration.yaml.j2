@@ -8,8 +8,14 @@
       shell:
         rm -rf /etc/yum.repos.d/*.repo
 
+    - name: Upload script to content host
+      ansible.builtin.copy:
+        src: /root/clients_host-registration.sh
+        dest: /root/clients_host-registration.sh
+        mode: '0500'
+
     - name: Register
-      ansible.builtin.script:
+      ansible.builtin.shell:
         cmd: /root/clients_host-registration.sh 2>&1 | tee /root/registration.log
       register: reg
 
