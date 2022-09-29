@@ -33,6 +33,13 @@
 - name: "Determine Installer command line"
   set_fact:
     satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_aditional_ops | default() }}"
+- name: "Configure MQTT transport for remote execution on Satellite >=6.12"
+  set_fact:
+    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode=pull-mqtt"
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+
 - name: "Show Installer command line"
   debug:
     msg: "{{ satellite_installer_cmd_line }}"
