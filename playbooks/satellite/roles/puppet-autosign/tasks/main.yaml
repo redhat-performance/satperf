@@ -1,16 +1,10 @@
 ---
   # Add '*' autosign entry to Puppet CA of integrated capsule
-  - name: "Add '*' autosign entry (Satellite 6.3 and below)"
-    lineinfile:
-      path: "/etc/puppet/autosign.conf"
-      line: "*"
-    when: "sat_version is version('6.3', '<=')"
-
-  - name: "Add '*' autosign entry (Satellite from 6.4 but below 6.11)"
+  - name: "Add '*' autosign entry (Satellite below 6.11)"
     lineinfile:
       path: "/etc/puppetlabs/puppet/autosign.conf"
       line: "*"
-    when: "sat_version is version('6.4', '>=') and sat_version is version('6.11', '<')"
+    when: "sat_version is version('6.11', '<')"
 
   - name: "If file exist on 6.11, it is enabled"
     stat:
