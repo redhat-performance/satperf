@@ -15,10 +15,6 @@
     content_puppet_cv: SatPerfContentViewPuppetFakeModule
     content_puppet_module_dir: "/root/{{ content_puppet_module_name }}"
   tasks:
-  - name: "If we are on Sat 6.3, puppet module dir name is different"
-    set_fact:
-      content_puppet_module_name: "/root/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}"
-    when: "sat_version == '6.3'"
   - name: "Make sure puppet module build dir is empty"
     file:
       path: "{{ content_puppet_module_name }}"
