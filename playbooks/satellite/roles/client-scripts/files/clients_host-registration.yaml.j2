@@ -5,7 +5,7 @@
   gather_facts: no
   tasks:
     - name: Cleanup
-      shell:
+      ansible.builtin.shell:
         rm -rf /etc/yum.repos.d/*.repo
 
     - name: Upload script to content host
@@ -15,19 +15,22 @@
         mode: '0500'
 
     - name: Register
-      ansible.builtin.shell:
-        cmd: /root/clients_host-registration.sh 2>&1 | tee /root/registration.log
+      ansible.builtin.shell: |
+        /root/clients_host-registration.sh &>/root/registration.log
+        ret=$?
+        cat /root/registration.log
+        exit $ret
+      environment:
+        TZ: UTC   # make sure returned times are in UTC
       register: reg
 
     - name: "Register - output"
-      debug:
-        msg:
-          - "{{ reg.stdout }}"
-          - "{{ reg.stderr }}"
+      ansible.builtin.debug:
+        var: reg.stdout_lines
 
     - name: "Register - timings"
-      debug:
-        msg="Register {{ reg.start }} to {{ reg.end }}"
+      ansible.builtin.debug:
+        msg: "Register {{ reg.start }} to {{ reg.end }}"
       when: "reg.rc == 0"
 ...
 {% endraw %}
