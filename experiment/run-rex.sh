@@ -83,7 +83,7 @@ doit "$scenario" "gprfc019-vm1-20GB" 2>&1 | tee $scenario.log
 ###ap $X-remove-hosts-pre.log  playbooks/satellite/satellite-remove-hosts.yaml
 ###ap $X/reg-1st-40.log playbooks/tests/registrations.yaml -e "size=5 resting=0 tags='untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM,INSTKAT'"   # register, downgrade, install katello-agent (for katello-package-upload)
 ###d=$( date --iso-8601=seconds )
-###a $X/rex-date-40.log -m "shell" -a "hammer -u admin -p changeme job-invocation create --description-format 'Date with 40 ($d)' --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs \"command='date'\" --async" satellite6 &
+###a $X/rex-date-40.log -m "shell" -a "hammer -u admin -p changeme job-invocation create --description-format 'Date with 40 ($d)' --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs command='date' --async" satellite6 &
 ###s 30
 ###kill $!   # looks like it keeps waiting even with "--async"
 ###./wait-for-job.py admin changeme https://gprfc019-vm1.sbu.lab.eng.bos.redhat.com/ 28

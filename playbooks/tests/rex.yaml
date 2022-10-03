@@ -17,7 +17,7 @@
         # Looks like even with "--async", hammer still waits, so this FIXME way
         # we are trying to make sure it started, but we are not going to block
         # script execution
-        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='date'" --async &
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs command='date' --async &
         sleep 15
     - name: "Get last job ID"
       shell:
