@@ -6,7 +6,7 @@ manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
+registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-25}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
 
