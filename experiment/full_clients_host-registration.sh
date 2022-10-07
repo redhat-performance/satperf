@@ -6,7 +6,7 @@ manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-25}
+registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
 
@@ -141,7 +141,7 @@ unset skip_measurement
 
 
 export skip_measurement='true'
-section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
+section "Synchronise capsules again"   # We just added up2date content from CDN, SatToolsRepo and SatClient7Repo, so no reason to measure this now
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
 for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
@@ -212,16 +212,16 @@ if vercmp_ge "$satellite_version" "6.12.0"; then
 else
     job_template_ssh_default='Run Command - SSH Default'
 fi
-skip_measurement='true' h 55-rex-date.log "job-invocation create --async --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 55-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/55-rex-date.log
 s $wait_interval
-skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
+skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --description-format 'Run %{command} (%{template_name}' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
 j $logs/56-rex-date-ansible.log
 s $wait_interval
-skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --description-format 'Run %{command} (%{template_name}' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/57-rex-sm-facts-update.log
 s $wait_interval
-skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name}' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/58-rex-uploadprofile.log
 s $wait_interval
 
