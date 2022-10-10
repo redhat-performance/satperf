@@ -115,6 +115,11 @@
   until: "configuration.rc == 0"
   retries: 5
   delay: 10
+
+- name: "Show Capsule configuration output"
+  ansible.builtin.debug:
+    var: configuration.stdout_lines
+
 - name: "Print capsule installer run duration"
   debug:
     msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"

@@ -45,13 +45,18 @@
     msg: "{{ satellite_installer_cmd_line }}"
 
 # Run the installer
-- name: "Satellite configured"
+- name: "Run Satellite configuration"
   shell: "{{ satellite_installer_cmd_line }}"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
     TZ: "UTC"
   register: satellite_installer_cmd
+
+- name: "Show Satellite configuration output"
+  ansible.builtin.debug:
+    var: satellite_installer_cmd.stdout_lines
+
 - name: "Print installer run duration"
   debug:
     msg: "SatelliteInstallerScenarioSatellite {{ satellite_installer_cmd.start }} to {{ satellite_installer_cmd.end }}"
