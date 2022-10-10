@@ -101,6 +101,10 @@
 - name: "We can ping NTP server"
   command:
     ping -c 3 "{{ (timesync_ntp_servers|first).hostname }}"
+  register: cmd
+  retries: 5
+  delay: 3
+  until: "cmd.rc == 0"
 
 # Sanity check yum config
 - name: "Command yum repolist returns"
