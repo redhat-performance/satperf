@@ -27,16 +27,16 @@ if vercmp_ge "$satellite_version" "6.12.0"; then
 else
     job_template_ssh_default='Run Command - SSH Default'
 fi
-skip_measurement='true' h 12-rex-date.log "job-invocation create --async --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 12-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/12-rex-date.log
 s $wait_interval
-skip_measurement='true' h 12-rex-date-ansible.log "job-invocation create --async --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
+skip_measurement='true' h 12-rex-date-ansible.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
 j $logs/12-rex-date-ansible.log
 s $wait_interval
-skip_measurement='true' h 13-rex-sm-facts-update.log "job-invocation create --async --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 13-rex-sm-facts-update.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/13-rex-sm-facts-update.log
 s $wait_interval
-skip_measurement='true' h 14-rex-uploadprofile.log "job-invocation create --async --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 14-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/14-rex-uploadprofile.log
 s $wait_interval
 
