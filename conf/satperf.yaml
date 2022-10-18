@@ -91,7 +91,6 @@ vms_vg: default
 vms_kss_os: http://repos.example.com/RHEL-7/7.4/Server/x86_64/os/
 vms_ssh_key: "{{ lookup('file', '../../conf/id_rsa.pub') }}"
 vms_ks: rhel7-vm.ks
-vms_enlarge_arp_table: true
 vms_static_private_hosts: true
 
 vms:
