@@ -7,7 +7,7 @@
 - name: "Showing config"
   debug:
     msg:
-      - "Public network: {{ public_nic }} with DHCP"
+      - "Public network: {{ public_nic }} with {% if public_ip is not defined %}DHCP{% else %}{{ (public_ip + '/' + public_netmask) | ansible.utils.ipaddr('host/prefix') }}{% endif %}"
       - "Private network: {{ private_nic }} with {{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('host/prefix') }}"
 
 - name: "Setup networking"
@@ -15,22 +15,5 @@
     name: linux-system-roles.network
   vars:
     network_allow_restart: yes
-    network_connections:
-      - name: public
-        type: ethernet
-        interface_name: "{{ public_nic }}"
-        autoconnect: yes
-        ip:
-          dhcp4: yes
-        state: up
-      - name: private
-        type: ethernet
-        interface_name: "{{ private_nic }}"
-        autoconnect: yes
-        ip:
-          dhcp4: no
-          address:
-            - "{{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('host/prefix') }}"
-        state: up
-      - persistent_state: absent   # remove all other profiles
+    network_connections: "{{ plain_network_yaml|from_yaml }}"
 ...
