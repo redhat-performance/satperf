@@ -72,7 +72,28 @@
           &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
-      when: "method == 'clients.yaml'"
+      when:
+        - method == 'clients.yaml'
+        - hostvars[groups['satellite6']|first].rex_mode is not defined or hostvars[groups['satellite6']|first].rex_mode == 'ssh'
+
+    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }})"
+      shell: |
+        ansible-playbook \
+          --private-key /root/id_rsa_key \
+          --forks "{{ size }}" \
+          -i clients.ini \
+          -e "server={{ groups['satellite6']|first }}" \
+          -e "activationkey='ActivationKey'" \
+          -e "organization='{{ sat_orglabel }}'" \
+          -e "config_server_server_timeout='{{ config_server_server_timeout|default('') }}'" \
+          -e "rex_mode='mqtt'" \
+          clients.yaml \
+          &> "{{ clients_yaml_cmd_log }}"
+      register: clients_yaml_cmd
+      ignore_errors: true
+      when:
+        - method == 'clients.yaml'
+        - hostvars[groups['satellite6']|first].rex_mode is defined and hostvars[groups['satellite6']|first].rex_mode == 'mqtt'
 
     - name: "Run clients-register.yaml (log = {{ clients_yaml_cmd_log }})"
       shell: |

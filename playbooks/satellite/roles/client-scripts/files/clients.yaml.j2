@@ -82,6 +82,24 @@
         TZ: UTC   # make sure returned times are in UTC
       register: reg
 
+    - name: Upload yggdrasild configuration file (if rex_mode == 'mqtt')
+      ansible.builtin.copy:
+        dest: /etc/yggdrasil/config.toml
+        content: |
+          # yggdrasil global configuration settings written by katello-pull-transport-migrate
+          broker = ["mqtts://{{ server }}:1883"]
+          cert-file = "/etc/pki/consumer/cert.pem"
+          key-file = "/etc/pki/consumer/key.pem"
+          ca-root = ["/etc/rhsm/ca/katello-server-ca.pem"]
+          log-level = "error"
+      when: "rex_mode == 'mqtt'"
+
+    - name: Restart yggdrasild service unit (if rex_mode == 'mqtt')
+      ansible.builtin.systemd:
+        name: yggdrasild
+        state: restarted
+      when: "rex_mode == 'mqtt'"
+
     - name: "Register - output"
       debug:
         msg:
