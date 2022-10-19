@@ -49,8 +49,11 @@ class SatelliteWebUIPerf(HttpUser):
         """
         with self.client.get(uri, headers=headers, verify=False, name=inspect.stack()[1][3], catch_response=True) as response:
             if re.search(pattern, response.text) is None:
-                logging.warning(f"Got wrong responsefor {uri}: {response.text}")
-                response.failure("Got wrong response")
+                if "No such file or directory @ rb_sysopen" in response.text:
+                    response.failure("Known issue: No such file or directory @ rb_sysopen")
+                else:
+                    logging.warning(f"Got wrong response for {uri}: {response.text}")
+                    response.failure("Got wrong response")
 
     @task
     def overview(self):
@@ -58,7 +61,7 @@ class SatelliteWebUIPerf(HttpUser):
 
     @task
     def job_invocations(self):
-        self._get("/job_invocations", "<title>Job invocations</title>")
+        self._get("/job_invocations", "<h1>Job Invocations</h1>")
 
     @task
     def foreman_tasks_tasks(self):
