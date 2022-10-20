@@ -21,12 +21,18 @@ def _get(client, uri, pattern, headers={}):
     Simple wrapper around GET requests used by tasks below.
     """
     with client.get(uri, headers=headers, verify=False, name=inspect.stack()[1][3], catch_response=True) as response:
+        try:
+            response.raise_for_status()
+        except Exception as e:
+            logging.warning(f"Error while accessing {uri}: {e}")
+            return response.failure(str(e))
+
         if re.search(pattern, response.text) is None:
             if "No such file or directory @ rb_sysopen" in response.text:
-                response.failure("Known issue: No such file or directory @ rb_sysopen")
+                return response.failure("Known issue: No such file or directory @ rb_sysopen")
             else:
-                logging.warning(f"Got wrong response for {uri}: {response.text}")
-                response.failure("Got wrong response")
+                logging.warning(f"Got wrong response for {uri}: [{response.status_code}] {response.text}")
+                return response.failure("Got wrong response")
 
 
 class SatelliteWebUIPerfNoAuth(HttpUser):
