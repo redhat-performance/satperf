@@ -122,19 +122,19 @@ class SatelliteWebUIPerf(HttpUser):
 
     @task
     def katello_api_v2_products_organization_id(self):
-        self._get(f"/katello/api/v2/products?organization_id={self.satellite_org_id}", "\"results\":")
+        _get(self.client, f"/katello/api/v2/products?organization_id={self.satellite_org_id}", "\"results\":")
 
     @task
     def katello_api_v2_content_views_nondefault_organization_id(self):
-        self._get(f"/katello/api/v2/content_views?nondefault=true&organization_id={self.satellite_org_id}", "\"results\":")
+        _get(self.client, f"/katello/api/v2/content_views?nondefault=true&organization_id={self.satellite_org_id}", "\"results\":")
 
     @task
     def katello_api_v2_packages_organization_id(self):
-        self._get(f"/katello/api/v2/packages?organization_id={self.satellite_org_id}&paged=true&search=", "\"results\":")
+        _get(self.client, f"/katello/api/v2/packages?organization_id={self.satellite_org_id}&paged=true&search=", "\"results\":")
 
 
 def doit(args, status_data):
-    test_set = SatelliteWebUIPerf
+    test_set = getattr(sys.modules[__name__], args.test_set)
     test_set.host_base = f"{args.host}{args.test_url_suffix}"
     test_set.satellite_version = args.satellite_version
     test_set.satellite_org_id = args.satellite_org_id
