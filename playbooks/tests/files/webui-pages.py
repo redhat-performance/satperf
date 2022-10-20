@@ -52,7 +52,7 @@ class SatelliteWebUIPerf(HttpUser):
         """
         response = self.client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
         try:
-            ###csrf_token = self.client.cookies["csrf-token"]
+            # csrf_token = self.client.cookies["csrf-token"]
             # <meta name="csrf-token" content="pN+PkZI8OHLvYlXPXisAbwRVXeSm8hcNk5LKuysAvD979wlbEPQX+/yn0PBouxkxChEAttUMUms0V9ANDrZyLQ==" />
             csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+/=]+?)\"", response.text).group(1)
         except AttributeError:
@@ -142,7 +142,7 @@ def doit(args, status_data):
     test_set.satellite_password = args.satellite_password
 
     # Add parameters to status data file
-    status_data.set('name', f'Satellite UI perf test, concurrency {{ ui_pages_concurrency }}, duration {{ ui_pages_duration }}')
+    status_data.set('name', 'Satellite UI perf test, concurrency { args.locust_num_clients }, duration { args.test_duration }')
     status_data.set('parameters.test.test_set', args.test_set)
     status_data.set('parameters.test.satellite_version', args.satellite_version)
     status_data.set('parameters.test.satellite_org_id', args.satellite_org_id)
