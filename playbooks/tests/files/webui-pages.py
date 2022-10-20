@@ -16,6 +16,31 @@ import opl.locust
 import opl.skelet
 
 
+def _get(client, uri, pattern, headers={}):
+    """
+    Simple wrapper around GET requests used by tasks below.
+    """
+    with client.get(uri, headers=headers, verify=False, name=inspect.stack()[1][3], catch_response=True) as response:
+        if re.search(pattern, response.text) is None:
+            if "No such file or directory @ rb_sysopen" in response.text:
+                response.failure("Known issue: No such file or directory @ rb_sysopen")
+            else:
+                logging.warning(f"Got wrong response for {uri}: {response.text}")
+                response.failure("Got wrong response")
+
+
+class SatelliteWebUIPerfNoAuth(HttpUser):
+    wait_time = constant(0)
+
+    @task
+    def users_login(self):
+        _get(self.client, "/users/login", "<title>Login</title>")
+
+    @task
+    def pub_bootstrap_py(self):
+        _get(self.client, "/pub/bootstrap.py", "Script to register a new host to Foreman/Satellite")
+
+
 class SatelliteWebUIPerf(HttpUser):
     wait_time = constant(0)
 
@@ -43,69 +68,57 @@ class SatelliteWebUIPerf(HttpUser):
             logging.fatal("Login failed")
             self.interrupt()
 
-    def _get(self, uri, pattern, headers={}):
-        """
-        Simple wrapper around GET requests used by tasks below.
-        """
-        with self.client.get(uri, headers=headers, verify=False, name=inspect.stack()[1][3], catch_response=True) as response:
-            if re.search(pattern, response.text) is None:
-                if "No such file or directory @ rb_sysopen" in response.text:
-                    response.failure("Known issue: No such file or directory @ rb_sysopen")
-                else:
-                    logging.warning(f"Got wrong response for {uri}: {response.text}")
-                    response.failure("Got wrong response")
-
     @task
     def overview(self):
-        self._get("/", "<title>Overview</title>")
+        _get(self.client, "/", "<title>Overview</title>")
 
     @task
     def job_invocations(self):
-        self._get("/job_invocations", "<h1>Job Invocations</h1>")
+        _get(self.client, "/job_invocations", "<h1>Job Invocations</h1>")
 
     @task
     def foreman_tasks_tasks(self):
-        self._get("/foreman_tasks/tasks", "<foreman-react-component name=\"ForemanTasks\"")
+        _get(self.client, "/foreman_tasks/tasks", "<foreman-react-component name=\"ForemanTasks\"")
 
     @task
     def foreman_tasks_api_tasks_include_permissions_true(self):
-        self._get("/foreman_tasks/api/tasks?include_permissions=true", "\"total\"")
+        _get(self.client, "/foreman_tasks/api/tasks?include_permissions=true", "\"total\"")
 
     @task
     def hosts(self):
-        self._get("/hosts", "<title>Hosts</title>")
+        _get(self.client, "/hosts", "<title>Hosts</title>")
 
     @task
     def templates_provisioning_templates(self):
-        self._get("/templates/provisioning_templates", "<title>Provisioning Templates</title>")
+        _get(self.client, "/templates/provisioning_templates", "<title>Provisioning Templates</title>")
 
     @task
     def hostgroups(self):
-        self._get("/hostgroups", "<title>Host Groups</title>")
+        _get(self.client, "/hostgroups", "<title>Host Groups</title>")
 
     @task
     def smart_proxies(self):
-        self._get("/smart_proxies", "<title>Capsules</title>")
+        _get(self.client, "/smart_proxies", "<title>Capsules</title>")
 
     @task
     def domains(self):
-        self._get("/domains", "<title>Domains</title>")
+        _get(self.client, "/domains", "<title>Domains</title>")
 
     @task
     def audits(self):
-        self._get("/audits", "<foreman-react-component name=\"ReactApp\" data-props=\".*Audits")
+        _get(self.client, "/audits", "<foreman-react-component name=\"ReactApp\" data-props=\".*Audits")
 
     @task
     def audits_page_per_page_search(self):
-        self._get("/audits?page=1&per_page=20&search=", "\"audits\"", headers={"Accept": "application/json"})
+        _get(self.client, "/audits?page=1&per_page=20&search=", "\"audits\"", headers={"Accept": "application/json"})
 
     @task
     def organizations(self):
-        self._get("/organizations", "<title>Organizations</title>")
+        _get(self.client, "/organizations", "<title>Organizations</title>")
 
     @task
     def locations(self):
-        self._get("/locations", "<title>Locations</title>")
+        _get(self.client, "/locations", "<title>Locations</title>")
 
     @task
     def katello_api_v2_products_organization_id(self):
@@ -130,6 +143,7 @@ def doit(args, status_data):
 
     # Add parameters to status data file
     status_data.set('name', f'Satellite UI perf test, concurrency {{ ui_pages_concurrency }}, duration {{ ui_pages_duration }}')
+    status_data.set('parameters.test.test_set', args.test_set)
     status_data.set('parameters.test.satellite_version', args.satellite_version)
     status_data.set('parameters.test.satellite_org_id', args.satellite_org_id)
     status_data.set('parameters.test.satellite_username', args.satellite_username)
@@ -145,6 +159,12 @@ def main():
     parser = argparse.ArgumentParser(
         description='Measure Satellite WebUI performance',
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
+    )
+    parser.add_argument(
+        '--test-set',
+        default='SatelliteWebUIPerf',
+        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth'],
+        help='What test set to use?',
     )
     parser.add_argument(
         '--satellite-version',
