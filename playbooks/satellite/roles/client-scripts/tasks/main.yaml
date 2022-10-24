@@ -69,10 +69,17 @@
     - "clients-bootstrap.yaml"
     - "clients_host-registration.yaml"
 
-- name: "Install Ansible"
-  package:
+- name: "Install Ansible (in RHEL <8.6)"
+  ansible.builtin.package:
     name: ansible
     state: present
+  when: "ansible_distribution_version is version('8.6', '<')"
+
+- name: "Install Ansible (in RHEL >=8.6)"
+  ansible.builtin.package:
+    name: ansible-core
+    state: present
+  when: "ansible_distribution_version is version('8.6', '>=')"
 
 - name: "Ensure we have Ansible config with default section"
   ansible.builtin.lineinfile:
