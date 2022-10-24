@@ -61,6 +61,25 @@
   debug:
     msg: "SatelliteInstallerScenarioSatellite {{ satellite_installer_cmd.start }} to {{ satellite_installer_cmd.end }}"
 
+- name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
+    content: |
+      [Service]
+      LimitNOFILE=10000
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+
+- name: Restart mosquitto service unit
+  ansible.builtin.systemd:
+    name: mosquitto
+    daemon_reload: yes
+    state: restarted
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+
 - name: "Install the katello-client-bootstrap package"
   yum:
     name: katello-client-bootstrap
