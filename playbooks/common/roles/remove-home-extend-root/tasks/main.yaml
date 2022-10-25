@@ -1,4 +1,7 @@
 ---
+- dnf:
+    name: lvm2
+    state: present
 - setup:
     gather_subset:
       - '!all'
