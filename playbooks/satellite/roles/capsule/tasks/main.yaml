@@ -123,4 +123,23 @@
 - name: "Print capsule installer run duration"
   debug:
     msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"
+
+- name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
+    content: |
+      [Service]
+      LimitNOFILE=10000
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+
+- name: Restart mosquitto service unit
+  ansible.builtin.systemd:
+    name: mosquitto
+    daemon_reload: yes
+    state: restarted
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
 ...
