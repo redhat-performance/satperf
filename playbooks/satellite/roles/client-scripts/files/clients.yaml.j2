@@ -92,13 +92,13 @@
           key-file = "/etc/pki/consumer/key.pem"
           ca-root = ["/etc/rhsm/ca/katello-server-ca.pem"]
           log-level = "error"
-      when: "rex_mode == 'mqtt'"
+      when: "rex_mode is defined and rex_mode == 'mqtt'"
 
     - name: Restart yggdrasild service unit (if rex_mode == 'mqtt')
       ansible.builtin.systemd:
         name: yggdrasild
         state: restarted
-      when: "rex_mode == 'mqtt'"
+      when: "rex_mode is defined and rex_mode == 'mqtt'"
 
     - name: "Register - output"
       debug:
