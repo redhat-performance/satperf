@@ -33,6 +33,18 @@
 - name: "Determine Installer command line"
   set_fact:
     satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_aditional_ops | default() }}"
+- name: "Configure Insights connection on Satellite <6.12"
+  set_fact:
+    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --enable-foreman-plugin-rh-cloud --foreman-proxy-plugin-remote-execution-ssh-install-key=true"
+  when:
+    - sat_version is version('6.12', '<')
+    - hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights|bool == False
+- name: "Configure Insights connection on Satellite >=6.12"
+  set_fact:
+    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key=true"
+  when:
+    - sat_version is version('6.12', '>=')
+    - hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights|bool == False
 - name: "Configure MQTT transport for remote execution on Satellite >=6.12"
   set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode=pull-mqtt"
