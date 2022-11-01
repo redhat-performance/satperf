@@ -70,7 +70,6 @@ fi
 
 
 section "Util: Prepare for registrations"
-ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml  # this detects OS, so need to run after we synces one
 h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
     || skip_measurement='true' h 42-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$do'"
 tmp=$( mktemp )
