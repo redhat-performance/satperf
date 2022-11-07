@@ -108,7 +108,5 @@
 
 # Sanity check yum config
 - name: "Command yum repolist returns"
-  command: yum repolist
-  args:
-    warn: false
+  ansible.builtin.command: yum repolist
 ...

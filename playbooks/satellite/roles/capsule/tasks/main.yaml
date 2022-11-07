@@ -57,7 +57,7 @@
     force: yes
 
 - name: "Get only commands we need to run"
-  shell: |
+  ansible.builtin.shell: |
     sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" \
       | grep \
         -e '^\s\+satellite-installer\s*' \
@@ -66,8 +66,6 @@
         -e '^\s\+--' \
       | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
       > "/root/{{ inventory_hostname }}-script.sh"
-  args:
-    warn: false
 
 - name: "Fix certificate tarball path"
   shell:
