@@ -35,5 +35,4 @@
     - role: capsule-location
     - role: ../common/roles/enlarge-arp-table
     - role: puppet-autosign
-    - role: capsule-populate
 ...
