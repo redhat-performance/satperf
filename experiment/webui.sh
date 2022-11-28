@@ -2,6 +2,7 @@
 
 source experiment/run-library.sh
 
+organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
@@ -11,7 +12,6 @@ wait_interval=${PARAM_wait_interval:-50}
 ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
 ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 
-do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"

@@ -117,7 +117,7 @@ function get_repo_id() {
     local tmp=$( mktemp )
     local product="$1"
     local repo="$2"
-    h_out "--output yaml repository info --organization '$do' --product '$product' --name '$repo'" >$tmp
+    h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >$tmp
     grep '^I[Dd]:' $tmp | cut -d ' ' -f 2
 }
 

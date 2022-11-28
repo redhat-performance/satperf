@@ -2,6 +2,7 @@
 
 source experiment/run-library.sh
 
+organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
@@ -21,7 +22,6 @@ PARAM_docker_registry=${PARAM_docker_registry:-https://registry-1.docker.io/}
 PARAM_iso_repos=${PARAM_iso_repos:-http://storage.example.com/iso-repos/}
 repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
-do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"

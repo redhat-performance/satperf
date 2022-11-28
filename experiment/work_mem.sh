@@ -2,6 +2,7 @@
 
 source experiment/run-library.sh
 
+organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
@@ -12,7 +13,6 @@ cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
 work_mem_value="${PARAM_test_work_mem_value:-4MB}"
 
-do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"

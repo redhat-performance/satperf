@@ -2,6 +2,7 @@
 
 source experiment/run-library.sh
 
+organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
@@ -28,7 +29,6 @@ job_name="${PARAM_job_name:-Sat_Experiment}"
 max_age_input="${PARAM_max_age_input:-19000}"
 skip_down_setup="${PARAM_skip_down_setup:-false}"
 
-do="Default Organization"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
@@ -41,68 +41,70 @@ generic_environment_check
 #If we already have setup ready - all repos synced, etc we can skip directly to registering and downloading batches. PLEASE DELETE ALL HOSTS FROM SATELLITE.
 if [ "$skip_down_setup" != "true" ]; then
     section "Upload manifest"
-    h regs-10-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
+    h_out "--no-headers --csv organization list --fields name" | grep --quiet '^$organization$' \
+        || h regs-10-ensure-org.log "organization create --name '$organization'"
+    h regs-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
     a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-    h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
+    h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
     s $wait_interval
 
 
     section "Sync from CDN"   # do not measure because of unpredictable network latency
-    h regs-20-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
-    h regs-20-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
-    h regs-20-repo-immediate-rhel7.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
-    h regs-20-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
+    h regs-20-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_full'"
+    h regs-20-reposet-enable-rhel7.log  "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
+    h regs-20-repo-immediate-rhel7.log "repository update --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
+    h regs-20-repo-sync-rhel7.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
     s $wait_interval
 
 
     section "Sync Tools repo"   # do not measure because of unpredictable network latency
-    h regs-30-sat-tools-product-create.log "product create --organization '$do' --name SatToolsProduct"
-    h regs-30-repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-    h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
+    h regs-30-sat-tools-product-create.log "product create --organization '$organization' --name SatToolsProduct"
+    h regs-30-repository-create-sat-tools.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
+    h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsRepo"
     s $wait_interval
 
     section "Sync Client repos"   # do not measure because of unpredictable network latency
-    h regs-30-sat-client-product-create.log "product create --organization '$do' --name SatClientProduct"
-    h regs-30-repository-create-sat-client_7.log "repository create --organization '$do' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
-    h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient7Repo"
+    h regs-30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
+    h regs-30-repository-create-sat-client_7.log "repository create --organization '$organization' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
+    h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient7Repo"
     s $wait_interval
-    h regs-30-repository-create-sat-client_8.log "repository create --organization '$do' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
-    h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$do' --product SatClientProduct --name SatClient8Repo"
+    h regs-30-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
+    h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
     s $wait_interval
 
     section "Sync Download Test repo"
-    #h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
+    #h product-create-downtest.log "product create --organization '$organization' --name DownTestProduct"
     ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test"
-    # h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
-    # h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
+    # h repository-create-downtest.log "repository create --organization '$organization' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
+    # h repo-sync-downtest.log "repository synchronize --organization '$organization' --product DownTestProduct --name DownTestRepo"
     s $wait_interval
 
     section "Prepare for registrations"
     ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml  -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"  # this detects OS, so need to run after we synces one
 
     h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
-        || h regs-40-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$do'"
+        || h regs-40-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$organization'"
     tmp=$( mktemp )
-    h_out "--no-headers --csv location list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+    h_out "--no-headers --csv location list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
     location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
-    h regs-40-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$do' --location-ids '$location_ids'"
+    h regs-40-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$organization' --location-ids '$location_ids'"
 
-    h regs-40-ak-create.log "activation-key create --content-view '$do View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
-    h_out "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
+    h regs-40-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
+    h_out "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
     tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-    skip_measurement='true' h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
-    h_out "--csv subscription list --organization '$do' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
+    skip_measurement='true' h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
+    h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
     rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
-    skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$rhel_subs_id'"
-    h_out "--csv subscription list --organization '$do' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
+    skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
+    h_out "--csv subscription list --organization '$organization' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
     client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
-    skip_measurement='true' h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$client_subs_id'"
-    h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'" >$logs/subs-list-downrepo.log
+    skip_measurement='true' h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$client_subs_id'"
+    h regs-40-subs-list-downtest.log "--csv subscription list --organization '$organization' --search 'name = DownTestProduct'" >$logs/subs-list-downrepo.log
     down_test_subs_id=$( tail -n 1 $logs/subs-list-downrepo.log | cut -d ',' -f 1 )
-    h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
+    h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$organizationwn_test_subs_id'"
 
     tmp=$( mktemp )
-    h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
+    h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
     for row in $( cut -d ' ' -f 1 $tmp ); do
         capsule_id=$( echo "$row" | cut -d ',' -f 1 )
         capsule_name=$( echo "$row" | cut -d ',' -f 2 )
@@ -114,11 +116,11 @@ if [ "$skip_down_setup" != "true" ]; then
             location_name="Location for $capsule_name"
         fi
         h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-            || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ containers_domain }}' --organization '$do' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+            || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ containers_domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
         subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
         a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
         h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-            || ap regs-41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "Default_Organization='$do' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
+            || ap regs-41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "organization='$organization' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
     done
 
 fi
