@@ -41,7 +41,7 @@ generic_environment_check
 #If we already have setup ready - all repos synced, etc we can skip directly to registering and downloading batches. PLEASE DELETE ALL HOSTS FROM SATELLITE.
 if [ "$skip_down_setup" != "true" ]; then
     section "Upload manifest"
-    h_out "--no-headers --csv organization list --fields name" | grep --quiet '^$organization$' \
+    h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
         || h regs-10-ensure-org.log "organization create --name '$organization'"
     h regs-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
     a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6

@@ -36,7 +36,7 @@ generic_environment_check false
 
 
 ###section "Prepare for Red Hat content"
-###h_out "--no-headers --csv organization list --fields name" | grep --quiet '^$organization$' \
+###h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
 ###    || h regs-10-ensure-org.log "organization create --name '$organization'"
 ###h 00-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
 ###a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
