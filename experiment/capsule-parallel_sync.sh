@@ -79,6 +79,7 @@ for (( iter=0, last=0; last < (num_capsules - 1); iter++)); do
     limit="${first}:${last}"
   fi
   ap capsync-40-populate-${iter}.log playbooks/satellite/capsules-populate.yaml -e "organization='$organization'" --limit capsules["$limit"]
+  s $wait_interval
 done
 
 
