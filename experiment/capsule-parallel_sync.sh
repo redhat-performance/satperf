@@ -71,8 +71,13 @@ for (( iter=0, last=0; last < (num_capsules - 1); iter++)); do
   if (( iter == 0 )); then
     limit=0
   else
-    first="$(( 2 ** iter - 1))"
-    last="$(( 2 ** (( iter + 1 )) - 2))"
+    first="$(( last + 1 ))"
+    if (( "$#" == 0 )) || [[ "$1" == 'lineal' ]]; then
+      incr="$iter"
+    elif [[ "$1" == 'exponential' ]]; then
+      incr="$(( 2 ** iter - 1 ))"
+    fi
+    last="$(( first + incr ))"
     if (( last >= num_capsules )); then
       last="$(( num_capsules - 1 ))"
     fi
