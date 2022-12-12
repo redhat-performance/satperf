@@ -67,12 +67,12 @@ skip_measurement='true' h capsync-31-ak-add-subs-rhel.log "activation-key add-su
 
 section "Push content to capsules"
 num_capsules="$(ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ')"
-for (( iter=0, last=0; last < (num_capsules - 1); iter++)); do
+for (( iter=0, last=0; last < (num_capsules - 1); iter++ )); do
   if (( iter == 0 )); then
     limit=0
   else
     first="$(( last + 1 ))"
-    if (( "$#" == 0 )) || [[ "$1" == 'lineal' ]]; then
+    if (( "$#" == 1 )) || [[ "$1" == 'lineal' ]]; then
       incr="$iter"
     elif [[ "$1" == 'exponential' ]]; then
       incr="$(( 2 ** iter - 1 ))"
