@@ -148,7 +148,7 @@ def doit(args, status_data):
     test_set.satellite_password = args.satellite_password
 
     # Add parameters to status data file
-    status_data.set('name', 'Satellite UI perf test, concurrency { args.locust_num_clients }, duration { args.test_duration }')
+    status_data.set('name', f'Satellite UI perf test, concurrency { args.locust_num_clients }, duration { args.test_duration }')
     status_data.set('parameters.test.test_set', args.test_set)
     status_data.set('parameters.test.satellite_version', args.satellite_version)
     status_data.set('parameters.test.satellite_org_id', args.satellite_org_id)
