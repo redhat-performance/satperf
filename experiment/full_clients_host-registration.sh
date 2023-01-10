@@ -40,7 +40,7 @@ generic_environment_check
 
 section "Prepare for Red Hat content"
 h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
-    || h regs-00-ensure-org.log "organization create --name '$organization'"
+    || h 00-ensure-org.log "organization create --name '$organization'"
 skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
 skip_measurement='true' ap 01-manifest-excercise.log playbooks/tests/manifest-excercise.yaml -e "manifest=../../$manifest"
 e ManifestUpload $logs/01-manifest-excercise.log
