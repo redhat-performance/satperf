@@ -3,7 +3,7 @@
 source experiment/run-library.sh
 
 organization="${PARAM_organization:-Default Organization}"
-manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
@@ -48,7 +48,6 @@ e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
 e ManifestDelete $logs/01-manifest-excercise.log
 skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
-skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '$organization'"
 s $wait_interval
 
 
