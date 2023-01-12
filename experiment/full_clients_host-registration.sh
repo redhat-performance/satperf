@@ -8,7 +8,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 concurrent_registrations=${PARAM_concurrent_registrations:-75}
-wait_interval=${PARAM_wait_interval:-50}
+wait_interval=${PARAM_wait_interval:-30}
 
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
 puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
