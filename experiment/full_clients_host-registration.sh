@@ -126,7 +126,6 @@ h 12b-repo-sync-rhel8appstream.log "repository synchronize --organization '$orga
 h 12b-repo-sync-rhel9baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS RPMs 9'" &
 h 12b-repo-sync-rhel9appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9'" &
 wait
-s $wait_interval
 unset skip_measurement
 
 
