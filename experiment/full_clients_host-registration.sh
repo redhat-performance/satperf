@@ -7,8 +7,7 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
-registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
-registrations_iterations=${PARAM_registrations_iterations:-20}
+concurrent_registrations=${PARAM_concurrent_registrations:-75}
 wait_interval=${PARAM_wait_interval:-50}
 
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
@@ -211,12 +210,22 @@ unset skip_measurement
 
 
 section "Register"
-for i in $( seq $registrations_iterations ); do
-    skip_measurement='true' ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts registration_logs='../../$logs/44-register-docker-host-client-logs' method=clients_host-registration"
+number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
+registration_iterations=$(( number_container_hosts * number_containers_per_container_host / concurrent_registrations ))
+concurrent_registrations_per_container_host=$(( concurrent_registrations / number_container_hosts ))
+
+log "Going to register $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $registration_iterations batches."
+
+for i in $( seq $registration_iterations ); do
+    skip_measurement='true' ap 44b-register-$i.log playbooks/tests/registrations.yaml \
+      -e "size=$concurrent_registrations_per_container_host" \
+      -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
+      -e "method=clients_host-registration"
     s $wait_interval
 done
-grep Register $logs/44-register-*.log >$logs/44-register-overall.log
-e Register $logs/44-register-overall.log
+grep Register $logs/44b-register-*.log >$logs/44b-register-overall.log
+e Register $logs/44b-register-overall.log
 
 
 section "Remote execution"
