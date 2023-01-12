@@ -3,7 +3,7 @@
 source experiment/run-library.sh
 
 organization="${PARAM_organization:-Default Organization}"
-manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 
 wait_interval=${PARAM_wait_interval:-50}
@@ -29,7 +29,6 @@ h_out "--no-headers --csv location list --fields name" | grep --quiet '^$dl$' \
     || h capsync-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
 a capsync-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
-h capsync-10-simple-content-access-disable.log "simple-content-access disable --organization '$organization'"
 s $wait_interval
 
 
