@@ -6,7 +6,7 @@ organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 
-wait_interval=${PARAM_wait_interval:-50}
+wait_interval=${PARAM_wait_interval:-30}
 
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
