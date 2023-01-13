@@ -32,7 +32,7 @@ h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-aut
 s $wait_interval
 
 
-section "Sync from CDN mirror"   # do not measure because of unpredictable network latency
+section "Sync from CDN mirror"
 h capsync-20-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_mirror'"
 
 h capsync-21-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
