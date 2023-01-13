@@ -59,12 +59,15 @@ h capsync-26-repo-sync-rhel9appstream.log "repository synchronize --organization
 s $wait_interval
 
 
+export skip_measurement='true'
 section "Prepare content"
-skip_measurement='true' h capsync-30-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
+h capsync-30-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
 
 h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
-skip_measurement='true' h capsync-31-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
+h capsync-31-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
+s $wait_interval
+unset skip_measurement
 
 
 section "Push content to capsules"
