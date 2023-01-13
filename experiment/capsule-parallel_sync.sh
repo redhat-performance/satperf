@@ -12,6 +12,8 @@ cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
+initial_index="${PARAM_initial_index:-0}"
+
 dl='Default Location'
 
 opts="--forks 100 -i $inventory"
@@ -72,24 +74,21 @@ unset skip_measurement
 
 section "Push content to capsules"
 num_capsules="$(ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ')"
-for (( iter=0, last=0; last < (num_capsules - 1); iter++ )); do
-  if (( iter == 0 )); then
-    limit=0
+
+for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
+  if (( initial_index == 0 && iter == 0 )); then
+    continue
   else
     first="$(( last + 1 ))"
-    if (( "$#" == 1 )) || [[ "$1" == 'lineal' ]]; then
-      incr="$iter"
-    elif [[ "$1" == 'exponential' ]]; then
-      incr="$(( 2 ** iter - 1 ))"
-    fi
+    incr="$(( initial_index + iter - 1 ))"
     last="$(( first + incr ))"
     if (( last >= num_capsules )); then
       last="$(( num_capsules - 1 ))"
     fi
     limit="${first}:${last}"
+    ap capsync-40-populate-${iter}.log playbooks/satellite/capsules-populate.yaml -e "organization='$organization'" --limit capsules["$limit"]
+    s $wait_interval
   fi
-  ap capsync-40-populate-${iter}.log playbooks/satellite/capsules-populate.yaml -e "organization='$organization'" --limit capsules["$limit"]
-  s $wait_interval
 done
 
 
