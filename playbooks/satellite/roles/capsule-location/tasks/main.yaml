@@ -105,7 +105,7 @@
     validate_certs: no
     headers:
       Content-Type: application/json
-      Accept: application/json,version=2
+      Accept: application/json
     body: >
       {"host":{"location_id":"{{ location_id }}"}}
     body_format: json
@@ -120,7 +120,7 @@
     validate_certs: no
     headers:
       Content-Type: application/json
-      Accept: application/json,version=2
+      Accept: application/json
     body: >
       {"smart_proxy":{"location_ids":["{{ location_id }}"],"organization_ids":["1"]}}
     body_format: json
