@@ -110,9 +110,6 @@
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
   register: configuration
-  until: "configuration.rc == 0"
-  retries: 5
-  delay: 10
 
 - name: "Show Capsule configuration output"
   ansible.builtin.debug:
