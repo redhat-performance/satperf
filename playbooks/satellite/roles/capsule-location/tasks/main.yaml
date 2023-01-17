@@ -107,7 +107,7 @@
       Content-Type: application/json
       Accept: application/json
     body: >
-      {"host":{"location_id":"{{ location_id }}"}}
+      {"host":{"location_id":{{ location_id }}}}
     body_format: json
 
 - name: "Move capsule to the location"
