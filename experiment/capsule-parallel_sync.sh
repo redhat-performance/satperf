@@ -72,6 +72,10 @@ s $wait_interval
 unset skip_measurement
 
 
+# section "Create Satellite snapshot"
+# ansible-playbook -i $PARAM_inventory -e "snapshot_name='${PARAM_snapshot_name}-with_capsules-with_content-$(date --utc -Ins)'" ansible-kvm-host-mgr/create-snapshot-vms.yaml --limit satellite6
+
+
 section "Push content to capsules"
 num_capsules="$(ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ')"
 
@@ -86,7 +90,8 @@ for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
       last="$(( num_capsules - 1 ))"
     fi
     limit="${first}:${last}"
-    ap capsync-40-populate-${iter}.log playbooks/satellite/capsules-populate.yaml -e "organization='$organization'" --limit capsules["$limit"]
+    num_concurrent_capsules="$(( last - first + 1 ))"
+    ap capsync-40-populate-${iter}.log playbooks/satellite/capsules-populate.yaml -e "organization='$organization'" -e "num_concurrent_capsules='$num_concurrent_capsules'" --limit capsules["$limit"]
     s $wait_interval
   fi
 done
