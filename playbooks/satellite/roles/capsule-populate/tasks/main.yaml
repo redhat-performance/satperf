@@ -20,8 +20,25 @@
   register: hammer_add_le_to_capsule_cmd
   changed_when: "hammer_add_le_to_capsule_cmd.rc is defined and hammer_add_le_to_capsule_cmd.rc == 0 and 'Library already present in ' + inventory_hostname not in hammer_add_le_to_capsule_cmd.stdout"
 
-- name: "Sync the content"
+- name: "Sync the content (async)"
   ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --name {{ inventory_hostname }} --lifecycle-environment Library --skip-metadata-check true"
+    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --name {{ inventory_hostname }} --lifecycle-environment Library --skip-metadata-check true --async"
   delegate_to: "{{ groups['satellite6']|first }}"
+
+- name: "Set delay period in minutes"
+  ansible.builtin.set_fact:
+    delay_minutes: 15
+
+- name: "Set number of busy-wait retries"
+  ansible.builtin.set_fact:
+    num_retries: "{{ ( 60 / delay_minutes|int ) * ( num_concurrent_capsules|default(4)|int + 1 ) }}"
+
+- name: "Wait for the content to be synchronized for up to {{ delay_minutes|int * num_retries|int }} minutes"
+  ansible.builtin.command:
+    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronization-status --organization '{{ organization }}' --name {{ inventory_hostname }}"
+  delegate_to: "{{ groups['satellite6']|first }}"
+  register: syncstatus_cmd
+  until: syncstatus_cmd.stdout.find("Capsule is synchronized") != -1
+  delay: "{{ 60 * delay_minutes|int }}"
+  retries: "{{ num_retries|int }}"
 ...
