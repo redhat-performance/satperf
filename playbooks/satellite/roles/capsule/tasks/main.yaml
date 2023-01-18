@@ -104,8 +104,9 @@
 
 # Finally install capsule
 - name: "Run Capsule configuration"
-  command:
-    bash "/root/{{ inventory_hostname }}-script.sh"
+  throttle: 1
+  ansible.builtin.command:
+    cmd: "bash /root/{{ inventory_hostname }}-script.sh"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"

@@ -1,6 +1,5 @@
 ---
 - hosts: capsules
-  serial: "{{ concurrent_installs|default(15) }}"
   remote_user: root
   ###gather_facts: no
   vars_files:
