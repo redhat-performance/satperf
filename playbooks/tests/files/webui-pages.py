@@ -2,6 +2,7 @@
 
 import argparse
 import inspect
+import itertools
 import logging
 import re
 import sys
@@ -19,6 +20,9 @@ import opl.skelet
 def _get(client, uri, pattern, headers={}):
     """
     Simple wrapper around GET requests used by tasks below.
+
+    It just performs the get request, checks status code and checks
+    if expected string is there in the output.
     """
     with client.get(uri, headers=headers, verify=False, name=inspect.stack()[1][3], catch_response=True) as response:
         try:
@@ -33,6 +37,28 @@ def _get(client, uri, pattern, headers={}):
             else:
                 logging.warning(f"Got wrong response for {uri}: [{response.status_code}] {response.text}")
                 return response.failure("Got wrong response")
+
+
+class SatelliteWebUIPerfStaticAssets(HttpUser):
+    wait_time = constant(0)
+
+    def on_start(self):
+        """
+        Load list of static assets we are going to query.
+        """
+        self.index = 0
+        self.urls = []
+        with self.client.get("/users/login", verify=False, name="get_list_of_urls") as response:
+            find_links = re.finditer(r'<link[^>]* href="(/[^"]+)" ?[^>]*>', response.text)
+            find_scripts = re.finditer(r'<script[^>]* src="(/[^"]+)" ?[^>]*>', response.text)
+            for match in itertools.chain(find_links, find_scripts):
+                self.urls.append(match.group(1))
+        logging.info(f"Loaded {len(self.urls)} URLs")
+
+    @task
+    def get(self):
+        self.client.get(self.urls[self.index])
+        self.index = self.index + 1 if self.index + 1 < len(self.urls) else 0
 
 
 class SatelliteWebUIPerfNoAuth(HttpUser):
