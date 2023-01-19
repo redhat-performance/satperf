@@ -1,0 +1,99 @@
+---
+# Register the subnet of the private network of a capsule
+
+# Client domain is added to the subnet
+- name: "Get id of a domain"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6']|first }}/api/domains/{{ capsule_domain }}"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: domain_info
+  run_once: true
+- name: "Determine domain ID"
+  set_fact:
+    domain_id: "{{ domain_info.json.id }}"
+  run_once: true
+
+- name: "Get list of subnets"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6']|first }}/api/subnets?per_page=1000"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: subnets
+  run_once: true
+
+- name: "Get subnet from inventory (using private network IPs)"
+  ansible.builtin.set_fact:
+    subnet: "{{ (hostvars[inventory_hostname].private_ip  + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') }}"
+    network: "{{ (hostvars[inventory_hostname].private_ip  + '/' + private_netmask) | ansible.utils.ipaddr('network') }}"
+    cidr: "{{ (hostvars[inventory_hostname].private_ip  + '/' + private_netmask) | ansible.utils.ipaddr('prefix') }}"
+
+- name: "Compose subnet request body"
+  ansible.builtin.set_fact:
+    subnet_body: "{{ {'subnet': {'name': subnet, 'network': network, 'cidr': cidr, 'domain_ids': [domain_id]} } }}"
+
+- debug:
+    msg: "subnet: {{ subnet }} - network: {{network }} - subnet_body: {{ subnet_body}}"
+
+- name: "Create subnet for our capsule if it is not already there"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6']|first }}/api/subnets"
+    method: POST
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: "{{ subnet_body }}"
+    status_code: 201
+    body_format: json
+  when: "subnet not in subnets.json.results|map(attribute='name')"
+  ignore_errors: True
+
+- name: "Get updated list of subnets if needed"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6']|first }}/api/subnets?per_page=1000"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: subnets
+  run_once: true
+  when: "'capsules' in group_names"
+  
+- name: "Determine subnet ID"
+  set_fact:
+    subnet_id: "{{ item.id }}"
+  when:
+    - "item.name == subnet"
+    - "'capsules' in group_names"
+  with_items: "{{ subnets.json.results }}"
+
+- debug:
+    var: subnet_id
+
+- name: "Move capsule's host to the subnet"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6']|first }}/api/hosts/{{ inventory_hostname }}"
+    method: PUT
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    headers:
+      Content-Type: application/json
+      Accept: application/json,version=2
+    body: >
+      {"host": {"interfaces": [1], "subnet_id": "{{ subnet_id }}"} }
+    body_format: json
+  when: "'capsules' in group_names"
+...
