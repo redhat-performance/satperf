@@ -7,7 +7,7 @@ import logging
 import re
 import sys
 
-from locust import HttpUser
+from locust import HttpUser, FastHttpUser
 from locust import constant
 from locust import task
 
@@ -39,7 +39,7 @@ def _get(client, uri, pattern, headers={}):
                 return response.failure("Got wrong response")
 
 
-class SatelliteWebUIPerfStaticAssets(HttpUser):
+class SatelliteWebUIPerfStaticAssets(FastHttpUser):
     wait_time = constant(0)
 
     def on_start(self):
