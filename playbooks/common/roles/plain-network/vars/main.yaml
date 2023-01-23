@@ -11,7 +11,7 @@ plain_network_yaml: |
       dhcp4: no
       gateway4: "{{ public_gateway }}"
       address:
-        - "{{ (public_ip + '/' + public_netmask) | ansible.netcommon.ipaddr('host/prefix') }}"
+        - "{{ (public_ip + '/' + public_netmask) | ansible.utils.ipaddr('host/prefix') }}"
       dns:
         - "{{ public_nameserver }}"
   {%  endif %}
@@ -24,7 +24,7 @@ plain_network_yaml: |
     ip:
       dhcp4: no
       address:
-        - "{{ (private_ip + '/' + private_netmask) | ansible.netcommon.ipaddr('host/prefix') }}"
+        - "{{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('host/prefix') }}"
     state: up
 
   - persistent_state: absent   # remove all other profiles
