@@ -21,5 +21,7 @@ roles:
     version: origin/main
 
 collections:
+  - name: ansible.posix
+
   - name: ansible.utils
 ...

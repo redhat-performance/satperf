@@ -8,7 +8,7 @@
 
 # Make sure we have key deployed
 - name: "Deploy key"
-  authorized_key:
+  ansible.posix.authorized_key:
     user: root
     key: "{{ lookup('file', '../../../../../'+satperf_private_key+'.pub') }}"
     manage_dir: yes
