@@ -3,7 +3,7 @@
 source experiment/run-library.sh
 
 organization="${PARAM_organization:-Default Organization}"
-manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
