@@ -43,7 +43,7 @@ s $wait_interval
 
 section "Sync from CDN"   # do not measure because of unpredictable network latency
 h regs-20-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_full'"
-skip_measurement='false' h regs-20-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
+h regs-20-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
 h regs-20-reposet-enable-rhel7.log  "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h regs-20-repo-immediate-rhel7.log "repository update --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
 skip_measurement='false' h regs-20-repo-sync-rhel7.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
