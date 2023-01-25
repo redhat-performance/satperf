@@ -35,7 +35,7 @@ export skip_measurement='true'
 section "Upload manifest"
 h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
     || h regs-10-ensure-org.log "organization create --name '$organization'"
-h regs-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location 'Default Location'"
+h regs-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
 a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
 h regs-10-simple-content-access-disable.log "simple-content-access disable --organization '$organization'"
