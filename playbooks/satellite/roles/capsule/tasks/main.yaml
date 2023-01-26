@@ -104,6 +104,7 @@
 
 # Finally install capsule
 - name: "Run Capsule configuration"
+  # XXX: Submit PR
   throttle: 1
   ansible.builtin.command:
     cmd: "bash /root/{{ inventory_hostname }}-script.sh"
