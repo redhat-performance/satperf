@@ -31,8 +31,8 @@ ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 
 dl="Default Location"
 
-opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
+opts="--forks 100 -i $inventory"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
