@@ -4,14 +4,13 @@ source experiment/run-library.sh
 
 organization="${PARAM_organization:-Default Organization}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 
 wait_interval=${PARAM_wait_interval:-50}
 
 dl="Default Location"
 
-opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
+opts="--forks 100 -i $inventory"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
