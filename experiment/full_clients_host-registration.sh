@@ -139,6 +139,7 @@ h repository-sync-sat-tools.log "repository synchronize --organization '$organiz
 wait
 unset skip_measurement
 
+
 export skip_measurement='true'
 section "Sync Client repos"
 h 30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
@@ -240,13 +241,13 @@ skip_measurement='true' a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a
 skip_measurement='true' h 55-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/55-rex-date.log
 s $wait_interval
-skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --description-format 'Run %{command} (%{template_name}' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
+skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
 j $logs/56-rex-date-ansible.log
 s $wait_interval
-skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --description-format 'Run %{command} (%{template_name}' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/57-rex-sm-facts-update.log
 s $wait_interval
-skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name}' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/58-rex-uploadprofile.log
 s $wait_interval
 
