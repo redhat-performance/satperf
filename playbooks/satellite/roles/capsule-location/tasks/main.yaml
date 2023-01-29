@@ -98,6 +98,8 @@
   with_items: "{{ locations.json.results }}"
 
 - name: "Move capsule's host to the location"
+  # XXX: Submit PR
+  throttle: 1
   uri:
     url: "https://{{ groups['satellite6']|first }}/api/hosts/{{ inventory_hostname }}"
     method: PUT
