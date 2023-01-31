@@ -115,6 +115,7 @@
     body_format: json
 
 - name: "Move capsule to the location"
+  # XXX: Submit PR
   uri:
     url: "https://{{ groups['satellite6']|first }}/api/smart_proxies/{{ inventory_hostname }}"
     method: PUT
