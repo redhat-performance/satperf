@@ -57,7 +57,13 @@ class SatelliteWebUIPerfStaticAssets(FastHttpUser):
 
     @task
     def get(self):
-        self.client.get(self.urls[self.index])
+        headers = {
+            "Accept": "*/*",
+            "Accept-Encoding": "gzip, deflate, br",
+            "Accept-Language": "en-US,en;q=0.5",
+            "Connection": "keep-alive",   # default on HTTP/1.1 anyway
+        }
+        self.client.get(self.urls[self.index], headers=headers)
         self.index = self.index + 1 if self.index + 1 < len(self.urls) else 0
 
 
