@@ -29,8 +29,8 @@ opts_adhoc="$opts -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 section "Checking environment"
 generic_environment_check
 
-export skip_measurement='true'
 
+export skip_measurement='true'
 section "Upload manifest"
 h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
   || h regs-10-ensure-org.log "organization create --name '$organization'"
@@ -39,8 +39,10 @@ a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto
 h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
 h regs-10-simple-content-access-disable.log "simple-content-access disable --organization '$organization'"
 s $wait_interval
+unset skip_measurement
 
 
+export skip_measurement='true'
 section "Sync from CDN"   # do not measure because of unpredictable network latency
 h regs-20-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_full'"
 h regs-20-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
@@ -69,26 +71,28 @@ s $wait_interval
 h regs-30-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
 skip_measurement='false' h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
 s $wait_interval
+unset skip_measurement
 
 
+export skip_measurement='true'
 section "Prepare for registrations"
 h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
-    || skip_measurement='true' h regs-42-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$organization'"
+    || h regs-42-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$organization'"
 tmp=$( mktemp )
 h_out "--no-headers --csv location list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
-skip_measurement='true' h regs-42-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$organization' --location-ids '$location_ids'"
+h regs-42-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$organization' --location-ids '$location_ids'"
 
-skip_measurement='true' h regs-43-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
+h regs-43-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
 h_out "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
 tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-skip_measurement='true' h regs-43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
+h regs-43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
 h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
-skip_measurement='true' h regs-43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
+h regs-43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
 h_out "--csv subscription list --organization '$organization' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
 client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
-skip_measurement='true' h regs-43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$client_subs_id'"
+h regs-43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$client_subs_id'"
 
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
@@ -103,20 +107,21 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
         location_name="Location for $capsule_name"
     fi
     h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-      || skip_measurement='true' h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ containers_domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+      || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ containers_domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
     subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
-    skip_measurement='true' a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+    a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-      || skip_measurement='true' ap regs-41-hostgroup-create-$capsule_name.log \
+      || ap regs-41-hostgroup-create-$capsule_name.log \
          -e "organization='$organization'" \
          -e "hostgroup_name=$hostgroup_name subnet_name=$subnet_name" \
          playbooks/satellite/hostgroup-create.yaml
 done
 
-skip_measurement='true' ap 44-generate-host-registration-command.log \
+ap 44-generate-host-registration-command.log \
   -e "ak=ActivationKey" \
   playbooks/satellite/host-registration_generate-command.yaml
-skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
+ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml
+unset skip_measurement
 
 
 section "Register more and more"
@@ -125,9 +130,8 @@ sum=0
 for b in $registrations_batches; do
     let sum+=$( expr $b \* $ansible_container_hosts )
 done
-log "Going to register $sum hosts in total. Make sure there is enough hosts available."
 
-export skip_measurement='false'
+log "Going to register $sum hosts in total. Make sure there is enough hosts available."
 
 iter=1
 for batch in $registrations_batches; do
