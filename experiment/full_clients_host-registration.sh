@@ -240,7 +240,7 @@ unset skip_measurement
 
 
 section "Register"
-number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
 registration_iterations=$(( number_container_hosts * number_containers_per_container_host / concurrent_registrations ))
 concurrent_registrations_per_container_host=$(( concurrent_registrations / number_container_hosts ))
