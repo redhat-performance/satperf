@@ -26,9 +26,9 @@ generic_environment_check
 
 section "Upload manifest"
 h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
-    || h capsync-10-ensure-org.log "organization create --name '$organization'"
+  || h capsync-10-ensure-org.log "organization create --name '$organization'"
 h_out "--no-headers --csv location list --fields name" | grep --quiet '^$dl$' \
-    || h capsync-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
+  || h capsync-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
 a capsync-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
 s $wait_interval
@@ -76,20 +76,24 @@ section "Push content to capsules"
 num_capsules="$(ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ')"
 
 for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
-  if (( initial_index == 0 && iter == 0 )); then
-    continue
-  else
-    first="$(( last + 1 ))"
-    incr="$(( initial_index + iter - 1 ))"
-    last="$(( first + incr ))"
-    if (( last >= num_capsules )); then
-      last="$(( num_capsules - 1 ))"
+    if (( initial_index == 0 && iter == 0 )); then
+        continue
+    else
+        first="$(( last + 1 ))"
+        incr="$(( initial_index + iter - 1 ))"
+        last="$(( first + incr ))"
+        if (( last >= num_capsules )); then
+            last="$(( num_capsules - 1 ))"
+        fi
+        limit="${first}:${last}"
+        num_concurrent_capsules="$(( last - first + 1 ))"
+        ap capsync-40-populate-${iter}.log \
+          --limit capsules["$limit"]
+          -e "organization='$organization'" \
+          -e "num_concurrent_capsules='$num_concurrent_capsules'" \
+          playbooks/satellite/capsules-populate.yaml
+        s $wait_interval
     fi
-    limit="${first}:${last}"
-    num_concurrent_capsules="$(( last - first + 1 ))"
-    ap capsync-40-populate-${iter}.log playbooks/satellite/capsules-populate.yaml -e "organization='$organization'" -e "num_concurrent_capsules='$num_concurrent_capsules'" --limit capsules["$limit"]
-    s $wait_interval
-  fi
 done
 
 
