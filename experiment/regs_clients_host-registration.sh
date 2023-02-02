@@ -120,7 +120,7 @@ skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/cl
 
 
 section "Register more and more"
-ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
 for b in $registrations_batches; do
     let sum+=$( expr $b \* $ansible_container_hosts )
