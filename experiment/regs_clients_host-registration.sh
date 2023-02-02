@@ -23,7 +23,7 @@ rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, S
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
 
 
 section "Checking environment"
