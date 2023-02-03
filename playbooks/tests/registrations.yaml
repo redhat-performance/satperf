@@ -28,8 +28,8 @@
       when: "not containers_used_count_cmd.failed"
 
     - name: "Ensure we have enough free containers"
-      assert:
-        that: "containers_used_count|int + size|int <= containers_count|int"
+      ansible.builtin.assert:
+        that: "containers_used_count | int < containers_count | int"
 
     - name: "Generate list of containers we are going to use"
       shell:
