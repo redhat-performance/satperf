@@ -11,21 +11,27 @@
     resting: 0
     registration_logs: "registration_logs"
   tasks:
-    - name: "Load number of already registered containers"
-      command:
-        cat /root/container-used-count
-      register: containers_used_count_cmd
-      ignore_errors: true
+    - name: "Check whether we have already registered some containers"
+      ansible.builtin.stat:
+        path: /root/container-used-count
+      register: container_used_count_path
 
     - name: "Set number of used containers to 0"
-      set_fact:
+      ansible.builtin.set_fact:
         containers_used_count: 0
-      when: "containers_used_count_cmd.failed"
+      when: "not container_used_count_path.stat.exists"
 
-    - name: "Set number of used containers based on file"
-      set_fact:
-        containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
-      when: "not containers_used_count_cmd.failed"
+    - name: "Load number of already registered containers"
+      ansible.builtin.command:
+        cmd: cat /root/container-used-count
+      register: containers_used_count_cmd
+      ignore_errors: true
+      when: "container_used_count_path.stat.exists"
+
+    - name: "Set number of used containers based on file contents"
+      ansible.builtin.set_fact:
+        containers_used_count: "{{ containers_used_count_cmd.stdout }}"   # Warning: this is still a string: https://github.com/ansible/ansible/issues/15249
+      when: "container_used_count_path.stat.exists"
 
     - name: "Ensure we have enough free containers"
       ansible.builtin.assert:
