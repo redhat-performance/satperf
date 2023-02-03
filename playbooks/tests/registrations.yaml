@@ -50,6 +50,7 @@
       ansible.builtin.get_url:
         url: http://{{ groups['satellite6'] | first }}/pub/host-registration_{{ tests_registration_target }}.sh
         dest: /root/clients_host-registration.sh
+        mode: '0400'
       when: "method == 'clients_host-registration'"
 
     - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
