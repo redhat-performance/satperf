@@ -9,6 +9,7 @@
     method: "clients.yaml"
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     resting: 0
+    num_retry_forks: 3
     registration_logs: "registration_logs"
   tasks:
     - name: "Check whether we have already registered some containers"
@@ -41,10 +42,15 @@
       shell:
         head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
 
-    - name: "Determine log name"
-      set_fact:
-        clients_yaml_cmd_log: "/root/out-{{ lookup('pipe', 'date --utc --iso-8601=seconds') | regex_replace('[^A-Za-z0-9-]', '_') }}.log"
-      run_once: yes
+    - name: "Set base log name"
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "/root/out-{{ lookup('pipe', 'date --utc --iso-8601=seconds') | regex_replace('[^A-Za-z0-9-]', '_') }}"
+      run_once: true
+
+    - name: "Set log name"
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
+      run_once: true
 
     - name: "Download host registration script from Satellite"
       ansible.builtin.get_url:
@@ -171,6 +177,48 @@
         regexp: .*
         line: "{{ containers_used_count|int + size|int }}"
         create: yes
+
+    - name: "Get number of hosts that failed to register"
+      ansible.builtin.command:
+        cmd: "grep -c '^fatal: ' {{ clients_yaml_cmd_log }}"
+      register: num_failed_hosts
+      failed_when: num_failed_hosts.rc == 2
+
+    - name: "Show number of hosts that failed to register"
+      ansible.builtin.debug:
+        var: num_failed_hosts.stdout_lines
+
+    - name: "Set additional retries log name (if needed)"
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
+      run_once: yes
+      when:
+        - num_failed_hosts.stdout_lines[0] | int > 0
+        - method == 'clients_host-registration'
+
+    - name: "Try to re-register failed hosts (if needed)"
+      ansible.builtin.shell: |
+        cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
+
+        while (( "$(grep -c '^fatal: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
+          unset CLIENT_IP_LIST
+
+          for client_ip in $(awk '/^fatal: / {print $2}' {{ clients_yaml_cmd_retries_log }} | cut -d'[' -f2 | cut -d']' -f1); do
+            CLIENT_IP_LIST+="$client_ip,"
+          done
+
+          ansible-playbook \
+           --private-key /root/id_rsa_key \
+           --inventory $CLIENT_IP_LIST \
+           --forks "{{ num_retry_forks }}" \
+           clients_host-registration.yaml \
+           &> "{{ clients_yaml_cmd_retries_log }}"
+        done
+      register: clients_yaml_cmd_retries
+      ignore_errors: true
+      when:
+        - num_failed_hosts.stdout_lines[0] | int > 0
+        - method == 'clients_host-registration'
 
     - name: "Give server some time to rest"
       pause:
