@@ -59,15 +59,22 @@
   when: "registration_hostgroup is defined"
 
 - name: "Distribute client scripts"
-  template:
-    src: "files/{{ item }}.j2"
+  ansible.builtin.copy:
+    src: "{{ item }}"
     dest: "/root/{{ item }}"
     force: yes
   loop:
     - "clients.yaml"
-    - "clients-register.yaml"
-    - "clients-bootstrap.yaml"
     - "clients_host-registration.yaml"
+    - "clients-bootstrap.yaml"
+
+- name: "Distribute client scripts from templates"
+  ansible.builtin.template:
+    src: "{{ item }}"
+    dest: "/root/{{ item }}"
+    force: yes
+  loop:
+    - "clients-register.yaml.j2"
 
 - name: "Install Ansible (in RHEL <8.6)"
   ansible.builtin.package:

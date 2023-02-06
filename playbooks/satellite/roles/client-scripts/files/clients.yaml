@@ -1,12 +1,10 @@
-{% raw %}
 ---
 - hosts: all
   remote_user: root
   gather_facts: no
-  vars:
   tasks:
     - name: "Register"
-      shell: |
+      ansible.builtin.shell: |
         set -x
         set -e
         set -o pipefail
@@ -101,14 +99,13 @@
       when: "rex_mode is defined and rex_mode == 'mqtt'"
 
     - name: "Register - output"
-      debug:
+      ansible.builtin.debug:
         msg:
           - "{{ reg.stdout }}"
           - "{{ reg.stderr }}"
 
     - name: "Register - timings"
-      debug:
+      ansible.builtin.debug:
         msg="Register {{ reg.start }} to {{ reg.end }}"
       when: "reg.rc == 0"
 ...
-{% endraw %}
