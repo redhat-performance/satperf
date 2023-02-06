@@ -193,7 +193,6 @@
     - name: "Set additional retries log name (if needed)"
       ansible.builtin.set_fact:
         clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
-      run_once: yes
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - method == 'clients_host-registration'
