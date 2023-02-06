@@ -4,8 +4,8 @@
   gather_facts: no
   tasks:
     - name: Cleanup
-      ansible.builtin.shell:
-        rm -rf /etc/yum.repos.d/*.repo
+      ansible.builtin.command:
+        cmd: rm -rf /etc/yum.repos.d/*.repo
 
     - name: Upload script to content host
       ansible.builtin.copy:
