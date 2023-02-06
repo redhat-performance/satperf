@@ -116,6 +116,7 @@
 
 - name: "Move capsule to the location"
   # XXX: Submit PR
+  throttle: 1
   uri:
     url: "https://{{ groups['satellite6']|first }}/api/smart_proxies/{{ inventory_hostname }}"
     method: PUT
