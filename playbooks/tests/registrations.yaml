@@ -39,8 +39,10 @@
         that: "containers_used_count | int < containers_count | int"
 
     - name: "Generate list of containers we are going to use"
-      shell:
-        head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
+      ansible.builtin.shell: |
+        awk 'NR > {{ containers_used_count | int }} && NR <= {{ containers_used_count | int + size | int }} {print $NF}' \
+          /root/container-ips.shuffled \
+          >clients.ini
 
     - name: "Set base log name"
       ansible.builtin.set_fact:
