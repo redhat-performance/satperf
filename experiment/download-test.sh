@@ -21,10 +21,10 @@ repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellit
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
-repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo*}"
+repo_download_test="${PARAM_repo_download_test:-http://repos.example.com/pub/satperf/test_sync_repositories/repo*}"
 repo_count_download_test="${PARAM_repo_count_download_test:-8}"
 package_name_download_test="${PARAM_package_name_download_test:-foo*}"
-workdir_url="${PARAM_workdir_url:-https://workdir-exporter-jenkins-csb-perf.apps.ocp-c1.prod.psi.redhat.com/workspace}"
+workdir_url="${PARAM_workdir_url:-https://workdir-exporter.example.com/workspace}"
 job_name="${PARAM_job_name:-Sat_Experiment}"
 max_age_input="${PARAM_max_age_input:-19000}"
 skip_down_setup="${PARAM_skip_down_setup:-false}"
