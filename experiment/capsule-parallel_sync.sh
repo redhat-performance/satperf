@@ -88,10 +88,10 @@ for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
         limit="${first}:${last}"
         num_concurrent_capsules="$(( last - first + 1 ))"
         ap capsync-40-populate-${iter}.log \
-          --limit capsules["$limit"]
+          --limit capsules["$limit"] \
           -e "organization='$organization'" \
           -e "num_concurrent_capsules='$num_concurrent_capsules'" \
-          playbooks/satellite/capsules-populate.yaml
+           playbooks/satellite/capsules-populate.yaml
         s $wait_interval
     fi
 done
