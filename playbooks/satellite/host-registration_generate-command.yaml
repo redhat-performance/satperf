@@ -21,7 +21,9 @@
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-remote-execution-pull true"
-      when: "hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'"
+      when: 
+        - sat_version is version('6.12', '>=')
+        - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
 
     - name: "Generate the host registration command"
       ansible.builtin.command:
