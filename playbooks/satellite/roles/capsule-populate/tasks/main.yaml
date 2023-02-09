@@ -1,15 +1,21 @@
 ---
 - name: "Assign capsule to organization '{{ organization }}'"
+  # No error seen until now
+  throttle: 1
   ansible.builtin.command:
     cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ inventory_hostname }} --organizations '{{ organization }}'"
   delegate_to: "{{ groups['satellite6']|first }}"
 
 - name: "Set capsule download policy to immediate"
+  # XXX: Submit PR
+  throttle: 1
   ansible.builtin.command:
     cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ inventory_hostname }} --download-policy immediate"
   delegate_to: "{{ groups['satellite6']|first }}"
 
 - name: "Assign Library lifecycle environment"
+  # XXX: Submit PR
+  throttle: 1
   ansible.builtin.shell: |
     if hammer --no-headers --output csv -u {{ sat_user }} -p {{ sat_pass }} capsule content lifecycle-environments --name '{{ inventory_hostname }}' --organization '{{ organization }}' --fields name | grep '^Library$'; then
       echo "Library already present in {{ inventory_hostname }}"
