@@ -197,6 +197,9 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
       || ap 41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "organization='$organization' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
 done
 
+ap 44-generate-host-registration-command.log \
+  -e "ak=ActivationKey" \
+  playbooks/satellite/host-registration_generate-command.yaml
 ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
 unset skip_measurement
 
