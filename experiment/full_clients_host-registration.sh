@@ -6,7 +6,7 @@ organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 
-concurrent_registrations=${PARAM_concurrent_registrations:-75}
+concurrent_registrations=${PARAM_concurrent_registrations:-125}
 wait_interval=${PARAM_wait_interval:-30}
 
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
