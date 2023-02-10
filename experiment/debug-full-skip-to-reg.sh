@@ -29,7 +29,7 @@ ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 dl="Default Location"
 
 opts="-i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Checking environment"

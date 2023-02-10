@@ -26,7 +26,7 @@ repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tool
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 section "Checking environment"
 generic_environment_check

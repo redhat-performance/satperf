@@ -29,7 +29,7 @@ proxy_id="${PARAM_proxy_id:-set-in-doit-sh}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Checking environment"

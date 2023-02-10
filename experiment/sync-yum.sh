@@ -20,7 +20,7 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Checking environment"

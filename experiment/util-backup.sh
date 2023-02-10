@@ -9,7 +9,7 @@ local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 wait_interval=${PARAM_wait_interval:-50}
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Backup"

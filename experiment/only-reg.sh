@@ -22,7 +22,7 @@ rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, S
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Util: Prepare for Red Hat content"

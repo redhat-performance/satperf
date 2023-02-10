@@ -25,7 +25,7 @@ ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root"
+opts_adhoc="$opts"
 
 
 section "Checking environment"
