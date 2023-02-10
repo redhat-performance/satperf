@@ -17,7 +17,7 @@ if [ -z "$marker" ]; then
 fi
 
 opts=${opts:-"--forks 100 -i conf/hosts.ini"}
-opts_adhoc=${opts_adhoc:-"$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc=${opts_adhoc:-"$opts -e @conf/satperf.yaml -e @$local_conf"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
