@@ -90,7 +90,7 @@
 - name: "Configure MQTT transport for remote execution on Satellite >=6.12"
   lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --foreman-proxy-plugin-remote-execution-script-mode=pull-mqtt\'
+    line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
     insertafter: '.*--enable-foreman-proxy-plugin-remote-execution-script'
   when:
     - sat_version is version('6.12', '>=')
