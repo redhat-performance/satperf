@@ -5,6 +5,7 @@ source experiment/run-library.sh
 organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
+local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 concurrent_registrations=${PARAM_concurrent_registrations:-125}
 wait_interval=${PARAM_wait_interval:-30}
@@ -30,7 +31,7 @@ ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
+opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Checking environment"

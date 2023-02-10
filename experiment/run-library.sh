@@ -1,5 +1,7 @@
 #!/bin/bash
 
+local_conf="${local_conf:-conf/satperf.local.yaml}"
+
 set -o pipefail
 ###set -x
 # Disable `set -e` for today (see `date -d @1594369339` for timestamp interpretation)
@@ -15,7 +17,7 @@ if [ -z "$marker" ]; then
 fi
 
 opts=${opts:-"--forks 100 -i conf/hosts.ini"}
-opts_adhoc=${opts_adhoc:-"$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"}
+opts_adhoc=${opts_adhoc:-"$opts --user root -e @conf/satperf.yaml -e @$local_conf"
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
@@ -93,7 +95,7 @@ function generic_environment_check() {
     if $extended; then
         ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
         if [ "$ansible_container_hosts" -gt 0 ]; then
-            skip_measurement='true' ap 00-recreate-containers.log -e @conf/satperf.local.yaml ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
+            skip_measurement='true' ap 00-recreate-containers.log -e @$local_conf ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
         fi
         skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi

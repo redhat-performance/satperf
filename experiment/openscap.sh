@@ -6,6 +6,7 @@ organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
+local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 wait_interval=${PARAM_wait_interval:-50}
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
@@ -28,7 +29,7 @@ proxy_id="${PARAM_proxy_id:-set-in-doit-sh}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
+opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
 
 
 section "Checking environment"

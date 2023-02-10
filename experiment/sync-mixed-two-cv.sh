@@ -6,6 +6,7 @@ organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
+local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 test_sync_mixed_count="${PARAM_test_sync_mixed_count:-8}"
 test_sync_mixed_max_sync_secs="${PARAM_test_sync_mixed_max_sync_secs:-1200}"
@@ -25,7 +26,7 @@ repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tool
 dl="Default Location"
 
 opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
+opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @$local_conf"
 
 section "Checking environment"
 generic_environment_check
