@@ -126,7 +126,7 @@
     dest: /etc/systemd/system/mosquitto.service.d/limits.conf
     content: |
       [Service]
-      LimitNOFILE=10000
+      LimitNOFILE=65536
   when:
     - sat_version is version('6.12', '>=')
     - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
