@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    source_manifest: "{{ manifest|default('../../conf/contperf/manifest.zip') }}"
+    source_manifest: "{{ manifest | default('../../conf/contperf/manifest_SCA.zip') }}"
   tasks:
     - name: "Deploy manifest {{ source_manifest }} to remote host"
       copy:
