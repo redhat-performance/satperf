@@ -301,12 +301,14 @@ s $wait_interval
 
 section "BackupTest"
 skip_measurement='true' ap 70-backup.log playbooks/tests/sat-backup.yaml
-e BackupOnline $logs/70-backup.log
 e BackupOffline $logs/70-backup.log
-e Restore $logs/70-backup.log
+e RestoreOffline $logs/70-backup.log
+e BackupOnline $logs/70-backup.log
+e RestoreOnline $logs/70-backup.log
 
 
 section "Sosreport"
 ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+
 
 junit_upload
