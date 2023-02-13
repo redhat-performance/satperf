@@ -1,8 +1,9 @@
+---
 - hosts: satellite6
   remote_user: root
   tasks:
-    - name: create a dir for backup & give full permission to postgres user
-      file:
+    - name: Create a dir for each kind of backup & give full permissions to postgres user
+      ansible.builtin.file:
         path: "{{ item }}"
         state: directory
         mode: 0775
@@ -11,44 +12,63 @@
         - /backup-offline
         - /backup-online
 
-    - name: execute the Satellite online backup
-      command: satellite-maintain backup online -y /backup-online/
-      environment:
-        TZ: UTC
-      register: backup_online_cmd
-
-    - name: print online backup duration
-      debug:
-        msg: "BackupOnline {{ backup_online_cmd.start }} to {{ backup_online_cmd.end }}"
-      when: "backup_online_cmd.rc is defined and backup_online_cmd.rc == 0"
-
-    - name: execute the Satellite offline backup
-      command: satellite-maintain backup offline -y /backup-offline/
+    - name: Execute the Satellite offline backup
+      ansible.builtin.command:
+        cmd: satellite-maintain backup offline -y /backup-offline
       environment:
         TZ: UTC
       register: backup_offline_cmd
 
-    - name: print offline backup duration
-      debug:
+    - name: Print the offline backup duration
+      ansible.builtin.debug:
         msg: "BackupOffline {{ backup_offline_cmd.start }} to {{ backup_offline_cmd.end }}"
       when: "backup_offline_cmd.rc is defined and backup_offline_cmd.rc == 0"
 
-    - name: run the restoration script
-      shell: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
+    - name: Run the offline backup restoration script
+      ansible.builtin.shell:
+        cmd: satellite-maintain restore -y /backup-offline/$( ls /backup-offline/ | sort -r | head -n 1 )
       environment:
         TZ: UTC
         LANG: en_US.utf-8
-      register: restore_cmd
+      register: restore_offline_cmd
 
-    - name: print restore duration
-      debug:
-        msg: "Restore {{ restore_cmd.start }} to {{ restore_cmd.end }}"
-      when: "restore_cmd.rc is defined and restore_cmd.rc == 0"
+    - name: Print the offline backup restore duration
+      ansible.builtin.debug:
+        msg: "RestoreOffline {{ restore_offline_cmd.start }} to {{ restore_offline_cmd.end }}"
+      when: "restore_offline_cmd.rc is defined and restore_offline_cmd.rc == 0"
 
-    - name: cleanup directory
-      file:
-        path: "{{ item }}"
+    - name: Cleanup the offline backup directory
+      ansible.builtin.file:
+        path: /backup-offline
         state: absent
-      loop:
-        - /backup-offline
-        - /backup-online
+
+    - name: Execute the Satellite online backup
+      ansible.builtin.command:
+        cmd: satellite-maintain backup online -y /backup-online
+      environment:
+        TZ: UTC
+      register: backup_online_cmd
+
+    - name: Print the online backup duration
+      ansible.builtin.debug:
+        msg: "BackupOnline {{ backup_online_cmd.start }} to {{ backup_online_cmd.end }}"
+      when: "backup_online_cmd.rc is defined and backup_online_cmd.rc == 0"
+
+    - name: Run the online backup restoration script
+      ansible.builtin.shell:
+        cmd: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: restore_online_cmd
+
+    - name: Print the online backup restore duration
+      ansible.builtin.debug:
+        msg: "RestoreOnline {{ restore_online_cmd.start }} to {{ restore_online_cmd.end }}"
+      when: "restore_online_cmd.rc is defined and restore_online_cmd.rc == 0"
+
+    - name: Cleanup the online backup directory
+      ansible.builtin.file:
+        path: /backup-online
+        state: absent
+...
