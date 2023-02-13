@@ -6,7 +6,7 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    method: "clients.yaml"
+    method: "clients_host-registration"
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     resting: 0
     num_retry_forks: 3
