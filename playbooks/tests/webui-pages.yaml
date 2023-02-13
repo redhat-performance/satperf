@@ -15,24 +15,9 @@
           - "ui_pages_concurrency = {{ ui_pages_concurrency }}"
           - "ui_pages_duration = {{ ui_pages_duration }}"
 
-    - name: "Detect RHEL release"
-      setup:
-        filter: ansible_distribution_major_version
-      when: ansible_distribution_major_version is not defined
-
-    - name: "Configure what python we will use on RHEL7"
-      set_fact:
-        python_command: "python3.6"
-      when: "ansible_distribution_major_version|int == 7"
-
-    - name: "Configure what python we will use on RHEL8"
-      set_fact:
-        python_command: "python3.8"
-      when: "ansible_distribution_major_version|int == 8"
-
     - name: "Create virtualenv"
-      shell: |
-        {{ python_command }} -m venv /root/venv
+      ansible.builtin.shell: |
+        python3 -m venv /root/venv
         source /root/venv/bin/activate
         python -m pip install -U pip
         python -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team"
