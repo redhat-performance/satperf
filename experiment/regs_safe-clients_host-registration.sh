@@ -192,6 +192,7 @@ for (( i=1; i <= ( registration_iterations + 1 ); i++ )); do
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
       -e "method=clients_host-registration" \
       playbooks/tests/registrations.yaml
+    e Register $logs/44b-register-$i.log
     s $wait_interval
 done
 grep Register $logs/44b-register-*.log >$logs/44b-register-overall.log
