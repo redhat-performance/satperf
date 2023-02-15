@@ -43,7 +43,9 @@ section "Prepare for Red Hat content"
 h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
   || h 00-ensure-org.log "organization create --name '$organization'"
 skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
-skip_measurement='true' ap 01-manifest-excercise.log playbooks/tests/manifest-excercise.yaml -e "manifest=../../$manifest"
+skip_measurement='true' ap 01-manifest-excercise.log \
+  -e "manifest=../../$manifest" \
+  playbooks/tests/manifest-excercise.yaml
 e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
 e ManifestDelete $logs/01-manifest-excercise.log
@@ -231,21 +233,28 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
     
     a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-      || ap 41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "organization='$organization' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
+      || ap 41-hostgroup-create-$capsule_name.log \
+           -e "organization='$organization'" \
+           -e "hostgroup_name=$hostgroup_name" \
+           -e "subnet_name=$subnet_name" \
+           playbooks/satellite/hostgroup-create.yaml
 done
 
 ap 44-generate-host-registration-command.log \
   -e "ak=ActivationKey" \
   playbooks/satellite/host-registration_generate-command.yaml
-ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
+ap 44-recreate-client-scripts.log \
+  -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}" \
+  playbooks/satellite/client-scripts.yaml
 unset skip_measurement
 
 
 section "Register"
 for i in $( seq $registrations_iterations ); do
-    skip_measurement='true' ap 44-register-$i.log playbooks/tests/registrations.yaml \
+    skip_measurement='true' ap 44-register-$i.log \
       -e "size=$registrations_per_docker_hosts" \
-      -e "registration_logs='../../$logs/44-register-docker-host-client-logs'"
+      -e "registration_logs='../../$logs/44-register-docker-host-client-logs'" \
+      playbooks/tests/registrations.yaml
     s $wait_interval
 done
 grep Register $logs/44-register-*.log >$logs/44-register-overall.log
@@ -285,7 +294,10 @@ ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
 e HammerHostList $logs/61-hammer-list.log
 s $wait_interval
 rm -f /tmp/status-data-webui-pages.json
-skip_measurement='true' ap 62-webui-pages.log -e "ui_pages_concurrency=$ui_pages_concurrency ui_pages_duration=$ui_pages_duration" playbooks/tests/webui-pages.yaml
+skip_measurement='true' ap 62-webui-pages.log \
+  -e "ui_pages_concurrency=$ui_pages_concurrency" \
+  -e "ui_pages_duration=$ui_pages_duration" \
+  playbooks/tests/webui-pages.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
 s $wait_interval
 a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
