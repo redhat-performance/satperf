@@ -12,6 +12,7 @@
   ansible.builtin.command:
     cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ inventory_hostname }} --download-policy immediate"
   delegate_to: "{{ groups['satellite6']|first }}"
+  when: "download_policy is defined and download_policy == 'immediate'"
 
 - name: "Assign Library lifecycle environment"
   # XXX: Submit PR
