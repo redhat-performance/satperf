@@ -88,12 +88,10 @@ unset skip_measurement
 
 
 export skip_measurement='true'
-section "Synchronise capsules"
-tmp=$( mktemp )
-h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
-for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
-    h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$organization' --id '$capsule_id'"
-done
+section "Push content to capsules"
+ap 35-capsync-populate.log \
+  -e "organization='$organization'" \
+  playbooks/satellite/capsules-populate.yaml
 s $wait_interval
 unset skip_measurement
 
