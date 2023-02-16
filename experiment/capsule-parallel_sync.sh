@@ -89,6 +89,44 @@ s $wait_interval
 unset skip_measurement
 
 
+section "Create, publish and promote CVs / LCEs"
+# RHEL 7
+rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Extras RPMs x86_64' )"
+rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient7Repo' )"
+
+skip_measurement='true' h 30-rhel7-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name 'CV_RHEL7'"
+h 31-rhel7-cv-publish.log "content-view publish --organization '$organization' --name 'CV_RHEL7'"
+
+skip_measurement='true' h 35-rhel7-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name 'LCE_RHEL7'"
+h 36-rhel7-lce-promote.log "content-view version promote --organization '$organization' --content-view 'CV_RHEL7' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'LCE_RHEL7'"
+lces='RHEL7'
+
+# RHEL 8
+rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
+
+skip_measurement='true' h 30-rhel8-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name 'CV_RHEL8'"
+h 31-rhel8-cv-publish.log "content-view publish --organization '$organization' --name 'CV_RHEL8'"
+
+skip_measurement='true' h 35-rhel8-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name 'LCE_RHEL8'"
+h 36-rhel8-lce-promote.log "content-view version promote --organization '$organization' --content-view 'CV_RHEL8' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'LCE_RHEL8'"
+lces+=",LCE_RHEL8"
+
+# RHEL 9
+rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS RPMs 9' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9' )"
+rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient9Repo' )"
+
+skip_measurement='true' h 30-rhel9-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name 'CV_RHEL9'"
+h 31-rhel9-cv-publish.log "content-view publish --organization '$organization' --name 'CV_RHEL9'"
+
+skip_measurement='true' h 35-rhel9-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name 'LCE_RHEL9'"
+h 36-rhel9-lce-promote.log "content-view version promote --organization '$organization' --content-view 'CV_RHEL9' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'LCE_RHEL9'"
+lces+=",LCE_RHEL9"
+
+
 section "Push content to capsules"
 num_capsules="$(ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ')"
 
@@ -108,8 +146,9 @@ for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
           --limit capsules["$limit"] \
           -e "organization='$organization'" \
           -e "download_policy='immediate'" \
+          -e "lces='$lces'" \
           -e "num_concurrent_capsules='$num_concurrent_capsules'" \
-           playbooks/satellite/capsules-populate.yaml
+          playbooks/satellite/capsules-populate.yaml
         s $wait_interval
     fi
 done
