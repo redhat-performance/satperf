@@ -33,7 +33,9 @@ h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$org
   || h capsync-10-ensure-org.log "organization create --name '$organization'"
 h_out "--no-headers --csv location list --fields name" | grep --quiet '^$dl$' \
   || h capsync-10-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
-a capsync-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
+a capsync-10-manifest-deploy.log \
+  -m copy \
+  -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
 s $wait_interval
 
@@ -125,7 +127,9 @@ done
 
 
 section "Sosreport"
-skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+skip_measurement='true' ap sosreporter-gatherer.log \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
 
 
 junit_upload
