@@ -1,16 +1,26 @@
 ---
+- name: "Get capsule ID"
+  ansible.builtin.command:
+    cmd: hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --fields id --search 'name = {{ inventory_hostname }}'
+  delegate_to: "{{ groups['satellite6']|first }}"
+  register: capsule_id_cmd
+
+- name: "Set capsule ID"
+  ansible.builtin.set_fact:
+    id: "{{ capsule_id_cmd.stdout_lines[0] }}"
+  
 - name: "Assign capsule to organization '{{ organization }}'"
   # No error seen until now
   throttle: 1
   ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ inventory_hostname }} --organizations '{{ organization }}'"
+    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --id '{{ id }}' --organizations '{{ organization }}'"
   delegate_to: "{{ groups['satellite6']|first }}"
 
 - name: "Set capsule download policy to immediate"
   # XXX: Submit PR
   throttle: 1
   ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --name {{ inventory_hostname }} --download-policy immediate"
+    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --id '{{ id }}' --download-policy immediate"
   delegate_to: "{{ groups['satellite6']|first }}"
   when: "download_policy is defined and download_policy == 'immediate'"
 
@@ -18,10 +28,10 @@
   # XXX: Submit PR
   throttle: 1
   ansible.builtin.shell: |
-    if hammer --no-headers --output csv -u {{ sat_user }} -p {{ sat_pass }} capsule content lifecycle-environments --name '{{ inventory_hostname }}' --organization '{{ organization }}' --fields name | grep '^Library$'; then
+    if hammer --no-headers --output csv -u {{ sat_user }} -p {{ sat_pass }} capsule content lifecycle-environments --id '{{ id }}' --organization '{{ organization }}' --fields name | grep '^Library$'; then
       echo "Library already present in {{ inventory_hostname }}"
     else
-      hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name '{{ inventory_hostname }}' --organization '{{ organization }}' --lifecycle-environment Library
+      hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment Library
     fi
   delegate_to: "{{ groups['satellite6']|first }}"
   register: hammer_add_le_to_capsule_cmd
@@ -29,7 +39,7 @@
 
 - name: "Sync the content (async)"
   ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --name {{ inventory_hostname }} --lifecycle-environment Library --skip-metadata-check true --async"
+    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment Library --skip-metadata-check true --async"
   delegate_to: "{{ groups['satellite6']|first }}"
 
 - name: "Set delay period in minutes"
@@ -42,7 +52,7 @@
 
 - name: "Wait for the content to be synchronized for up to {{ delay_minutes|int * num_retries|int }} minutes"
   ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronization-status --organization '{{ organization }}' --name {{ inventory_hostname }}"
+    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronization-status --organization '{{ organization }}' --id '{{ id }}'"
   delegate_to: "{{ groups['satellite6']|first }}"
   register: syncstatus_cmd
   until: syncstatus_cmd.stdout.find("Capsule is synchronized") != -1
