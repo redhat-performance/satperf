@@ -89,17 +89,6 @@ s $wait_interval
 unset skip_measurement
 
 
-export skip_measurement='true'
-section "Prepare content"
-h capsync-30-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
-
-h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
-rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
-h capsync-31-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
-s $wait_interval
-unset skip_measurement
-
-
 section "Push content to capsules"
 num_capsules="$(ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ')"
 
