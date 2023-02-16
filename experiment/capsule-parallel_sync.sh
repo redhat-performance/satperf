@@ -90,6 +90,7 @@ for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
         ap capsync-40-populate-${iter}.log \
           --limit capsules["$limit"] \
           -e "organization='$organization'" \
+          -e "download_policy='immediate'" \
           -e "num_concurrent_capsules='$num_concurrent_capsules'" \
            playbooks/satellite/capsules-populate.yaml
         s $wait_interval
