@@ -32,7 +32,7 @@ h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$org
   || h 00-ensure-org.log "organization create --name '$organization'"
 skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
 skip_measurement='true' ap 01-manifest-excercise.log \
-  -e "manifest=../../$manifest" \
+  -e "manifest='../../$manifest'" \
   playbooks/tests/manifest-excercise.yaml
 e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
@@ -59,20 +59,37 @@ unset skip_measurement
 
 
 export skip_measurement='true'
-section "Sync Client repos"
-h 30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
+section "Sync Satellite Client repos"
+h 15-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
 
 # Satellite Client for RHEL 8
-h 30-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
-h 30-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
+h 15-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
+h 15-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
 s $wait_interval
 unset skip_measurement
+
+
+section "Create, publish and promote CV / LCE"
+rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
+
+cv='CV_RHEL8'
+skip_measurement='true' h 25-rhel8-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
+h 25-rhel8-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
+s $wait_interval
+
+lce='LCE_RHEL8'
+skip_measurement='true' h 26-rhel8-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name '$lce'"
+h 27-rhel8-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
+s $wait_interval
 
 
 export skip_measurement='true'
 section "Push content to capsules"
 ap 35-capsync-populate.log \
   -e "organization='$organization'" \
+  -e "lces='$lce'" \
   playbooks/satellite/capsules-populate.yaml
 s $wait_interval
 unset skip_measurement
@@ -89,15 +106,16 @@ h_out "--no-headers --csv location list --organization '$organization'" | grep '
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
 h 42-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$organization' --location-ids '$location_ids'"
 
-h 43-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
+ak='AK_RHEL8'
+h 43-ak-create.log "activation-key create --content-view '$cv' --lifecycle-environment '$lce' --name '$ak' --organization '$organization'"
 
 h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
-h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"
+h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name '$ak' --subscription-id '$rhel_subs_id'"
 
 h_out "--csv subscription list --organization '$organization' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
 client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
-h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$client_subs_id'"
+h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name '$ak' --subscription-id '$client_subs_id'"
 
 tmp=$( mktemp )
 h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
@@ -122,13 +140,13 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
       || ap 41-hostgroup-create-$capsule_name.log \
            -e "organization='$organization'" \
-           -e "hostgroup_name=$hostgroup_name" \
-           -e "subnet_name=$subnet_name" \
+           -e "hostgroup_name='$hostgroup_name'" \
+           -e "subnet_name='$subnet_name'" \
            playbooks/satellite/hostgroup-create.yaml
 done
 
 ap 44-generate-host-registration-command.log \
-  -e "ak=ActivationKey" \
+  -e "ak='$ak'" \
   playbooks/satellite/host-registration_generate-command.yaml
 ap 44-recreate-client-scripts.log \
   playbooks/satellite/client-scripts.yaml
@@ -146,9 +164,8 @@ log "Going to register $total_number_containers hosts: $concurrent_registrations
 
 for (( i=1; i <= ( registration_iterations + 1 ); i++ )); do
     skip_measurement='true' ap 44b-register-$i.log \
-      -e "size=${concurrent_registrations_per_container_host}" \
+      -e "size='${concurrent_registrations_per_container_host}'" \
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
-      -e "method=clients_host-registration" \
       playbooks/tests/registrations.yaml
     e Register $logs/44b-register-$i.log
     s $wait_interval
@@ -161,5 +178,6 @@ section "Sosreport"
 ap sosreporter-gatherer.log \
   -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
   playbooks/satellite/sosreport_gatherer.yaml
+
 
 junit_upload
