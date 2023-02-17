@@ -231,7 +231,9 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
       || h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ containers_domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
     subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
     
-    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 \
+      -m "shell" \
+      -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
       || ap 41-hostgroup-create-$capsule_name.log \
            -e "organization='$organization'" \
@@ -270,7 +272,9 @@ else
 fi
 
 skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
-skip_measurement='true' a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
+skip_measurement='true' a 51-rex-cleanup-know_hosts.log satellite6 \
+  -m "shell" \
+  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
 
 skip_measurement='true' h 55-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/55-rex-date.log
@@ -300,7 +304,9 @@ skip_measurement='true' ap 62-webui-pages.log \
   playbooks/tests/webui-pages.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
 s $wait_interval
-a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
+a 63-foreman_inventory_upload-report-generate.log satellite6 \
+  -m "shell" \
+  -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
 s $wait_interval
 
 
@@ -313,7 +319,8 @@ e RestoreOnline $logs/70-backup.log
 
 
 section "Sosreport"
-ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
 
 
 junit_upload
