@@ -50,7 +50,6 @@ h 00b-manifest-refresh.log "subscription refresh-manifest --organization '$organ
 # RHEL 8
 h 12b-reposet-enable-rhel8baseos.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
 h 12b-repo-sync-rhel8baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
-s $wait_interval
 
 h 12b-reposet-enable-rhel8appstream.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
 h 12b-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
@@ -70,16 +69,16 @@ unset skip_measurement
 
 
 section "Create, publish and promote CV / LCE"
+# RHEL 8
 rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
 rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
 rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
-
 cv='CV_RHEL8'
+lce='LCE_RHEL8'
+
 skip_measurement='true' h 25-rhel8-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
 h 25-rhel8-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
-s $wait_interval
 
-lce='LCE_RHEL8'
 skip_measurement='true' h 26-rhel8-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name '$lce'"
 h 27-rhel8-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
 s $wait_interval
