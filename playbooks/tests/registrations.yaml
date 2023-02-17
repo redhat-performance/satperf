@@ -201,7 +201,7 @@
       ansible.builtin.shell: |
         cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
 
-        while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
+        if (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); then
           unset CLIENT_IP_LIST
 
           for client_ip in $(awk '/^fatal: / {print $2}' {{ clients_yaml_cmd_retries_log }} | cut -d'[' -f2 | cut -d']' -f1); do
@@ -219,7 +219,7 @@
            --forks "{{ num_retry_forks }}" \
            clients_host-registration.yaml \
            &> "{{ clients_yaml_cmd_retries_log }}"
-        done
+        fi
       register: clients_yaml_cmd_retries
       ignore_errors: true
       when:
