@@ -1,5 +1,7 @@
 ---
 - name: "Get capsule ID"
+  # XXX: Submit PR
+  throttle: 1
   ansible.builtin.command:
     cmd: hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --fields id --search 'name = {{ inventory_hostname }}'
   delegate_to: "{{ groups['satellite6'] | first }}"
