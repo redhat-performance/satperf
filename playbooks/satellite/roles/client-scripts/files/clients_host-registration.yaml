@@ -15,6 +15,8 @@
 
     - name: Register
       ansible.builtin.shell: |
+        set -e
+
         /root/clients_host-registration.sh &>/root/registration.log
         ret=$?
         cat /root/registration.log
