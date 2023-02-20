@@ -41,6 +41,8 @@
   delegate_to: "{{ groups['satellite6'] | first }}"
 
 - name: "Sync the content (async)"
+  # XXX: Submit PR
+  throttle: 16
   ansible.builtin.command:
     cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --id '{{ id }}' --skip-metadata-check true --async"
   delegate_to: "{{ groups['satellite6'] | first }}"
@@ -54,6 +56,8 @@
     num_retries: "{{ ( 60 / delay_minutes | int ) * ( num_concurrent_capsules | default(4) | int + 1 ) }}"
 
 - name: "Wait for the content to be synchronized for up to {{ delay_minutes | int * num_retries | int }} minutes"
+  # XXX: Submit PR
+  throttle: 16
   ansible.builtin.command:
     cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronization-status --organization '{{ organization }}' --id '{{ id }}'"
   delegate_to: "{{ groups['satellite6'] | first }}"
