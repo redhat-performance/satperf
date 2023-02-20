@@ -6,6 +6,7 @@
     concurrency: 10
     spawn_rate: 10
     duration: 10   # duration needs to be in sec (we need it to be integer, not things like '10s' or '5m')
+    max_static_size: 1024   # only run for these requests with content size <= this limit
   tasks:
     - name: "Determine HW info"
       setup:
@@ -88,20 +89,17 @@
     - name: "Start Locust leader"
       shell: |
         source venv/bin/activate
-        locust \
-          --expect-workers={{ locust_followers_count }} \
-          --master \
-          --locustfile webui-pages.py \
-          --headless \
-          --host https://{{ target }} \
-          --users {{ concurrency }} \
-          --spawn-rate {{ spawn_rate }} \
-          --run-time {{ duration|int }} \
-          --print-stats \
-          --only-summary \
-          --stop-timeout 100 \
-          SatelliteWebUIPerfStaticAssets \
-          2>&1 | grep -v -e 'InsecureRequestWarning' -e 'warnings.warn' \
+        python webui-pages.py \
+          --test-set SatelliteWebUIPerfStaticAssets \
+          --locust-host https://{{ target }} \
+          --test-url-suffix / \
+          --test-duration {{ duration|int }} \
+          --locust-num-clients {{ concurrency|int }} \
+          --locust-hatch-rate {{ spawn_rate|int }} \
+          --locust-stop-timeout 100 \
+          --satellite-max-static-size {{ max_static_size|int }} \
+          --locust-master-runner \
+          --locust-master-expect-workers {{ locust_followers_count }} \
           | tee /root/locust-leader.log
       async: "{{ (duration|float * 1.1 + ansible_processor_vcpus * 10)|int }}"   # maximum duration in seconds this task should be running, formulla is just a guess
       poll: 0   # with "poll: 0" we start the task and immediately moves on to the next task without waiting for a result
@@ -111,15 +109,17 @@
     - name: "Start Locust followers"
       shell: |
         source venv/bin/activate
-        locust \
-          --worker \
-          --master-host={{ groups['container_hosts'][0] }} \
-          --locustfile webui-pages.py \
-          --headless \
-          --host https://{{ target }} \
-          --stop-timeout 100 \
-          SatelliteWebUIPerfStaticAssets \
-          2>&1 | grep -v -e 'InsecureRequestWarning' -e 'warnings.warn' \
+        python webui-pages.py \
+          --test-set SatelliteWebUIPerfStaticAssets \
+          --locust-host https://{{ target }} \
+          --test-url-suffix / \
+          --test-duration {{ duration|int }} \
+          --locust-num-clients {{ concurrency|int }} \
+          --locust-hatch-rate {{ spawn_rate|int }} \
+          --locust-stop-timeout 100 \
+          --satellite-max-static-size {{ max_static_size|int }} \
+          --locust-worker-runner \
+          --locust-worker-master-host {{ groups['container_hosts'][0] }} \
           &>/root/locust-follower-{{ item }}.log
       async: "{{ (duration|float * 1.1 + 60 + 30)|int }}"   # fire and forget
       poll: 0
