@@ -16,6 +16,13 @@ import opl.gen
 import opl.locust
 import opl.skelet
 
+import requests
+
+import urllib3
+
+
+urllib3.disable_warnings()
+
 
 def _get(client, uri, pattern, headers={}):
     """
@@ -45,14 +52,29 @@ class SatelliteWebUIPerfStaticAssets(FastHttpUser):
     def on_start(self):
         """
         Load list of static assets we are going to query.
+
+        Warning: Runtime of this function is part of the test duration :-/
         """
         self.index = 0
         self.urls = []
-        with self.client.get("/users/login", verify=False, name="get_list_of_urls") as response:
+        with requests.get(f"{self.host_base}/users/login", verify=False) as response:
             find_links = re.finditer(r'<link[^>]* href="(/[^"]+)" ?[^>]*>', response.text)
             find_scripts = re.finditer(r'<script[^>]* src="(/[^"]+)" ?[^>]*>', response.text)
             for match in itertools.chain(find_links, find_scripts):
-                self.urls.append(match.group(1))
+                uri = match.group(1)
+                addit = True
+                if self.satellite_max_static_size > 0:
+                    with requests.get(f"{self.host_base}{uri}", verify=False, stream=True) as response:
+                        size = 0
+                        for chunk in response.iter_content(8196):
+                            size += len(chunk)
+                            if size > self.satellite_max_static_size:
+                                logging.debug(f"Not adding {uri} URI because its size is {size} and still streaming")
+                                addit = False
+                                break
+                if addit:
+                    logging.debug(f"Adding {uri} URI")
+                    self.urls.append(uri)
         logging.info(f"Loaded {len(self.urls)} URLs")
 
     @task
@@ -178,6 +200,7 @@ def doit(args, status_data):
     test_set.satellite_org_id = args.satellite_org_id
     test_set.satellite_username = args.satellite_username
     test_set.satellite_password = args.satellite_password
+    test_set.satellite_max_static_size = args.satellite_max_static_size
 
     # Add parameters to status data file
     status_data.set('name', f'Satellite UI perf test, concurrency { args.num_clients }, duration { args.test_duration }')
@@ -185,6 +208,7 @@ def doit(args, status_data):
     status_data.set('parameters.test.satellite_version', args.satellite_version)
     status_data.set('parameters.test.satellite_org_id', args.satellite_org_id)
     status_data.set('parameters.test.satellite_username', args.satellite_username)
+    status_data.set('parameters.test.satellite_max_static_size', args.satellite_max_static_size)
 
     return opl.locust.run_locust(args, status_data, test_set, new_stats=True, summary_only=True)
 
@@ -201,7 +225,7 @@ def main():
     parser.add_argument(
         '--test-set',
         default='SatelliteWebUIPerf',
-        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth'],
+        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth', 'SatelliteWebUIPerfStaticAssets'],
         help='What test set to use?',
     )
     parser.add_argument(
@@ -224,6 +248,12 @@ def main():
         '--satellite-password',
         default='password',
         help='Satellite password',
+    )
+    parser.add_argument(
+        '--satellite-max-static-size',
+        default=0,
+        type=int,
+        help='For SatelliteWebUIPerfStaticAssets, this is max size of the asset when running the test. Use 0 for no limit',
     )
     opl.args.add_locust_opts(parser)
     with opl.skelet.test_setup(parser) as (args, status_data):
