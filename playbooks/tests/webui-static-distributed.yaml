@@ -2,7 +2,7 @@
 - hosts: container_hosts
   gather_facts: no
   vars:
-    target: perf94-vm1.satcpt.ddns.perf.redhat.com
+    target: "{{ groups['satellite6'][0] }}"
     concurrency: 10
     spawn_rate: 10
     duration: 10   # duration needs to be in sec (we need it to be integer, not things like '10s' or '5m')
