@@ -215,12 +215,14 @@
             CLIENT_IP_LIST+="$client_ip,"
           done
 
+          echo >> "{{ clients_yaml_cmd_retries_log }}"
+
           ansible-playbook \
            --private-key /root/id_rsa_key \
            --inventory $CLIENT_IP_LIST \
            --forks "{{ num_retry_forks }}" \
            clients_host-registration.yaml \
-           &> "{{ clients_yaml_cmd_retries_log }}"
+           &>> "{{ clients_yaml_cmd_retries_log }}"
         fi
       register: clients_yaml_cmd_retries
       ignore_errors: true
