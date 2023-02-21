@@ -56,7 +56,7 @@
 
 # Check SELinux
 - name: "SELinux is in {{ system_selinux_state }} with {{ system_selinux_policy }} policy"
-  selinux:
+  ansible.posix.selinux:
     policy: "{{ system_selinux_policy }}"
     state: "{{ system_selinux_state }}"
 
