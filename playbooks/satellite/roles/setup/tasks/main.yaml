@@ -47,7 +47,7 @@
     - hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights|bool == False
 - name: "Configure MQTT transport for remote execution on Satellite >=6.12"
   set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode=pull-mqtt"
+    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
   when:
     - sat_version is version('6.12', '>=')
     - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
