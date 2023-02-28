@@ -2,6 +2,15 @@
 - hosts: satellite6
   remote_user: root
   tasks:
+    - name: Define base directory for backup
+      ansible.builtin.set_fact:
+        base_backup_dir: "{{ base_backup_dir | default('/var/lib/pulp') }}"
+
+    - name: Define backup directories
+      ansible.builtin.set_fact:
+        backup_offline_dir: "{{ base_backup_dir }}/backup-offline"
+        backup_online_dir: "{{ base_backup_dir }}/backup-online"
+
     - name: Create a dir for each kind of backup & give full permissions to postgres user
       ansible.builtin.file:
         path: "{{ item }}"
@@ -9,12 +18,12 @@
         mode: 0775
         owner: postgres
       loop:
-        - /backup-offline
-        - /backup-online
+        - "{{ backup_offline_dir }}"
+        - "{{ backup_online_dir }}"
 
     - name: Execute the Satellite offline backup
       ansible.builtin.command:
-        cmd: satellite-maintain backup offline -y /backup-offline
+        cmd: satellite-maintain backup offline -y {{ backup_offline_dir }}
       environment:
         TZ: UTC
       register: backup_offline_cmd
@@ -26,7 +35,7 @@
 
     - name: Run the offline backup restoration script
       ansible.builtin.shell:
-        cmd: satellite-maintain restore -y /backup-offline/$( ls /backup-offline/ | sort -r | head -n 1 )
+        cmd: satellite-maintain restore -y {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )
       environment:
         TZ: UTC
         LANG: en_US.utf-8
@@ -39,12 +48,12 @@
 
     - name: Cleanup the offline backup directory
       ansible.builtin.file:
-        path: /backup-offline
+        path: "{{ backup_offline_dir }}"
         state: absent
 
     - name: Execute the Satellite online backup
       ansible.builtin.command:
-        cmd: satellite-maintain backup online -y /backup-online
+        cmd: satellite-maintain backup online -y {{ backup_online_dir }}
       environment:
         TZ: UTC
       register: backup_online_cmd
@@ -56,7 +65,7 @@
 
     - name: Run the online backup restoration script
       ansible.builtin.shell:
-        cmd: satellite-maintain restore -y /backup-online/$( ls /backup-online/ | sort -r | head -n 1 )
+        cmd: satellite-maintain restore -y {{ backup_online_dir }}/$( ls {{ backup_online_dir }} | sort -r | head -n 1 )
       environment:
         TZ: UTC
         LANG: en_US.utf-8
@@ -69,6 +78,6 @@
 
     - name: Cleanup the online backup directory
       ansible.builtin.file:
-        path: /backup-online
+        path: "{{ backup_online_dir }}"
         state: absent
 ...
