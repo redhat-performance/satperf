@@ -199,8 +199,6 @@
 
     - name: "Try to re-register failed hosts (if needed)"
       ansible.builtin.shell: |
-        set -e
-
         cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
 
         while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
