@@ -203,27 +203,30 @@
 
         cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
 
-        if (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); then
+        while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
+          num_fails=$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }})
+          iter_clients_yaml_cmd_retries_log={{ clients_yaml_cmd_retries_log }}.${num_fails}
+
+          cp -p {{ clients_yaml_cmd_retries_log }} $iter_clients_yaml_cmd_retries_log
+
           unset CLIENT_IP_LIST
 
-          for client_ip in $(awk '/^fatal: / {print $2}' {{ clients_yaml_cmd_retries_log }} | cut -d'[' -f2 | cut -d']' -f1); do
+          for client_ip in $(awk '/^fatal: / {print $2}' $iter_clients_yaml_cmd_retries_log | cut -d'[' -f2 | cut -d']' -f1); do
             CLIENT_IP_LIST+="$client_ip,"
           done
 
-          for client_ip in $(grep -e ^'ok:' -e ^'        "Traceback ' -e ^'        "curl: ' {{ clients_yaml_cmd_retries_log }} |
+          for client_ip in $(grep -e ^'ok:' -e ^'        "Traceback ' -e ^'        "curl: ' $iter_clients_yaml_cmd_retries_log |
            uniq | grep -B1 -e '        "Traceback ' -e '        "curl: ' | awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
             CLIENT_IP_LIST+="$client_ip,"
           done
-
-          echo >> "{{ clients_yaml_cmd_retries_log }}"
 
           ansible-playbook \
            --private-key /root/id_rsa_key \
            --inventory $CLIENT_IP_LIST \
            --forks "{{ num_retry_forks }}" \
            clients_host-registration.yaml \
-           &>> "{{ clients_yaml_cmd_retries_log }}"
-        fi
+           &> "{{ clients_yaml_cmd_retries_log }}"
+        done
       register: clients_yaml_cmd_retries
       ignore_errors: true
       when:
