@@ -201,8 +201,8 @@
       ansible.builtin.shell: |
         cp -p "{{ clients_yaml_cmd_log }}" "{{ clients_yaml_cmd_retries_log }}"
 
-        while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
-          num_fails=$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' {{ clients_yaml_cmd_retries_log }})
+        while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
+          num_fails=$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_retries_log }})
           iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
 
           cp -p "{{ clients_yaml_cmd_retries_log }}" $iter_clients_yaml_cmd_retries_log
@@ -213,8 +213,8 @@
             CLIENT_IP_LIST+="$client_ip,"
           done
 
-          for client_ip in $(grep -e ^'ok:' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' $iter_clients_yaml_cmd_retries_log |
-           uniq | grep -B1 -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' |
+          for client_ip in $(grep -e ^'ok:' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' $iter_clients_yaml_cmd_retries_log |
+           uniq | grep -B1 -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' |
            awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
             CLIENT_IP_LIST+="$client_ip,"
           done
