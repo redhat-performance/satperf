@@ -181,8 +181,8 @@
         create: yes
 
     - name: "Get number of hosts that failed to register"
-      ansible.builtin.command:
-        cmd: "grep -c '^fatal: ' {{ clients_yaml_cmd_log }}"
+      ansible.builtin.shell: |
+        grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_log }}
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
 
