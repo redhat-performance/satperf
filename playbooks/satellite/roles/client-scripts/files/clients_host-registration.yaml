@@ -15,7 +15,7 @@
 
     - name: Register
       ansible.builtin.shell: |
-        /root/clients_host-registration.sh &>>/root/registration.log
+        /root/clients_host-registration.sh &>/root/registration.log
         ret=$?
         echo "-" >>/root/registration.log
         echo "Return code: $ret" >>/root/registration.log
