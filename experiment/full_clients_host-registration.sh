@@ -89,6 +89,7 @@ tmp=$( mktemp )
 
 h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
 for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v -e '1' ); do
+    skip_measurement='true' h 13-capsule-add-library-lce-$capsule_id.log "capsule content add-lifecycle-environment  --organization '$organization' --id '$capsule_id' --lifecycle-environment 'Library'"
     h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '$organization' --id '$capsule_id'"
 done
 s $wait_interval
