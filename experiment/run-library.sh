@@ -95,7 +95,7 @@ function generic_environment_check() {
     if $extended; then
         ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
         if [ "$ansible_container_hosts" -gt 0 ]; then
-            skip_measurement='true' ap 00-recreate-containers.log -e @$local_conf ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
+            skip_measurement='true' ap 00-recreate-containers.log ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
         fi
         skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi
