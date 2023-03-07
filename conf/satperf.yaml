@@ -65,7 +65,6 @@ capsule_storage_pools: []
 # Containers setup
 containers_host_registration_options: {}
 containers_host_additional_repos: []
-containers_domain: satcpt.lan
 containers_image: rhel8-ubi-init-big_outdated
 
 # Satellite setup
@@ -84,7 +83,6 @@ satellite_additional_repos: []
 # Capsules setup
 capsule_registration_options: {}
 capsule_additional_repos: []
-capsule_domain: satcpt.lan
 
 # VMs provisioning
 vms_vg: default
