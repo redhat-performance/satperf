@@ -80,12 +80,12 @@ s $wait_interval
 section "Prepare for registrations"
 ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
 
-h_out "--no-headers --csv domain list --search 'name = {{ containers_domain }}'" | grep --quiet '^[0-9]\+,' \
-    || h regs-40-domain-create.log "domain create --name '{{ containers_domain }}' --organizations '$organization'"
+h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
+    || h regs-40-domain-create.log "domain create --name '{{ domain }}' --organizations '$organization'"
 tmp=$( mktemp )
 h_out "--no-headers --csv location list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
-h regs-40-domain-update.log "domain update --name '{{ containers_domain }}' --organizations '$organization' --location-ids '$location_ids'"
+h regs-40-domain-update.log "domain update --name '{{ domain }}' --organizations '$organization' --location-ids '$location_ids'"
 
 h regs-40-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
 h_out "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
@@ -111,7 +111,7 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
         location_name="Location for $capsule_name"
     fi
     h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-        || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ containers_domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+        || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
     subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
     a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
