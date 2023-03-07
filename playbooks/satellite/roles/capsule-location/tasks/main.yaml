@@ -3,7 +3,7 @@
 # Client domain is added to the location
 - name: "Get id of a domain"
   uri:
-    url: "https://{{ groups['satellite6']|first }}/api/domains/{{ capsule_domain }}"
+    url: "https://{{ groups['satellite6']|first }}/api/domains/{{ domain }}"
     method: GET
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
