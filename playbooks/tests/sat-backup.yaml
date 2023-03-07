@@ -4,7 +4,7 @@
   tasks:
     - name: Define base directory for backup
       ansible.builtin.set_fact:
-        base_backup_dir: "{{ base_backup_dir | default('/var/lib/pulp') }}"
+        base_backup_dir: "{{ base_backup_dir | default('/export') }}"
 
     - name: Define backup directories
       ansible.builtin.set_fact:
