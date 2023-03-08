@@ -10,6 +10,12 @@
     name: "satellite-capsule"
     state: present
 
+- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
+  include_role:
+    name: apply_custom-hiera
+  when:
+    - custom_hiera_content is defined and custom_hiera_content | length > 0
+
 # Prepare for capsule installation
 - name: "Run capsule-certs-generate"
   shell:

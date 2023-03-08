@@ -31,9 +31,6 @@
     - role: repo_setup
       vars:
         additional_repos: "{{ capsule_additional_repos }}"
-    - role: apply_custom-hiera
-      when:
-        - custom_hiera_content is defined and custom_hiera_content | length > 0
     - role: capsule
     - role: capsule-location
     - role: puppet-autosign
