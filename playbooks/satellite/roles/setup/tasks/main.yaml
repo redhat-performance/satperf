@@ -22,6 +22,12 @@
     that:
       - not yum_install_satellite_cmd.failed
 
+- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
+  include_role:
+    name: apply_custom-hiera
+  when:
+    - custom_hiera_content is defined and custom_hiera_content | length > 0
+
 # Figure out installer options
 - name: "Ensure sat_version is string to avoid hard to detect issues"
   assert:
