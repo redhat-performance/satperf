@@ -7,7 +7,7 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
-concurrent_registrations=${PARAM_concurrent_registrations:-125}
+expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-125}
 
 wait_interval=${PARAM_wait_interval:-30}
 
@@ -156,8 +156,9 @@ section "Register"
 number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
 total_number_containers=$(( number_container_hosts * number_containers_per_container_host ))
-registration_iterations=$(( ( total_number_containers + concurrent_registrations - 1 ) / concurrent_registrations )) # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
-concurrent_registrations_per_container_host=$(( concurrent_registrations / number_container_hosts ))
+concurrent_registrations_per_container_host=$(( expected_concurrent_registrations / number_container_hosts ))
+real_concurrent_registrations=$(( concurrent_registrations_per_container_host * number_container_hosts ))
+registration_iterations=$(( ( total_number_containers + real_concurrent_registrations - 1 ) / real_concurrent_registrations )) # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
 
 log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $(( registration_iterations + 1 )) batches."
 
