@@ -499,7 +499,13 @@ function j() {
     [ -z "$satellite_host" ] && return 2
     local satellite_creds="$( ansible $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
     [ -z "$satellite_creds" ] && return 2
-    local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id | python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
+    local task_id=$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
+
+    until [[ "$( curl --silent --insecure -u "$satellite_creds" -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://$satellite_host/api/v2/job_invocations/$job_invocation_id |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["status_label"])' )" != 'running' ]]; do
+        s $(( 3 * wait_interval ))
+    done
 
     task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
 }
