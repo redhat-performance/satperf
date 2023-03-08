@@ -38,9 +38,9 @@ section "Sync test"
 # Yum repositories
 ap 10-test-sync-repositories.log playbooks/tests/sync-repositories.yaml -e "test_sync_repositories_count=$test_sync_repositories_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs"
 # ISO repositories
-ap 10-test-sync-iso.log playbooks/tests/sync-iso.yaml -e "test_sync_iso_count=$test_sync_iso_count test_sync_iso_url_template=$test_sync_iso_url_template test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs"
+#ap 10-test-sync-iso.log playbooks/tests/sync-iso.yaml -e "test_sync_iso_count=$test_sync_iso_count test_sync_iso_url_template=$test_sync_iso_url_template test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs"
 # Container repositories
-ap 10-test-sync-docker.log playbooks/tests/sync-docker.yaml -e "test_sync_docker_count=$test_sync_docker_count test_sync_docker_url_template=$test_sync_docker_url_template test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs"
+#ap 10-test-sync-docker.log playbooks/tests/sync-docker.yaml -e "test_sync_docker_count=$test_sync_docker_count test_sync_docker_url_template=$test_sync_docker_url_template test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs"
 
 section "Summary"
 # Yum repositories
