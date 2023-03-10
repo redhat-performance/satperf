@@ -97,14 +97,27 @@ def print_result(output_format, data):
 
 def investigate_task(args):
     time_before = time.time()
+    parent_task = get_json(
+        args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
+        args.username, args.password)
+    finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+    timeout_counter = 0
+    timeout_minutes = 10
     while True:
-        parent_task = get_json(
-            args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
-            args.username, args.password)
         if parent_task["pending"]:
-            if time.time() - time_before > args.timeout:
+            time.sleep(60)
+            parent_task = get_json(
+                args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
+                args.username, args.password)
+            finished_count_current = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+            if finished_count_current == finished_count_before:
+                timeout_counter += 1
+            else:
+                finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+                timeout_counter = 0
+
+            if timeout_counter == timeout_minutes:
                 raise Exception(f"Ran out of time waiting for task {args.task_id} to finish")
-            time.sleep(10)
         else:
             break
 
