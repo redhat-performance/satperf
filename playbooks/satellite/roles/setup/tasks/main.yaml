@@ -97,9 +97,4 @@
   when:
     - sat_version is version('6.12', '>=')
     - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
-
-- name: "Install the katello-client-bootstrap package"
-  yum:
-    name: katello-client-bootstrap
-    state: present
 ...
