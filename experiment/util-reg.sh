@@ -116,9 +116,10 @@ skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/cl
 section "Util: Register"
 for i in $( seq $registrations_iterations ); do
     ap 50-register-$i.log playbooks/tests/registrations.yaml \
-        -e "size=$registrations_per_container_hosts" \
-        -e "registration_logs='../../$logs/50-register-container-host-client-logs'" \
-        -e "config_server_server_timeout=$registrations_config_server_server_timeout"
+      -e "size=$registrations_per_container_hosts" \
+      -e "registration_logs='../../$logs/50-register-container-host-client-logs'" \
+      -e 're_register_failed_hosts=true' \
+      -e "config_server_server_timeout=$registrations_config_server_server_timeout"
     e Register $logs/50-register-$i.log
     s $wait_interval
 done

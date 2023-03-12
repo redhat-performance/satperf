@@ -253,6 +253,7 @@ for i in $( seq $registration_iterations ); do
     skip_measurement='true' ap 44b-register-$i.log playbooks/tests/registrations.yaml \
       -e "size=$concurrent_registrations_per_container_host" \
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
+      -e 're_register_failed_hosts=true' \
       -e "method=clients_host-registration"
     s $wait_interval
 done
