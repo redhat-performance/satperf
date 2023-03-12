@@ -96,7 +96,6 @@ def print_result(output_format, data):
 
 
 def investigate_task(args):
-    time_before = time.time()
     parent_task = get_json(
         args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
         args.username, args.password)
