@@ -102,7 +102,6 @@ def investigate_task(args):
         args.username, args.password)
     finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
     timeout_counter = 0
-    timeout_minutes = 10
     while True:
         if parent_task["pending"]:
             time.sleep(60)
@@ -116,7 +115,7 @@ def investigate_task(args):
                 finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
                 timeout_counter = 0
 
-            if timeout_counter == timeout_minutes:
+            if timeout_counter == args.timeout:
                 raise Exception(f"Ran out of time waiting for task {args.task_id} to finish")
         else:
             break
@@ -201,8 +200,8 @@ def doit():
                         help='Satellite hostname')
     parser.add_argument('--task-id', required=True,
                         help='Task ID you want to investigate')
-    parser.add_argument('--timeout', type=int, default=1000,
-                        help='How long to wait for the parent task to finish (in seconds)')
+    parser.add_argument('--timeout', type=int, default=10,
+                        help='How long to wait for the parent task to show progress (in minutes). The progress will be measured against the sum of the failed an successful sub-tasks')
     parser.add_argument('--percentage', type=float, default=3,
                         help='How many %% of earliest and latest starts and ends to drop')
     parser.add_argument('-o', '--output', default='plain',
