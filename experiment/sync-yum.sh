@@ -26,15 +26,24 @@ opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 section "Checking environment"
 generic_environment_check false
 
+
 section "Sync test"
-ap 10-test-sync-repositories.log playbooks/tests/sync-repositories.yaml -e "test_sync_repositories_count=$test_sync_repositories_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs"
+ap 10-test-sync-repositories.log \
+  -e "test_sync_repositories_count=$test_sync_repositories_count" \
+  -e "test_sync_repositories_url_template=$test_sync_repositories_url_template" \
+  -e "test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs" \
+  playbooks/tests/sync-repositories.yaml
+
 
 section "Summary"
 e SyncRepositories $logs/10-test-sync-repositories.log
 e PublishContentViews $logs/10-test-sync-repositories.log
 e PromoteContentViews $logs/10-test-sync-repositories.log
 
+
 section "Sosreport"
-skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+skip_measurement='true' ap sosreporter-gatherer.log \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
 
 junit_upload

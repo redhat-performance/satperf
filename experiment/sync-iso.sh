@@ -22,18 +22,28 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
+
 section "Checking environment"
 generic_environment_check false
 
+
 section "Sync file repo"
-ap 10-test-sync-iso.log playbooks/tests/sync-iso.yaml -e "test_sync_iso_count=$test_sync_iso_count test_sync_iso_url_template=$test_sync_iso_url_template test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs"
+ap 10-test-sync-iso.log \
+  -e "test_sync_iso_count=$test_sync_iso_count" \
+  -e "test_sync_iso_url_template=$test_sync_iso_url_template" \
+  -e "test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs" \
+  playbooks/tests/sync-iso.yaml
+
 
 section "Summary"
 e SyncRepositories $logs/10-test-sync-iso.log
 e PublishContentViews $logs/10-test-sync-iso.log
 e PromoteContentViews $logs/10-test-sync-iso.log
 
+
 section "Sosreport"
-skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+skip_measurement='true' ap sosreporter-gatherer.log \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
 
 junit_upload

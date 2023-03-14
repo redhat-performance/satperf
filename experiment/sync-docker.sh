@@ -22,18 +22,28 @@ dl="Default Location"
 opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
+
 section "Checking environment"
 generic_environment_check false
 
+
 section "Sync docker repo"
-ap 10-test-sync-docker.log playbooks/tests/sync-docker.yaml -e "test_sync_docker_count=$test_sync_docker_count test_sync_docker_url_template=$test_sync_docker_url_template test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs"
+ap 10-test-sync-docker.log \
+  -e "test_sync_docker_count=$test_sync_docker_count" \
+  -e "test_sync_docker_url_template=$test_sync_docker_url_template" \
+  -e "test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs" \
+  playbooks/tests/sync-docker.yaml
+
 
 section "Summary"
 e SyncRepositories $logs/10-test-sync-docker.log
 e PublishContentViews $logs/10-test-sync-docker.log
 e PromoteContentViews $logs/10-test-sync-docker.log
 
+
 section "Sosreport"
-skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+skip_measurement='true' ap \
+   -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
 
 junit_upload
