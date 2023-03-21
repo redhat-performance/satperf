@@ -24,7 +24,7 @@
     test_sync_docker_le: "test_sync_docker_le"
     test_sync_docker_repo_template: "test_sync_docker_repo*"
     test_sync_docker_cv_template: "test_sync_docker_cv*"
-    test_sync_docker_upstream_template: "test_repo*"   # FIXME - no asterix here means all repos with same upstream repo
+    test_sync_docker_upstream_template: "test_repo*"   # FIXME - no asterisk here means all repos with same upstream repo
     test_sync_docker_max_sync_secs: 3600
   roles:
     - wait-for-task-script
@@ -37,7 +37,7 @@
       changed_when: "create_product.rc == 0 and 'Product created' in create_product.stdout"
     - name: "Create repos"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_docker_product }}" --content-type docker --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --url "{{ test_sync_docker_url_template|replace('*', item) }}"  --docker-upstream-name "{{ test_sync_docker_upstream_template|replace('*',item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_docker_product }}" --content-type docker --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --url "{{ test_sync_docker_url_template|replace('*', item) }}" --docker-upstream-name "{{ test_sync_docker_upstream_template|replace('*',item) }}"
       register: create_repo
       loop: "{{ range(1, test_sync_docker_count|int+1)|list }}"
     - name: "Start sync asynchronously"
