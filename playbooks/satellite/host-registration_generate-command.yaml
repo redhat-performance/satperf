@@ -34,7 +34,6 @@
     - name: Copy the output of the the host registration command to the Apache pub directory
       ansible.builtin.copy:
         content: "{{ cmd.stdout }}"
-        dest: "/var/www/html/pub/host-registration_{{ inventory_hostname }}.sh"
-      delegate_to: "{{ groups['satellite6'] | first }}"
+        dest: /var/www/html/pub/host-registration.sh
       when: "cmd.rc == 0"
 ...
