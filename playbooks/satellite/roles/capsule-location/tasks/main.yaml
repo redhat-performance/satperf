@@ -26,11 +26,11 @@
     validate_certs: no
   register: environment_info
   run_once: true
-  when: "sat_version is version('6.11', '<')"
+  when: "sat_version != 'Stream' and sat_version is version('6.11', '<')"
 - name: "Determine environment ID"
   set_fact:
     environment_id: "{{ environment_info.json.id }}"
-  when: "sat_version is version('6.11', '<')"
+  when: "sat_version != 'Stream' and sat_version is version('6.11', '<')"
 
 - name: "Get list of locations"
   uri:
@@ -56,12 +56,12 @@
 - name: "Compose location creation request body for Sat <6.11"
   set_fact:
     location_body: "{{ {'location': {'name': location, 'domain_ids': [domain_id], 'environment_ids': [environment_id]}} }}"
-  when: "sat_version is version('6.11', '<')"
+  when: "sat_version != 'Stream' and sat_version is version('6.11', '<')"
 
 - name: "Compose location creation request body for Sat >=6.11"
   set_fact:
     location_body: "{{ {'location': {'name': location, 'domain_ids': [domain_id]}} }}"
-  when: "sat_version is version('6.11', '>=')"
+  when: "sat_version == 'Stream' or sat_version is version('6.11', '>=')"
 
 - name: "Create location for our capsule if it is not already there"
   # XXX: Submit PR

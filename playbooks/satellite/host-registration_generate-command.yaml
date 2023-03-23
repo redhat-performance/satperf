@@ -22,7 +22,7 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-remote-execution-pull true"
       when: 
-        - sat_version is version('6.12', '>=')
+        - sat_version == 'Stream' or sat_version is version('6.12', '>=')
         - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
 
     - name: "Generate the host registration command"
