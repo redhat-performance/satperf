@@ -13,7 +13,7 @@ function doit() {
     {
         podman build -f populate_docker_registry-Containerfile . --tag $tag --no-cache --rm=true
         rc_build=$?
-        podman push $tag
+        podman push $tag --tls-verify=false
         rc_push=$?
         podman rmi $tag
         rc_rmi=$?
