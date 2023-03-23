@@ -11,11 +11,11 @@ function doit() {
     log="$( echo "$tag" | sed 's/[^a-zA-Z0-9-]/_/g' ).log"
     echo "DEBUG: Started build of $tag with log in $log"
     {
-        docker build -f populate_docker_registry-Containerfile . --tag $tag --no-cache --rm=true
+        podman build -f populate_docker_registry-Containerfile . --tag $tag --no-cache --rm=true
         rc_build=$?
-        docker push $tag
+        podman push $tag
         rc_push=$?
-        docker rmi $tag
+        podman rmi $tag
         rc_rmi=$?
     } >$log
     echo "$( date -Ins ) $tag $rc_build $rc_push $rc_build" >>aaa.log
