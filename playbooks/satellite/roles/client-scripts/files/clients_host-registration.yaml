@@ -34,4 +34,8 @@
       ansible.builtin.debug:
         msg: "Register {{ reg.start }} to {{ reg.end }}"
       when: "reg.rc == 0"
+
+    - name: "Disable insights-client automatic scheduling"
+      ansible.builtin.command:
+        cmd: insights-client --disable-schedule
 ...
