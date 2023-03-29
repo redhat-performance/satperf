@@ -24,6 +24,8 @@ repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellit
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
+initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-25}"
+
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
 test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
 test_sync_repositories_max_sync_secs="${PARAM_test_sync_repositories_max_sync_secs:-600}"
@@ -267,12 +269,31 @@ ap 44-recreate-client-scripts.log \
 unset skip_measurement
 
 
-section "Register"
-for i in $( seq $registrations_iterations ); do
-    skip_measurement='true' ap 44-register-$i.log \
-      -e "size=$registrations_per_docker_hosts" \
+section "Incremental registrations"
+number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
+if (( initial_expected_concurrent_registrations > number_container_hosts )); then
+    initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
+else
+    initial_concurrent_registrations_per_container_host=1
+fi
+
+for (( batch=1, remaining_containers_per_container_host=$number_containers_per_container_host; remaining_containers_per_container_host > 0; batch++ )); do
+    if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
+        concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
+    else
+        concurrent_registrations_per_container_host="$(( remaining_containers_per_container_host ))"
+    fi
+    concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
+    (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
+
+    log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
+
+    skip_measurement='true' ap 44-register-$concurrent_registrations.log \
+      -e "size=$concurrent_registrations_per_container_host" \
       -e "registration_logs='../../$logs/44-register-docker-host-client-logs'" \
       playbooks/tests/registrations.yaml
+      e Register $logs/44-register-$concurrent_registrations.log
     s $wait_interval
 done
 grep Register $logs/44-register-*.log >$logs/44-register-overall.log
