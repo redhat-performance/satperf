@@ -26,6 +26,16 @@ repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellit
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
+test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
+test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
+test_sync_repositories_max_sync_secs="${PARAM_test_sync_repositories_max_sync_secs:-600}"
+test_sync_iso_count="${PARAM_test_sync_iso_count:-8}"
+test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
+test_sync_iso_max_sync_secs="${PARAM_test_sync_iso_max_sync_secs:-600}"
+test_sync_docker_count="${PARAM_test_sync_docker_count:-8}"
+test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://registry-1.docker.io}"
+test_sync_docker_max_sync_secs="${PARAM_test_sync_docker_max_sync_secs:-600}"
+
 ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
 ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 
@@ -292,6 +302,42 @@ s $wait_interval
 skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/58-rex-uploadprofile.log
 s $wait_interval
+
+
+section "Sync yum repo"
+ap 80-test-sync-repositories.log \
+  -e "test_sync_repositories_count=$test_sync_repositories_count" \
+  -e "test_sync_repositories_url_template=$test_sync_repositories_url_template" \
+  -e "test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs" \
+  playbooks/tests/sync-repositories.yaml
+
+e SyncRepositories $logs/80-test-sync-repositories.log
+e PublishContentViews $logs/80-test-sync-repositories.log
+e PromoteContentViews $logs/80-test-sync-repositories.log
+
+
+section "Sync iso"
+ap 81-test-sync-iso.log \
+  -e "test_sync_iso_count=$test_sync_iso_count" \
+  -e "test_sync_iso_url_template=$test_sync_iso_url_template" \
+  -e "test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs" \
+  playbooks/tests/sync-iso.yaml
+
+e SyncRepositories $logs/81-test-sync-iso.log
+e PublishContentViews $logs/81-test-sync-iso.log
+e PromoteContentViews $logs/81-test-sync-iso.log
+
+
+section "Sync docker repo"
+ap 82-test-sync-docker.log \
+  -e "test_sync_docker_count=$test_sync_docker_count" \
+  -e "test_sync_docker_url_template=$test_sync_docker_url_template" \
+  -e "test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs" \
+  playbooks/tests/sync-docker.yaml
+
+e SyncRepositories $logs/82-test-sync-docker.log
+e PublishContentViews $logs/82-test-sync-docker.log
+e PromoteContentViews $logs/82-test-sync-docker.log
 
 
 section "Misc simple tests"
