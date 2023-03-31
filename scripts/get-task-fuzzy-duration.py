@@ -96,11 +96,18 @@ def print_result(output_format, data):
 
 
 def investigate_task(args):
-    parent_task = get_json(
-        args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
-        args.username, args.password)
-    finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
-    timeout_counter = 0
+    # Wait until we get some output
+    while True:
+        parent_task = get_json(
+            args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
+            args.username, args.password)
+        if parent_task['output']:
+            finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+            timeout_counter = 0
+            break
+        else:
+            time.sleep(5)
+
     while True:
         if parent_task["pending"]:
             time.sleep(60)
