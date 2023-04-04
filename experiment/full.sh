@@ -331,6 +331,31 @@ j $logs/58-rex-uploadprofile.log
 s $wait_interval
 
 
+section "Misc simple tests"
+ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
+e HammerHostList $logs/61-hammer-list.log
+s $wait_interval
+rm -f /tmp/status-data-webui-pages.json
+skip_measurement='true' ap 62-webui-pages.log \
+  -e "ui_pages_concurrency=$ui_pages_concurrency" \
+  -e "ui_pages_duration=$ui_pages_duration" \
+  playbooks/tests/webui-pages.yaml
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
+s $wait_interval
+a 63-foreman_inventory_upload-report-generate.log satellite6 \
+  -m "shell" \
+  -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
+s $wait_interval
+
+
+section "BackupTest"
+skip_measurement='true' ap 70-backup.log playbooks/tests/sat-backup.yaml
+e BackupOffline $logs/70-backup.log
+e RestoreOffline $logs/70-backup.log
+e BackupOnline $logs/70-backup.log
+e RestoreOnline $logs/70-backup.log
+
+
 section "Sync yum repo"
 ap 80-test-sync-repositories.log \
   -e "test_sync_repositories_count=$test_sync_repositories_count" \
@@ -365,31 +390,6 @@ ap 82-test-sync-docker.log \
 e SyncRepositories $logs/82-test-sync-docker.log
 e PublishContentViews $logs/82-test-sync-docker.log
 e PromoteContentViews $logs/82-test-sync-docker.log
-
-
-section "Misc simple tests"
-ap 61-hammer-list.log playbooks/tests/hammer-list.yaml
-e HammerHostList $logs/61-hammer-list.log
-s $wait_interval
-rm -f /tmp/status-data-webui-pages.json
-skip_measurement='true' ap 62-webui-pages.log \
-  -e "ui_pages_concurrency=$ui_pages_concurrency" \
-  -e "ui_pages_duration=$ui_pages_duration" \
-  playbooks/tests/webui-pages.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
-s $wait_interval
-a 63-foreman_inventory_upload-report-generate.log satellite6 \
-  -m "shell" \
-  -a "export organization_id={{ sat_orgid }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
-s $wait_interval
-
-
-section "BackupTest"
-skip_measurement='true' ap 70-backup.log playbooks/tests/sat-backup.yaml
-e BackupOffline $logs/70-backup.log
-e RestoreOffline $logs/70-backup.log
-e BackupOnline $logs/70-backup.log
-e RestoreOnline $logs/70-backup.log
 
 
 section "Sosreport"
