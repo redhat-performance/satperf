@@ -310,9 +310,10 @@ else
 fi
 
 skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
-skip_measurement='true' a 51-rex-cleanup-know_hosts.log satellite6 \
+skip_measurement='true' a 51-rex-cleanup-know_hosts.log \
   -m "shell" \
-  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
+  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
+  satellite6
 
 skip_measurement='true' h 55-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/55-rex-date.log
