@@ -13,11 +13,11 @@
         gather_subset: hardware
       when: "ansible_processor_vcpus is not defined"
 
-    - name: "Determine total numer of followers"
+    - name: "Determine total number of followers per host"
       set_fact:
         locust_per_host_followers: "{{ (ansible_processor_vcpus / 1)|int }}"   # to be able to experiment with e.g. only half of processes than CPU cores
 
-    - name: "Determine total numer of followers"
+    - name: "Determine total number of followers"
       set_fact:
         locust_followers_count: "{{ locust_followers_count|default(0)|int + hostvars[item]['locust_per_host_followers']|int }}"
         locust_leader: "{{ groups['container_hosts'][0] }}"
