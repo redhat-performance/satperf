@@ -177,6 +177,8 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
       e Register $logs/50-register-$concurrent_registrations.log
     s $wait_interval
 done
+grep Register $logs/50-register-*.log >$logs/50-register-overall.log
+e Register $logs/50-register-overall.log
 
 
 section "Sosreport"
