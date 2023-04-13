@@ -33,6 +33,14 @@ issues = [
         ###         No such file or directory @ rb_sysopen - /usr/share/foreman/tmp/cache/1CC/031/.permissions_check.226080.30012.98543 (HTTP error code 500: Internal Server Error)
         "regexp": r"No such file or directory @ rb_sysopen - /usr/share/foreman/tmp/cache/[0-9a-zA-Z]+/[0-9a-zA-Z]+/.permissions_check.[0-9.]+ \(HTTP error code 500: Internal Server Error\)",
     },
+    {
+        "name": "Remote server error. Please check the connection details, or see /var/log/rhsm/rhsm.log for more information.",
+        "regexp": r"Remote server error. Please check the connection details, or see /var/log/rhsm/rhsm.log for more information.",
+    },
+    {
+        "name": "Internal Server Error: the server was unable to finish the request.",
+        "regexp": r"Internal Server Error: the server was unable to finish the request. This may be caused by unavailability of some required service, incorrect API call or a server-side bug. There may be more information in the server's logs.",
+    },
 ]
 
 
