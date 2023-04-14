@@ -11,7 +11,7 @@
     resting: 0
     num_retry_forks: 3
     registration_logs: "registration_logs"
-    re_register_failed_hosts: "{{ re_register_failed_hosts | default(false) | bool }}"
+    re_register_failed_hosts: false
   tasks:
     - name: "Check whether we have already registered some containers"
       ansible.builtin.stat:
@@ -197,7 +197,7 @@
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - method == 'clients_host-registration'
-        - re_register_failed_hosts is defined and re_register_failed_hosts | bool == true
+        - re_register_failed_hosts | bool == true
 
     - name: "Try to re-register failed hosts (if needed)"
       ansible.builtin.shell: |
@@ -233,7 +233,7 @@
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - method == 'clients_host-registration'
-        - re_register_failed_hosts is defined and re_register_failed_hosts | bool == true
+        - re_register_failed_hosts | bool == true
 
     - name: "Give server some time to rest"
       pause:
