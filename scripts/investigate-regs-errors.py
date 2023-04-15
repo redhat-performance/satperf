@@ -21,7 +21,7 @@ issues = [
         "regexp": r"could not obtain a connection from the pool within 5.000 seconds",
     },
     {
-        "name": "Network error, unable to connect to server",
+        "name": "Network error, unable to connect to server.",
         "regexp": r"Network error, unable to connect to server. Please see /var/log/rhsm/rhsm.log for more information.",
     },
     {
@@ -40,6 +40,14 @@ issues = [
     {
         "name": "Internal Server Error: the server was unable to finish the request.",
         "regexp": r"Internal Server Error: the server was unable to finish the request. This may be caused by unavailability of some required service, incorrect API call or a server-side bug. There may be more information in the server's logs.",
+    },
+    {
+        "name": "Unable to find available subscriptions for all your installed products.",
+        "regexp": r"Unable to find available subscriptions for all your installed products.",
+    },
+    {
+        "name": "Service unavailable or restarting, try later",
+        "regexp": r"Service unavailable or restarting, try later",
     },
 ]
 
