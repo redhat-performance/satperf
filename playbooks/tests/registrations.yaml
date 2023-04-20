@@ -12,6 +12,7 @@
     num_retry_forks: 3
     registration_logs: "registration_logs"
     re_register_failed_hosts: false
+    debug_rhsm: false
   tasks:
     - name: "Check whether we have already registered some containers"
       ansible.builtin.stat:
@@ -61,6 +62,19 @@
         dest: /root/clients_host-registration.sh
         mode: '0400'
       when: "method == 'clients_host-registration'"
+
+    - name: "Try to patch `rhsm/connection.py` to add some error logging"
+      ansible.builtin.shell: |
+        ansible \
+         --private-key /root/id_rsa_key \
+         --inventory clients.ini \
+         -m ansible.builtin.shell -a 'sed -i.orig -e "/\# This really needs an exception mapper too\.\.\./i \
+        \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ log.error(\"Response content: %s\" % response[\"content\"])" \
+         /usr/lib64/python3.6/site-packages/rhsm/connection.py' \
+         all \
+           &> patch_rhsm_{{ size }}.log
+      when:
+        - debug_rhsm | bool == true
 
     - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
       shell: |
@@ -190,6 +204,20 @@
     - name: "Show number of hosts that failed to register"
       ansible.builtin.debug:
         var: num_failed_hosts.stdout_lines
+
+    - name: "Try to show errors in /var/log/rhsm/rhsm.log when log file shows rhsm related errors"
+      ansible.builtin.shell: |
+        for client_ip in $(awk '/^fatal: .* \/var\/log\/rhsm\/rhsm.log / {print $2}' "{{ clients_yaml_cmd_log }}" | cut -d'[' -f2 | cut -d']' -f1); do
+          ansible \
+           --private-key /root/id_rsa_key \
+           --inventory ${client_ip}, \
+           -m ansible.builtin.shell -a "cat /var/log/rhsm/rhsm.log" \
+           all \
+           &> rhsm_${client_ip}.log
+        done
+      when:
+        - num_failed_hosts.stdout_lines[0] | int > 0
+        - debug_rhsm | bool == true
 
     - name: "Set additional retries log name (if needed)"
       ansible.builtin.set_fact:
