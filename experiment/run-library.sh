@@ -50,9 +50,15 @@ function _vercmp() {
     vers2=( $ver2_1 $ver2_2 $ver2_3 )
     for i in 0 1 2; do
         echo "Comparing item ${vers1[$i]} vs. ${vers2[$i]}"
-        if [ "${vers1[$i]}" -gt "${vers2[$i]}" ]; then
+        if [[ "${vers1[$i]}" != 'Stream' && "${vers2[$i]}" != 'Stream' ]]; then
+            if [ "${vers1[$i]}" -gt "${vers2[$i]}" ]; then
+                return 11
+            elif [ "${vers1[$i]}" -lt "${vers2[$i]}" ]; then
+                return 12
+            fi
+        elif [[ "${vers1[$i]}" == 'Stream' && "${vers2[$i]}" != 'Stream' ]]; then
             return 11
-        elif [ "${vers1[$i]}" -lt "${vers2[$i]}" ]; then
+        elif [[ "${vers1[$i]}" != 'Stream' && "${vers2[$i]}" == 'Stream' ]]; then
             return 12
         fi
     done
