@@ -13,10 +13,10 @@
         hgrg: "{{ hgrg }} --smart-proxy {{ inventory_hostname }}"
       when: "'capsules' in group_names"
 
-    - name: "Check if Insights client should not be installed nor configured (it'll be by default)"
+    - name: "Check if Insights client should be installed and configured (it won't be by default)"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-insights false"
-      when: "hostvars[inventory_hostname].setup_insights is defined and hostvars[inventory_hostname].setup_insights|bool == False"
+      when: "hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights | bool == False"
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
