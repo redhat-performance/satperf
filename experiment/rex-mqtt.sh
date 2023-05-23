@@ -26,8 +26,11 @@ if vercmp_ge "$satellite_version" "6.12.0"; then
 else
     job_template_ssh_default='Run Command - SSH Default'
 fi
-skip_measurement='true' h 12-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager refresh yum -y install insights-client insights-client --register' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-j $logs/12-rex-date.log
+skip_measurement='true' h 12-rex-subscription.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager refresh ; yum -y install insights-client ; insights-client --register' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+j $logs/12-rex-subscription.log
+s $wait_interval
+skip_measurement='true' h 13-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+j $logs/13-rex-date.log
 s $wait_interval
 
 junit_upload
