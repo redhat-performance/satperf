@@ -471,20 +471,26 @@ function task_examine() {
 
     scripts/get-task-fuzzy-duration.py --hostname $satellite_host --task-id "$task_id" --percentage 5 --output status-data &>$log_report
     local rc=$?
-    started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
-    ended_ts="$( date -d "$( grep '^results.tasks.end=' $log_report | cut -d '"' -f 2 )" +%s )"
-    head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
-    log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
-    measurement_add \
-        "$command" \
-        "$log_report" \
-        "$rc" \
-        "$started_ts" \
-        "$ended_ts" \
-        "$katello_version" \
-        "$satellite_version" \
-        "$marker" \
-        "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
+    if (( "$rc" == 0 )); then
+        started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
+        ended_ts="$( date -d "$( grep '^results.tasks.end=' $log_report | cut -d '"' -f 2 )" +%s )"
+        head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
+        log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
+        measurement_add \
+            "$command" \
+            "$log_report" \
+            "$rc" \
+            "$started_ts" \
+            "$ended_ts" \
+            "$katello_version" \
+            "$satellite_version" \
+            "$marker" \
+            "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
+            return 0
+    else
+        log "There were errors examining the task $task_id. Please check $log and $log_report log files"
+    fi
+    return 1
 }
 
 function t() {
