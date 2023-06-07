@@ -57,6 +57,12 @@
   when:
     - sat_version == 'Stream' or sat_version is version('6.12', '>=')
     - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+- name: "Configure Redis as Foreman cache on Satellite >=6.14"
+  set_fact:
+    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-rails-cache-store type:redis"
+  when:
+    - sat_version == 'Stream' or sat_version is version('6.14', '>=')
+    - hostvars[inventory_hostname].configure_redis_cache is defined and hostvars[inventory_hostname].configure_redis_cache|bool == True
 
 - name: "Show Installer command line"
   debug:
