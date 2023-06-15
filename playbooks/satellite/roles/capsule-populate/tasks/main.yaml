@@ -32,8 +32,8 @@
   throttle: 1
   ansible.builtin.shell: |
     for LCE in $(echo "{{ lces }}" | tr ',' ' '); do
-      if ! hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule content lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
-        if hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule content available-lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+      if ! hammer --no-headers --csv -u {{ sat_user }} -p {{ sat_pass }} capsule content lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+        if hammer --no-headers --csv -u {{ sat_user }} -p {{ sat_pass }} capsule content available-lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
           hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment "$LCE"
         fi
       fi
