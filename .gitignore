@@ -24,3 +24,5 @@ yacctab.py
 __pycache__
 venv/
 env/
+
+.vscode/
