@@ -1,6 +1,7 @@
 ---
 - hosts: satellite6 capsules container_hosts
   remote_user: root
+  gather_facts: False
   vars_files:
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
