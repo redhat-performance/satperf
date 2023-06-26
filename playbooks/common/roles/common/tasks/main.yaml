@@ -28,12 +28,23 @@
     line: "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
     state: present
 
-- name: "Build own entry in hosts file"
+- name: "Build own entry in hosts file (using public network IPs)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: ".*{{ inventory_hostname }}$"
     line: "{{ public_ip }} {{ inventory_hostname }}"
     state: present
+  when: "public_ip is defined"
+
+- name: "Build own entry in hosts file (using privaate network IPs)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ inventory_hostname }}$"
+    line: "{{ private_ip }} {{ inventory_hostname }}"
+    state: present
+  when:
+    - public_ip is not defined
+    - private_ip is defined
 
 - name: "Build Satellite hosts file (using public network IPs) - Capsules entries"
   ansible.builtin.lineinfile:
