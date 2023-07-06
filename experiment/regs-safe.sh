@@ -8,6 +8,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-125}
+initial_batch=${PARAM_initial_batch:-1}
 
 wait_interval=${PARAM_wait_interval:-30}
 
@@ -162,7 +163,7 @@ registration_iterations=$(( ( total_number_containers + real_concurrent_registra
 
 log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $(( registration_iterations + 1 )) batches."
 
-for (( i=1; i <= ( registration_iterations + 1 ); i++ )); do
+for (( i=initial_batch; i <= ( registration_iterations + 1 ); i++ )); do
     skip_measurement='true' ap 44b-register-$i.log \
       -e "size='${concurrent_registrations_per_container_host}'" \
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
