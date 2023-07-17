@@ -27,7 +27,7 @@
   delegate_to: "{{ groups['satellite6'] | first }}"
   when: "download_policy is defined and download_policy == 'immediate'"
 
-- name: "Assign lifecycle environments"
+- name: "Assign lifecycle environments: '{{ lces }}'"
   # XXX: Submit PR
   throttle: 1
   ansible.builtin.shell: |
