@@ -31,8 +31,8 @@ opts="--forks 100 -i $inventory --private-key $private_key"
 opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
-section "Checking environment"
-generic_environment_check false
+#section "Checking environment"
+#generic_environment_check false
 
 section "Sync test"
 # Yum repositories
