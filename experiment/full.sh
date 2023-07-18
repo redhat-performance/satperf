@@ -128,15 +128,17 @@ s $wait_interval
 
 
 section "Publish and promote filtered CV"
+export skip_measurement='true'
 rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
 
-skip_measurement='true' h 30-cv-create-filtered.log "content-view create --organization '$organization' --repository-ids '$rids' --name 'BenchFilteredContentView'"
+30-cv-create-filtered.log "content-view create --organization '$organization' --repository-ids '$rids' --name 'BenchFilteredContentView'"
 
-skip_measurement='true' h 31-filter-create-1.log "content-view filter create --organization '$organization' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
-skip_measurement='true' h 31-filter-create-2.log "content-view filter create --organization '$organization' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
+h 31-filter-create-1.log "content-view filter create --organization '$organization' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
+h 31-filter-create-2.log "content-view filter create --organization '$organization' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
 
-skip_measurement='true' h 32-rule-create-1.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '$organization' --types enhancement,bugfix,security"
-skip_measurement='true' h 32-rule-create-2.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '$organization' --types security"
+h 32-rule-create-1.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '$organization' --types enhancement,bugfix,security"
+h 32-rule-create-2.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '$organization' --types security"
+unset skip_measurement
 
 h 33-cv-filtered-publish.log "content-view publish --organization '$organization' --name 'BenchFilteredContentView'"
 s $wait_interval
