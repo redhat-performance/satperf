@@ -19,8 +19,8 @@
       ansible.builtin.shell: |
         python3 -m venv /root/venv
         source /root/venv/bin/activate
-        python -m pip install -U pip
-        python -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team"
+        python3 -m pip install -U pip
+        python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team"
       args:
         creates: /root/venv
 
@@ -37,7 +37,7 @@
         rm -rf $STATUS_DATA_FILE
         export PYTHONWARNINGS="ignore:Unverified HTTPS request"
         source /root/venv/bin/activate
-        /root/webui-pages.py \
+        python3 /root/webui-pages.py \
           --satellite-username {{ sat_user }} \
           --satellite-password {{ sat_pass }} \
           --satellite-org_id {{ sat_orgid }} \
