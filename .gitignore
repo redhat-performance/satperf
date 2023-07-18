@@ -18,6 +18,8 @@ manifest.zip
 log/
 logs-*/
 
+run-*/
+
 lextab.py
 yacctab.py
 
