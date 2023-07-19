@@ -53,8 +53,8 @@
     - name: "Install python"
       package:
         name:
-          - python39
-          - python39-pip
+          - python3.11
+          - python3.11-pip
         state: present
       tags:
         - setup
