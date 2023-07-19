@@ -62,11 +62,11 @@
     - name: "Create venv"
       shell: |
         curl https://raw.githubusercontent.com/redhat-performance/satperf/main/playbooks/tests/files/webui-pages.py -o webui-pages.py
-        python3.9 -m venv venv
+        python3 -m venv venv
         source venv/bin/activate
-        python3.9 -m pip install -U pip
-        python3.9 -m pip install locust
-        python3.9 -m pip install -e 'git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team'
+        python3 -m pip install -U pip
+        python3 -m pip install locust
+        python3 -m pip install -e 'git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team'
       tags:
         - setup
 
@@ -89,7 +89,7 @@
     - name: "Start Locust leader"
       shell: |
         source venv/bin/activate
-        python webui-pages.py \
+        python3 webui-pages.py \
           --test-set SatelliteWebUIPerfStaticAssets \
           --locust-host https://{{ target }} \
           --test-url-suffix / \
@@ -109,7 +109,7 @@
     - name: "Start Locust followers"
       shell: |
         source venv/bin/activate
-        python webui-pages.py \
+        python3 webui-pages.py \
           --test-set SatelliteWebUIPerfStaticAssets \
           --locust-host https://{{ target }} \
           --test-url-suffix / \
