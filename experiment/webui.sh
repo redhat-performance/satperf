@@ -29,6 +29,11 @@ skip_measurement='true' ap 10-webui-pages.log \
   playbooks/tests/webui-pages.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/10-webui-pages.log
 
-skip_measurement='true' ap 20-webui-static-distributed.log -e "duration=300 concurrency=10 spawn_rate=10 max_static_size=1024" playbooks/tests/webui-static-distributed.yaml
+skip_measurement='true' ap 20-webui-static-distributed.log \
+  -e "duration=300" \
+  -e "concurrency=10" \
+  -e "spawn_rate=10" \
+  -e "max_static_size=1024" \
+  playbooks/tests/webui-static-distributed.yaml
 
 junit_upload
