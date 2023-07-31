@@ -45,7 +45,8 @@ h rhel8sync-20-set-cdn-stage.log "organization update --name '$organization' --r
 
 h rhel8sync-21-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
 
-h rhel8sync-22-set-download-policy-immediate.log "settings set --organization '$organization' --name default_redhat_download_policy --value immediate"
+#h rhel8sync-22-set-download-policy-immediate.log "settings set --organization '$organization' --name default_redhat_download_policy --value immediate"
+h rhel8sync-22-set-download-policy-streamed.log "settings set --organization '$organization' --name default_redhat_download_policy --value streamed"
 
 # RHEL 8
 h rhel8sync-25-reposet-enable-rhel8baseos.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
