@@ -199,6 +199,7 @@ function status_data_create() {
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
+        set -x
         status_data.py -d --status-data-file $sd_file \
             --additional "$PARAM_cluster_read_config" \
             --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
@@ -209,6 +210,7 @@ function status_data_create() {
             --grafana-interface "$PARAM_grafana_interface" \
             --grafana-token "$PARAM_grafana_token" \
             --grafana-node "$PARAM_grafana_node"
+        set +x
     fi
 
     # Based on historical data, determine result of this test
@@ -216,10 +218,12 @@ function status_data_create() {
     if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
         export sd_section
         export sd_name
+        set -x
         pass_or_fail.py \
             --config "$PARAM_investigator_config" \
             --current-file "$sd_file" 2>&1 | tee $sd_result_log \
             && pof_rc=$? || pof_rc=$?
+        set +x
         if [ "$pof_rc" -eq 0 ]; then
             sd_result='PASS'
         else
