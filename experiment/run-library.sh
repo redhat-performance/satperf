@@ -2,8 +2,7 @@
 
 set -o pipefail
 ###set -x
-# Disable `set -e` for today (see `date -d @1594369339` for timestamp interpretation)
-[ "$( date +%s )" -gt 1594369339 ] && set -e
+set -e
 
 
 # We need to add an ID to run-bench runs to be able to filter out results from multiple runs. This ID will be appended as
@@ -214,16 +213,20 @@ function status_data_create() {
     if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
         export sd_section
         export sd_name
+        set +e
         set -x
         pass_or_fail.py \
             --config "$PARAM_investigator_config" \
-            --current-file "$sd_file" 2>&1 | tee $sd_result_log \
-            && pof_rc=$? || pof_rc=$?
+            --current-file "$sd_file" 2>&1 | tee $sd_result_log
+        pof_rc=$?
         set +x
-        if [ "$pof_rc" -eq 0 ]; then
+        set -e
+        if [[ $pof_rc -eq 0 ]]; then
             sd_result='PASS'
+        elif [[ $pof_rc -eq 1 ]]; then
+            sd_result='FALSE'
         else
-            sd_result='FAIL'
+            sd_result='ERROR'
         fi
     else
         sd_result='ERROR'
