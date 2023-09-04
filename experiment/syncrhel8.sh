@@ -57,10 +57,27 @@ h rhel8sync-25-repo-sync-rhel8baseos.log "repository synchronize --organization 
 h rhel8sync-26-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'" &
 wait
 
+
+section "Sync EPEL"
+# EPEL 8
+a rhel8sync-28-download-epel-8-gpg-key.log satellite6 \
+  -m command \
+  -a "curl -O -L https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8"
+
+h rhel8sync-28-content-credentials-create-epel-8.log "content-credentials create --organization '$organization' --content-type gpg_key --name 'RPM_GPG_KEY_EPEL_8' --path ~/RPM-GPG-KEY-EPEL-8"
+
+h rhel8sync-28-product-create-epel-8.log "product create --organization '$organization' --name 'EPEL 8' --gpg-key-id 1"
+
+h rhel8sync-28-repo-create-epel-8.log "repository create --organization '$organization'  --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8' --content-type 'yum' --download-policy 'on_demand' --url 'https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64'"
+h rhel8sync-28-repo-sync-epel-8.log "repository synchronize --organization '$organization' --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8'" &
+wait
+
+
 section "Create, publish and promote CVs / LCEs"
 # RHEL 8
 rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
 rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id 'EPEL 8' 'EPEL 8 for x86_64 - Everything RPMs 8' )"
 cv='CV_RHEL8'
 lce='LCE_RHEL8'
 lces+=",$lce"
