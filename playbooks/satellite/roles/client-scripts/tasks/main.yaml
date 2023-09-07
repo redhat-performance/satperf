@@ -59,6 +59,7 @@
   when: "registration_hostgroup is defined"
 
 - name: "Distribute client scripts"
+  throttle: 8
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "/root/{{ item }}"
@@ -69,6 +70,7 @@
     - "clients-bootstrap.yaml"
 
 - name: "Distribute client scripts from templates"
+  throttle: 8
   ansible.builtin.template:
     src: "{{ item }}"
     dest: "/root/{{ item }}"
@@ -77,18 +79,21 @@
     - "clients-register.yaml.j2"
 
 - name: "Install Ansible (in RHEL <8.6)"
+  throttle: 8
   ansible.builtin.package:
     name: ansible
     state: present
   when: "ansible_distribution_version is version('8.6', '<')"
 
 - name: "Install Ansible (in RHEL >=8.6)"
+  throttle: 8
   ansible.builtin.package:
     name: ansible-core
     state: present
   when: "ansible_distribution_version is version('8.6', '>=')"
 
 - name: "Ensure we have Ansible config with default section"
+  throttle: 8
   ansible.builtin.lineinfile:
     dest: /etc/ansible/ansible.cfg
     insertafter: EOF
@@ -96,6 +101,7 @@
     state: present
 
 - name: "Ansible should not check host keys"
+  throttle: 8
   lineinfile:
     dest: /etc/ansible/ansible.cfg
     regexp: '^.*host_key_checking'
@@ -104,6 +110,7 @@
     state: present
 
 - name: "Distribute private key"
+  throttle: 8
   copy:
     src: "../../{{ client_private_key }}"
     dest: /root/id_rsa_key
