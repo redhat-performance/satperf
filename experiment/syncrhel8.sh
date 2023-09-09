@@ -49,10 +49,7 @@ h rhel8sync-26-reposet-enable-rhel8appstream.log "repository-set enable --organi
 
 h rhel8sync-25-repo-sync-rhel8baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'" &
 h rhel8sync-26-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'" &
-wait
 
-
-section "Sync EPEL"
 # EPEL 8
 a rhel8sync-28-download-epel-8-gpg-key.log satellite6 \
   -m command \
@@ -65,7 +62,6 @@ h rhel8sync-28-product-create-epel-8.log "product create --organization '$organi
 h rhel8sync-28-repo-create-epel-8.log "repository create --organization '$organization'  --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8' --content-type 'yum' --download-policy 'on_demand' --url 'https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64'"
 h rhel8sync-28-repo-sync-epel-8.log "repository synchronize --organization '$organization' --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8'" &
 wait
-
 
 section "Create, publish and promote CVs / LCEs"
 # RHEL 8
