@@ -43,6 +43,16 @@ h rhel8sync-21-manifest-refresh.log "subscription refresh-manifest --organizatio
 #h rhel8sync-22-set-download-policy-streamed.log "settings set --organization '$organization' --name default_redhat_download_policy --value streamed"
 h rhel8sync-22-set-download-policy-on_demand.log "settings set --organization '$organization' --name default_redhat_download_policy --value on_demand"
 
+# EPEL 8 download
+a rhel8sync-28-download-epel-8-gpg-key.log satellite6 \
+  -m command \
+  -a "curl -O -L https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8"
+h rhel8sync-28-content-credentials-create-epel-8.log "content-credentials create --organization '$organization' --content-type gpg_key --name 'RPM_GPG_KEY_EPEL_8' --path ~/RPM-GPG-KEY-EPEL-8"
+
+h rhel8sync-28-product-create-epel-8.log "product create --organization '$organization' --name 'EPEL 8' --gpg-key-id 1"
+
+h rhel8sync-28-repo-create-epel-8.log "repository create --organization '$organization'  --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8' --content-type 'yum' --download-policy 'on_demand' --url 'https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64'"
+
 # RHEL 8
 h rhel8sync-25-reposet-enable-rhel8baseos.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
 h rhel8sync-26-reposet-enable-rhel8appstream.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
@@ -50,18 +60,9 @@ h rhel8sync-26-reposet-enable-rhel8appstream.log "repository-set enable --organi
 h rhel8sync-25-repo-sync-rhel8baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'" &
 h rhel8sync-26-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'" &
 
-# EPEL 8
-a rhel8sync-28-download-epel-8-gpg-key.log satellite6 \
-  -m command \
-  -a "curl -O -L https://dl.fedoraproject.org/pub/epel/RPM-GPG-KEY-EPEL-8"
-
-h rhel8sync-28-content-credentials-create-epel-8.log "content-credentials create --organization '$organization' --content-type gpg_key --name 'RPM_GPG_KEY_EPEL_8' --path ~/RPM-GPG-KEY-EPEL-8"
-
-h rhel8sync-28-product-create-epel-8.log "product create --organization '$organization' --name 'EPEL 8' --gpg-key-id 1"
-
-h rhel8sync-28-repo-create-epel-8.log "repository create --organization '$organization'  --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8' --content-type 'yum' --download-policy 'on_demand' --url 'https://dl.fedoraproject.org/pub/epel/8/Everything/x86_64'"
+#epel 8
 h rhel8sync-28-repo-sync-epel-8.log "repository synchronize --organization '$organization' --product 'EPEL 8' --name 'EPEL 8 for x86_64 - Everything RPMs 8'" &
-wait
+
 
 section "Create, publish and promote CVs / LCEs"
 # RHEL 8
