@@ -120,12 +120,12 @@ def find_log_files(dirname):
     List log files in directory structure like this:
 
         workdir-exporter-jenkins-csb-perf.apps.ocp-c1.prod.psi.redhat.com/workspace/Sat_Red/run-2022-09-08T20:36:48+00:00/regs-50-register-container-host-client-logs
-        ├── f04-h23-b01-5039ms.rdu2.scalelab.redhat.com
+        ├── f04-h23-b01-5039ms.subdomain.example.com
         │   └── root
         │       ├── out-2022-09-08T22_20_16_00_00.log
         │       ├── out-2022-09-08T22_23_17_00_00.log
         │       ...
-        ├── f09-h20-b07-5039ms.rdu2.scalelab.redhat.com
+        ├── f09-h20-b07-5039ms.subdomain.example.com
         │   └── root
         │       ├── out-2022-09-08T22_20_16_00_00.log
         │       ├── out-2022-09-08T22_23_17_00_00.log
