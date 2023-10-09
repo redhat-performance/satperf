@@ -392,6 +392,10 @@ e PublishContentViews $logs/82-test-sync-docker.log
 e PromoteContentViews $logs/82-test-sync-docker.log
 
 
+section "Delete all content hosts"
+ap 99-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
+
+
 section "Sosreport"
 ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml \
   -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
