@@ -108,6 +108,12 @@
     line: '                    --enable-foreman-proxy-plugin-ansible\'
     insertafter: '.*--scenario capsule.*'
 
+- name: "Run desired shell commands before installation"
+  ansible.builtin.shell:
+    cmd: "{{ run_before_cap_installer }}"
+  when:
+    - run_before_cap_installer is defined and run_before_cap_installer | length > 0
+
 # Finally install capsule
 - name: "Run Capsule configuration"
   # XXX: Submit PR
@@ -126,6 +132,12 @@
 - name: "Print capsule installer run duration"
   debug:
     msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"
+
+- name: "Run desired shell commands after installation"
+  ansible.builtin.shell:
+    cmd: "{{ run_after_cap_installer }}"
+  when:
+    - run_after_cap_installer is defined and run_after_cap_installer | length > 0
 
 - name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
   ansible.builtin.copy:
