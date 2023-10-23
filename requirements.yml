@@ -1,12 +1,16 @@
 ---
 roles:
   - name: linux-system-roles.timesync
+    version: main
 
   - name: linux-system-roles.firewall
+    version: main
 
   - name: linux-system-roles.network
+    version: main
 
   - name: linux-system-roles.storage
+    version: main
 
   - name: rhsm_helper
     src: git+https://github.com/jhutar/ansible-role-rhsm_helper.git
