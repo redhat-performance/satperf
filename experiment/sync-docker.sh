@@ -42,7 +42,7 @@ e PromoteContentViews $logs/10-test-sync-docker.log
 
 
 section "Sosreport"
-skip_measurement='true' ap \
+skip_measurement='true' ap sosreporter-gatherer.log \
    -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
   playbooks/satellite/sosreport_gatherer.yaml
 
