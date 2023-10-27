@@ -2,6 +2,7 @@ ansible-container-host-mgr
 ansible-kvm-host-mgr
 conf/contperf*
 satellite-monitoring
+latest-junit.xml
 OLD
 
 *.pyc
