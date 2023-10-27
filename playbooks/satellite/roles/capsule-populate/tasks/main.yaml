@@ -49,13 +49,13 @@
 
 - name: "Set delay period in minutes"
   ansible.builtin.set_fact:
-    delay_minutes: 15
+    delay_minutes: 10
 
 - name: "Set number of busy-wait retries"
   ansible.builtin.set_fact:
-    num_retries: "{{ ( 60 / delay_minutes | int ) * ( num_concurrent_capsules | default(4) | int + 1 ) }}"
+    num_retries: "{{ ( 60 / delay_minutes | int ) * ( num_concurrent_capsules | default(4) | int + 7 ) }}"
 
-- name: "Wait for the content to be synchronized for up to {{ delay_minutes | int * num_retries | int }} minutes"
+- name: "Wait for the content to be synchronized for up to {{ delay_minutes | int * num_retries | int }} minutes - Checking every {{ delay_minutes }} minutes"
   # XXX: Submit PR
   throttle: 16
   ansible.builtin.command:
