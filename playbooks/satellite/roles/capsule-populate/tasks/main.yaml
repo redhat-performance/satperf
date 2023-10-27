@@ -40,11 +40,27 @@
     done
   delegate_to: "{{ groups['satellite6'] | first }}"
 
+- name: "Set the base synchronization command"
+  ansible.builtin.set_fact:
+    cap_sync_command: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --id '{{ id }}' --async"
+
+- name: "Set complete synchronization mode"
+  ansible.builtin.set_fact:
+    cap_sync_command: "{{ cap_sync_command }} --skip-metadata-check true"
+  when:
+    - mode is defined and mode == 'complete'
+
+- name: "Set validate content synchronization mode"
+  ansible.builtin.set_fact:
+    cap_sync_command: "{{ cap_sync_command }} --validate-contents true"
+  when:
+    - mode is defined and mode == 'validate_contents'
+
 - name: "Sync the content (async)"
   # XXX: Submit PR
   throttle: 16
   ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --organization '{{ organization }}' --id '{{ id }}' --skip-metadata-check true --async"
+    cmd: "{{ cap_sync_command }}"
   delegate_to: "{{ groups['satellite6'] | first }}"
 
 - name: "Set delay period in minutes"
