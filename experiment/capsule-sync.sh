@@ -8,6 +8,11 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
+rels='rhel6 rhel7 rhel8 rhel9'
+basearch='x86_64'
+
+sat_client_product='Satellite Client'
+
 repo_sat_client_6="${PARAM_repo_sat_client_6:-http://mirror.example.com/Satellite_Client_6_x86_64/}"
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
@@ -38,221 +43,175 @@ a capsync-10-manifest-deploy.log \
 h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
 
 
-section "Sync from CDN"
-h capsync-20-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_full'"
-
+section "Get OS content"
+if [[ "$cdn_url_full" != 'https://cdn.redhat.com/' ]]; then
+    h capsync-20-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_full'"
+fi
 h capsync-21-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
 
-# RHEL 6
-rel='rhel6'
+for rel in $rels; do
+    case $rel in
+        rhel6)
+            os_product='Red Hat Enterprise Linux Server'
+            os_releasever='6Server'
+            os_reposet_name='Red Hat Enterprise Linux 6 Server (RPMs)'
+            os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch $os_releasever"
+            ;;
+        rhel7)
+            os_product='Red Hat Enterprise Linux Server'
+            os_releasever='7Server'
+            os_reposet_name='Red Hat Enterprise Linux 7 Server (RPMs)'
+            os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch $os_releasever"
+            os_extras_reposet_name='Red Hat Enterprise Linux 7 Server - Extras (RPMs)'
+            os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
+            ;;
+        rhel8)
+            os_product='Red Hat Enterprise Linux for x86_64'
+            os_releasever='8'
+            os_reposet_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS (RPMs)"
+            os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
+            os_appstream_reposet_name="Red Hat Enterprise Linux 8 for $basearch - AppStream (RPMs)"
+            os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
+            ;;
+        rhel9)
+            os_product='Red Hat Enterprise Linux for x86_64'
+            os_releasever='9'
+            os_reposet_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS (RPMs)"
+            os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
+            os_appstream_reposet_name="Red Hat Enterprise Linux 9 for $basearch - AppStream (RPMs)"
+            os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs $os_releasever"
+            ;;
+    esac
 
-h capsync-22-reposet-enable-${rel}.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server (RPMs)' --releasever '6Server' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'"
+    case $rel in
+        rhel6)
+            h capsync-25-reposet-enable-${rel}.log "repository-set enable --organization '$organization' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+            h capsync-26-repo-sync-${rel}.log "repository synchronize --organization '$organization' --product '$os_product' --name '$os_repo_name'"
+            ;;
+        rhel7)
+            h capsync-25-reposet-enable-${rel}.log "repository-set enable --organization '$organization' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+            h capsync-26-repo-sync-${rel}.log "repository synchronize --organization '$organization' --product '$os_product' --name '$os_repo_name'"
 
-# RHEL 7
-rel='rhel7'
+            h capsync-25-reposet-enable-${rel}-extras.log "repository-set enable --organization '$organization' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+            h capsync-26-repo-sync-${rel}-extras.log "repository synchronize --organization '$organization' --product '$os_product' --name '$os_extras_repo_name'"
+            ;;
+        rhel8|rhel9)
+            h capsync-25-reposet-enable-${rel}-baseos.log "repository-set enable --organization '$organization' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+            h capsync-26-repo-sync-${rel}-baseos.log "repository synchronize --organization '$organization' --product '$os_product' --name '$os_repo_name'"
 
-h capsync-22-reposet-enable-${rel}.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
-
-h capsync-22-reposet-enable-${rel}extras.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Extras (RPMs)' --releasever '7Server' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}extras.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Extras RPMs x86_64'"
-
-# RHEL 8
-rel='rhel8'
-
-h capsync-22-reposet-enable-${rel}baseos.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
-
-h capsync-22-reposet-enable-${rel}appstream.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
-
-# RHEL 9
-rel='rhel9'
-
-h capsync-22-reposet-enable-${rel}baseos.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS (RPMs)' --releasever '9' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS RPMs 9'"
-
-h capsync-22-reposet-enable-${rel}appstream.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - AppStream (RPMs)' --releasever '9' --basearch 'x86_64'"
-h capsync-23-repo-sync-${rel}appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9'"
+            h capsync-25-reposet-enable-${rel}-appstream.log "repository-set enable --organization '$organization' --product '$os_product' --name '$os_appstream_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+            h capsync-26-repo-sync-${rel}-appstream.log "repository synchronize --organization '$organization' --product '$os_product' --name '$os_appstream_repo_name'"
+            ;;
+    esac
+done
 
 
-section "Sync Satellite Client repos"
-h capsync-27-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
+section "Get Satellite Client content"
+h capsync-27-product-create-sat-client.log "product create --organization '$organization' --name '$sat_client_product'"
 
-# Satellite Client for RHEL 6
-h capsync-28-repository-create-sat-client_6.log "repository create --organization '$organization' --product SatClientProduct --name SatClient6Repo --content-type yum --url '$repo_sat_client_6'"
-h capsync-29-repository-sync-sat-client_6.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient6Repo"
+for rel in $rels; do
+    case $rel in
+        rhel6)
+            sat_client_repo_name='Satellite Client for RHEL 6'
+            sat_client_repo_url="$repo_sat_client_6"
+            ;;
+        rhel7)
+            sat_client_repo_name='Satellite Client for RHEL 7'
+            sat_client_repo_url="$repo_sat_client_7"
+            ;;
+        rhel8)
+            sat_client_repo_name='Satellite Client for RHEL 8'
+            sat_client_repo_url="$repo_sat_client_8"
+            ;;
+        rhel9)
+            sat_client_repo_name='Satellite Client for RHEL 9'
+            sat_client_repo_url="$repo_sat_client_9"
+            ;;
+    esac
 
-# Satellite Client for RHEL 7
-h capsync-28-repository-create-sat-client_7.log "repository create --organization '$organization' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
-h capsync-29-repository-sync-sat-client_7.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient7Repo"
-
-# Satellite Client for RHEL 8
-h capsync-28-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
-h capsync-29-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
-
-# Satellite Client for RHEL 9
-h capsync-28-repository-create-sat-client_9.log "repository create --organization '$organization' --product SatClientProduct --name SatClient9Repo --content-type yum --url '$repo_sat_client_9'"
-h capsync-29-repository-sync-sat-client_9.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient9Repo"
+    h capsync-28-repository-create-${rel}-sat-client.log "repository create --organization '$organization' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
+    h capsync-29-repository-sync-${rel}-sat-client.log "repository synchronize --organization '$organization' --product '$sat_client_product' --name '$sat_client_repo_name'"
+done
 
 
-section "Create LCEs"
+section "Create LCE(s)"
 prior='Library'
 for lce in $lces; do
-    h capsync-30-${lce}-lce-create.log "lifecycle-environment create --organization '$organization' --prior '$prior' --name '$lce'"
+    h capsync-30-lce-create-${lce}.log "lifecycle-environment create --organization '$organization' --prior '$prior' --name '$lce'"
     prior="${lce}"
 done
 
 
-section "Create, publish and promote Operating System related content"
-# RHEL 6
-rel='rhel6'
-cv="CV_$rel"
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+section "Create, publish and promote CVs / CCVs to LCE(s)s"
+for rel in $rels; do
+    cv_os="CV_$rel"
+    cv_sat_client="CV_${rel}-sat-client"
+    ccv="CCV_$rel"
 
-h capsync-31-${rel}-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
-h capsync-32-${rel}-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
+    case $rel in
+        rhel6)
+            os_product='Red Hat Enterprise Linux Server'
+            os_releasever='6Server'
+            os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch $os_releasever"
+            os_rids="$( get_repo_id "$os_product" "$os_repo_name" )"
+            sat_client_repo_name='Satellite Client for RHEL 6'
+            sat_client_rids="$( get_repo_id "$sat_client_product" "$sat_client_repo_name" )"
+            ;;
+        rhel7)
+            os_product='Red Hat Enterprise Linux Server'
+            os_releasever='7Server'
+            os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch $os_releasever"
+            os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
+            os_rids="$( get_repo_id "$os_product" "$os_repo_name" )"
+            os_rids=$os_rids,$( get_repo_id "$product" "$os_extras_repo_name" )
+            sat_client_repo_name='Satellite Client for RHEL 7'
+            sat_client_rids="$( get_repo_id "$sat_client_product" "$sat_client_repo_name" )"
+            ;;
+        rhel8)
+            os_product='Red Hat Enterprise Linux for x86_64'
+            os_releasever='8'
+            os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
+            os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
+            os_rids="$( get_repo_id "$os_product" "$os_repo_name" )"
+            os_rids="$os_rids,$( get_repo_id "$os_product" "$os_appstream_repo_name" )"
+            sat_client_repo_name='Satellite Client for RHEL 8'
+            sat_client_rids="$( get_repo_id "$sat_client_product" "$sat_client_repo_name" )"
+            ;;
+        rhel9)
+            os_product='Red Hat Enterprise Linux for x86_64'
+            os_releasever='9'
+            os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
+            os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs $os_releasever"
+            os_rids="$( get_repo_id "$os_product" "$os_repo_name" )"
+            os_rids="$os_rids,$( get_repo_id "$os_product" "$os_appstream_repo_name" )"
+            sat_client_repo_name='Satellite Client for RHEL 9'
+            sat_client_rids="$( get_repo_id "$sat_client_product" "$sat_client_repo_name" )"
+            ;;
+    esac
 
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-33-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
+    # OS
+    h capsync-31-cv-create-${rel}-os.log "content-view create --organization '$organization' --name '$cv_os' --repository-ids '$os_rids'"
+    h capsync-32-cv-publish-${rel}-os.log "content-view publish --organization '$organization' --name '$cv_os'"
 
-# RHEL 7
-rel='rhel7'
-cv="CV_$rel"
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Extras RPMs x86_64' )"
+    # Satellite Client
+    h capsync-33-cv-create-${rel}-sat-client.log "content-view create --organization '$organization' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
+    h capsync-34-cv-publish-${rel}-sat-client.log "content-view publish --organization '$organization' --name '$cv_sat_client'"
 
-h capsync-31-${rel}-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
-h capsync-32-${rel}-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
+    # CCV
+    h capsync-35-ccv-create-${rel}.log "content-view create --organization '$organization' --composite --auto-publish yes --name '$ccv'"
+    h capsync-36-ccv-component-add-${rel}.log "content-view component add --organization '$organization' --composite-content-view '$ccv' --component-content-view '$cv_os' --component-content-view '$cv_sat_client' --latest"
+    h capsync-37-ccv-publish-${rel}.log "content-view publish --organization '$organization' --name '$ccv'"
 
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-33-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
-
-# RHEL 8
-rel='rhel8'
-cv="CV_$rel"
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
-
-h capsync-31-${rel}-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
-h capsync-32-${rel}-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-33-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
-
-# RHEL 9
-rel='rhel9'
-cv="CV_$rel"
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS RPMs 9' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9' )"
-
-h capsync-31-${rel}-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
-h capsync-32-${rel}-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-33-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
-
-
-section "Add, publish and promote Satellite Client related content"
-# RHEL 6
-rel='rhel6'
-cv="CV_$rel"
-rid="$( get_repo_id 'SatClientProduct' 'SatClient6Repo' )"
-
-h capsync-34-${rel}-cv-add-repository.log "content-view add-repository --organization '$organization' --repository-id '$rid' --name '$cv'"
-h capsync-35-${rel}-cv-republish.log "content-view publish --organization '$organization' --name '$cv'"
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-36-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
-
-# RHEL 7
-rel='rhel7'
-cv="CV_$rel"
-rid="$( get_repo_id 'SatClientProduct' 'SatClient7Repo' )"
-
-h capsync-34-${rel}-cv-add-repository.log "content-view add-repository --organization '$organization' --repository-id '$rid' --name '$cv'"
-h capsync-35-${rel}-cv-republish.log "content-view publish --organization '$organization' --name '$cv'"
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-36-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
-
-# RHEL 8
-rel='rhel8'
-cv="CV_$rel"
-rid="$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
-
-h capsync-34-${rel}-cv-add-repository.log "content-view add-repository --organization '$organization' --repository-id '$rid' --name '$cv'"
-h capsync-35-${rel}-cv-republish.log "content-view publish --organization '$organization' --name '$cv'"
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-36-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
-done
-
-# RHEL 9
-rel='rhel9'
-cv="CV_$rel"
-rid="$( get_repo_id 'SatClientProduct' 'SatClient9Repo' )"
-
-h capsync-34-${rel}-cv-add-repository.log "content-view add-repository --organization '$organization' --repository-id '$rid' --name '$cv'"
-h capsync-35-${rel}-cv-republish.log "content-view publish --organization '$organization' --name '$cv'"
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$cv'" | grep '^[0-9]\+,' >$tmp
-version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-rm -f $tmp
-prior='Library'
-for lce in $lces; do
-    h capsync-36-${rel}-${lce}-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-    prior="${lce}"
+    # Promotion to LCE(s)
+    tmp="$( mktemp )"
+    h_out "--no-headers --csv content-view version list --organization '$organization' --content-view '$ccv'" | grep '^[0-9]\+,' >$tmp
+    version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
+    rm -f $tmp
+    prior='Library'
+    for lce in $lces; do
+        h capsync-38-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '$organization' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+        prior="${lce}"
+    done
 done
 
 
