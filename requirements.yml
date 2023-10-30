@@ -10,7 +10,7 @@ roles:
     version: 1.13.2
 
   - name: linux-system-roles.storage
-    version: main
+    version: 1.12.4
 
   - name: rhsm_helper
     src: git+https://github.com/jhutar/ansible-role-rhsm_helper.git
