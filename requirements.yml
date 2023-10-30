@@ -4,7 +4,7 @@ roles:
     version: 1.7.7
 
   - name: linux-system-roles.firewall
-    version: main
+    version: 1.6.4
 
   - name: linux-system-roles.network
     version: main
