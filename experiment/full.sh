@@ -62,8 +62,9 @@ skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/r
 
 
 section "Sync from mirror"
-skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_mirror'"
-
+if [[ "$cdn_url_mirror" != 'https://cdn.redhat.com/' ]]; then
+  skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_mirror'"
+fi
 skip_measurement='true' h 00-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
 
 sca_status="$(h_out "--no-headers --csv simple-content-access status --organization '$organization'" | grep -v "^$satellite_host \| ")"
