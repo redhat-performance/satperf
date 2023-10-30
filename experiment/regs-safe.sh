@@ -7,7 +7,7 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
-expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-125}
+expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
 initial_batch=${PARAM_initial_batch:-1}
 
 wait_interval=${PARAM_wait_interval:-30}
