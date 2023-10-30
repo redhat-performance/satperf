@@ -7,7 +7,7 @@ roles:
     version: 1.6.4
 
   - name: linux-system-roles.network
-    version: main
+    version: 1.13.2
 
   - name: linux-system-roles.storage
     version: main
