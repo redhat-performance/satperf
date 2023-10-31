@@ -13,14 +13,14 @@ rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
 
 lces="${PARAM_lces:-Test QA Pre Prod}"
 
+basearch='x86_64'
+
+sat_client_product='Satellite Client'
+
 repo_sat_client_6="${PARAM_repo_sat_client_6:-http://mirror.example.com/Satellite_Client_6_x86_64/}"
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
 repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_x86_64/}"
-
-basearch='x86_64'
-
-sat_client_product='Satellite Client'
 
 dl="Default Location"
 
