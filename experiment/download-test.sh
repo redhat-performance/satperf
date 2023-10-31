@@ -39,6 +39,7 @@ opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 section "Checking environment"
 generic_environment_check
 
+
 #If we already have setup ready - all repos synced, etc we can skip directly to registering and downloading batches. PLEASE DELETE ALL HOSTS FROM SATELLITE.
 if [ "$skip_down_setup" != "true" ]; then
     section "Upload manifest"
@@ -56,7 +57,7 @@ if [ "$skip_down_setup" != "true" ]; then
     fi
     h regs-20-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
 
-    h regs-20-reposet-enable-rhel7.log  "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
+    h regs-20-reposet-enable-rhel7.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
     h regs-20-repo-immediate-rhel7.log "repository update --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
     h regs-20-repo-sync-rhel7.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
     s $wait_interval
@@ -68,6 +69,7 @@ if [ "$skip_down_setup" != "true" ]; then
     h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsRepo"
     s $wait_interval
 
+
     section "Sync Client repos"   # do not measure because of unpredictable network latency
     h regs-30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
     h regs-30-repository-create-sat-client_7.log "repository create --organization '$organization' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
@@ -77,15 +79,22 @@ if [ "$skip_down_setup" != "true" ]; then
     h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
     s $wait_interval
 
+
     section "Sync Download Test repo"
     #h product-create-downtest.log "product create --organization '$organization' --name DownTestProduct"
-    ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test"
+    ap repository-create-downtest.log  \
+      -e "repo_download_test=$repo_download_test" \
+      -e "repo_count_download_test=$repo_count_download_test" \
+      playbooks/tests/downloadtest-syncrepo.yaml
     # h repository-create-downtest.log "repository create --organization '$organization' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
     # h repo-sync-downtest.log "repository synchronize --organization '$organization' --product DownTestProduct --name DownTestRepo"
     s $wait_interval
 
+
     section "Prepare for registrations"
-    ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml  -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"  # this detects OS, so need to run after we synces one
+    ap regs-40-recreate-client-scripts.log \
+      -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}" \
+      playbooks/satellite/client-scripts.yaml # this detects OS, so need to run after we synces one
 
     h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
         || h regs-40-domain-create.log "domain create --name '{{ domain }}' --organizations '$organization'"
@@ -121,16 +130,21 @@ if [ "$skip_down_setup" != "true" ]; then
             location_name="Location for $capsule_name"
         fi
         h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-            || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+          || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
         subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
-        a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
+        a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 º \
+          -m "ansible.builtin.shell" \
+          -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
         h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-            || ap regs-41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "organization='$organization' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
+          || ap regs-41-hostgroup-create-$capsule_name.log \
+              -e "organization='$organization'" \
+              -e "hostgroup_name=$hostgroup_name subnet_name=$subnet_name" \
+              playbooks/satellite/hostgroup-create.yaml
     done
-
 fi
 
 skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
+
 
 section "Register more and more"
 ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
@@ -144,17 +158,28 @@ iter=1
 sum=0
 totalclients=0
 for batch in $download_test_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log \
+      -e "size=$batch" \
+      -e "tags=untagged,REG,REM bootstrap_activationkey='ActivationKey'" \
+      -e "bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}'" \
+      -e "grepper='Register'" \
+      -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
+      playbooks/tests/registrations.yaml
     e Register $logs/regs-50-register-$iter-$batch.log
     s $download_wait_interval
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_container_hosts )
-    ap clean-downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest-cleanup.yaml
-    ap downrepo-50-$iter-$sum-$totalclients-Download.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test max_age_task=$max_age_input"
+    ap clean-downrepo-50-$iter-$sum-$totalclients.log \
+      playbooks/tests/downloadtest-cleanup.yaml
+    ap downrepo-50-$iter-$sum-$totalclients-Download.log \
+      -e "package_name_download_test=$package_name_download_test" \
+      -e "max_age_task=$max_age_input" \
+      playbooks/tests/downloadtest.yaml
     log "$(grep 'RESULT:' $logs/downrepo-50-$iter-$sum-$totalclients-Download.log)"
     let iter+=1
     s $wait_interval
 done
+
 
 section "Summary"
 iter=1
