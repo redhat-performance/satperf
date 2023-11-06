@@ -96,7 +96,6 @@ function generic_environment_check() {
     skip_measurement='true' a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
     skip_measurement='true' a 00-info-ip-a.log satellite6,capsules,container_hosts -m "shell" -a "ip a"
     skip_measurement='true' a 00-check-ping-sat.log container_hosts -m "shell" -a "ping -c 10 {{ groups['satellite6']|first }}"
-    skip_measurement='true' a 00-check-hammer-ping.log satellite6 -m "shell" -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 
     if $extended; then
         ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
@@ -116,6 +115,10 @@ function generic_environment_check() {
     satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
     log "katello_version = $katello_version"
     log "satellite_version = $satellite_version"
+
+    skip_measurement='true' a 00-check-hammer-ping.log satellite6 \
+      -m "ansible.builtin.shell" \
+      -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 
     set +e   # Quit "-e" mode as from now on failure is not fatal
     s $(( 3 * wait_interval ))
