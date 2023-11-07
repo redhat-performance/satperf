@@ -20,6 +20,9 @@ rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, S
 
 ak="${PARAM_ak:-ActivationKey}"
 
+expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
+initial_batch=${PARAM_initial_batch:-1}
+
 repo_download_test="${PARAM_repo_download_test:-http://repos.example.com/pub/satperf/test_sync_repositories/repo*}"
 repo_count_download_test="${PARAM_repo_count_download_test:-8}"
 package_name_download_test="${PARAM_package_name_download_test:-foo*}"
@@ -105,33 +108,30 @@ skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
   playbooks/satellite/client-scripts.yaml
 
 
-section "Register more and more"
-ansible_container_hosts="$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )"
-sum=0
-for b in $download_test_batches; do
-    (( sum += b * ansible_container_hosts ))
-done
-log "Going to register $sum hosts in total. Make sure there is enough hosts available."
-
+section "Register"
 # Install PiP
 a downtest-49-install-python3-pip.log \
   -m 'ansible.builtin.dnf' \
   -a 'name=python3-pip state=latest' \
   satellite6
 
-iter=1
-sum=0
-totalclients=0
-for batch in $download_test_batches; do
-    ap downtest-50-register-$iter-$batch.log \
-      -e "size=$batch" \
-      -e "registration_logs='../../$logs/downtest-50-register-container-host-client-logs'" \
+
+number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
+total_number_containers=$(( number_container_hosts * number_containers_per_container_host ))
+concurrent_registrations_per_container_host=$(( expected_concurrent_registrations / number_container_hosts ))
+real_concurrent_registrations=$(( concurrent_registrations_per_container_host * number_container_hosts ))
+registration_iterations=$(( ( total_number_containers + real_concurrent_registrations - 1 ) / real_concurrent_registrations )) # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
+
+log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $(( registration_iterations + 1 )) batches."
+
+for (( batch=initial_batch, total_clients=real_concurrent_registrations; batch <= ( registration_iterations + 1 ); batch++, total_clients += real_concurrent_registrations )); do
+    ap downtest-50-register-${batch}-${total_clients}.log \
+      -e "size='${concurrent_registrations_per_container_host}'" \
+      -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       playbooks/tests/registrations.yaml
-    e Register $logs/downtest-50-register-$iter-$batch.log
-
-    (( sum += batch ))
-    (( totalclients = sum * ansible_container_hosts ))
+    e Register $logs/downtest-50-register-${batch}-${total_clients}.log
 
     if vercmp_ge "$satellite_version" "6.12.0"; then
         job_template_ssh_default='Run Command - Script Default'
@@ -139,26 +139,17 @@ for batch in $download_test_batches; do
         job_template_ssh_default='Run Command - SSH Default'
     fi
 
-    ap downtest-50-$iter-$sum-$totalclients-Download.log \
+    ap downtest-50-${batch}-${total_clients}-Download.log \
       -e "job_template_ssh_default='$job_template_ssh_default'" \
       -e "package_name_download_test=$package_name_download_test" \
       -e "max_age_task=$max_age_input" \
       playbooks/tests/downloadtest.yaml
-    log "$(grep 'RESULT:' $logs/downtest-50-$iter-$sum-$totalclients-Download.log)"
-    (( iter++ ))
+    log "$(grep 'RESULT:' $logs/downtest-50-${batch}-${total_clients}-Download.log)"
 done
 
 
 section "Summary"
-iter=1
-sum=0
-totalclients=0
-for batch in $download_test_batches; do
-    (( sum += batch ))
-    (( totalclients = sum * ansible_container_hosts ))
-    log "$(grep 'RESULT:' $logs/downtest-50-$iter-$sum-$totalclients-Download.log)"
-    (( iter++ ))
-done
+log "$(grep 'RESULT:' $logs/downtest-50-*-*-Download.log)"
 
 
 junit_upload
