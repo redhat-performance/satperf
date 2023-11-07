@@ -16,9 +16,6 @@ puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
-
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
 repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_x86_64/}"
@@ -152,21 +149,6 @@ unset skip_measurement
 
 
 export skip_measurement='true'
-section "Sync Tools repo"
-h product-create.log "product create --organization '$organization' --name SatToolsProduct"
-
-h repository-create-sat-tools.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-[ "$repo_sat_tools_puppet" != "none" ] \
-  && h repository-create-puppet-upgrade.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsPuppetRepo --content-type yum --url '$repo_sat_tools_puppet'"
-
-h repository-sync-sat-tools.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsRepo" &
-[ "$repo_sat_tools_puppet" != "none" ] \
-  && h repository-sync-puppet-upgrade.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsPuppetRepo" &
-wait
-unset skip_measurement
-
-
-export skip_measurement='true'
 section "Sync Client repos"
 h 30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
 
@@ -183,7 +165,7 @@ unset skip_measurement
 
 
 export skip_measurement='true'
-section "Synchronise capsules again"   # We just added up2date content from CDN, SatToolsRepo and SatClient7Repo, so no reason to measure this now
+section "Synchronise capsules again"   # We just added up2date content from CDN and SatClient7Repo, so no reason to measure this now
 tmp=$( mktemp )
 
 h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
@@ -204,9 +186,6 @@ location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
 h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '$organization' --location-ids '$location_ids'"
 
 h 43-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
-h_out "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
-tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
 h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
 h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"

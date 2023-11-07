@@ -18,9 +18,6 @@ puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
-
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
 
@@ -116,18 +113,6 @@ generic_environment_check false
 ###wait
 ###s $wait_interval
 ###
-###
-###section "Sync Tools repo"
-###h product-create.log "product create --organization '$organization' --name SatToolsProduct"
-###h repository-create-sat-tools.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-###[ "$repo_sat_tools_puppet" != "none" ] \
-###    && h repository-create-puppet-upgrade.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsPuppetRepo --content-type yum --url '$repo_sat_tools_puppet'"
-###h repository-sync-sat-tools.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsRepo" &
-###[ "$repo_sat_tools_puppet" != "none" ] \
-###    && h repository-sync-puppet-upgrade.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsPuppetRepo" &
-###wait
-###s $wait_interval
-###
 ###section "Sync Client repos"
 ###h regs-30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
 ###h regs-30-repository-create-sat-client_7.log "repository create --organization '$organization' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
@@ -138,7 +123,7 @@ generic_environment_check false
 ###s $wait_interval
 ###
 ###
-###section "Synchronise capsules again do not measure"   # We just added up2date content from CDN and SatToolsRepo, so no reason to measure this now
+###section "Synchronise capsules again do not measure"   # We just added up2date content from CDN, so no reason to measure this now
 ###tmp=$( mktemp )
 ###h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
 ###for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
@@ -175,9 +160,6 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
         || h 41-hostgroup-create-$capsule_name.log "hostgroup create --content-view '$organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$organization' --subnet '$subnet_name'"
 done
 h 43-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
-h 43-subs-list-tools.log "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'"
-tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
 h 43-subs-list-client.log "--csv subscription list --organization '$organization' --search 'name = SatClientProduct'"
 client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
 h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$client_subs_id'"

@@ -17,9 +17,6 @@ puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-repo_sat_tools_puppet="${PARAM_repo_sat_tools_puppet:-none}"   # Older example: http://mirror.example.com/Satellite_Tools_Puppet_4_6_3_RHEL7_x86_64/
-
 ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 
 dl="Default Location"

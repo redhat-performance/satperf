@@ -12,8 +12,6 @@ registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 wait_interval=${PARAM_wait_interval:-50}
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
 
@@ -35,12 +33,6 @@ h 03-manifest-refresh.log "subscription refresh-manifest --organization '$organi
 s $wait_interval
 
 
-section "Util: Sync Tools repo"
-h product-create.log "product create --organization '$organization' --name SatToolsProduct"
-h repository-create-sat-tools.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-h repository-sync-sat-tools.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsRepo"
-s $wait_interval
-
 section "Util: Sync Client repos"
 h client-product-create.log "product create --organization '$organization' --name SatClientProduct"
 h repository-create-sat-client_7.log "repository create --organization '$organization' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
@@ -52,9 +44,6 @@ s $wait_interval
 
 
 h regs-40-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
-h_out "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
-tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-skip_measurement='true' h 43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
 h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
 skip_measurement='true' h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"

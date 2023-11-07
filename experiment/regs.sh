@@ -14,8 +14,6 @@ bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you w
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
-
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
 
@@ -56,12 +54,6 @@ h regs-20-reposet-enable-rhel8appstream.log  "repository-set enable --organizati
 skip_measurement='false' h regs-20-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
 s $wait_interval
 
-section "Sync Tools repo"   # do not measure because of unpredictable network latency
-h regs-30-sat-tools-product-create.log "product create --organization '$organization' --name SatToolsProduct"
-h regs-30-repository-create-sat-tools.log "repository create --organization '$organization' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-skip_measurement='false' h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$organization' --product SatToolsProduct --name SatToolsRepo"
-s $wait_interval
-
 section "Sync Client repos"   # do not measure because of unpredictable network latency
 h regs-30-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
 h regs-30-repository-create-sat-client_7.log "repository create --organization '$organization' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
@@ -81,9 +73,6 @@ location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
 skip_measurement='true' h regs-42-domain-update.log "domain update --name '{{ domain }}' --organizations '$organization' --location-ids '$location_ids'"
 
 skip_measurement='true' h regs-43-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment Library --name ActivationKey --organization '$organization'"
-h_out "--csv subscription list --organization '$organization' --search 'name = SatToolsProduct'" >$logs/subs-list-tools.log
-tools_subs_id=$( tail -n 1 $logs/subs-list-tools.log | cut -d ',' -f 1 )
-skip_measurement='true' h regs-43-ak-add-subs-tools.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$tools_subs_id'"
 h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
 skip_measurement='true' h regs-43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$rhel_subs_id'"

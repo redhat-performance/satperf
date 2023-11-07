@@ -21,7 +21,6 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 PARAM_docker_registry=${PARAM_docker_registry:-https://registry-1.docker.io/}
 PARAM_iso_repos=${PARAM_iso_repos:-http://storage.example.com/iso-repos/}
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
 
 dl="Default Location"
 
