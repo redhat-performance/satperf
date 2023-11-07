@@ -7,8 +7,8 @@
     - ../../conf/satperf.local.yaml
   tasks:
     - name: "Start yum download job"
-      shell: |
-        hammer job-invocation create --search-query 'container' --job-template 'Run Command - SSH Default' --inputs command='yumdownloader --destdir=\"/test-folder/\`hostname\`\" {{ package_name_download_test }}' --async &
+      ansible.builtin.shell: |
+        hammer job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf download --downloadonly --downloaddir=\"/var/tmp\" {{ package_name_download_test }}' --job-template "{{ job_template_ssh_default }}" --search-query 'name ~ container' &
         sleep 30
     - name: "Get last job ID"
       shell:
@@ -27,7 +27,6 @@
     - name: Install simpleJson
       pip:
         name: simpleJson
-        executable: pip3
     - name: "Wait for job {{ last_job_id }} to finish"
       shell:
         /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}" "{{ max_age_task }}"
