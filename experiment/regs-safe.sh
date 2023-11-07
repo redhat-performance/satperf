@@ -10,8 +10,6 @@ local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
 initial_batch=${PARAM_initial_batch:-1}
 
-wait_interval=${PARAM_wait_interval:-30}
-
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
@@ -39,7 +37,6 @@ e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
 e ManifestDelete $logs/01-manifest-excercise.log
 skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
-s $wait_interval
 
 
 export skip_measurement='true'
@@ -54,7 +51,6 @@ h 12b-repo-sync-rhel8baseos.log "repository synchronize --organization '$organiz
 
 h 12b-reposet-enable-rhel8appstream.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
 h 12b-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
-s $wait_interval
 unset skip_measurement
 
 
@@ -65,7 +61,6 @@ h 15-sat-client-product-create.log "product create --organization '$organization
 # Satellite Client for RHEL 8
 h 15-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
 h 15-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
-s $wait_interval
 unset skip_measurement
 
 
@@ -82,7 +77,6 @@ h 25-rhel8-cv-publish.log "content-view publish --organization '$organization' -
 
 skip_measurement='true' h 26-rhel8-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name '$lce'"
 h 27-rhel8-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
-s $wait_interval
 
 
 export skip_measurement='true'
@@ -91,7 +85,6 @@ ap 35-capsync-populate.log \
   -e "organization='$organization'" \
   -e "lces='$lce'" \
   playbooks/satellite/capsules-populate.yaml
-s $wait_interval
 unset skip_measurement
 
 
@@ -172,7 +165,6 @@ for (( i=initial_batch; i <= ( registration_iterations + 1 ); i++ )); do
       -e 're_register_failed_hosts=true' \
       playbooks/tests/registrations.yaml
     e Register $logs/44b-register-$i.log
-    s $wait_interval
 done
 grep Register $logs/44b-register-*.log >$logs/44b-register-overall.log
 e Register $logs/44b-register-overall.log
