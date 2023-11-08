@@ -39,7 +39,7 @@ function _vercmp() {
     # CID-5112 is resolved
     ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
     ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
-    echo "Comparing $ver1 vs. $ver2"
+    # echo "Comparing $ver1 vs. $ver2"
     ver1_1=$( echo "$ver1" | cut -d '.' -f 1 )
     ver1_2=$( echo "$ver1" | cut -d '.' -f 2 )
     ver1_3=$( echo "$ver1" | cut -d '.' -f 3 )
@@ -49,7 +49,7 @@ function _vercmp() {
     vers1=( $ver1_1 $ver1_2 $ver1_3 )
     vers2=( $ver2_1 $ver2_2 $ver2_3 )
     for i in 0 1 2; do
-        echo "Comparing item ${vers1[$i]} vs. ${vers2[$i]}"
+        # echo "Comparing item ${vers1[$i]} vs. ${vers2[$i]}"
         if [[ "${vers1[$i]}" != 'Stream' && "${vers2[$i]}" != 'Stream' ]]; then
             if [ "${vers1[$i]}" -gt "${vers2[$i]}" ]; then
                 return 11
