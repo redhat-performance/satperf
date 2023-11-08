@@ -25,11 +25,11 @@
         mode: "u=rwx,g=rx,o=rx"
         force: yes
     - name: Install simpleJson
-      pip:
+      ansible.builtin.pip:
         name: simpleJson
     - name: "Wait for job {{ last_job_id }} to finish"
-      shell:
-        /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}" "{{ max_age_task }}"
+      ansible.builtin.shell:
+        cmd: /usr/libexec/platform-python /root/wait-for-job.py "{{ sat_user }}" "{{ sat_pass }}" "https://{{ groups['satellite6']|first }}" "{{ last_job_id }}" "{{ max_age_task }}"
       register: wait_for_job_cmd
       ignore_errors: yes
       until: wait_for_job_cmd is not failed

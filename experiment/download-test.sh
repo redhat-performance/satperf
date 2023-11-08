@@ -109,13 +109,6 @@ skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
 
 
 section "Register"
-# Install PiP
-a downtest-49-install-python3-pip.log \
-  -m 'ansible.builtin.dnf' \
-  -a 'name=python3-pip state=latest' \
-  satellite6
-
-
 number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
 total_number_containers=$(( number_container_hosts * number_containers_per_container_host ))
