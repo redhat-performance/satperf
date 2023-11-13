@@ -1,6 +1,10 @@
 ---
 # Create location for this capsule if it does not exist yet and move the location there
 # Client domain is added to the location
+- name: "Set location name"
+  ansible.builtin.set_fact:
+    location: "{{ location | default('Location for {{ inventory_hostname }}') }}"
+
 - name: "Get id of a domain"
   uri:
     url: "https://{{ groups['satellite6']|first }}/api/domains/{{ domain }}"
@@ -11,6 +15,7 @@
     validate_certs: no
   register: domain_info
   run_once: true
+
 - name: "Determine domain ID"
   set_fact:
     domain_id: "{{ domain_info.json.id }}"
@@ -43,15 +48,6 @@
   register: locations
   run_once: true
 
-- name: "Set location name (if location is defined)"
-  ansible.builtin.set_fact:
-    location: "{{ hostvars[inventory_hostname].location }}"
-  when: "hostvars[inventory_hostname].location is defined"
-
-- name: "Set location name (if location is not defined)"
-  ansible.builtin.set_fact:
-    location: "Location for {{ inventory_hostname }}"
-  when: "hostvars[inventory_hostname].location is not defined"
 
 - name: "Compose location creation request body for Sat <6.11"
   set_fact:
@@ -91,6 +87,7 @@
     validate_certs: no
   register: locations
   run_once: true
+
 - name: "Determine location ID"
   set_fact:
     location_id: "{{ item.id }}"
