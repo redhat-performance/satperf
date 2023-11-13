@@ -1,6 +1,5 @@
 ---
 - hosts: capsules
-  remote_user: root
   roles:
   ###  - common
   tasks:

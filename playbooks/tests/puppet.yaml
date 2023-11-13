@@ -5,7 +5,6 @@
 
 # Finally run the puppet!
 - hosts: docker_hosts
-  remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
@@ -22,7 +21,6 @@
       copy:
         content: |
           - hosts: all
-            remote_user: root
             gather_facts: no
             tasks:
               - name: "Puppet agent run"

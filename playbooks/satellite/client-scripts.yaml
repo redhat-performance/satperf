@@ -1,6 +1,5 @@
 ---
 - hosts: container_hosts
-  remote_user: root
   gather_facts: yes
   vars_files:
     - ../../conf/satperf.yaml

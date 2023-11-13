@@ -5,7 +5,6 @@
 
 # Get list of containers to use
 - hosts: docker_hosts
-  remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
@@ -48,7 +47,6 @@
 
 # Configure containers on satellite side
 - hosts: satellite6
-  remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
@@ -84,7 +82,6 @@
 
 # Cleanup containers
 - hosts: docker_hosts
-  remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
@@ -123,7 +120,6 @@
       copy:
         content: |
           - hosts: all
-            remote_user: root
             gather_facts: no
             tasks:
               - name: "Remove packages"

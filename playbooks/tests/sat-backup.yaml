@@ -1,6 +1,5 @@
 ---
 - hosts: satellite6
-  remote_user: root
   tasks:
     - name: Define base directory for backup
       ansible.builtin.set_fact:

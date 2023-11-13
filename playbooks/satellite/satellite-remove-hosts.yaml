@@ -1,6 +1,5 @@
 ---
 - hosts: satellite6
-  remote_user: root
   gather_facts: no
   vars:
     organization_id: "{{ org_id | default(1) }}"

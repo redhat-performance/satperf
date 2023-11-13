@@ -1,6 +1,5 @@
 ---
 - hosts: satellite6
-  remote_user: root
   gather_facts: yes
   vars:
     - installer_additional_ops: ''

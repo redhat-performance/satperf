@@ -12,7 +12,6 @@
 # hammer product delete --organization-id 1 --name test_sync_iso_product
 ---
 - hosts: satellite6
-  remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml

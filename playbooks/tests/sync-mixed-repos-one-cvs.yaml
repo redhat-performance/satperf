@@ -2,7 +2,6 @@
 # 6 repo, creates lifecycle environment and publishes these repos into it.
 ---
 - hosts: satellite6
-  remote_user: root
   gather_facts: no
   vars_files:
     - ../../conf/satperf.yaml
