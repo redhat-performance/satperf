@@ -18,7 +18,6 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-remote-execution-pull true"
       when:
-        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
         - rex_mode is defined and rex_mode == 'mqtt'
 
     - name: "Check if some package should be installed"

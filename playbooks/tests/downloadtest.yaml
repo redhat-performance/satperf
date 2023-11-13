@@ -2,7 +2,7 @@
 - hosts: satellite6
   gather_facts: False
   tasks:
-    - name: "Start yum download job"
+    - name: "Start dnf download job"
       ansible.builtin.shell: |
         hammer job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf download --downloadonly --downloaddir=\"/var/tmp\" {{ package_name_download_test }}' --job-template "{{ job_template_ssh_default }}" --search-query 'name ~ container' &
         sleep 30

@@ -49,25 +49,16 @@
   ansible.builtin.set_fact:
     satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_additional_ops | default() }}"
 
-- name: "Configure Insights connection on Satellite <6.12"
-  ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --enable-foreman-plugin-rh-cloud --foreman-proxy-plugin-remote-execution-ssh-install-key true"
-  when:
-    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.12.0', '<')
-    - setup_insights is not defined or setup_insights | bool == False
-
-- name: "Configure Insights connection on Satellite >=6.12"
+- name: "Configure Insights connection"
   ansible.builtin.set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
   when:
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
-    - setup_insights is not defined or setup_insights | bool == False
+    - setup_insights is not defined or setup_insights|bool == False
 
-- name: "Configure MQTT transport for remote execution on Satellite >=6.12"
+- name: "Configure MQTT transport for remote execution"
   ansible.builtin.set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
   when:
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
     - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: "Configure Redis as Foreman cache on Satellite >=6.14"
@@ -117,7 +108,6 @@
       [Service]
       LimitNOFILE=65536
   when:
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
     - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: Restart mosquitto service unit
@@ -126,6 +116,5 @@
     daemon_reload: yes
     state: restarted
   when:
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
     - rex_mode is defined and rex_mode == 'mqtt'
 ...

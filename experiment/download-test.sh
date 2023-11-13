@@ -126,11 +126,7 @@ for (( batch=initial_batch, total_clients=real_concurrent_registrations; batch <
       playbooks/tests/registrations.yaml
     e Register $logs/downtest-50-register-${batch}-${total_clients}.log
 
-    if vercmp_ge "$satellite_version" "6.12.0"; then
-        job_template_ssh_default='Run Command - Script Default'
-    else
-        job_template_ssh_default='Run Command - SSH Default'
-    fi
+    job_template_ssh_default='Run Command - Script Default'
 
     ap downtest-50-${batch}-${total_clients}-Download.log \
       -e "job_template_ssh_default='$job_template_ssh_default'" \

@@ -488,11 +488,7 @@ e Register $logs/44-register-overall.log
 
 section "Remote execution"
 job_template_ansible_default='Run Command - Ansible Default'
-if vercmp_ge "$sat_version" "6.12.0"; then
-    job_template_ssh_default='Run Command - Script Default'
-else
-    job_template_ssh_default='Run Command - SSH Default'
-fi
+job_template_ssh_default='Run Command - Script Default'
 
 skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 skip_measurement='true' a 51-rex-cleanup-know_hosts.log \

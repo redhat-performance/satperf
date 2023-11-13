@@ -49,11 +49,6 @@
     delay: 10
 
   # Make sure only base RHEL repo is attached
-  - name: "Disable all RHSM repos and only enable main RHEL7 repo"
-    rhsm_repository:
-      name: 'rhel-7-server-rpms'
-      purge: True
-    when: ansible_distribution_major_version == 7 and registering.changed
   - name: "Disable all RHSM repos and only enable main RHEL8 repos"
     rhsm_repository:
       name:
