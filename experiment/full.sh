@@ -156,7 +156,7 @@ for rel in $rels; do
             os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch $os_releasever"
             os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
             os_rids="$( get_repo_id "$os_product" "$os_repo_name" )"
-            os_rids="$os_rids,$( get_repo_id "$product" "$os_extras_repo_name" )"
+            os_rids="$os_rids,$( get_repo_id "$os_product" "$os_extras_repo_name" )"
             ;;
         rhel8)
             os_product='Red Hat Enterprise Linux for x86_64'
