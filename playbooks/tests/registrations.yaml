@@ -5,13 +5,12 @@
     - ../../conf/satperf.yaml
     - ../../conf/satperf.local.yaml
   vars:
-    method: "clients_host-registration"
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     resting: 0
     num_retry_forks: 3
     registration_logs: "registration_logs"
-    re_register_failed_hosts: false
-    debug_rhsm: false
+    re_register_failed_hosts: False
+    debug_rhsm: False
   tasks:
     - name: "Check whether we have already registered some containers"
       ansible.builtin.stat:
@@ -60,7 +59,6 @@
         url: http://{{ tests_registration_target }}/pub/host-registration.sh
         dest: /root/clients_host-registration.sh
         mode: '0400'
-      when: "method == 'clients_host-registration'"
 
     - name: "Try to patch `rhsm/connection.py` to add some error logging"
       ansible.builtin.shell: |
@@ -73,7 +71,7 @@
          all \
            &> patch_rhsm_{{ size }}.log
       when:
-        - debug_rhsm | bool == true
+        - debug_rhsm | bool == True
 
     - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
       shell: |
@@ -85,80 +83,6 @@
           &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
-      when: "method == 'clients_host-registration'"
-
-    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }})"
-      shell: |
-        ansible-playbook \
-          --private-key /root/id_rsa_key \
-          --forks "{{ size }}" \
-          -i clients.ini \
-          -e "server={{ groups['satellite6']|first }}" \
-          -e "activationkey='ActivationKey'" \
-          -e "organization='{{ sat_orglabel }}'" \
-          -e "config_server_server_timeout='{{ config_server_server_timeout|default('') }}'" \
-          clients.yaml \
-          &> "{{ clients_yaml_cmd_log }}"
-      register: clients_yaml_cmd
-      ignore_errors: true
-      when:
-        - method == 'clients.yaml'
-        - hostvars[groups['satellite6']|first].rex_mode is not defined or hostvars[groups['satellite6']|first].rex_mode == 'ssh'
-
-    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }})"
-      shell: |
-        ansible-playbook \
-          --private-key /root/id_rsa_key \
-          --forks "{{ size }}" \
-          -i clients.ini \
-          -e "server={{ groups['satellite6']|first }}" \
-          -e "activationkey='ActivationKey'" \
-          -e "organization='{{ sat_orglabel }}'" \
-          -e "config_server_server_timeout='{{ config_server_server_timeout|default('') }}'" \
-          -e "rex_mode='mqtt'" \
-          clients.yaml \
-          &> "{{ clients_yaml_cmd_log }}"
-      register: clients_yaml_cmd
-      ignore_errors: true
-      when:
-        - method == 'clients.yaml'
-        - hostvars[groups['satellite6']|first].rex_mode is defined and hostvars[groups['satellite6']|first].rex_mode == 'mqtt'
-
-    - name: "Run clients-register.yaml (log = {{ clients_yaml_cmd_log }})"
-      shell: |
-        ansible-playbook \
-          --private-key /root/id_rsa_key \
-          --forks "{{ size }}" \
-          -i clients.ini \
-          -e "server={{ groups['satellite6']|first }}" \
-          -e "sat_user={{ sat_user }}" \
-          -e "sat_pass={{ sat_pass }}" \
-          -e "activationkey='ActivationKey'" \
-          -e "organization='{{ sat_orglabel }}'" \
-          clients-register.yaml \
-          &> "{{ clients_yaml_cmd_log }}"
-      register: clients_yaml_cmd
-      ignore_errors: true
-      when: "method == 'clients-register.yaml'"
-
-    - name: "Run clients-bootstrap.yaml (log = {{ clients_yaml_cmd_log }})"
-      shell: |
-        ansible-playbook \
-          --private-key /root/id_rsa_key \
-          --forks "{{ size }}" \
-          -i clients.ini \
-          -e "server={{ groups['satellite6']|first }}" \
-          -e "user={{ sat_user }}" \
-          -e "pass={{ sat_pass }}" \
-          -e "activationkey='ActivationKey'" \
-          -e "organization='{{ sat_org }}'" \
-          -e "location='{{ sat_location }}'" \
-          -e "hostgroup='{{ registration_hostgroup }}'" \
-          clients-bootstrap.yaml \
-          &> "{{ clients_yaml_cmd_log }}"
-      register: clients_yaml_cmd
-      ignore_errors: true
-      when: "method == 'clients-bootstrap.yaml'"
 
     - name: "Fetch client logs"
       fetch:
@@ -223,8 +147,7 @@
         clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - method == 'clients_host-registration'
-        - re_register_failed_hosts | bool == true
+        - re_register_failed_hosts | bool == True
 
     - name: "Try to re-register failed hosts (if needed)"
       ansible.builtin.shell: |
@@ -259,8 +182,7 @@
       ignore_errors: true
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - method == 'clients_host-registration'
-        - re_register_failed_hosts | bool == true
+        - re_register_failed_hosts | bool == True
 
     - name: "Give server some time to rest"
       pause:
