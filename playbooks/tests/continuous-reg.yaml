@@ -1,9 +1,6 @@
 ---
 - hosts: docker_hosts
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     # size=10 tags=untagged,REG,REM bootstrap_retries=0 grepper='Register'
     contreg_size: 3   # how many containers per docker host to use?

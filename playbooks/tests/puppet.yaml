@@ -5,10 +5,7 @@
 
 # Finally run the puppet!
 - hosts: docker_hosts
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     resting: 10
     save_graphs: true

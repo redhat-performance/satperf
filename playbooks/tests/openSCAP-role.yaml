@@ -1,9 +1,6 @@
 ---
 - hosts: satellite6
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   tasks:
     - name: "Install openSCAP client"
       shell: |

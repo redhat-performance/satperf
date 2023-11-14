@@ -12,10 +12,7 @@
 # hammer product delete --organization-id 1 --name test_sync_iso_product
 ---
 - hosts: satellite6
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     test_sync_iso_count: 8
     test_sync_iso_url_template: "http://storage.example.com/iso-repos*"

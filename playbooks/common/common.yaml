@@ -1,14 +1,12 @@
 ---
 - hosts: satellite6 capsules container_hosts
   gather_facts: False
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
   roles:
     - role: ../common/roles/epel-not-present
     - role: ../common/roles/scalelab-generic-cleanup
       when: '"scalelab" in inventory_hostname'
     - role: ../common/roles/plain-network
-      when: 'configure_plain_network == True'
+      when:
+        - configure_plain_network is defined and configure_plain_network | bool == True
     - role: ../common/roles/common
 ...

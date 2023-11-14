@@ -1,9 +1,6 @@
 ---
 - hosts: kvm-hosts
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   roles:
   tasks:
     - name: "Collect only minimum of facts"

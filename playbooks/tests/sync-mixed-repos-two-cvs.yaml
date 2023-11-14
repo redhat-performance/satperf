@@ -2,10 +2,7 @@
 # 2 repo, creates lifecycle environment and publishes these repos into it.
 ---
 - hosts: satellite6
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     test_sync_mixed_count: 2
     test_sync_mixed_product: "test_sync_mixed_product"

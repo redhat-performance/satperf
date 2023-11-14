@@ -1,35 +1,26 @@
 ---
 - hosts: capsules
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   roles:
     - role: ../common/roles/epel-not-present
     - role: ../common/roles/scalelab-generic-cleanup
-      when: '"scalelab" in inventory_hostname'
+      when:
+        - "'scalelab' in inventory_hostname"
     - role: ../common/roles/plain-network
-      when: 'configure_plain_network == True'
+      when:
+        - configure_plain_network is defined and configure_plain_network | bool == True
     - role: ../common/roles/common
     - role: ../common/roles/remove-home-extend-root
-      when: 'remove_home_partition|bool == True or extend_root_partition|bool == True'
+      when:
+        - (remove_home_partition is defined and remove_home_partition | bool == True) or
+          (extend_root_partition is defined and extend_root_partition | bool == True)
     - role: ../common/roles/enlarge-arp-table
     - role: linux-system-roles.timesync
     - role: rhsm_helper
-      vars:
-        registration_options: "{{ capsule_registration_options }}"
     - role: upgrade-restart
     - role: linux-system-roles.firewall
-      vars:
-        firewall: "{{ capsule_firewall }}"
-    - role: ../common/roles/partition-new-storage
-      vars:
-        storage_pools: "{{ capsule_storage_pools }}"
-        storage_safe_mode: False
-      when:
-        - capsule_storage_pools is defined and capsule_storage_pools|length > 0
+    - role: linux-system-roles.storage
     - role: repo_setup
-      vars:
-        additional_repos: "{{ capsule_additional_repos }}"
     - role: capsule
     - role: capsule-location
     - role: puppet-autosign

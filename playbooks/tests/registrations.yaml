@@ -1,9 +1,6 @@
 ---
 - hosts: container_hosts
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     resting: 0

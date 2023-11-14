@@ -1,9 +1,6 @@
 ---
 - hosts: satellite6
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     repo_count_download_test: 1
     download_test_product: "DownTestProduct"

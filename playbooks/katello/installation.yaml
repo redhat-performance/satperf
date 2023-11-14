@@ -1,9 +1,6 @@
 ---
 - hosts: katello
-
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   roles:
     - ../common/roles/add-epel
     - ../common/roles/rhsm

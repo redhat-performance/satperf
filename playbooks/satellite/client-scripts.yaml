@@ -1,12 +1,7 @@
 ---
 - hosts: container_hosts
-  gather_facts: yes
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   roles:
     - role: repo_setup
-      vars:
-        additional_repos: "{{ containers_host_additional_repos }}"
     - role: client-scripts
 ...

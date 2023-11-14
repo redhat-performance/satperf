@@ -1,12 +1,9 @@
 ---
 - hosts: satellite6
-  gather_facts: no
+  gather_facts: False
   vars:
     organization_id: "{{ org_id | default(1) }}"
     search: "{{ search_query | default('container') }}"
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
   tasks:
     - name: "Delete hosts in bulk"
       ansible.builtin.uri:

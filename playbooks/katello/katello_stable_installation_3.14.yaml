@@ -1,12 +1,9 @@
 ---
 - hosts: satellite6
-  gather_facts: yes
+  gather_facts: False
   vars:
     - installer_additional_ops: ''
     - run_after_install: ''
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
   roles:
     - ../common/roles/scalelab-nic-cleanup
     - ../common/roles/common
