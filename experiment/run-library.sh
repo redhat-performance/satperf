@@ -33,36 +33,25 @@ if ! type ansible >/dev/null; then
     echo "ERROR: ansible not installed" >&2
     exit 1
 fi
+if ! type rpmdev-vercmp >/dev/null; then
+    echo "ERROR: rpmdev-vercmp (from rpmdevtools) not installed" >&2
+    exit 1
+fi
 
 function _vercmp() {
-    # FIXME: This parser sucks. Would be better to have rpmdev-vercmp once
-    # CID-5112 is resolved
-    ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
-    ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
-    # echo "Comparing $ver1 vs. $ver2"
-    ver1_1=$( echo "$ver1" | cut -d '.' -f 1 )
-    ver1_2=$( echo "$ver1" | cut -d '.' -f 2 )
-    ver1_3=$( echo "$ver1" | cut -d '.' -f 3 )
-    ver2_1=$( echo "$ver2" | cut -d '.' -f 1 )
-    ver2_2=$( echo "$ver2" | cut -d '.' -f 2 )
-    ver2_3=$( echo "$ver2" | cut -d '.' -f 3 )
-    vers1=( $ver1_1 $ver1_2 $ver1_3 )
-    vers2=( $ver2_1 $ver2_2 $ver2_3 )
-    for i in 0 1 2; do
-        # echo "Comparing item ${vers1[$i]} vs. ${vers2[$i]}"
-        if [[ "${vers1[$i]}" != 'Stream' && "${vers2[$i]}" != 'Stream' ]]; then
-            if [ "${vers1[$i]}" -gt "${vers2[$i]}" ]; then
-                return 11
-            elif [ "${vers1[$i]}" -lt "${vers2[$i]}" ]; then
-                return 12
-            fi
-        elif [[ "${vers1[$i]}" == 'Stream' && "${vers2[$i]}" != 'Stream' ]]; then
-            return 11
-        elif [[ "${vers1[$i]}" != 'Stream' && "${vers2[$i]}" == 'Stream' ]]; then
-            return 12
-        fi
-    done
-    return 0
+    # Return values mimic `rpmdev-vercmp` ones
+    if [[ "$1" == "$2" ]]; then
+        return 0
+    elif [[ "$1" == 'stream' ]]; then
+        return 11
+    elif [[ "$2" == 'stream' ]]; then
+        return 12
+    else
+        ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+        ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+
+        rpmdev-vercmp "$ver1" "$ver2"
+    fi
 }
 
 function vercmp_gt() {
