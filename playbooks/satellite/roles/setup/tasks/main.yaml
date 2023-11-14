@@ -1,8 +1,13 @@
 ---
+- name: "Detect RHEL release"
+  ansible.builtin.setup:
+    filter: ansible_distribution_major_version
+  when: ansible_distribution_major_version is not defined
+
 # RHEL8 requirements
 - name: "Enable satellite:el8 module"
   command: dnf -y module enable satellite:el8
-  when: "ansible_distribution_major_version|int == 8"
+  when: "ansible_distribution_major_version | int == 8"
 
 # Now, finally install required packages
 - name: "Package satellite installed"
@@ -14,9 +19,11 @@
   delay: 10
   register: yum_install_satellite_cmd
   until: yum_install_satellite_cmd is not failed
+
 - name: "Show installation result"
   debug:
     var: yum_install_satellite_cmd
+
 - name: "Fail if satellite package installation failed"
   assert:
     that:
@@ -33,12 +40,14 @@
   assert:
     that: sat_version is string
     fail_msg: "Variable 'sat_version' have to be string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
+
 - name: "Determine base installer options"
   set_fact:
     sat_installer_options: "--foreman-initial-admin-email {{ sat_email }} --foreman-initial-admin-username {{ sat_user }} --foreman-initial-admin-password {{ sat_pass }}"
 - name: "Determine Installer command line"
   set_fact:
     satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_additional_ops | default() }}"
+
 - name: "Configure Insights connection on Satellite <6.12"
   set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --enable-foreman-plugin-rh-cloud --foreman-proxy-plugin-remote-execution-ssh-install-key true"
