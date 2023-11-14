@@ -1,4 +1,9 @@
 ---
+- name: "Detect RHEL release"
+  ansible.builtin.setup:
+    filter: ansible_distribution_major_version
+  when: ansible_distribution_major_version is not defined
+
 # RHEL8 requirements
 - name: "Enable satellite-capsule:el8 module"
   command: dnf -y module enable satellite-capsule:el8
