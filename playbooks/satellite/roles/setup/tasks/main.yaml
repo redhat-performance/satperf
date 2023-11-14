@@ -52,26 +52,29 @@
   set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --enable-foreman-plugin-rh-cloud --foreman-proxy-plugin-remote-execution-ssh-install-key true"
   when:
-    - sat_version != 'Stream' and sat_version is version('6.12', '<')
-    - hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights|bool == False
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.12.0', '<')
+    - setup_insights is not defined or setup_insights | bool == False
+
 - name: "Configure Insights connection on Satellite >=6.12"
   set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights|bool == False
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - setup_insights is not defined or setup_insights | bool == False
+
 - name: "Configure MQTT transport for remote execution on Satellite >=6.12"
   set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - rex_mode is defined and rex_mode == 'mqtt'
+
 - name: "Configure Redis as Foreman cache on Satellite >=6.14"
   set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-rails-cache-store type:redis"
   when:
-    - sat_version == 'Stream' or sat_version is version('6.14', '>=')
-    - hostvars[inventory_hostname].configure_redis_cache is defined and hostvars[inventory_hostname].configure_redis_cache|bool == True
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.14.0', '>=')
+    - configure_redis_cache is defined and configure_redis_cache | bool == True
 
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
@@ -113,8 +116,8 @@
       [Service]
       LimitNOFILE=65536
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: Restart mosquitto service unit
   ansible.builtin.systemd:
@@ -122,6 +125,6 @@
     daemon_reload: yes
     state: restarted
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - rex_mode is defined and rex_mode == 'mqtt'
 ...

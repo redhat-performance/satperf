@@ -89,14 +89,14 @@
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-remote-execution-ssh\'
     insertafter: '.*--scenario capsule.*'
-  when: "sat_version != 'Stream' and sat_version is version('6.11', '<=')"
+  when: "sat_version != 'stream' and sat_version is ansible.builtin.version('6.11.0', '<=')"
 
 - name: "Make sure remote execution plugin is enabled on Satellite >=6.12"
   lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
     insertafter: '.*--scenario capsule.*'
-  when: "sat_version == 'Stream' or sat_version is version('6.12', '>=')"
+  when: "sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')"
 
 - name: "Configure MQTT transport for remote execution on Satellite >=6.12"
   lineinfile:
@@ -104,8 +104,8 @@
     line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
     insertafter: '.*--enable-foreman-proxy-plugin-remote-execution-script'
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: "Make sure Ansible plugin is enabled"
   lineinfile:
@@ -151,8 +151,8 @@
       [Service]
       LimitNOFILE=65536
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: Restart mosquitto service unit
   ansible.builtin.systemd:
@@ -160,6 +160,6 @@
     daemon_reload: yes
     state: restarted
   when:
-    - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-    - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+    - rex_mode is defined and rex_mode == 'mqtt'
 ...

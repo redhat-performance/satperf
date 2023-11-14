@@ -1,22 +1,16 @@
 ---
   # Add '*' autosign entry to Puppet CA of integrated capsule
-  - name: "Add '*' autosign entry (Satellite below 6.11)"
-    lineinfile:
-      path: "/etc/puppetlabs/puppet/autosign.conf"
-      line: "*"
-    when: "sat_version != 'Stream' and sat_version is version('6.11', '<')"
-
-  - name: "If file exist on 6.11, it is enabled"
-    stat:
+  - name: "If file exists, it is enabled"
+    ansible.builtin.stat:
       path: /etc/puppetlabs/puppet/autosign.conf
     register: stat_result
-    when: "sat_version == 'Stream' or sat_version is version('6.11', '>=')"
+    when: "sat_version == 'stream' or sat_version is ansible.builtin.version('6.11.0', '>=')"
 
   - name: "Add '*' autosign entry (Satellite 6.11 and above)"
-    lineinfile:
+    ansible.builtin.lineinfile:
       path: "/etc/puppetlabs/puppet/autosign.conf"
       line: "*"
     when:
-      - sat_version == 'Stream' or sat_version is version('6.11', '>=')
+      - sat_version == 'stream' or sat_version is ansible.builtin.version('6.11.0', '>=')
       - stat_result.stat.exists
 ...

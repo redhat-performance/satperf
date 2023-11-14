@@ -15,14 +15,14 @@
     - name: "Check if Insights client should be installed and configured (it won't be by default)"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-insights false"
-      when: "hostvars[inventory_hostname].setup_insights is not defined or hostvars[inventory_hostname].setup_insights | bool == False"
+      when: "setup_insights is not defined or setup_insights | bool == False"
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-remote-execution-pull true"
       when:
-        - sat_version == 'Stream' or sat_version is version('6.12', '>=')
-        - hostvars[inventory_hostname].rex_mode is defined and hostvars[inventory_hostname].rex_mode == 'mqtt'
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.12.0', '>=')
+        - rex_mode is defined and rex_mode == 'mqtt'
 
     - name: "Check if some package should be installed"
       ansible.builtin.set_fact:
