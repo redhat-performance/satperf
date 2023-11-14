@@ -55,6 +55,7 @@
   with_items: "{{ groups['capsules'] }}"
   when:
     - "'satellite6' in group_names"
+    - hostvars[item].public_ip is defined
     - private_ip is not defined or
       private_netmask is not defined or
       hostvars[item].private_ip is not defined or
@@ -91,6 +92,7 @@
   with_items: "{{ groups['satellite6'] }}"
   when:
     - "'capsules' in group_names"
+    - hostvars[item].public_ip is defined
     - private_ip is not defined or
       private_netmask is not defined or
       hostvars[item].private_ip is not defined or
@@ -127,6 +129,7 @@
   with_items: "{{ tests_registration_target }}"
   when:
     - "'container_hosts' in group_names"
+    - hostvars[item].public_ip is defined
     - private_ip is not defined or
       private_netmask is not defined or
       hostvars[item].private_ip is not defined or
