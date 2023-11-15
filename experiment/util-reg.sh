@@ -5,7 +5,6 @@ source experiment/run-library.sh
 organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 registrations_per_container_hosts=${PARAM_registrations_per_container_hosts:-5}
@@ -21,7 +20,7 @@ rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, S
 
 dl="Default Location"
 
-opts="--forks 100 -i $inventory --private-key $private_key"
+opts="--forks 100 -i $inventory"
 opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 

@@ -5,7 +5,6 @@ source experiment/run-library.sh
 organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 download_test_batches="${PARAM_download_test_batches:-1 2 3}"

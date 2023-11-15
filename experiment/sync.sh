@@ -5,7 +5,6 @@ source experiment/run-library.sh
 organization="${PARAM_organization:-Default Organization}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
@@ -27,7 +26,7 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 dl="Default Location"
 
-opts="--forks 100 -i $inventory --private-key $private_key"
+opts="--forks 100 -i $inventory"
 opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 
