@@ -50,7 +50,7 @@
       Content-Type: application/json
       Accept: application/json
     body: "{{ location_body }}"
-    status_code: 201
+    status_code: [201 422]
     body_format: json
   when: "location not in locations.json.results|map(attribute='name')"
 
