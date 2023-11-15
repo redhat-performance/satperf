@@ -6,8 +6,8 @@
     location: "{{ location | default('Location for {{ inventory_hostname }}') }}"
 
 - name: "Get id of a domain"
-  uri:
-    url: "https://{{ groups['satellite6']|first }}/api/domains/{{ domain }}"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/domains/{{ domain }}"
     method: GET
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
@@ -22,8 +22,8 @@
   run_once: true
 
 - name: "Get list of locations"
-  uri:
-    url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/locations?per_page=1000000"
     method: GET
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
@@ -39,8 +39,8 @@
 - name: "Create location for our capsule if it is not already there"
   # XXX: Submit PR
   throttle: 1
-  uri:
-    url: "https://{{ groups['satellite6']|first }}/api/locations"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/locations"
     method: POST
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
@@ -52,11 +52,11 @@
     body: "{{ location_body }}"
     status_code: [201 422]
     body_format: json
-  when: "location not in locations.json.results|map(attribute='name')"
+  when: "location not in locations.json.results | map(attribute='name')"
 
 - name: "Get updated list of locations if needed"
-  uri:
-    url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/locations?per_page=1000000"
     method: GET
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
@@ -66,7 +66,7 @@
   run_once: true
 
 - name: "Determine location ID"
-  set_fact:
+  ansible.builtin.set_fact:
     location_id: "{{ item.id }}"
   when: "item.name == location"
   with_items: "{{ locations.json.results }}"
@@ -74,8 +74,8 @@
 - name: "Move capsule's host to the location"
   # XXX: Submit PR
   throttle: 1
-  uri:
-    url: "https://{{ groups['satellite6']|first }}/api/hosts/{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ inventory_hostname }}"
     method: PUT
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
@@ -91,8 +91,8 @@
 - name: "Move capsule to the location"
   # XXX: Submit PR
   throttle: 1
-  uri:
-    url: "https://{{ groups['satellite6']|first }}/api/smart_proxies/{{ inventory_hostname }}"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies/{{ inventory_hostname }}"
     method: PUT
     user: "{{ sat_user }}"
     password: "{{ sat_pass }}"
@@ -102,6 +102,6 @@
       Content-Type: application/json
       Accept: application/json
     body: >
-      {"smart_proxy":{"location_ids":["{{ location_id }}"],"organization_ids":["1"]}}
+      {"smart_proxy": {"location_ids": ["{{ location_id }}"], "organization_ids": ["1"]}}
     body_format: json
 ...
