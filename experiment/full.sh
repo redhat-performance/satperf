@@ -212,7 +212,7 @@ section "Publish and promote big CV"
 cv='BenchContentView'
 rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
 rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Extras RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch" )"
 
 skip_measurement='true' h 20-cv-create-big.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
 h 21-cv-publish-big.log "content-view publish --organization '$organization' --name '$cv'"
