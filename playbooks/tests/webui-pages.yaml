@@ -36,7 +36,7 @@
         python3 /root/webui-pages.py \
           --satellite-username {{ sat_user }} \
           --satellite-password {{ sat_pass }} \
-          --satellite-org_id {{ sat_orgid }} \
+          --satellite-org_id 1 \
           --satellite-version {{ sat_version }} \
           --locust-host https://localhost \
           --locust-num-clients {{ ui_pages_concurrency }} \
