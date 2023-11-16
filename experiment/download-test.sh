@@ -99,10 +99,10 @@ if [ "$skip_down_setup" != "true" ]; then
     done
 fi
 
-
 skip_measurement='true' ap downtest-44-generate-host-registration-command.log \
   -e "ak='$ak'" \
   playbooks/satellite/host-registration_generate-command.yaml
+
 skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
   playbooks/satellite/client-scripts.yaml
 

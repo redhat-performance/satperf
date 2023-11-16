@@ -132,7 +132,6 @@ generic_environment_check false
 
 
 section "Prepare for registrations"
-ap 40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
 h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
     || h 42-domain-create.log "domain create --name '{{ domain }}' --organizations '$organization'"
 tmp=$( mktemp )
@@ -165,6 +164,13 @@ h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$or
 h 43-subs-list-employee.log "--csv subscription list --organization '$organization' --search 'name = \"Employee SKU\"'"
 employee_subs_id=$( tail -n 1 $logs/subs-list-employee.log | cut -d ',' -f 1 )
 h 43-ak-add-subs-employee.log "activation-key add-subscription --organization '$organization' --name ActivationKey --subscription-id '$employee_subs_id'"
+
+ap 44-generate-host-registration-command.log \
+  -e "ak=ActivationKey" \
+  playbooks/satellite/host-registration_generate-command.yaml
+
+ap 44-recreate-client-scripts.log \
+  playbooks/satellite/client-scripts.yaml
 
 
 section "Register"

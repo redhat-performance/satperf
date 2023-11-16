@@ -102,7 +102,13 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
         || skip_measurement='true' ap 41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "organization='$organization' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
 done
 
-skip_measurement='true' ap 44-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml -e "registration_hostgroup=hostgroup-for-{{ tests_registration_target }}"
+ap 44-generate-host-registration-command.log \
+  -e "ak=ActivationKey" \
+  playbooks/satellite/host-registration_generate-command.yaml
+
+skip_measurement='true' ap 44-recreate-client-scripts.log \
+  playbooks/satellite/client-scripts.yaml
+
 
 section "Util: Register"
 for i in $( seq $registrations_iterations ); do

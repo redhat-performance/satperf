@@ -143,6 +143,7 @@ done
 ap 44-generate-host-registration-command.log \
   -e "ak='$ak'" \
   playbooks/satellite/host-registration_generate-command.yaml
+
 ap 44-recreate-client-scripts.log \
   playbooks/satellite/client-scripts.yaml
 unset skip_measurement
