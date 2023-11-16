@@ -2,7 +2,7 @@
 - hosts: satellite6:capsules
   gather_facts: False
   vars:
-    hgrg: "host-registration generate-command --organization-id {{ sat_orgid }} --activation-key {{ ak }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
+    hgrg: "host-registration generate-command --organization '{{ sat_org }}' --activation-key {{ ak }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
   tasks:
     - name: "Check if running in a capsule"
       ansible.builtin.set_fact:

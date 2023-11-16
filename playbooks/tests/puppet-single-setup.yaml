@@ -28,17 +28,17 @@
 
   - name: "Create Puppet product"
     command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" product create --label "{{ content_puppet_product }}" --name "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" product create --label "{{ content_puppet_product }}" --name "{{ content_puppet_product }}" --organization "{{ sat_org }}"
     register: cmd
     failed_when: cmd.rc != 0 and 'Name has already been taken for a product in this organization.' not in cmd.stderr
   - name: "Create puppet repository"
     command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type puppet --label "{{ content_puppet_repo }}" --name "{{ content_puppet_repo }}" --organization-id "{{ sat_orgid }}" --product "{{ content_puppet_product }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository create --content-type puppet --label "{{ content_puppet_repo }}" --name "{{ content_puppet_repo }}" --organization "{{ sat_org }}" --product "{{ content_puppet_product }}"
     register: cmd
     failed_when: cmd.rc != 0 and 'Name has already been taken for this product.' not in cmd.stderr
   - name: "Upload our puppet module to the repository"
     command:
-      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module_name }}/pkg/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization-id "{{ sat_orgid }}"
+      hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" repository upload-content --name "{{ content_puppet_repo }}" --path "{{ content_puppet_module_name }}/pkg/{{ content_puppet_module_author }}-{{ content_puppet_module_name }}-0.1.0.tar.gz" --product "{{ content_puppet_product }}" --organization "{{ sat_org }}"
     register: upload
     until: "{{ upload.rc }} == 0"
     retries: 2
@@ -46,12 +46,12 @@
 
   - name: "Create content view"
     command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view create --name "{{ content_puppet_cv }}" --organization-id "{{ sat_orgid }}"
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view create --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
   - name: "Add Puppet module to the content view"
     command:
       hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view puppet-module add --organization-id 1 --content-view "{{ content_puppet_cv }}" --name "{{ content_puppet_module_name }}" --author "{{ content_puppet_module_author }}"
 
   - name: "Publish and promote content view without async"
     command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_puppet_cv }}" --organization-id "{{ sat_orgid }}"
+      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --name "{{ content_puppet_cv }}" --organization "{{ sat_org }}"
 ...

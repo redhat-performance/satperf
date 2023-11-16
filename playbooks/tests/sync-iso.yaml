@@ -26,18 +26,18 @@
   tasks:
     - name: "Create product"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_iso_product }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization "{{ sat_org }}" --name "{{ test_sync_iso_product }}"
       register: create_product
       failed_when: "create_product.rc != 0 and 'Name has already been taken for a product in this organization' not in create_product.stderr"
       changed_when: "create_product.rc == 0 and 'Product created' in create_product.stdout"
     - name: "Create repos"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_iso_product }}" --content-type file --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --url "{{ test_sync_iso_url_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ sat_org }}" --product "{{ test_sync_iso_product }}" --content-type file --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --url "{{ test_sync_iso_url_template|replace('*', item) }}"
       register: create_repo
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
     - name: "Start sync asynchronously"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_iso_product }}" --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --async
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ sat_org }}" --product "{{ test_sync_iso_product }}" --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
       register: start_sync
       ignore_errors: true
@@ -65,16 +65,16 @@
 
     - name: "Create lifecycle environment"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization-id "{{ sat_orgid }}" --prior Library --name "{{ test_sync_iso_le }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization "{{ sat_org }}" --prior Library --name "{{ test_sync_iso_le }}"
       register: create_le
     - name: "Create content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_iso_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization "{{ sat_org }}" --name "{{ test_sync_iso_cv_template|replace('*', item) }}"
       register: create_cv
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
     - name: "Publish content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization-id "{{ sat_orgid }}" --name "{{ test_sync_iso_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization "{{ sat_org }}" --name "{{ test_sync_iso_cv_template|replace('*', item) }}"
       register: start_publish
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
     - name: "Wait for publish to finish"
@@ -93,7 +93,7 @@
 
     - name: "Promote content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization-id "{{ sat_orgid }}" --content-view "{{ test_sync_iso_cv_template|replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_iso_le }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization "{{ sat_org }}" --content-view "{{ test_sync_iso_cv_template|replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_iso_le }}"
       register: start_promote
       loop: "{{ range(1, test_sync_iso_count|int+1)|list }}"
     - name: "Wait for promote to finish"
