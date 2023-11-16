@@ -6,19 +6,11 @@
     dest: "/root/clients_host-registration.yaml"
     force: yes
 
-- name: "Install Ansible (in RHEL <8.6)"
+- name: "Install Ansible"
   throttle: 8
-  ansible.builtin.package:
-    name: ansible
-    state: present
-  when: "ansible_distribution_version is version('8.6', '<')"
-
-- name: "Install Ansible (in RHEL >=8.6)"
-  throttle: 8
-  ansible.builtin.package:
+  ansible.builtin.dnf:
     name: ansible-core
-    state: present
-  when: "ansible_distribution_version is version('8.6', '>=')"
+    state: latest
 
 - name: "Ensure we have Ansible config with default section"
   throttle: 8
