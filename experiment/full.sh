@@ -18,10 +18,10 @@ basearch='x86_64'
 
 sat_client_product='Satellite Client'
 
-repo_sat_client_6="${PARAM_repo_sat_client_6:-http://mirror.example.com/Satellite_Client_6_x86_64/}"
-repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
-repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
-repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_x86_64/}"
+repo_sat_client_6="${PARAM_repo_sat_client_6:-http://mirror.example.com/Satellite_Client_6_${basearch}/}"
+repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_${basearch}/}"
+repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_${basearch}/}"
+repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_${basearch}/}"
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
@@ -97,7 +97,7 @@ for rel in $rels; do
             os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
             ;;
         rhel8)
-            os_product='Red Hat Enterprise Linux for x86_64'
+            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever='8'
             os_reposet_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS (RPMs)"
             os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
@@ -105,7 +105,7 @@ for rel in $rels; do
             os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
             ;;
         rhel9)
-            os_product='Red Hat Enterprise Linux for x86_64'
+            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever='9'
             os_reposet_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS (RPMs)"
             os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
@@ -159,7 +159,7 @@ for rel in $rels; do
             os_rids="$os_rids,$( get_repo_id "$os_product" "$os_extras_repo_name" )"
             ;;
         rhel8)
-            os_product='Red Hat Enterprise Linux for x86_64'
+            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever='8'
             os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
             os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
@@ -167,7 +167,7 @@ for rel in $rels; do
             os_rids="$os_rids,$( get_repo_id "$os_product" "$os_appstream_repo_name" )"
             ;;
         rhel9)
-            os_product='Red Hat Enterprise Linux for x86_64'
+            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever='9'
             os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
             os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs $os_releasever"
@@ -210,8 +210,8 @@ ap 14-capsync-populate.log \
 
 section "Publish and promote big CV"
 cv='BenchContentView'
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$( get_repo_id 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 6 Server RPMs $basearch 6Server" )"
+rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server RPMs $basearch 7Server" )"
 rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch" )"
 
 skip_measurement='true' h 20-cv-create-big.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
@@ -231,7 +231,7 @@ done
 section "Publish and promote filtered CV"
 export skip_measurement='true'
 cv='BenchFilteredContentView'
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+rids="$( get_repo_id 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 6 Server RPMs $basearch 6Server" )"
 
 h 30-cv-create-filtered.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
 
@@ -268,7 +268,7 @@ for rel in $rels; do
             os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
             ;;
         rhel8)
-            os_product='Red Hat Enterprise Linux for x86_64'
+            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever='8'
             os_reposet_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS (RPMs)"
             os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
@@ -276,7 +276,7 @@ for rel in $rels; do
             os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
             ;;
         rhel9)
-            os_product='Red Hat Enterprise Linux for x86_64'
+            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever='9'
             os_reposet_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS (RPMs)"
             os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
