@@ -13,7 +13,7 @@
     register: copying
   - name: "Upload manifest"
     command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription upload --organization '{{ sat_org }}' --file /root/manifest.zip
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription upload --organization '{{ organization }}' --file /root/manifest.zip
     register: uploading
     # rc==70 is the new manifest data are same as those already present.
     failed_when: not (uploading.rc == 70 or uploading.rc == 0)
@@ -27,7 +27,7 @@
   # should suffice
   - name: "Show manifest is there"
     command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription manifest-history --organization '{{ sat_org }}'
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription manifest-history --organization '{{ organization }}'
     register: manifest_history
   - name: "Check that manifest is there"
     assert:
@@ -37,12 +37,12 @@
   # Reload manifest as othervise it fails frequently when listing repos
   - name: "Refresh manifest"
     command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription refresh-manifest --organization '{{ sat_org }}'
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' subscription refresh-manifest --organization '{{ organization }}'
 
   # Enable repositories
   - name: "List repositories we already have (not to attempt to enable what we already have)"
     command:
-      hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository list --organization '{{ sat_org }}'
+      hammer --csv --username '{{ sat_user }}' --password '{{ sat_pass }}' repository list --organization '{{ organization }}'
     register: repository_list
   - include_tasks: try_enable_repo.yaml
     when: 'repository_list.stdout.find("," + item.repo + ",") == -1'
@@ -52,7 +52,7 @@
   # Start async of the repos
   - name: "Start (asynchronous) sync of repos we have just enabled"
     command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}' --async
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ organization }}' --async
     with_items:
       "{{ sat_repos }}"
     when: "sat_repos_sync == 'async'"
@@ -60,7 +60,7 @@
   # Start sync of the repos
   - name: "Start (synchronous) sync of repos we have just enabled"
     command:
-      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ sat_org }}'
+      hammer --username '{{ sat_user }}' --password '{{ sat_pass }}' repository synchronize --product '{{ item.product }}' --name '{{ item.repo }}' --organization '{{ organization }}'
     with_items:
       "{{ sat_repos }}"
     when: "sat_repos_sync == 'sync'"

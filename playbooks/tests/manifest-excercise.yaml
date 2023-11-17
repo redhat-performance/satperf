@@ -18,5 +18,5 @@
 
     - name: "Cleanup manifest if it is there"
       shell:
-        hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ sat_org }}'
+        hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ organization }}'
       ignore_errors: yes
