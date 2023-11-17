@@ -23,8 +23,6 @@ repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellit
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_${basearch}/}"
 repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_${basearch}/}"
 
-rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
-
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-25}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
