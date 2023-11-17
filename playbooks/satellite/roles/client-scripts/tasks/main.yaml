@@ -32,7 +32,7 @@
 - name: "Distribute private key"
   throttle: 8
   copy:
-    src: "../../{{ client_private_key }}"
+    src: "../../{{ ansible_ssh_private_key_file }}"
     dest: /root/id_rsa_key
     mode: "u=rw,g=,o="
     force: yes
