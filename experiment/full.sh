@@ -7,8 +7,8 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
 local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
-cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
+cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
 rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
 
