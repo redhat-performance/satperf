@@ -1,7 +1,5 @@
 #!/bin/bash
 
-local_conf="${local_conf:-conf/satperf.local.yaml}"
-
 set -o pipefail
 ###set -x
 # Disable `set -e` for today (see `date -d @1594369339` for timestamp interpretation)
@@ -17,7 +15,7 @@ if [ -z "$marker" ]; then
 fi
 
 opts=${opts:-"--forks 100 -i conf/hosts.ini"}
-opts_adhoc=${opts_adhoc:-"$opts -e @conf/satperf.yaml -e @$local_conf"}
+opts_adhoc=${opts_adhoc:-"$opts"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
@@ -87,7 +85,7 @@ function generic_environment_check() {
     skip_measurement='true' a 00-check-ping-sat.log container_hosts -m "shell" -a "ping -c 10 {{ groups['satellite6']|first }}"
 
     if $extended; then
-        ansible_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+        ansible_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
         if [ "$ansible_container_hosts" -gt 0 ]; then
             skip_measurement='true' ap 00-recreate-containers.log ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
         fi
@@ -384,17 +382,17 @@ function ap() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
     local start=$( date --utc +%s )
-    log "Start 'ansible-playbook $opts $*' with log in $out"
+    log "Start 'ansible-playbook $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible-playbook RUN"
         local rc=0
     else
-        ansible-playbook $opts "$@" &>$out && local rc=$? || local rc=$?
+        ansible-playbook $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
     fi
     local end=$( date --utc +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
-        "ansible-playbook $opts $( _format_opts "$@" )" \
+        "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
         "$out" \
         "$rc" \
         "$start" \
