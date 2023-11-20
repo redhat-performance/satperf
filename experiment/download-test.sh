@@ -2,10 +2,9 @@
 
 source experiment/run-library.sh
 
-organization="${PARAM_organization:-Default Organization}"
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 download_test_batches="${PARAM_download_test_batches:-1 2 3}"
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
@@ -34,7 +33,7 @@ skip_down_setup="${PARAM_skip_down_setup:-false}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e branch='$branch'"
 
 
 section "Checking environment"
@@ -45,6 +44,7 @@ generic_environment_check
 if [ "$skip_down_setup" != "true" ]; then
     section "Sync Download Test repo"
     ap downtest-25-repository-create-downtest.log  \
+      -e "organization='{{ sat_org }}'" \
       -e "download_test_repo_template='download_test_repo'" \
       -e "repo_download_test=$repo_download_test" \
       -e "repo_count_download_test=$repo_count_download_test" \
@@ -53,31 +53,33 @@ if [ "$skip_down_setup" != "true" ]; then
 
     section "Push content to capsules"
     ap downtest-35-capsync-populate.log \
-      -e "organization='$organization'" \
+      -e "organization='{{ sat_org }}'" \
       playbooks/satellite/capsules-populate.yaml
     unset skip_measurement
 
 
     section "Prepare for registrations"
     h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
-      || h downtest-40-domain-create.log "domain create --name '{{ domain }}' --organizations '$organization'"
+      || h downtest-40-domain-create.log "domain create --name '{{ domain }}' --organizations '{{ sat_org }}'"
+    
     tmp=$( mktemp )
-    h_out "--no-headers --csv location list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
+    h_out "--no-headers --csv location list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
     location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
     rm -f $tmp
-    h downtest-40-domain-update.log "domain update --name '{{ domain }}' --organizations '$organization' --location-ids '$location_ids'"
+    
+    h downtest-40-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
-    h downtest-40-ak-create.log "activation-key create --content-view '$organization View' --lifecycle-environment 'Library' --name '$ak' --organization '$organization'"
+    h downtest-40-ak-create.log "activation-key create --content-view '{{ sat_org }} View' --lifecycle-environment 'Library' --name '$ak' --organization '{{ sat_org }}'"
 
-    h_out "--csv --no-headers activation-key product-content --organization '$organization' --content-access-mode-all true --name '$ak' --search 'name ~ download_test_repo' --fields label" >$logs/downtest-repo-label.log
+    h_out "--csv --no-headers activation-key product-content --organization '{{ sat_org }}' --content-access-mode-all true --name '$ak' --search 'name ~ download_test_repo' --fields label" >$logs/downtest-repo-label.log
     down_test_repo_label="$( tail -n 1 $logs/downtest-repo-label.log )"
-    h downtest-40-ak-content-override-downtest.log "activation-key content-override --organization '$organization' --name '$ak' --content-label '$down_test_repo_label' --override-name 'enabled' --value 1"
-
+    h downtest-40-ak-content-override-downtest.log "activation-key content-override --organization '{{ sat_org }}' --name '$ak' --content-label '$down_test_repo_label' --override-name 'enabled' --value 1"
 
     tmp=$( mktemp )
-    h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
+    h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
     rows="$( cut -d ' ' -f 1 $tmp )"
     rm -f $tmp
+
     for row in $rows; do
         capsule_id="$( echo "$row" | cut -d ',' -f 1 )"
         capsule_name="$( echo "$row" | cut -d ',' -f 2 )"
@@ -89,7 +91,7 @@ if [ "$skip_down_setup" != "true" ]; then
         fi
 
         h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-          || h downtest-44-subnet-create-${capsule_name}.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+          || h downtest-44-subnet-create-${capsule_name}.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '{{ sat_org }}' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
 
         subnet_id="$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )"
         a downtest-45-subnet-add-rex-capsule-${capsule_name}.log \
@@ -100,6 +102,7 @@ if [ "$skip_down_setup" != "true" ]; then
 fi
 
 skip_measurement='true' ap downtest-44-generate-host-registration-command.log \
+  -e "organization='{{ sat_org }}'" \
   -e "ak='$ak'" \
   playbooks/satellite/host-registration_generate-command.yaml
 
