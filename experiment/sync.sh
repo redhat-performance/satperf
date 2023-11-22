@@ -2,10 +2,9 @@
 
 source experiment/run-library.sh
 
-organization="${PARAM_organization:-Default Organization}"
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
 test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
@@ -27,19 +26,26 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e branch='$branch'"
 
 
 #section "Checking environment"
 #generic_environment_check false
 
+
 section "Sync test"
 # Yum repositories
-ap 10-test-sync-repositories.log playbooks/tests/sync-repositories.yaml -e "test_sync_repositories_count=$test_sync_repositories_count test_sync_repositories_url_template=$test_sync_repositories_url_template test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs"
+ap 10-test-sync-repositories.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "test_sync_repositories_count=$test_sync_repositories_count" \
+  -e "test_sync_repositories_url_template=$test_sync_repositories_url_template" \
+  -e "test_sync_repositories_max_sync_secs=$test_sync_repositories_max_sync_secs" \
+  playbooks/tests/sync-repositories.yaml
 # ISO repositories
 #ap 10-test-sync-iso.log playbooks/tests/sync-iso.yaml -e "test_sync_iso_count=$test_sync_iso_count test_sync_iso_url_template=$test_sync_iso_url_template test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs"
 # Container repositories
 #ap 10-test-sync-docker.log playbooks/tests/sync-docker.yaml -e "test_sync_docker_count=$test_sync_docker_count test_sync_docker_url_template=$test_sync_docker_url_template test_sync_docker_max_sync_secs=$test_sync_docker_max_sync_secs"
+
 
 section "Summary"
 # Yum repositories
@@ -55,7 +61,9 @@ e SyncRepositories $logs/10-test-sync-docker.log
 e PublishContentViews $logs/10-test-sync-docker.log
 e PromoteContentViews $logs/10-test-sync-docker.log
 
+
 section "Sosreport"
 skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+
 
 junit_upload

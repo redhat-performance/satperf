@@ -2,10 +2,9 @@
 
 source experiment/run-library.sh
 
-organization="${PARAM_organization:-Default Organization}"
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
 initial_batch=${PARAM_initial_batch:-1}
@@ -19,7 +18,7 @@ rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, S
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e branch='$branch'"
 
 
 section "Checking environment"
@@ -27,40 +26,41 @@ generic_environment_check
 
 
 section "Prepare for Red Hat content"
-h_out "--no-headers --csv organization list --fields name" | grep --quiet "^$organization$" \
-  || h 00-ensure-org.log "organization create --name '$organization'"
-skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '$organization' --location '$dl'"
+h_out "--no-headers --csv organization list --fields name" | grep --quiet "^{{ sat_org }}$" \
+  || h 00-ensure-org.log "organization create --name '{{ sat_org }}'"
+skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
 skip_measurement='true' ap 01-manifest-excercise.log \
+  -e "organization='{{ sat_org }}'" \
   -e "manifest='../../$manifest'" \
   playbooks/tests/manifest-excercise.yaml
 e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
 e ManifestDelete $logs/01-manifest-excercise.log
-skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$organization'"
+skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 
 
 export skip_measurement='true'
 section "Sync from CDN"   # do not measure becasue of unpredictable network latency
-h 00b-set-cdn-stage.log "organization update --name '$organization' --redhat-repository-url '$cdn_url_full'"
+h 00b-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_full'"
 
-h 00b-manifest-refresh.log "subscription refresh-manifest --organization '$organization'"
+h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 # RHEL 8
-h 12b-reposet-enable-rhel8baseos.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
-h 12b-repo-sync-rhel8baseos.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
+h 12b-reposet-enable-rhel8baseos.log "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
+h 12b-repo-sync-rhel8baseos.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
 
-h 12b-reposet-enable-rhel8appstream.log "repository-set enable --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
-h 12b-repo-sync-rhel8appstream.log "repository synchronize --organization '$organization' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
+h 12b-reposet-enable-rhel8appstream.log "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
+h 12b-repo-sync-rhel8appstream.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
 unset skip_measurement
 
 
 export skip_measurement='true'
 section "Sync Satellite Client repos"
-h 15-sat-client-product-create.log "product create --organization '$organization' --name SatClientProduct"
+h 15-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name SatClientProduct"
 
 # Satellite Client for RHEL 8
-h 15-repository-create-sat-client_8.log "repository create --organization '$organization' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
-h 15-repository-sync-sat-client_8.log "repository synchronize --organization '$organization' --product SatClientProduct --name SatClient8Repo"
+h 15-repository-create-sat-client_8.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
+h 15-repository-sync-sat-client_8.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo"
 unset skip_measurement
 
 
@@ -72,17 +72,17 @@ rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
 cv='CV_RHEL8'
 lce='LCE_RHEL8'
 
-skip_measurement='true' h 25-rhel8-cv-create.log "content-view create --organization '$organization' --repository-ids '$rids' --name '$cv'"
-h 25-rhel8-cv-publish.log "content-view publish --organization '$organization' --name '$cv'"
+skip_measurement='true' h 25-rhel8-cv-create.log "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name '$cv'"
+h 25-rhel8-cv-publish.log "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
-skip_measurement='true' h 26-rhel8-lce-create.log "lifecycle-environment create --organization '$organization' --prior 'Library' --name '$lce'"
-h 27-rhel8-lce-promote.log "content-view version promote --organization '$organization' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
+skip_measurement='true' h 26-rhel8-lce-create.log "lifecycle-environment create --organization '{{ sat_org }}' --prior 'Library' --name '$lce'"
+h 27-rhel8-lce-promote.log "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
 
 
 export skip_measurement='true'
 section "Push content to capsules"
 ap 35-capsync-populate.log \
-  -e "organization='$organization'" \
+  -e "organization='{{ sat_org }}'" \
   -e "lces='$lce'" \
   playbooks/satellite/capsules-populate.yaml
 unset skip_measurement
@@ -93,25 +93,25 @@ section "Prepare for registrations"
 tmp=$( mktemp )
 
 h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
-  || h 42-domain-create.log "domain create --name '{{ domain }}' --organizations '$organization'"
+  || h 42-domain-create.log "domain create --name '{{ domain }}' --organizations '{{ sat_org }}'"
 
-h_out "--no-headers --csv location list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
+h_out "--no-headers --csv location list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
-h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '$organization' --location-ids '$location_ids'"
+h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
 ak='AK_RHEL8'
-h 43-ak-create.log "activation-key create --content-view '$cv' --lifecycle-environment '$lce' --name '$ak' --organization '$organization'"
+h 43-ak-create.log "activation-key create --content-view '$cv' --lifecycle-environment '$lce' --name '$ak' --organization '{{ sat_org }}'"
 
-h_out "--csv subscription list --organization '$organization' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
+h_out "--csv subscription list --organization '{{ sat_org }}' --search 'name = \"$rhel_subscription\"'" >$logs/subs-list-rhel.log
 rhel_subs_id=$( tail -n 1 $logs/subs-list-rhel.log | cut -d ',' -f 1 )
-h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '$organization' --name '$ak' --subscription-id '$rhel_subs_id'"
+h 43-ak-add-subs-rhel.log "activation-key add-subscription --organization '{{ sat_org }}' --name '$ak' --subscription-id '$rhel_subs_id'"
 
-h_out "--csv subscription list --organization '$organization' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
+h_out "--csv subscription list --organization '{{ sat_org }}' --search 'name = SatClientProduct'" >$logs/subs-list-client.log
 client_subs_id=$( tail -n 1 $logs/subs-list-client.log | cut -d ',' -f 1 )
-h 43-ak-add-subs-client.log "activation-key add-subscription --organization '$organization' --name '$ak' --subscription-id '$client_subs_id'"
+h 43-ak-add-subs-client.log "activation-key add-subscription --organization '{{ sat_org }}' --name '$ak' --subscription-id '$client_subs_id'"
 
 tmp=$( mktemp )
-h_out "--no-headers --csv capsule list --organization '$organization'" | grep '^[0-9]\+,' >$tmp
+h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 for row in $( cut -d ' ' -f 1 $tmp ); do
     capsule_id=$( echo "$row" | cut -d ',' -f 1 )
     capsule_name=$( echo "$row" | cut -d ',' -f 2 )
@@ -124,7 +124,7 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
     fi
 
     h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-      || h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '$organization' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
+      || h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '{{ sat_org }}' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
     
     subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
     a 45-subnet-add-rex-capsule-$capsule_name.log \
@@ -134,13 +134,14 @@ for row in $( cut -d ' ' -f 1 $tmp ); do
 
     h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
       || ap 41-hostgroup-create-$capsule_name.log \
-           -e "organization='$organization'" \
+           -e "organization='{{ sat_org }}'" \
            -e "hostgroup_name='$hostgroup_name'" \
            -e "subnet_name='$subnet_name'" \
            playbooks/satellite/hostgroup-create.yaml
 done
 
 ap 44-generate-host-registration-command.log \
+  -e "organization='{{ sat_org }}'" \
   -e "ak='$ak'" \
   playbooks/satellite/host-registration_generate-command.yaml
 
@@ -150,8 +151,8 @@ unset skip_measurement
 
 
 section "Register"
-number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
-number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
+number_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_containers_per_container_host=$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
 total_number_containers=$(( number_container_hosts * number_containers_per_container_host ))
 concurrent_registrations_per_container_host=$(( expected_concurrent_registrations / number_container_hosts ))
 real_concurrent_registrations=$(( concurrent_registrations_per_container_host * number_container_hosts ))

@@ -2,13 +2,13 @@
 
 source experiment/run-library.sh
 
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
 wait_interval=${PARAM_wait_interval:-50}
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e branch='$branch'"
 
 
 section "Backup"

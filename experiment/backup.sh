@@ -2,10 +2,8 @@
 
 source experiment/run-library.sh
 
-organization="${PARAM_organization:-Default Organization}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
 wait_interval=${PARAM_wait_interval:-50}
 
@@ -14,7 +12,7 @@ cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e branch='$branch'"
 
 
 section "BackupTest"

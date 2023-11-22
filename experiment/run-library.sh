@@ -162,7 +162,7 @@ function status_data_create() {
         rm -f "$sd_file"
     fi
     if [ -n "$PARAM_inventory" ]; then
-        sd_hostname="$( ansible -i "$PARAM_inventory" --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+        sd_hostname="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     fi
 
     # Create status data file

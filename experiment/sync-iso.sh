@@ -2,10 +2,9 @@
 
 source experiment/run-library.sh
 
-organization="${PARAM_organization:-Default Organization}"
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-local_conf="${PARAM_local_conf:-conf/satperf.local.yaml}"
 
 test_sync_iso_count="${PARAM_test_sync_iso_count:-8}"
 test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
@@ -19,7 +18,7 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
+opts_adhoc="$opts -e branch='$branch'"
 
 
 #section "Checking environment"
@@ -28,6 +27,7 @@ opts_adhoc="$opts -e @conf/satperf.yaml -e @$local_conf"
 
 section "Sync file repo"
 ap 10-test-sync-iso.log \
+  -e "organization='{{ sat_org }}'" \
   -e "test_sync_iso_count=$test_sync_iso_count" \
   -e "test_sync_iso_url_template=$test_sync_iso_url_template" \
   -e "test_sync_iso_max_sync_secs=$test_sync_iso_max_sync_secs" \

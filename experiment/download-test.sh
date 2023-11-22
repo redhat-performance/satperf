@@ -6,15 +6,7 @@ branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
-download_test_batches="${PARAM_download_test_batches:-1 2 3}"
-bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
-
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
-
-repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
-repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
-
-rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
 ak="${PARAM_ak:-ActivationKey}"
 
@@ -94,6 +86,7 @@ if [ "$skip_down_setup" != "true" ]; then
           || h downtest-44-subnet-create-${capsule_name}.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '{{ sat_org }}' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
 
         subnet_id="$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )"
+
         a downtest-45-subnet-add-rex-capsule-${capsule_name}.log \
           -m "ansible.builtin.uri" \
           -a "url=https://{{ groups['satellite6'] | first }}/api/v2/subnets/${subnet_id} force_basic_auth=true user={{ sat_user }} password={{ sat_pass }} method=PUT body_format=json body='{\"subnet\": {\"remote_execution_proxy_ids\": [\"${capsule_id}\"]}}'" \
@@ -111,8 +104,8 @@ skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
 
 
 section "Register"
-number_container_hosts=$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
-number_containers_per_container_host=$( ansible -i $inventory -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
+number_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_containers_per_container_host=$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
 total_number_containers=$(( number_container_hosts * number_containers_per_container_host ))
 concurrent_registrations_per_container_host=$(( expected_concurrent_registrations / number_container_hosts ))
 real_concurrent_registrations=$(( concurrent_registrations_per_container_host * number_container_hosts ))
