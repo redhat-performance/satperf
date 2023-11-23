@@ -185,8 +185,8 @@ for rel in $rels; do
     # CCV
     h 13c-ccv-create-${rel}.log "content-view create --organization '{{ sat_org }}' --composite --auto-publish yes --name '$ccv'"
 
-    h 13c-ccv-component-add-${rel}.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
-    h 13c-ccv-publish-${rel}.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+    h 13c-ccv-component-add-${rel}-os.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
+    h 13c-ccv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
     # Promotion to LCE(s)
     tmp="$( mktemp )"
@@ -364,8 +364,8 @@ for rel in $rels; do
     h 35-cv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
     # CCV
-    h 36-ccv-component-add-${rel}.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
-    h 37-ccv-publish-${rel}.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+    h 36-ccv-component-add-${rel}-sat-client.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
+    h 37-ccv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
     tmp="$( mktemp )"
     h_out "--no-headers --csv content-view version list --organization '{{ sat_org }}' --content-view '$ccv'" | grep '^[0-9]\+,' >$tmp
