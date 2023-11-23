@@ -133,7 +133,7 @@ done
 
 
 section "Summary"
-log "$(grep 'RESULT:' $logs/downtest-50-*-*-Download.log)"
+log "$(grep 'RESULT:' $logs/downtest-50-*-*-Download.log | sort -V)"
 
 
 junit_upload
