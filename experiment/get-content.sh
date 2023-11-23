@@ -206,8 +206,12 @@ if [[ "$skip_down_setup" != "true" ]]; then
 
         # CCV
         h 35-ccv-create-${rel}.log "content-view create --organization '{{ sat_org }}' --composite --auto-publish yes --name '$ccv'"
-        h 36-ccv-component-add-${rel}.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --component-content-view '$cv_sat_client' --latest"
-        h 37-ccv-publish-${rel}.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+
+        h 36-ccv-component-add-${rel}-os.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
+        h 37-ccv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+
+        h 36-ccv-component-add-${rel}-sat-client.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
+        h 37-ccv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
         # Promotion to LCE(s)
         tmp="$( mktemp )"
