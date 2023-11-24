@@ -235,3 +235,12 @@ if [[ "$skip_push_to_capsules_setup" != "true" ]]; then
     -e "lces='$lces'" \
     playbooks/satellite/capsules-populate.yaml
 fi
+
+
+section "Sosreport"
+ap sosreporter-gatherer.log \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
+
+
+junit_upload
