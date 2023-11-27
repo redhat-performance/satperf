@@ -231,9 +231,9 @@ fi
 if [[ "$skip_push_to_capsules_setup" != "true" ]]; then
     section "Push content to capsules"
     ap 40-capsules-populate.log \
-    -e "organization='{{ sat_org }}'" \
-    -e "lces='$lces'" \
-    playbooks/satellite/capsules-populate.yaml
+      -e "organization='{{ sat_org }}'" \
+      -e "lces='$lces'" \
+      playbooks/satellite/capsules-populate.yaml
 fi
 
 
