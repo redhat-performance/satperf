@@ -12,13 +12,6 @@
     id: "{{ capsule_id_cmd.stdout_lines[0] }}"
     lces: "{{ lces | default('Library') }}"
 
-- name: "Assign capsule to organization '{{ organization }}'"
-  # No error seen until now
-  throttle: 1
-  ansible.builtin.command:
-    cmd: "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule update --id '{{ id }}' --organizations '{{ organization }}'"
-  delegate_to: "{{ groups['satellite6'] | first }}"
-
 - name: "Set capsule download policy to immediate"
   # XXX: Submit PR
   throttle: 1
