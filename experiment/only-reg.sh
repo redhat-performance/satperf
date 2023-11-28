@@ -8,7 +8,6 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
-wait_interval=${PARAM_wait_interval:-50}
 
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
@@ -28,17 +27,14 @@ h 00-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --l
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h 01-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 h 03-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
-s $wait_interval
 
 
 section "Util: Sync Client repos"
 h client-product-create.log "product create --organization '{{ sat_org }}' --name SatClientProduct"
 h repository-create-sat-client_7.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
 h repository-sync-sat-client_7.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo"
-s $wait_interval
 h repository-create-sat-client_8.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
 h repository-sync-sat-client_8.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo"
-s $wait_interval
 
 
 h regs-40-ak-create.log "activation-key create --content-view '{{ sat_org }} View' --lifecycle-environment Library --name ActivationKey --organization '{{ sat_org }}'"
@@ -88,7 +84,6 @@ section "Util: Register"
 for i in $( seq $registrations_iterations ); do
     ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/44-register-docker-host-client-logs'"
     e Register $logs/44-register-$i.log
-    s $wait_interval
 done
 
 

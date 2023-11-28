@@ -5,8 +5,6 @@ source experiment/run-library.sh
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-wait_interval=${PARAM_wait_interval:-30}
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
@@ -36,7 +34,6 @@ a capsync-10-manifest-deploy.log \
   -m copy \
   -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-s $wait_interval
 
 
 section "Sync from CDN mirror"
@@ -66,7 +63,6 @@ h capsync-25-repo-sync-rhel9baseos.log "repository synchronize --organization '{
 
 h capsync-26-reposet-enable-rhel9appstream.log "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - AppStream (RPMs)' --releasever '9' --basearch 'x86_64'"
 h capsync-26-repo-sync-rhel9appstream.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9'"
-s $wait_interval
 
 
 export skip_measurement='true'
@@ -84,7 +80,6 @@ h capsync-29-repository-sync-sat-client_8.log "repository synchronize --organiza
 # Satellite Client for RHEL 9
 h capsync-29-repository-create-sat-client_9.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient9Repo --content-type yum --url '$repo_sat_client_9'"
 h capsync-29-repository-sync-sat-client_9.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient9Repo"
-s $wait_interval
 unset skip_measurement
 
 
@@ -130,7 +125,6 @@ h 31-rhel9-cv-publish.log "content-view publish --organization '{{ sat_org }}' -
 
 skip_measurement='true' h 35-rhel9-lce-create.log "lifecycle-environment create --organization '{{ sat_org }}' --prior 'Library' --name '$lce'"
 h 36-rhel9-lce-promote.log "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
-s $wait_interval
 
 
 section "Push content to capsules"
@@ -155,7 +149,6 @@ for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
           -e "lces='$lces'" \
           -e "num_concurrent_capsules='$num_concurrent_capsules'" \
           playbooks/satellite/capsules-populate.yaml
-        s $wait_interval
     fi
 done
 

@@ -8,7 +8,6 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
-wait_interval=${PARAM_wait_interval:-50}
 
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
 puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"
@@ -39,13 +38,10 @@ generic_environment_check false
 ###count=5
 ###for i in $( seq $count ); do
 ###    h 01-manifest-upload-$i.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-###    s $wait_interval
 ###    if [ $i -lt $count ]; then
 ###        h 02-manifest-delete-$i.log "subscription delete-manifest --organization '{{ sat_org }}'"
-###        s $wait_interval
 ###    fi
 ###done
-###s $wait_interval
 ###
 ###
 ###section "Sync from mirror"
@@ -55,11 +51,8 @@ generic_environment_check false
 ###h 10-reposet-enable-rhel7optional.log "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 ###h 11-repo-immediate-rhel7.log "repository update --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
 ###h 12-repo-sync-rhel7.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
-###s $wait_interval
 ###h 12-repo-sync-rhel6.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'"
-###s $wait_interval
 ###h 12-repo-sync-rhel7optional.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
-###s $wait_interval
 ###
 ###section "Synchronise capsules"
 ###tmp=$( mktemp )
@@ -68,7 +61,6 @@ generic_environment_check false
 ###    skip_measurement='true' h 13-capsule-add-library-lce-$capsule_id.log "capsule content add-lifecycle-environment  --organization '{{ sat_org }}' --id '$capsule_id' --lifecycle-environment 'Library'"
 ###    h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '{{ sat_org }}' --id '$capsule_id'"
 ###done
-###s $wait_interval
 ###
 ###section "Publish and promote big CV"
 ###rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
@@ -76,16 +68,12 @@ generic_environment_check false
 ###rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server' )"
 ###h 20-cv-create-all.log "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name 'BenchContentView'"
 ###h 21-cv-all-publish.log "content-view publish --organization '{{ sat_org }}' --name 'BenchContentView'"
-###s $wait_interval
 ###h 22-le-create-1.log "lifecycle-environment create --organization '{{ sat_org }}' --prior 'Library' --name 'BenchLifeEnvAAA'"
 ###h 22-le-create-2.log "lifecycle-environment create --organization '{{ sat_org }}' --prior 'BenchLifeEnvAAA' --name 'BenchLifeEnvBBB'"
 ###h 22-le-create-3.log "lifecycle-environment create --organization '{{ sat_org }}' --prior 'BenchLifeEnvBBB' --name 'BenchLifeEnvCCC'"
 ###h 23-cv-all-promote-1.log "content-view version promote --organization '{{ sat_org }}' --content-view 'BenchContentView' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'BenchLifeEnvAAA'"
-###s $wait_interval
 ###h 23-cv-all-promote-2.log "content-view version promote --organization '{{ sat_org }}' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvAAA' --to-lifecycle-environment 'BenchLifeEnvBBB'"
-###s $wait_interval
 ###h 23-cv-all-promote-3.log "content-view version promote --organization '{{ sat_org }}' --content-view 'BenchContentView' --to-lifecycle-environment 'BenchLifeEnvBBB' --to-lifecycle-environment 'BenchLifeEnvCCC'"
-###s $wait_interval
 ###
 ###
 ###section "Publish and promote filtered CV"
@@ -96,7 +84,6 @@ generic_environment_check false
 ###h 32-rule-create-1.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '{{ sat_org }}' --types enhancement,bugfix,security"
 ###h 32-rule-create-2.log "content-view filter rule create --content-view BenchFilteredContentView --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '{{ sat_org }}' --types security"
 ###h 33-cv-filtered-publish.log "content-view publish --organization '{{ sat_org }}' --name 'BenchFilteredContentView'"
-###s $wait_interval
 ###
 ###
 ###section "Sync from CDN do not measure"   # do not measure because of unpredictable network latency
@@ -109,16 +96,13 @@ generic_environment_check false
 ###h 12b-repo-sync-rhel6.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server'" &
 ###h 12b-repo-sync-rhel7optional.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'" &
 ###wait
-###s $wait_interval
 ###
 ###section "Sync Client repos"
 ###h regs-30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name SatClientProduct"
 ###h regs-30-repository-create-sat-client_7.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
 ###h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo"
-###s $wait_interval
 ###h regs-30-repository-create-sat-client_8.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
 ###h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo"
-###s $wait_interval
 ###
 ###
 ###section "Synchronise capsules again do not measure"   # We just added up2date content from CDN, so no reason to measure this now
@@ -127,7 +111,6 @@ generic_environment_check false
 ###for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
 ###    h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '{{ sat_org }}' --id '$capsule_id'"
 ###done
-###s $wait_interval
 
 
 section "Prepare for registrations"
@@ -177,7 +160,6 @@ section "Register"
 for i in $( seq $registrations_iterations ); do
     ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/44-register-docker-host-client-logs'"
     e Register $logs/44-register-$i.log
-    s $wait_interval
 done
 
 
@@ -185,28 +167,20 @@ section "Remote execution"
 h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*"
 h 52-rex-date.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-s $wait_interval
 h 52-rex-date-ansible.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
-s $wait_interval
 h 53-rex-sm-facts-update.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-s $wait_interval
 h 54-rex-uploadprofile.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-s $wait_interval
 
 
 section "Misc simple tests"
 ap 60-generate-applicability.log playbooks/tests/generate-applicability.yaml
 e GenerateApplicability $logs/60-generate-applicability.log
-s $wait_interval
 ap 61-hammer-list.log \
   -e "organization='{{ sat_org }}'" \
   playbooks/tests/hammer-list.yaml
 e HammerHostList $logs/61-hammer-list.log
-s $wait_interval
 ap 62-some-webui-pages.log -e "ui_pages_reloads=$ui_pages_reloads" playbooks/tests/some-webui-pages.yaml
-s $wait_interval
 a 63-foreman_inventory_upload-report-generate.log satellite6 -m "shell" -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake foreman_inventory_upload:report:generate"
-s $wait_interval
 
 
 section "Preparing Puppet environment"
@@ -218,7 +192,6 @@ ap satellite-puppet-big-cv.log \
   playbooks/tests/puppet-big-setup.yaml &
 a clear-used-containers-counter.log -m shell -a "echo 0 >/root/container-used-count" docker_hosts &
 wait
-s $wait_interval
 
 
 section "Apply one module with different concurency"
@@ -229,7 +202,6 @@ for concurency in $( echo "$puppet_one_concurency" | tr " " "\n" | sort -n -u );
         e RegisterPuppet $logs/$concurency-PuppetOne-$iteration.log
         e SetupPuppet $logs/$concurency-PuppetOne-$iteration.log
         e PickupPuppet $logs/$concurency-PuppetOne-$iteration.log
-        s $wait_interval
     done
 done
 
@@ -242,7 +214,6 @@ for concurency in $( echo "$puppet_bunch_concurency" | tr " " "\n" | sort -n -u 
         e RegisterPuppet $logs/$concurency-PuppetBunch-$iteration.log 
         e SetupPuppet $logs/$concurency-PuppetBunch-$iteration.log 
         e PickupPuppet $logs/$concurency-PuppetBunch-$iteration.log
-        s $wait_interval
     done
 done
 

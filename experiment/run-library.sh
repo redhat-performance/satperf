@@ -108,7 +108,6 @@ function generic_environment_check() {
       -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
 
     set +e   # Quit "-e" mode as from now on failure is not fatal
-    s $(( 3 * wait_interval ))
 }
 
 function get_repo_id() {

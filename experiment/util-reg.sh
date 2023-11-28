@@ -8,7 +8,6 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_container_hosts=${PARAM_registrations_per_container_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
-wait_interval=${PARAM_wait_interval:-50}
 all_rex=${PARAM_all_rex:-false}
 skip_util_reg_setup=${PARAM_skip_util_reg_setup:-false}
 
@@ -34,30 +33,23 @@ if [ "$skip_util_reg_setup" != "true" ]; then
     a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
     h 01-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
     skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '{{ sat_org }}'"
-    s $wait_interval
 
     section "Util: Sync from CDN"
     h 20-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
     # h 20-reposet-enable-rhel7.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
     # h 20-repo-immediate-rhel7.log "repository update --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
     # skip_measurement='false' h regs-20-repo-sync-rhel7.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'" &
-    # s $wait_interval
     h 20-reposet-enable-rhel8baseos.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
     skip_measurement='false' h regs-20-repo-sync-rhel8baseos.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'" &
-    s $wait_interval
     h 20-reposet-enable-rhel8appstream.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
     skip_measurement='false' h regs-20-repo-sync-rhel8appstream.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'" &
-    s $wait_interval
 
     section "Util: Sync Client repos"
     h 30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name SatClientProduct"
     h 30-repository-create-sat-client_7.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
     h 30-repository-sync-sat-client_7.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo" &
-    s $wait_interval
     h 30-repository-create-sat-client_8.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
     h 30-repository-sync-sat-client_8.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo" &
-    s $wait_interval
-
     wait
 fi
 
@@ -118,7 +110,6 @@ for i in $( seq $registrations_iterations ); do
       -e 're_register_failed_hosts=true' \
       -e "config_server_server_timeout=$registrations_config_server_server_timeout"
     e Register $logs/50-register-$i.log
-    s $wait_interval
 done
 
 
@@ -128,13 +119,10 @@ a 51-rex-cleanup-know_hosts.log satellite6 -m "shell" -a "rm -rf /usr/share/fore
 
 if [ "$all_rex" != "false" ]; then
     h 52-rex-ssh-date.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-    s $wait_interval
     h 52-rex-ssh-sm-facts-update.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-    s $wait_interval
     h 52-rex-ssh-uploadprofile.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template 'Run Command - SSH Default' --search-query 'name ~ container'"
-    s $wait_interval
     h 52-rex-ansible-date.log "job-invocation create --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template 'Run Command - Ansible Default' --search-query 'name ~ container'"
-    s $wait_interval
 fi
+
 
 junit_upload

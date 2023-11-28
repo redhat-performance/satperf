@@ -6,8 +6,6 @@ branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
-wait_interval=${PARAM_wait_interval:-10}
-
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
@@ -34,7 +32,6 @@ h_out "--no-headers --csv organization list --fields name" | grep -q "^{{ sat_or
 h 10-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
 a 10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h 10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-s $wait_interval
 
 
 section "Sync from CDN"   # do not measure because of unpredictable network latency
@@ -45,10 +42,8 @@ h 20-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_
 # RHEL 8
 h 20-reposet-enable-rhel8baseos.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
 h 20-repo-sync-rhel8baseos.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
-s $wait_interval
 h 20-reposet-enable-rhel8appstream.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
 h 20-repo-sync-rhel8appstream.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
-s $wait_interval
 
 
 section "Sync Client repos"   # do not measure because of unpredictable network latency
@@ -57,7 +52,6 @@ h 24-sat-client-product-create.log "product create --organization '{{ sat_org }}
 # Satellite Client for RHEL 8
 h 24-repository-create-sat-client_8.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
 h 24-repository-sync-sat-client_8.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo"
-s $wait_interval
 
 
 section "Create, publish and promote CV / LCE"
@@ -78,7 +72,6 @@ cat $tmp
 latest_version=$( tail -1 $tmp  )
 rm -f $tmp
 h 27-rhel8-lce-promote.log "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --version '$latest_version' --to-lifecycle-environment '$lce'"
-s $wait_interval
 
 
 section "Push content to capsules"
@@ -86,7 +79,6 @@ ap 35-capsync-populate.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lce'" \
   playbooks/satellite/capsules-populate.yaml
-s $wait_interval
 
 
 section "Prepare for registrations"
@@ -179,7 +171,6 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
       -e "debug_rhsm=true" \
       playbooks/tests/registrations.yaml
       e Register $logs/50-register-$concurrent_registrations.log
-    s $wait_interval
 done
 grep Register $logs/50-register-*.log >$logs/50-register-overall.log
 e Register $logs/50-register-overall.log

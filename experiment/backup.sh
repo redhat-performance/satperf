@@ -5,8 +5,6 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-wait_interval=${PARAM_wait_interval:-50}
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
 dl="Default Location"

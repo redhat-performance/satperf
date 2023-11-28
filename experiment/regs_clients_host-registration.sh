@@ -6,7 +6,6 @@ branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
-wait_interval=${PARAM_wait_interval:-50}
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
 registrations_config_server_server_timeout="${PARAM_registrations_config_server_server_timeout:-}"   # empty means to use default
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
@@ -36,7 +35,6 @@ h regs-10-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}
 a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 h regs-10-simple-content-access-disable.log "simple-content-access disable --organization '{{ sat_org }}'"
-s $wait_interval
 unset skip_measurement
 
 
@@ -47,22 +45,17 @@ h regs-20-manifest-refresh.log "subscription refresh-manifest --organization '{{
 h regs-20-reposet-enable-rhel7.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
 h regs-20-repo-immediate-rhel7.log "repository update --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
 skip_measurement='false' h regs-20-repo-sync-rhel7.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
-s $wait_interval
 h regs-20-reposet-enable-rhel8baseos.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS (RPMs)' --releasever '8' --basearch 'x86_64'"
 skip_measurement='false' h regs-20-repo-sync-rhel8baseos.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8'"
-s $wait_interval
 h regs-20-reposet-enable-rhel8appstream.log  "repository-set enable --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream (RPMs)' --releasever '8' --basearch 'x86_64'"
 skip_measurement='false' h regs-20-repo-sync-rhel8appstream.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux for x86_64' --name 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8'"
-s $wait_interval
 
 section "Sync Client repos"   # do not measure because of unpredictable network latency
 h regs-30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name SatClientProduct"
 h regs-30-repository-create-sat-client_7.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo --content-type yum --url '$repo_sat_client_7'"
 skip_measurement='false' h regs-30-repository-sync-sat-client_7.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient7Repo"
-s $wait_interval
 h regs-30-repository-create-sat-client_8.log "repository create --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo --content-type yum --url '$repo_sat_client_8'"
 skip_measurement='false' h regs-30-repository-sync-sat-client_8.log "repository synchronize --organization '{{ sat_org }}' --product SatClientProduct --name SatClient8Repo"
-s $wait_interval
 unset skip_measurement
 
 
@@ -135,7 +128,6 @@ for batch in $registrations_batches; do
       playbooks/tests/registrations.yaml
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
-    s $wait_interval
 done
 
 

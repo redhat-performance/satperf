@@ -7,7 +7,6 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
-wait_interval=${PARAM_wait_interval:-50}
 
 puppet_one_concurency="${PARAM_puppet_one_concurency:-5 15 30}"
 puppet_bunch_concurency="${PARAM_puppet_bunch_concurency:-2 6 10 14 18}"

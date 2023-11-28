@@ -5,8 +5,6 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-wait_interval=${PARAM_wait_interval:-50}
-
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
@@ -25,15 +23,11 @@ skip_measurement='true' a 11-rex-cleanup-know_hosts.log satellite6 -m "shell" -a
 
 skip_measurement='true' h 12-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/12-rex-date.log
-s $wait_interval
 skip_measurement='true' h 12-rex-date-ansible.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
 j $logs/12-rex-date-ansible.log
-s $wait_interval
 skip_measurement='true' h 13-rex-sm-facts-update.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/13-rex-sm-facts-update.log
-s $wait_interval
 skip_measurement='true' h 14-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 j $logs/14-rex-uploadprofile.log
-s $wait_interval
 
 junit_upload

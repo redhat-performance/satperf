@@ -10,8 +10,6 @@ test_sync_iso_count="${PARAM_test_sync_iso_count:-8}"
 test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
 test_sync_iso_max_sync_secs="${PARAM_test_sync_iso_max_sync_secs:-600}"
 
-wait_interval=${PARAM_wait_interval:-50}
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 

@@ -5,8 +5,6 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-wait_interval=${PARAM_wait_interval:-50}
-
 ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
 ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 

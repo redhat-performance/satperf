@@ -5,8 +5,6 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-wait_interval=${PARAM_wait_interval:-30}
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
@@ -30,7 +28,6 @@ a rhel8sync-10-manifest-deploy.log \
   -m copy \
   -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h rhel8sync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-s $wait_interval
 
 
 section "Sync from CDN mirror"
