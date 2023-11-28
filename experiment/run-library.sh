@@ -103,9 +103,10 @@ function generic_environment_check() {
     log "katello_version = $katello_version"
     log "satellite_version = $satellite_version"
 
-    skip_measurement='true' a 00-check-hammer-ping.log satellite6 \
+    skip_measurement='true' a 00-check-hammer-ping.log \
       -m "ansible.builtin.shell" \
-      -a "! ( hammer $hammer_opts ping | grep 'Status:' | grep -v 'ok$' )"
+      -a "hammer $hammer_opts ping" \
+      satellite6
 
     set +e   # Quit "-e" mode as from now on failure is not fatal
 }
