@@ -82,7 +82,7 @@ function generic_environment_check() {
     skip_measurement='true' a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
     skip_measurement='true' a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
     skip_measurement='true' a 00-info-ip-a.log satellite6,capsules,container_hosts -m "shell" -a "ip a"
-    skip_measurement='true' a 00-check-ping-sat.log container_hosts -m "shell" -a "ping -c 10 {{ groups['satellite6']|first }}"
+    skip_measurement='true' a 00-check-ping-registration-target.log -m "ansible.builtin.shell" -a "ping -c 10 {{ tests_registration_target }}" container_hosts
 
     if $extended; then
         ansible_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
