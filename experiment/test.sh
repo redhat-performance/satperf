@@ -2,8 +2,9 @@
 
 source experiment/run-library.sh
 
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
+branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
@@ -19,7 +20,7 @@ ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

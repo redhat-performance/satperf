@@ -24,7 +24,7 @@ proxy_id="${PARAM_proxy_id:-set-in-doit-sh}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

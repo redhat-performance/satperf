@@ -26,7 +26,7 @@ initial_index="${PARAM_initial_index:-0}"
 dl='Default Location'
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

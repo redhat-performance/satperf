@@ -27,7 +27,7 @@ skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
 dl='Default Location'
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

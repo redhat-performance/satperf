@@ -10,7 +10,7 @@ cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "BackupTest"

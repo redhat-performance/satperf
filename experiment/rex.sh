@@ -8,7 +8,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

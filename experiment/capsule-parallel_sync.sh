@@ -2,8 +2,9 @@
 
 source experiment/run-library.sh
 
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
+branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 
@@ -18,7 +19,7 @@ initial_index="${PARAM_initial_index:-0}"
 dl='Default Location'
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

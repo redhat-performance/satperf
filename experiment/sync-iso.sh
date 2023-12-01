@@ -16,7 +16,7 @@ cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 #section "Checking environment"

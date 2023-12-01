@@ -23,7 +23,7 @@ ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

@@ -17,7 +17,7 @@ initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_r
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 section "Checking environment"

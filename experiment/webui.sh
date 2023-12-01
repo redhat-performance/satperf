@@ -11,7 +11,7 @@ ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 dl="Default Location"
 
 opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
+opts_adhoc="$opts"
 
 
 #section "Checking environment"
