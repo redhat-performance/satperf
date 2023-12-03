@@ -58,9 +58,9 @@ section "Create, publish and promote CV / LCE"
 lce='LCE_Perf'
 # RHEL 8
 cv='CV_RHEL8'
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
-rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'SatClientProduct' 'SatClient8Repo' )"
 
 h 25-rhel8-cv-create.log "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name '$cv'"
 h 25-rhel8-cv-publish.log "content-view publish --organization '{{ sat_org }}' --name '$cv'"

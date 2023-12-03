@@ -86,9 +86,9 @@ unset skip_measurement
 
 section "Create, publish and promote CVs / LCEs"
 # RHEL 7
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Extras RPMs x86_64' )"
-rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient7Repo' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server - Extras RPMs x86_64' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'SatClientProduct' 'SatClient7Repo' )"
 cv='CV_RHEL7'
 lce='LCE_RHEL7'
 lces='$lce'
@@ -100,9 +100,9 @@ skip_measurement='true' h 35-rhel7-lce-create.log "lifecycle-environment create 
 h 36-rhel7-lce-promote.log "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
 
 # RHEL 8
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
-rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'SatClientProduct' 'SatClient8Repo' )"
 cv='CV_RHEL8'
 lce='LCE_RHEL8'
 lces+=",$lce"
@@ -114,9 +114,9 @@ skip_measurement='true' h 35-rhel8-lce-create.log "lifecycle-environment create 
 h 36-rhel8-lce-promote.log "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment 'Library' --to-lifecycle-environment '$lce'"
 
 # RHEL 9
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS RPMs 9' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9' )"
-rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient9Repo' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - BaseOS RPMs 9' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 9 for x86_64 - AppStream RPMs 9' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'SatClientProduct' 'SatClient9Repo' )"
 cv='CV_RHEL9'
 lce='LCE_RHEL9'
 lces+=",$lce"

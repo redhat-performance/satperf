@@ -62,9 +62,9 @@ h rhel8sync-28-repo-sync-epel-8.log "repository synchronize --organization '{{ s
 
 section "Create, publish and promote CVs / LCEs"
 # RHEL 8
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
-rids="$rids,$( get_repo_id 'EPEL 8' 'EPEL 8 for x86_64 - Everything RPMs 8' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'EPEL 8' 'EPEL 8 for x86_64 - Everything RPMs 8' )"
 cv='CV_RHEL8'
 lce='LCE_RHEL8'
 lces+=",$lce"

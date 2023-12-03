@@ -1,0 +1,48 @@
+---
+- hosts: satellite6
+  gather_facts: False
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        action: "{{ action }}"
+
+    - name: "Get foreman_tasks information"
+      vars:
+        # body: "search=action ~ {{ action }}"
+        body: "search=label = Actions::Katello::CapsuleContent::Sync"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/foreman_tasks/api/tasks"
+        method: GET
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body: "{{ body }}" 
+      register: foreman_tasks_json
+      failed_when: foreman_tasks_json.json.results | length == 0
+
+    - debug:
+        var: foreman_tasks_json
+
+    # - name: "Get first stopped task id (when 'action' is defined)"
+    #   ansible.builtin.set_fact:
+    #     task_duration: "{{ foreman_tasks_json.json | community.general.json_query(query) }}"
+    #   vars:
+    #     query: "results[?pending==`false` && action=='{{ action }}'].duration | [0]"
+    #   when:
+    #     - action is defined and action | length > 0
+
+    # - name: "Get first stopped task id"
+    #   ansible.builtin.set_fact:
+    #     task_duration: "{{ foreman_tasks_json.json | community.general.json_query(query) }}"
+    #   vars:
+    #     query: "results[?pending==`false`].duration | [0]"
+    #   when:
+    #     - action is not defined or action | length == 0
+
+    # - debug:
+    #     # var: last_task
+    #     var: task_duration
+...

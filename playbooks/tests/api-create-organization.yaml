@@ -1,0 +1,24 @@
+---
+- hosts: satellite6
+  gather_facts: False
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        organization: "{{ password | default('{{ sat_org }}') | default('Default Organization') }}"
+
+    - name: "Create organization"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
+        method: POST
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization': {'name': organization} } }}"
+        status_code:
+          - 201
+          - 422   # "Name has already been taken"
+...

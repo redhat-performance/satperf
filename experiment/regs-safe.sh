@@ -66,9 +66,9 @@ unset skip_measurement
 
 section "Create, publish and promote CV / LCE"
 # RHEL 8
-rids="$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
-rids="$rids,$( get_repo_id 'SatClientProduct' 'SatClient8Repo' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux for x86_64' 'Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'SatClientProduct' 'SatClient8Repo' )"
 cv='CV_RHEL8'
 lce='LCE_RHEL8'
 

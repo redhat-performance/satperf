@@ -69,8 +69,8 @@ h 22-le-create-3.log "lifecycle-environment create --organization '{{ sat_org }}
 
 
 section "Publish and promote big CV"
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
 h 20-cv-create-all.log "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name 'BenchContentView'"
 h 21-cv-all-publish.log "content-view publish --organization '{{ sat_org }}' --name 'BenchContentView'"
 h 22-cv-all-promote-1.log "content-view version promote --organization '{{ sat_org }}' --content-view 'BenchContentView' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'BenchLifeEnvAAA'"
@@ -79,8 +79,8 @@ h 22-cv-all-promote-3.log "content-view version promote --organization '{{ sat_o
 
 
 section "Publish and promote filtered CV"
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
 h 30-cv-create-filtered.log "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name 'BenchFilteredContentView'"
 h 31-filter-create-1.log "content-view filter create --organization '{{ sat_org }}' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterAAA"
 h 31-filter-create-2.log "content-view filter create --organization '{{ sat_org }}' --type erratum --inclusion true --content-view BenchFilteredContentView --name BenchFilterBBB"
@@ -93,10 +93,10 @@ h 34-cv-filtered-promote-3.log "content-view version promote --organization '{{ 
 
 
 section "Publish and promote mixed content CV"
-rids="$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
-rids="$rids,$( get_repo_id 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
-rids="$rids,$( get_repo_id 'BenchDockerHubProduct' 'RepoBusyboxAll' )"
-rids="$rids,$( get_repo_id 'BenchIsoProduct' 'Repofile-100k-100kB-A' )"
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'BenchDockerHubProduct' 'RepoBusyboxAll' )"
+rids="$rids,$( get_repo_id '{{ sat_org }}' 'BenchIsoProduct' 'Repofile-100k-100kB-A' )"
 h 60-cv-create-mixed.log "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name 'BenchMixedContentContentView'"
 h 61-cv-mixed-publish.log "content-view publish --organization '{{ sat_org }}' --name 'BenchMixedContentContentView'"
 h 62-cv-mixed-promote-1.log "content-view version promote --organization '{{ sat_org }}' --content-view 'BenchMixedContentContentView' --to-lifecycle-environment 'Library' --to-lifecycle-environment 'BenchLifeEnvAAA'"
