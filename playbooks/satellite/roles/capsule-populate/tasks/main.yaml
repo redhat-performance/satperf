@@ -79,7 +79,7 @@
 
 - name: "Set number of busy-wait retries"
   ansible.builtin.set_fact:
-    num_retries: "{{ ( 60 / delay_minutes | int ) * ( num_concurrent_capsules | default(4) | int + 7 ) }}"
+    num_retries: "{{ (60 / delay_minutes | int) * (num_concurrent_capsules | default(4) | int + 7) }}"
 
 - name: "Wait for the capsule sync task to finish for up to {{ delay_minutes | int * num_retries | int }} minutes - Checking every {{ delay_minutes }} minutes"
   # XXX: Submit PR

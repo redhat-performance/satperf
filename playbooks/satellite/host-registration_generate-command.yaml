@@ -1,6 +1,7 @@
 ---
-- hosts: satellite6:capsules
-  gather_facts: False
+- name: "Generate the host registration command"
+  hosts: satellite6:capsules
+  gather_facts: false
   vars:
     hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
   tasks:

@@ -6,12 +6,13 @@
 
 # RHEL8 requirements
 - name: "Enable satellite-capsule:el8 module"
-  command: dnf -y module enable satellite-capsule:el8
-  when: "ansible_distribution_major_version|int == 8"
-  
+  ansible.builtin.command:
+    cmd: dnf -y module enable satellite-capsule:el8
+  when: "ansible_distribution_major_version | int == 8"
+
 # Install packages required for capsule
 - name: "Install capsule package"
-  yum:
+  ansible.builtin.dnf:
     name: "satellite-capsule"
     state: present
 
@@ -56,16 +57,18 @@
   #   The full log is at /var/log/capsule-certs-generate.log
 
 - name: "Download tarball created by capsule-certs-generate"
-  get_url:
-    url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-certs.tar"
+  ansible.builtin.get_url:
+    url: "http://{{ groups['satellite6'] | first }}/pub/{{ inventory_hostname }}-certs.tar"
     dest: "/root/{{ inventory_hostname }}-certs.tar"
-    force: yes
+    mode: '0600'
+    force: true
 
 - name: "Download output produced by capsule-certs-generate"
-  get_url:
-    url: "http://{{ groups['satellite6']|first }}/pub/{{ inventory_hostname }}-out.raw"
+  ansible.builtin.get_url:
+    url: "http://{{ groups['satellite6'] | first }}/pub/{{ inventory_hostname }}-out.raw"
     dest: "/root/{{ inventory_hostname }}-out.raw"
-    force: yes
+    mode: '0600'
+    force: true
 
 - name: "Get only commands we need to run"
   ansible.builtin.shell: |
@@ -83,13 +86,13 @@
     sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
 
 - name: "Make sure remote execution plugin is enabled"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
     insertafter: '.*--scenario capsule.*'
 
 - name: "Configure MQTT transport for remote execution"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
     insertafter: '.*--enable-foreman-proxy-plugin-remote-execution-script'
@@ -97,7 +100,7 @@
     - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: "Make sure Ansible plugin is enabled"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-ansible\'
     insertafter: '.*--scenario capsule.*'
@@ -124,7 +127,7 @@
     var: configuration.stdout_lines
 
 - name: "Print capsule installer run duration"
-  debug:
+  ansible.builtin.debug:
     msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"
 
 - name: "Run desired shell commands after installation"
@@ -139,13 +142,14 @@
     content: |
       [Service]
       LimitNOFILE=65536
+    mode: '0444'
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: Restart mosquitto service unit
   ansible.builtin.systemd:
     name: mosquitto
-    daemon_reload: yes
+    daemon_reload: true
     state: restarted
   when:
     - rex_mode is defined and rex_mode == 'mqtt'

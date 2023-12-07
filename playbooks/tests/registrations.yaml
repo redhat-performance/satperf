@@ -1,13 +1,13 @@
 ---
 - hosts: container_hosts
-  gather_facts: False
+  gather_facts: false
   vars:
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     resting: 0
     num_retry_forks: 3
     registration_logs: "registration_logs"
-    re_register_failed_hosts: False
-    debug_rhsm: False
+    re_register_failed_hosts: false
+    debug_rhsm: false
   tasks:
     - name: "Check whether we have already registered some containers"
       ansible.builtin.stat:
@@ -68,7 +68,7 @@
          all \
            &> patch_rhsm_{{ size }}.log
       when:
-        - debug_rhsm | bool == True
+        - debug_rhsm
 
     - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
       shell: |
@@ -82,7 +82,7 @@
       ignore_errors: true
 
     - name: "Fetch client logs"
-      fetch:
+      ansible.builtin.fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ registration_logs }}"
       ignore_errors: true
@@ -93,27 +93,27 @@
       register: clients_yaml_grepper_timings
 
     - name: "Append registration timings to central list"
-      set_fact:
-        grepper_times: "{{ grepper_times|default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
+      ansible.builtin.set_fact:
+        grepper_times: "{{ grepper_times | default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
       with_items: "{{ ansible_play_batch }}"
       run_once: true
 
     - name: "Show how long registration took"
-      debug:
+      ansible.builtin.debug:
         var: grepper_times
       run_once: true
 
     - name: "Show number of successful registration events"
-      debug:
+      ansible.builtin.debug:
         var: grepper_times|length
       run_once: true
 
     - name: "Increment number of already registered containers"
-      lineinfile:
+      ansible.builtin.lineinfile:
         path: /root/container-used-count
         regexp: .*
-        line: "{{ containers_used_count|int + size|int }}"
-        create: yes
+        line: "{{ containers_used_count | int + size | int }}"
+        create: true
 
     - name: "Get number of hosts that failed to register"
       ansible.builtin.shell: |
@@ -137,14 +137,14 @@
         done
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - debug_rhsm | bool == true
+        - debug_rhsm
 
     - name: "Set additional retries log name (if needed)"
       ansible.builtin.set_fact:
         clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts | bool == True
+        - re_register_failed_hosts
 
     - name: "Try to re-register failed hosts (if needed)"
       ansible.builtin.shell: |
@@ -179,9 +179,9 @@
       ignore_errors: true
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts | bool == True
+        - re_register_failed_hosts
 
     - name: "Give server some time to rest"
-      pause:
+      ansible.builtin.pause:
         seconds: "{{ resting }}"
 ...
