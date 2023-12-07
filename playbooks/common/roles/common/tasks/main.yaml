@@ -157,6 +157,47 @@
     - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
        (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
 
+- name: "Get group name of our location"
+  ansible.builtin.set_fact:
+    location_groupname: "location_{{ location | lower }}"
+
+- name: "Build load balancers hosts file (using public network IPs) - Capsules entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].public_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
+  when:
+    - "'capsule_lbs' in group_names"
+    - hostvars[item].public_ip is defined and hostvars[item].public_ip | length > 0
+    - private_ip is not defined or private_ip | length == 0 or
+      private_netmask is not defined or private_netmask | length == 0 or
+      hostvars[item].private_ip is not defined or hostvars[item].private_ip | length == 0 or
+      hostvars[item].private_netmask is not defined or hostvars[item].private_netmask | length == 0 or
+      (private_ip is defined and private_ip | length > 0 and
+       private_netmask is defined and private_netmask | length > 0 and
+       hostvars[item].private_ip is defined and hostvars[item].private_ip | length > 0 and
+       hostvars[item].private_netmask is defined and hostvars[item].private_netmask | length > 0 and
+       (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build load balancers hosts file (using private network IPs) - Capsules entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].private_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
+  when:
+    - "'capsule_lbs' in group_names"
+    - private_ip is defined and private_ip | length > 0
+    - private_netmask is defined and private_netmask | length > 0
+    - hostvars[item].private_ip is defined and hostvars[item].private_ip | length > 0
+    - hostvars[item].private_netmask is defined and hostvars[item].private_netmask | length > 0
+    - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
+
 - name: "File /etc/hosts have correct SELinux context (had issues before)"
   command:
     restorecon -vR /etc/hosts

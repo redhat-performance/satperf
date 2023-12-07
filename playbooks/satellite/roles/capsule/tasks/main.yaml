@@ -23,14 +23,36 @@
     - custom_hiera_content is defined and custom_hiera_content | length > 0
 
 # Prepare for capsule installation
+- name: "Set capsule-certs-generate base options"
+  ansible.builtin.set_fact:
+    cap_certs_generate_options: "--certs-tar /var/www/html/pub/{{ inventory_hostname }}-certs.tar --foreman-proxy-fqdn {{ inventory_hostname }}"
+
+- name: "Get group name of our location"
+  ansible.builtin.set_fact:
+    location_groupname: "location_{{ location | lower }}"
+
+- name: "Get load balancer name"
+  ansible.builtin.set_fact:
+    capsule_lb: "{{ groups[location_groupname] | intersect(groups['capsule_lbs']) | first }}"
+  when:
+    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+
+- name: "Add load balanced capsule parameters"
+  ansible.builtin.set_fact:
+    cap_certs_generate_options: "{{ cap_certs_generate_options }} --foreman-proxy-cname {{ capsule_lb }}"
+  when:
+    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+
 - name: "Run capsule-certs-generate"
-  shell:
-    "capsule-certs-generate --foreman-proxy-fqdn {{ item }} --certs-tar /var/www/html/pub/{{ item }}-certs.tar >/var/www/html/pub/{{ item }}-out.raw"
-  delegate_to: "{{ groups['satellite6']|first }}"
-  run_once: true
-  with_items: "{{ groups['capsules'] }}"
+  # XXX: Cannot run concurrently -> Submit PR
+  throttle: 1
+  ansible.builtin.shell:
+    cmd: |
+      capsule-certs-generate {{ cap_certs_generate_options }} >/var/www/html/pub/{{ inventory_hostname }}-out.raw
+  delegate_to: "{{ groups['satellite6'] | first }}"
+
   # Output of this command looks like this:
-  # # capsule-certs-generate --capsule-fqdn capsule.example.com --certs-tar aaa.tar
+  # # capsule-certs-generate --certs-tar aaa.tar --capsule-fqdn capsule.example.com
   # Installing             Done                                               [100%] [..........]
   #   Success!
   # 
@@ -89,6 +111,30 @@
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
     insertafter: '.*--scenario capsule.*'
+
+- name: "Add load balanced capsule parameters"
+  ansible.builtin.lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --certs-cname                                 "{{ capsule_lb }}"\'
+    insertbefore: '.*--enable-foreman-proxy-plugin-remote-execution-script'
+  when:
+    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+
+- name: "Add host registration URL parameters"
+  ansible.builtin.lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:9090"\'
+    insertafter: '.*--certs-cname'
+  when:
+    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+
+- name: "Add host registration URL parameters"
+  ansible.builtin.lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
+    insertafter: '.*--foreman-proxy-registration-url'
+  when:
+    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
 
 - name: "Configure MQTT transport for remote execution"
   ansible.builtin.lineinfile:

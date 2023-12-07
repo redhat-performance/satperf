@@ -5,10 +5,29 @@
   vars:
     hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
   tasks:
+    - name: "Get capsule ID"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: |
+          hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --organization '{{ organization }}' --search 'name = {{ inventory_hostname }}' --fields id
+      register: capsule_id_cmd
+      changed_when: capsule_id_cmd.rc != 0
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      when:
+        - "'capsules' in group_names"
+
+    - name: "Set capsule ID"
+      ansible.builtin.set_fact:
+        capsule_id: "{{ capsule_id_cmd.stdout }}"
+      when:
+        - "'capsules' in group_names"
+
     - name: "Check if running in a capsule"
       ansible.builtin.set_fact:
-        hgrg: "{{ hgrg }} --smart-proxy {{ inventory_hostname }}"
-      when: "'capsules' in group_names"
+        hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
+      when:
+        - "'capsules' in group_names"
 
     - name: "Check if Insights client should be installed and configured (it won't be by default)"
       ansible.builtin.set_fact:
