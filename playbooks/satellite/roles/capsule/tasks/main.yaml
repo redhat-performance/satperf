@@ -71,19 +71,18 @@
     force: true
 
 - name: "Get only commands we need to run"
-  ansible.builtin.shell: |
-    sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" \
-      | grep \
-        -e '^\s\+satellite-installer\s*' \
-        -e '^\s\+foreman-installer\s*' \
-        -e '^\s\+capsule-installer\s*' \
-        -e '^\s\+--' \
-      | sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
-      > "/root/{{ inventory_hostname }}-script.sh"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
 
-- name: "Fix certificate tarball path"
-  shell:
-    sed -i 's|/var/www/html/pub/{{ inventory_hostname }}-certs.tar|/root/{{ inventory_hostname }}-certs.tar|' "/root/{{ inventory_hostname }}-script.sh"
+      sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" |
+        grep \
+          -e '^\s\+satellite-installer\s*' \
+          -e '^\s\+foreman-installer\s*' \
+          -e '^\s\+capsule-installer\s*' \
+          -e '^\s\+--' |
+        sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
+        > "/root/{{ inventory_hostname }}-script.sh"
 
 - name: "Make sure remote execution plugin is enabled"
   ansible.builtin.lineinfile:
@@ -107,7 +106,10 @@
 
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
-    cmd: "{{ run_before_cap_installer }}"
+    cmd: |
+      set -o pipefail
+
+      {{ run_before_cap_installer }}
   when:
     - run_before_cap_installer is defined and run_before_cap_installer | length > 0
 
@@ -132,7 +134,10 @@
 
 - name: "Run desired shell commands after installation"
   ansible.builtin.shell:
-    cmd: "{{ run_after_cap_installer }}"
+    cmd: |
+      set -o pipefail
+
+      {{ run_after_cap_installer }}
   when:
     - run_after_cap_installer is defined and run_after_cap_installer | length > 0
 

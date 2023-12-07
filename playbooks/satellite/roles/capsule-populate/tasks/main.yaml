@@ -30,14 +30,17 @@
 - name: "Assign lifecycle environment(s): '{{ lces }}'"
   # XXX: Submit PR
   throttle: 1
-  ansible.builtin.shell: |
-    for LCE in $(echo "{{ lces }}" | tr ',' ' '); do
-      if ! hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
-        if hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content available-lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
-          hammer -u {{ user }} -p {{ password }} capsule content add-lifecycle-environment --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment "$LCE"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      for LCE in $(echo "{{ lces }}" | tr ',' ' '); do
+        if ! hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+          if hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content available-lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+            hammer -u {{ user }} -p {{ password }} capsule content add-lifecycle-environment --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment "$LCE"
+          fi
         fi
-      fi
-    done
+      done
   delegate_to: "{{ groups['satellite6'] | first }}"
 
 - name: "Set the base synchronization command"

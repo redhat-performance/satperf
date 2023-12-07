@@ -22,7 +22,8 @@
 
     - name: "Load number of already registered containers"
       ansible.builtin.command:
-        cmd: cat /root/container-used-count
+        cmd: |
+          cat /root/container-used-count
       register: containers_used_count_cmd
       ignore_errors: true
       when:
@@ -39,10 +40,11 @@
         that: "containers_used_count | int < containers_count | int"
 
     - name: "Generate list of containers we are going to use"
-      ansible.builtin.shell: |
-        awk 'NR > {{ containers_used_count | int }} && NR <= {{ containers_used_count | int + size | int }} {print $NF}' \
-          /root/container-ips.shuffled \
-          >clients.ini
+      ansible.builtin.shell:
+        cmd: |
+          awk 'NR > {{ containers_used_count | int }} && NR <= {{ containers_used_count | int + size | int }} {print $NF}' \
+            /root/container-ips.shuffled \
+            >clients.ini
 
     - name: "Set base log name"
       ansible.builtin.set_fact:
@@ -61,26 +63,28 @@
         mode: '0400'
 
     - name: "Try to patch `rhsm/connection.py` to add some error logging"
-      ansible.builtin.shell: |
-        ansible \
-         --private-key /root/id_rsa_key \
-         --inventory clients.ini \
-         -m ansible.builtin.shell -a 'sed -i.orig -e "/\# This really needs an exception mapper too\.\.\./i \
-        \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ log.error(\"Response content: %s\" % response[\"content\"])" \
-         /usr/lib64/python3.6/site-packages/rhsm/connection.py' \
-         all \
-           &> patch_rhsm_{{ size }}.log
+      ansible.builtin.shell:
+        cmd: |
+          ansible \
+            --private-key /root/id_rsa_key \
+            --inventory clients.ini \
+            -m ansible.builtin.shell -a 'sed -i.orig -e "/\# This really needs an exception mapper too\.\.\./i \
+            \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ log.error(\"Response content: %s\" % response[\"content\"])" \
+            /usr/lib64/python3.6/site-packages/rhsm/connection.py' \
+            all \
+            &> patch_rhsm_{{ size }}.log
       when:
         - debug_rhsm
 
     - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
-      shell: |
-        ansible-playbook \
-          --private-key /root/id_rsa_key \
-          --forks "{{ size }}" \
-          -i clients.ini \
-          clients_host-registration.yaml \
-          &> "{{ clients_yaml_cmd_log }}"
+      ansible.builtin.shell:
+        cmd: |
+          ansible-playbook \
+            --private-key /root/id_rsa_key \
+            --forks "{{ size }}" \
+            -i clients.ini \
+            clients_host-registration.yaml \
+            &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
       ignore_errors: true
 
@@ -91,8 +95,11 @@
       ignore_errors: true
 
     - name: "Get how long registration took"
-      shell:
-        grep '"msg". "Register' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          grep '"msg". "Register' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_grepper_timings
 
     - name: "Append registration timings to central list"
@@ -119,8 +126,9 @@
         create: true
 
     - name: "Get number of hosts that failed to register"
-      ansible.builtin.shell: |
-        grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_log }}
+      ansible.builtin.shell:
+        cmd: |
+          grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_log }}
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
 
@@ -129,15 +137,18 @@
         var: num_failed_hosts.stdout_lines
 
     - name: "Try to show errors in /var/log/rhsm/rhsm.log when log file shows rhsm related errors"
-      ansible.builtin.shell: |
-        for client_ip in $(awk '/^fatal: .* \/var\/log\/rhsm\/rhsm.log / {print $2}' "{{ clients_yaml_cmd_log }}" | cut -d'[' -f2 | cut -d']' -f1); do
-          ansible \
-           --private-key /root/id_rsa_key \
-           --inventory ${client_ip}, \
-           -m ansible.builtin.shell -a "cat /var/log/rhsm/rhsm.log" \
-           all \
-           &> rhsm_${client_ip}.log
-        done
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          for client_ip in $(awk '/^fatal: .* \/var\/log\/rhsm\/rhsm.log / {print $2}' "{{ clients_yaml_cmd_log }}" | cut -d'[' -f2 | cut -d']' -f1); do
+              ansible \
+                --private-key /root/id_rsa_key \
+                --inventory ${client_ip}, \
+                -m ansible.builtin.shell -a "cat /var/log/rhsm/rhsm.log" \
+                all \
+                &> rhsm_${client_ip}.log
+          done
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - debug_rhsm
@@ -150,34 +161,37 @@
         - re_register_failed_hosts
 
     - name: "Try to re-register failed hosts (if needed)"
-      ansible.builtin.shell: |
-        cp -p "{{ clients_yaml_cmd_log }}" "{{ clients_yaml_cmd_retries_log }}"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
 
-        while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
-          num_fails=$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_retries_log }})
-          iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
+          cp -p "{{ clients_yaml_cmd_log }}" "{{ clients_yaml_cmd_retries_log }}"
 
-          cp -p "{{ clients_yaml_cmd_retries_log }}" $iter_clients_yaml_cmd_retries_log
+          while (( "$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_retries_log }})" != 0 )); do
+              num_fails=$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' {{ clients_yaml_cmd_retries_log }})
+              iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
 
-          unset CLIENT_IP_LIST
+              cp -p "{{ clients_yaml_cmd_retries_log }}" $iter_clients_yaml_cmd_retries_log
 
-          for client_ip in $(awk '/^fatal: / {print $2}' $iter_clients_yaml_cmd_retries_log | cut -d'[' -f2 | cut -d']' -f1); do
-            CLIENT_IP_LIST+="$client_ip,"
+              unset CLIENT_IP_LIST
+
+              for client_ip in $(awk '/^fatal: / {print $2}' $iter_clients_yaml_cmd_retries_log | cut -d'[' -f2 | cut -d']' -f1); do
+                  CLIENT_IP_LIST+="$client_ip,"
+              done
+
+              for client_ip in $(grep -e ^'ok:' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' $iter_clients_yaml_cmd_retries_log |
+                uniq | grep -B1 -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' |
+                awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
+                  CLIENT_IP_LIST+="$client_ip,"
+              done
+
+              ansible-playbook \
+                --private-key /root/id_rsa_key \
+                --inventory $CLIENT_IP_LIST \
+                --forks "{{ num_retry_forks }}" \
+                clients_host-registration.yaml \
+                &> "{{ clients_yaml_cmd_retries_log }}"
           done
-
-          for client_ip in $(grep -e ^'ok:' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' $iter_clients_yaml_cmd_retries_log |
-           uniq | grep -B1 -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' |
-           awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
-            CLIENT_IP_LIST+="$client_ip,"
-          done
-
-          ansible-playbook \
-           --private-key /root/id_rsa_key \
-           --inventory $CLIENT_IP_LIST \
-           --forks "{{ num_retry_forks }}" \
-           clients_host-registration.yaml \
-           &> "{{ clients_yaml_cmd_retries_log }}"
-        done
       register: clients_yaml_cmd_retries
       ignore_errors: true
       when:

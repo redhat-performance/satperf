@@ -30,7 +30,8 @@
 
     - name: "Generate the host registration command"
       ansible.builtin.command:
-        hammer -u {{ sat_user}} -p {{ sat_pass }} {{ hgrg }}
+        cmd: |
+          hammer -u {{ sat_user }} -p {{ sat_pass }} {{ hgrg }}
       register: cmd
       delegate_to: "{{ groups['satellite6'] | first }}"
 
