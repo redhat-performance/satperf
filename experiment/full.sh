@@ -77,7 +77,7 @@ done
 
 section "Sync from mirror"
 if [[ "$cdn_url_mirror" != 'https://cdn.redhat.com/' ]]; then
-  skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_mirror'"
+    skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_mirror'"
 fi
 skip_measurement='true' h 00-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
