@@ -13,7 +13,8 @@
     - name: "Check if Insights client should be installed and configured (it won't be by default)"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-insights false"
-      when: "setup_insights is not defined or setup_insights | bool == False"
+      when:
+        - setup_insights is not defined or not setup_insights
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
@@ -24,7 +25,8 @@
     - name: "Check if some package should be installed"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --packages {{ packages }}"
-      when: "packages is defined and packages | length > 0"
+      when:
+        - packages is defined and packages | length > 0
 
     - name: "Generate the host registration command"
       ansible.builtin.command:
@@ -36,5 +38,6 @@
       ansible.builtin.copy:
         content: "{{ cmd.stdout }}"
         dest: /var/www/html/pub/host-registration.sh
-      when: "cmd.rc == 0"
+      when:
+        - cmd.rc == 0
 ...

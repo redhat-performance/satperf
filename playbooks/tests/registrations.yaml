@@ -17,19 +17,22 @@
     - name: "Set number of used containers to 0"
       ansible.builtin.set_fact:
         containers_used_count: 0
-      when: "not container_used_count_path.stat.exists"
+      when:
+        - not container_used_count_path.stat.exists
 
     - name: "Load number of already registered containers"
       ansible.builtin.command:
         cmd: cat /root/container-used-count
       register: containers_used_count_cmd
       ignore_errors: true
-      when: "container_used_count_path.stat.exists"
+      when:
+        - container_used_count_path.stat.exists
 
     - name: "Set number of used containers based on file contents"
       ansible.builtin.set_fact:
         containers_used_count: "{{ containers_used_count_cmd.stdout }}"   # Warning: this is still a string: https://github.com/ansible/ansible/issues/15249
-      when: "container_used_count_path.stat.exists"
+      when:
+        - container_used_count_path.stat.exists
 
     - name: "Ensure we have enough free containers"
       ansible.builtin.assert:
