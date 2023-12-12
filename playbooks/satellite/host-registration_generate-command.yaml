@@ -58,6 +58,7 @@
       ansible.builtin.copy:
         content: "{{ cmd.stdout }}"
         dest: /var/www/html/pub/host-registration.sh
+        mode: '0644'
       when:
         - cmd.rc == 0
 ...
