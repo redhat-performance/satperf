@@ -1,6 +1,7 @@
 ---
-- hosts: satellite6
-  gather_facts: False
+- name: "Create organization using the REST API"
+  hosts: satellite6
+  gather_facts: false
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:

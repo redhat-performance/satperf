@@ -1,6 +1,7 @@
 ---
-- hosts: satellite6
-  gather_facts: False
+- name: "Configure Satellite"
+  hosts: satellite6
+  gather_facts: false
   roles:
     - role: ../common/roles/epel-not-present
     - role: ../common/roles/scalelab-generic-cleanup

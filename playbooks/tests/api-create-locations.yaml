@@ -1,6 +1,8 @@
 ---
-- hosts: satellite6:capsules
-  gather_facts: False
+- name: "Create location(s) using the REST API"
+  hosts: satellite6:capsules
+  strategy: linear
+  gather_facts: false
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
