@@ -1,0 +1,15 @@
+---
+- name: "Common configuration steps for Satellite and capsule(s) servers"
+  hosts: satellite6:capsules
+  gather_facts: false
+  roles:
+    - role: ../common/roles/epel-not-present
+    - role: ../common/roles/common
+    - role: ../common/roles/enlarge-arp-table
+    - role: linux-system-roles.timesync
+    - role: rhsm_helper
+    - role: upgrade-restart
+    - role: linux-system-roles.firewall
+    - role: linux-system-roles.storage
+    - role: repo_setup
+...
