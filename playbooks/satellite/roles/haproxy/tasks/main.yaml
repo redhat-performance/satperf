@@ -5,7 +5,7 @@
 
 - name: "Get capsule names"
   ansible.builtin.set_fact:
-    lb_capsules: "{{ groups[location_groupname] | intersect(groups['capsules']) | sort }}"
+    lb_capsules: "{{ groups['capsules'] | intersect(groups[location_groupname]) | sort }}"
 
 - name: "Tune sysctl"
   ansible.posix.sysctl:

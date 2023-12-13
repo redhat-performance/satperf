@@ -33,15 +33,17 @@
 
 - name: "Get load balancer name"
   ansible.builtin.set_fact:
-    capsule_lb: "{{ groups[location_groupname] | intersect(groups['capsule_lbs']) | first }}"
+    capsule_lb: "{{ groups['capsule_lbs'] | intersect(groups[location_groupname]) | first }}"
   when:
-    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Add load balanced capsule parameters"
   ansible.builtin.set_fact:
     cap_certs_generate_options: "{{ cap_certs_generate_options }} --foreman-proxy-cname {{ capsule_lb }}"
   when:
-    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Run capsule-certs-generate"
   # XXX: Cannot run concurrently -> Submit PR
@@ -118,7 +120,8 @@
     line: '                    --certs-cname                                 "{{ capsule_lb }}"\'
     insertbefore: '.*--enable-foreman-proxy-plugin-remote-execution-script'
   when:
-    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Add host registration URL parameters"
   ansible.builtin.lineinfile:
@@ -126,7 +129,8 @@
     line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:9090"\'
     insertafter: '.*--certs-cname'
   when:
-    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Add host registration URL parameters"
   ansible.builtin.lineinfile:
@@ -134,7 +138,8 @@
     line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
     insertafter: '.*--foreman-proxy-registration-url'
   when:
-    - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Configure MQTT transport for remote execution"
   ansible.builtin.lineinfile:
