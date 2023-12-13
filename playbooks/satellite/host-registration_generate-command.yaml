@@ -3,7 +3,7 @@
   hosts: satellite6:capsules
   gather_facts: false
   vars:
-    hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --location {{ location }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
+    hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
   tasks:
     - name: "Get capsule ID"
       # XXX: Submit PR
