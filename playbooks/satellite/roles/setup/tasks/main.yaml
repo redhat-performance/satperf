@@ -61,12 +61,12 @@
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
 
-- name: "Configure Redis as Foreman cache on Satellite >=6.14"
+- name: "Configure Redis as Foreman cache on Satellite 6.14"
   ansible.builtin.set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-rails-cache-store type:redis"
   when:
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.14.0', '>=')
-    - configure_redis_cache is defined and configure_redis_cache | bool == True
+    - configure_redis_cache is defined and configure_redis_cache
+    - sat_version is ansible.builtin.version('6.14.0')
 
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
