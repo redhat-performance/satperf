@@ -26,7 +26,7 @@ generic_environment_check
 
 
 section "Prepare for Red Hat content"
-h_out "--no-headers --csv organization list --fields name" | grep --quiet "^{{ sat_org }}$" \
+h_out "--no-headers --csv organization list --search 'name = \"{{ sat_org }}\"'" | grep --quiet '^[0-9]\+,' \
   || h 00-ensure-org.log "organization create --name '{{ sat_org }}'"
 skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
 skip_measurement='true' ap 01-manifest-excercise.log \
