@@ -3,7 +3,7 @@
   gather_facts: false
   tasks:
     - name: Cleanup
-      ansible.builtin.command:
+      ansible.builtin.shell:
         cmd: |
           rm -f /etc/yum.repos.d/*.repo
 
