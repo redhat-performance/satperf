@@ -66,7 +66,7 @@
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-rails-cache-store type:redis"
   when:
     - configure_redis_cache is defined and configure_redis_cache
-    - sat_version is ansible.builtin.version('6.14.0')
+    - sat_version == '6.14.0'
 
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
