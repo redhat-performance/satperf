@@ -122,8 +122,6 @@
         password: "{{ password }}"
         body_format: json
         body: "{{ {'organization_id': organization_id, 'location': {'name': location, 'organization_ids': [organization_id]}} }}"
-        status_code:
-          - 422   # "Name has already been taken"
       delegate_to: "{{ groups['satellite6'] | first }}"
 
     - name: "Set host location"
