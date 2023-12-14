@@ -20,10 +20,6 @@ generic_environment_check
 
 
 section "Upload manifest"
-h_out "--no-headers --csv organization list --fields name" | grep --quiet "^{{ sat_org }}$" \
-  || h rhel8sync-10-ensure-org.log "organization create --name '{{ sat_org }}'"
-h_out "--no-headers --csv location list --fields name" | grep --quiet '^$dl$' \
-  || h rhel8sync-10-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
 a rhel8sync-10-manifest-deploy.log \
   -m copy \
   -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6

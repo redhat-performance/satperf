@@ -24,9 +24,6 @@ generic_environment_check
 
 
 section "Prepare for Red Hat content"
-h_out "--no-headers --csv organization list --fields name" | grep --quiet "^{{ sat_org }}$" \
-    || h 00-ensure-org.log "organization create --name '{{ sat_org }}'"
-h 00-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 count=5
 for i in $( seq $count ); do

@@ -21,9 +21,6 @@ opts_adhoc="$opts"
 
 
 section "Util: Prepare for Red Hat content"
-h_out "--no-headers --csv organization list --fields name" | grep --quiet "^{{ sat_org }}$" \
-    || h regs-10-ensure-org.log "organization create --name '{{ sat_org }}'"
-h 00-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
 a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
 h 01-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 h 03-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
@@ -52,25 +49,6 @@ tmp=$( mktemp )
 h_out "--no-headers --csv location list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
 h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
-tmp=$( mktemp )
-h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
-for row in $( cut -d ' ' -f 1 $tmp ); do
-    capsule_id=$( echo "$row" | cut -d ',' -f 1 )
-    capsule_name=$( echo "$row" | cut -d ',' -f 2 )
-    subnet_name="subnet-for-$capsule_name"
-    hostgroup_name="hostgroup-for-$capsule_name"
-    if [ "$capsule_id" -eq 1 ]; then
-        location_name="$dl"
-    else
-        location_name="Location for $capsule_name"
-    fi
-    h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-        || h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '{{ sat_org }}' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
-    subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
-    a 45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
-    h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-        || ap regs-41-hostgroup-create-$capsule_name.log playbooks/satellite/hostgroup-create.yaml -e "organization='{{ sat_org }}' hostgroup_name=$hostgroup_name subnet_name=$subnet_name"
-done
 
 ap 44-generate-host-registration-command.log \
   -e "organization='{{ sat_org }}'" \

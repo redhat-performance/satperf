@@ -66,32 +66,6 @@ if [ "$skip_down_setup" != "true" ]; then
     h_out "--csv --no-headers activation-key product-content --organization '{{ sat_org }}' --content-access-mode-all true --name '$ak' --search 'name ~ download_test_repo' --fields label" >$logs/downtest-repo-label.log
     down_test_repo_label="$( tail -n 1 $logs/downtest-repo-label.log )"
     h downtest-40-ak-content-override-downtest.log "activation-key content-override --organization '{{ sat_org }}' --name '$ak' --content-label '$down_test_repo_label' --override-name 'enabled' --value 1"
-
-    tmp=$( mktemp )
-    h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
-    rows="$( cut -d ' ' -f 1 $tmp )"
-    rm -f $tmp
-
-    for row in $rows; do
-        capsule_id="$( echo "$row" | cut -d ',' -f 1 )"
-        capsule_name="$( echo "$row" | cut -d ',' -f 2 )"
-        subnet_name="subnet-for-${capsule_name}"
-        if [ "$capsule_id" -eq 1 ]; then
-            location_name="$dl"
-        else
-            location_name="Location for $capsule_name"
-        fi
-
-        h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-          || h downtest-44-subnet-create-${capsule_name}.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '{{ sat_org }}' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
-
-        subnet_id="$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )"
-
-        a downtest-45-subnet-add-rex-capsule-${capsule_name}.log \
-          -m "ansible.builtin.uri" \
-          -a "url=https://{{ groups['satellite6'] | first }}/api/v2/subnets/${subnet_id} force_basic_auth=true user={{ sat_user }} password={{ sat_pass }} method=PUT body_format=json body='{\"subnet\": {\"remote_execution_proxy_ids\": [\"${capsule_id}\"]}}'" \
-          satellite6
-    done
 fi
 
 skip_measurement='true' ap downtest-44-generate-host-registration-command.log \

@@ -50,12 +50,6 @@ generic_environment_check
 
 
 section "Prepare for Red Hat content"
-h_out "--no-headers --csv organization list --search 'name = \"{{ sat_org }}\"'" | grep --quiet '^[0-9]\+,' \
-  || h 00-ensure-org.log "organization create --name '{{ sat_org }}'"
-
-h_out "--no-headers --csv location list --search 'name = \"$dl\"' --fields name" | grep --quiet "^$dl$" \
-  || skip_measurement='true' h 00-ensure-loc-in-org.log "organization add-location --name '{{ sat_org }}' --location '$dl'"
-
 skip_measurement='true' ap 01-manifest-excercise.log \
   -e "organization='{{ sat_org }}'" \
   -e "manifest=../../$manifest" \
@@ -409,45 +403,6 @@ location_ids="$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )"
 rm -f $tmp
 
 h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
-
-
-tmp="$( mktemp )"
-h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
-rows="$( cut -d ' ' -f 1 $tmp )"
-rm -f $tmp
-
-for row in $rows; do
-    capsule_id="$( echo "$row" | cut -d ',' -f 1 )"
-    capsule_name="$( echo "$row" | cut -d ',' -f 2 )"
-    subnet_name="subnet-for-$capsule_name"
-    hostgroup_name="hostgroup-for-$capsule_name"
-    if [ "$capsule_id" -eq 1 ]; then
-        location_name="$dl"
-    else
-        location_name="Location for $capsule_name"
-    fi
-
-    h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-      || h 44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ domain }}' --organization '{{ sat_org }}' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
-
-    subnet_id="$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )"
-
-    a 45-subnet-add-rex-capsule-$capsule_name.log \
-      -m "ansible.builtin.uri" \
-      -a "url=https://{{ groups['satellite6'] | first }}/api/v2/subnets/${subnet_id} force_basic_auth=true user={{ sat_user }} password={{ sat_pass }} method=PUT body_format=json body='{\"subnet\": {\"remote_execution_proxy_ids\": [\"${capsule_id}\"]}}'" \
-      satellite6
-
-    h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-      || ap 41-hostgroup-create-$capsule_name.log \
-           -e "organization='{{ sat_org }}'" \
-           -e "hostgroup_name='$hostgroup_name'" \
-           -e "subnet_name='$subnet_name'" \
-           -e "containers_os_name='{{ containers_os.name }}'" \
-           -e "containers_os_major='{{ containers_os.major }}'" \
-           -e "containers_os_minor='{{ containers_os.minor }}'" \
-           playbooks/satellite/hostgroup-create.yaml
-done
-
 
 ak='AK_rhel8_Test'
 
