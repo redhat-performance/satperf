@@ -39,7 +39,7 @@ if [[ "$skip_down_setup" != "true" ]]; then
     a 12-manifest-deploy.log \
       -m ansible.builtin.copy \
       -a "src=$manifest dest=/root/manifest-auto.zip force=yes" \
-    satellite6
+      satellite6
     h 15-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 
 
