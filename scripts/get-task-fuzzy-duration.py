@@ -206,7 +206,7 @@ def doit():
                         help='Satellite hostname')
     parser.add_argument('--task-id', required=True,
                         help='Task ID you want to investigate')
-    parser.add_argument('--timeout', type=int, default=10,
+    parser.add_argument('--timeout', type=int, default=30,
                         help='How long to wait for the parent task to show progress (in minutes). The progress will be measured against the sum of the failed an successful sub-tasks')
     parser.add_argument('--percentage', type=float, default=3,
                         help='How many %% of earliest and latest starts and ends to drop')
