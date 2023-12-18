@@ -92,7 +92,7 @@ def print_result(output_format, data):
         data = {k: v.isoformat(timespec="microseconds") if isinstance(v, datetime.datetime) else v for k, v in data.items()}
         print(json.dumps(data))
     else:
-        raise Exception("Do not know how to prin in %s" % output_format)
+        raise Exception("Do not know how to print in %s" % output_format)
 
 
 def investigate_task(args):
