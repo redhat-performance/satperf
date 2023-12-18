@@ -416,7 +416,7 @@ ap 44-recreate-client-scripts.log \
 unset skip_measurement
 
 
-section "Incremental registrations"
+section "Incremental registrations and remote execution"
 number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )"
 number_containers_per_container_host="$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 if (( initial_expected_concurrent_registrations > number_container_hosts )); then
@@ -424,8 +424,16 @@ if (( initial_expected_concurrent_registrations > number_container_hosts )); the
 else
     initial_concurrent_registrations_per_container_host=1
 fi
+job_template_ansible_default='Run Command - Ansible Default'
+job_template_ssh_default='Run Command - Script Default'
 
-for (( batch=1, remaining_containers_per_container_host=$number_containers_per_container_host; remaining_containers_per_container_host > 0; batch++ )); do
+skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
+skip_measurement='true' a 51-rex-cleanup-know_hosts.log \
+  -m "shell" \
+  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
+  satellite6
+
+for (( batch=1, remaining_containers_per_container_host=$number_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
     if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
         concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
     else
@@ -443,32 +451,27 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
       -e 're_register_failed_hosts=true' \
       playbooks/tests/registrations.yaml
       e Register $logs/44-register-$concurrent_registrations.log
+
+    (( total_registered += concurrent_registrations ))
+
+    skip_measurement='true' h 55-rex-date-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+    jsr $logs/55-rex-date-${total_registered}.log
+    j $logs/55-rex-date-${total_registered}.log
+
+    skip_measurement='true' h 56-rex-date-ansible-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
+    jsr $logs/56-rex-date-ansible-${total_registered}.log
+    j $logs/56-rex-date-ansible-${total_registered}.log
+
+    skip_measurement='true' h 57-rex-sm-facts-update-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+    jsr $logs/57-rex-sm-facts-update-${total_registered}.log
+    j $logs/57-rex-sm-facts-update-${total_registered}.log
+
+    skip_measurement='true' h 58-rex-uploadprofile-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+    jsr $logs/58-rex-uploadprofile-${total_registered}.log
+    j $logs/58-rex-uploadprofile-${total_registered}.log
 done
 grep Register $logs/44-register-*.log >$logs/44-register-overall.log
 e Register $logs/44-register-overall.log
-
-
-section "Remote execution"
-job_template_ansible_default='Run Command - Ansible Default'
-job_template_ssh_default='Run Command - Script Default'
-
-skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
-skip_measurement='true' a 51-rex-cleanup-know_hosts.log \
-  -m "shell" \
-  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
-  satellite6
-
-skip_measurement='true' h 55-rex-date.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-j $logs/55-rex-date.log
-
-skip_measurement='true' h 56-rex-date-ansible.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
-j $logs/56-rex-date-ansible.log
-
-skip_measurement='true' h 57-rex-sm-facts-update.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-j $logs/57-rex-sm-facts-update.log
-
-skip_measurement='true' h 58-rex-uploadprofile.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-j $logs/58-rex-uploadprofile.log
 
 
 section "Misc simple tests"
