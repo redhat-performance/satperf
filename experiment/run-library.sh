@@ -512,6 +512,63 @@ function j() {
     task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
 }
 
+function jsr() {
+    # Parse job invocation ID from the log and show its execution success ratio
+    local log="$1"
+    local job_invocation_id="$( extract_job_invocation "$log" )"
+    [ -z "$job_invocation_id" ] && return 1
+    local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    [ -z "$satellite_host" ] && return 2
+    local satellite_creds="$( ansible $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
+    [ -z "$satellite_creds" ] && return 2
+
+    local task_state="$( curl --silent --insecure \
+      -u "${satellite_creds}" \
+      -X GET \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      https://$satellite_host/api/v2/job_invocations/${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
+
+    local counter=0
+    while [[ "${task_state}" == 'running' ]]; do
+        if (( counter >= 30 )); then
+            log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
+
+            return 1
+        else
+            sleep 60
+
+            task_state="$( curl --silent --insecure \
+              -u "${satellite_creds}" \
+              -X GET \
+              -H 'Accept: application/json' \
+              -H 'Content-Type: application/json' \
+              https://$satellite_host/api/v2/job_invocations/${job_invocation_id} |
+              python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
+        fi
+    done
+
+    local succeeded="$( curl --silent --insecure \
+      -u "${satellite_creds}" \
+      -X GET \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      https://$satellite_host/api/v2/job_invocations/${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["succeeded"])' )"
+    local total="$( curl --silent --insecure \
+      -u "${satellite_creds}" \
+      -X GET \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      https://$satellite_host/api/v2/job_invocations/${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["total"])' )"
+
+    log "Examined job invocation $job_invocation_id: $succeeded / $total successful executions"
+
+    return 0
+}
+
 function extract_task() {
     # Take log with hammer run log and extract task ID from it. Do not return
     # anything if more task IDs are found or in case of any other error.
