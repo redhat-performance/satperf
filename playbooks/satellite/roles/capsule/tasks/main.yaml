@@ -1,4 +1,10 @@
 ---
+- name: "Set default variable(s) values"
+  ansible.builtin.set_fact:
+    user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+    password: "{{ password | default('{{ sat_pass }}') }}"
+    organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+
 - name: "Detect RHEL release"
   ansible.builtin.setup:
     filter: ansible_distribution_major_version
@@ -182,6 +188,34 @@
 - name: "Print capsule installer run duration"
   ansible.builtin.debug:
     msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"
+
+- name: "Get capsule ID"
+  ansible.builtin.command:
+    cmd: |
+      hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id
+  register: capsule_id_cmd
+  delegate_to: "{{ groups['satellite6'] | first }}"
+  when:
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+
+- name: "Set capsule ID"
+  ansible.builtin.set_fact:
+    id: "{{ capsule_id_cmd.stdout }}"
+  when:
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+
+- name: "Refresh capsule features"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.command:
+    cmd: |
+      hammer -u {{ user }} -p {{ password }} capsule refresh-features --organization '{{ organization }}' --id {{ id }}
+  delegate_to: "{{ groups['satellite6'] | first }}"
+  when:
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Run desired shell commands after installation"
   ansible.builtin.shell:
