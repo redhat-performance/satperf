@@ -13,7 +13,8 @@
 # RHEL8 requirements
 - name: "Enable satellite-capsule:el8 module"
   ansible.builtin.command:
-    cmd: dnf -y module enable satellite-capsule:el8
+    cmd: |
+      dnf -y module enable satellite-capsule:el8
   when: "ansible_distribution_major_version | int == 8"
 
 # Install packages required for capsule
@@ -175,7 +176,8 @@
   # XXX: Submit PR
   throttle: 1
   ansible.builtin.command:
-    cmd: "bash /root/{{ inventory_hostname }}-script.sh"
+    cmd: |
+      bash /root/{{ inventory_hostname }}-script.sh
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
