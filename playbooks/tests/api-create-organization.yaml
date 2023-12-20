@@ -7,18 +7,20 @@
       ansible.builtin.set_fact:
         user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
         password: "{{ password | default('{{ sat_pass }}') }}"
-        organization: "{{ password | default('{{ sat_org }}') | default('Default Organization') }}"
+        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
 
     - name: "Create organization"
+      # XXX: Submit PR
+      throttle: 1
       ansible.builtin.uri:
         url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
         method: POST
-        validate_certs: False
-        force_basic_auth: True
+        validate_certs: false
+        force_basic_auth: true
         user: "{{ user }}"
         password: "{{ password }}"
         body_format: json
-        body: "{{ {'organization': {'name': organization} } }}"
+        body: "{{ {'organization': {'name': organization}} }}"
         status_code:
           - 201
           - 422   # "Name has already been taken"
