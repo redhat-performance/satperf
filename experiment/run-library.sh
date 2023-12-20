@@ -79,34 +79,39 @@ function measurement_row_field() {
 function generic_environment_check() {
     extended=${1:-true}
     restarted=${2:-true}
-    skip_measurement='true' a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
-    skip_measurement='true' a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
-    skip_measurement='true' a 00-info-ip-a.log satellite6,capsules,container_hosts -m "shell" -a "ip a"
-    skip_measurement='true' a 00-check-ping-registration-target.log -m "ansible.builtin.shell" -a "ping -c 10 {{ tests_registration_target }}" container_hosts
+
+    export skip_measurement='true'
+
+    a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
+    a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
+    a 00-info-ip-a.log satellite6,capsules,container_hosts -m "shell" -a "ip a"
+    a 00-check-ping-registration-target.log -m "ansible.builtin.shell" -a "ping -c 10 {{ tests_registration_target }}" container_hosts
 
     if $extended; then
         ansible_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
         if [ "$ansible_container_hosts" -gt 0 ]; then
-            skip_measurement='true' ap 00-recreate-containers.log ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
+            ap 00-recreate-containers.log ansible-container-host-mgr/tierdown.yaml ansible-container-host-mgr/tierup.yaml
         fi
-        skip_measurement='true' ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
+        ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
     fi
 
     if $restarted; then
-        skip_measurement='true' a 00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
+        a 00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
     fi
 
-    skip_measurement='true' a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
+    a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
     katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
-    skip_measurement='true' a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
+    a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
     satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
     log "katello_version = $katello_version"
     log "satellite_version = $satellite_version"
 
-    skip_measurement='true' a 00-check-hammer-ping.log \
+    a 00-check-hammer-ping.log \
       -m "ansible.builtin.shell" \
       -a "hammer $hammer_opts ping" \
       satellite6
+
+    unset skip_measurement
 
     set +e   # Quit "-e" mode as from now on failure is not fatal
 }
