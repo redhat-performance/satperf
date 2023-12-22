@@ -11,5 +11,4 @@
     - role: upgrade-restart
     - role: linux-system-roles.firewall
     - role: linux-system-roles.storage
-    - role: repo_setup
 ...

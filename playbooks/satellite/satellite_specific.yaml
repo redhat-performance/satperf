@@ -3,5 +3,6 @@
   hosts: satellite6
   gather_facts: false
   roles:
+    - role: repo_setup
     - role: setup
 ...
