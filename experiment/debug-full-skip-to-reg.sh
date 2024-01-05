@@ -4,6 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
@@ -136,7 +137,11 @@ ap 44-recreate-client-scripts.log \
 
 section "Register"
 for i in $( seq $registrations_iterations ); do
-    ap 44-register-$i.log playbooks/tests/registrations.yaml -e "size=$registrations_per_docker_hosts tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/44-register-docker-host-client-logs'"
+    ap 44-register-$i.log \
+      -e "size=$registrations_per_docker_hosts" \
+      -e "registration_logs='../../$logs/44-register-docker-host-client-logs'" \
+      -e "sat_version='$sat_version'" \
+      playbooks/tests/registrations.yaml
     e Register $logs/44-register-$i.log
 done
 

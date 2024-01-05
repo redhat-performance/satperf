@@ -4,6 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_container_hosts=${PARAM_registrations_per_container_hosts:-5}
@@ -78,11 +79,12 @@ skip_measurement='true' ap 44-recreate-client-scripts.log \
 
 section "Util: Register"
 for i in $( seq $registrations_iterations ); do
-    ap 50-register-$i.log playbooks/tests/registrations.yaml \
+    ap 50-register-$i.log \
       -e "size=$registrations_per_container_hosts" \
       -e "registration_logs='../../$logs/50-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
-      -e "config_server_server_timeout=$registrations_config_server_server_timeout"
+      -e "sat_version='$sat_version'" \
+      playbooks/tests/registrations.yaml
     e Register $logs/50-register-$i.log
 done
 

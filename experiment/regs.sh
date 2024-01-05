@@ -4,6 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
@@ -90,13 +91,16 @@ export skip_measurement='false'
 
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml \
-        -e "size=$batch" \
-        -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
-        -e "config_server_server_timeout=$registrations_config_server_server_timeout"
+    ap regs-50-register-$iter-$batch.log \
+      -e "size=$batch" \
+      -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
+      -e "config_server_server_timeout=$registrations_config_server_server_timeout" \
+      -e "sat_version='$sat_version'" \
+      playbooks/tests/registrations.yaml
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1
 done
+
 
 section "Summary"
 iter=1

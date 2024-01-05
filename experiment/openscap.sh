@@ -4,6 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
@@ -100,7 +101,11 @@ sum=0
 totalclients=0
 iter=1
 for batch in $registrations_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch registration_logs='../../$logs/regs-50-register-container-host-client-logs'"
+    ap regs-50-register-$iter-$batch.log \
+      -e "size=$batch" \
+      -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
+      -e "sat_version='$sat_version'" \
+      playbooks/tests/registrations.yaml
     e Register $logs/regs-50-register-$iter-$batch.log
     let sum=$(($sum + $batch))
     let totalclients=$( expr $sum \* $ansible_container_hosts )

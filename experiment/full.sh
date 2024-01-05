@@ -4,9 +4,8 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 sat_version="${PARAM_sat_version:-stream}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
@@ -449,6 +448,7 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "registration_logs='../../$logs/44-register-docker-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
+      -e "sat_version='$sat_version'" \
       playbooks/tests/registrations.yaml
       e Register $logs/44-register-$concurrent_registrations.log
 

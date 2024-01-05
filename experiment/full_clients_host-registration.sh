@@ -4,6 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 concurrent_registrations=${PARAM_concurrent_registrations:-125}
@@ -194,11 +195,12 @@ concurrent_registrations_per_container_host=$(( concurrent_registrations / numbe
 log "Going to register $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $registration_iterations batches."
 
 for i in $( seq $registration_iterations ); do
-    skip_measurement='true' ap 44b-register-$i.log playbooks/tests/registrations.yaml \
+    skip_measurement='true' ap 44b-register-$i.log \
       -e "size=$concurrent_registrations_per_container_host" \
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
-      -e "method=clients_host-registration"
+      -e "sat_version='$sat_version'" \
+      playbooks/tests/registrations.yaml
 done
 grep Register $logs/44b-register-*.log >$logs/44b-register-overall.log
 e Register $logs/44b-register-overall.log

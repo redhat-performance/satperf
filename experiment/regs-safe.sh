@@ -4,6 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
@@ -258,6 +259,7 @@ for (( i=initial_batch; i <= ( registration_iterations + 1 ); i++ )); do
       -e "size='${concurrent_registrations_per_container_host}'" \
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
+      -e "sat_version='$sat_version'" \
       playbooks/tests/registrations.yaml
     e Register $logs/44b-register-$i.log
 done
