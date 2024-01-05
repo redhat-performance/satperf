@@ -87,6 +87,7 @@ section "Prepare env for openSCAP test"
 ap openSCAP-sat-prep.log playbooks/tests/openSCAP-sat-prep.yaml -e "proxy_id=$proxy_id hostgroup_name={{ tests_registration_target }}"
 
 
+export skip_measurement='false'
 section "Register more and more"
 ansible_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts,container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 sum=0
@@ -94,8 +95,6 @@ for b in $registrations_batches; do
     let sum+=$( expr $b \* $ansible_container_hosts )
 done
 log "Going to register $sum hosts in total. Make sure there is enough hosts available."
-
-export skip_measurement='false'
 
 sum=0
 totalclients=0
