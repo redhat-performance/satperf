@@ -4,7 +4,6 @@
   gather_facts: false
   vars:
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
-    resting: 0
     num_retry_forks: 3
     registration_logs: "registration_logs"
     re_register_failed_hosts: false
@@ -198,8 +197,4 @@
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - re_register_failed_hosts
-
-    - name: "Give server some time to rest"
-      ansible.builtin.pause:
-        seconds: "{{ resting }}"
 ...
