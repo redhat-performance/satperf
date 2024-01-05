@@ -76,7 +76,7 @@
           ansible-playbook \
             --private-key /root/id_rsa_key \
             --forks "{{ size }}" \
-            -i clients.ini \
+            --inventory clients.ini \
             clients_host-registration.yaml \
             &> "{{ clients_yaml_cmd_log }}"
       register: clients_yaml_cmd
@@ -139,7 +139,8 @@
               ansible \
                 --private-key /root/id_rsa_key \
                 --inventory ${client_ip}, \
-                -m ansible.builtin.shell -a "cat /var/log/rhsm/rhsm.log" \
+                -m ansible.builtin.command \
+                -a "cat /var/log/rhsm/rhsm.log" \
                 all \
                 &> rhsm_${client_ip}.log
           done
