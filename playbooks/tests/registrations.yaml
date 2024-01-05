@@ -56,12 +56,6 @@
         clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
       run_once: true
 
-    - name: "Download host registration script from Satellite/capsule"
-      ansible.builtin.get_url:
-        url: http://{{ tests_registration_target }}/pub/host-registration.sh
-        dest: /root/clients_host-registration.sh
-        mode: '0400'
-
     - name: "Try to patch `rhsm/connection.py` to add some error logging"
       ansible.builtin.shell:
         cmd: |
