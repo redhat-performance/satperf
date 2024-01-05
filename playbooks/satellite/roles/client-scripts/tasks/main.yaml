@@ -22,7 +22,7 @@
 
 - name: "Ansible should not check host keys"
   throttle: 8
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/ansible/ansible.cfg
     regexp: '^.*host_key_checking'
     insertafter: '[defaults]'
@@ -31,9 +31,9 @@
 
 - name: "Distribute private key"
   throttle: 8
-  copy:
+  ansible.builtin.copy:
     src: "../../{{ ansible_ssh_private_key_file }}"
     dest: /root/id_rsa_key
     mode: "u=rw,g=,o="
-    force: yes
+    force: true
 ...
