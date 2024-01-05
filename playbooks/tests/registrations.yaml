@@ -1,5 +1,6 @@
 ---
-- hosts: container_hosts
+- name: "Register containers against a registration target"
+  hosts: container_hosts
   gather_facts: false
   vars:
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
