@@ -115,52 +115,59 @@
         sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
         > "/root/{{ inventory_hostname }}-script.sh"
 
+- name: "Make sure Ansible plugin is enabled"
+  ansible.builtin.lineinfile:
+    dest: "/root/{{ inventory_hostname }}-script.sh"
+    line: '                    --enable-foreman-proxy-plugin-ansible\'
+    insertafter: '.*--certs-tar-file.*'
+
 - name: "Make sure remote execution plugin is enabled"
   ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
-    insertafter: '.*--scenario capsule.*'
+    insertafter: '.*--enable-foreman-proxy-plugin-ansible.*'
 
 - name: "Add load balanced capsule parameters"
   ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --certs-cname                                 "{{ capsule_lb }}"\'
-    insertbefore: '.*--enable-foreman-proxy-plugin-remote-execution-script'
+    insertafter: '.*--certs-tar-file.*'
   when:
     - "'capsule_lbs' in groups"
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
-- name: "Add host registration URL parameters"
+- name: "Ensure sat_version is string to avoid hard to detect issues"
+  ansible.builtin.assert:
+    that: sat_version is string
+    fail_msg: "Variable 'sat_version' have to be string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
+
+- name: "Add load balanced capsule host registration URL parameters"
   ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:9090"\'
-    insertafter: '.*--certs-cname'
+    insertafter: '.*--certs-cname.*'
   when:
     - "'capsule_lbs' in groups"
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.13.0', '>=')
 
-- name: "Add host registration URL parameters"
+- name: "Add load balanced capsule host registration URL parameters"
   ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
-    insertafter: '.*--foreman-proxy-registration-url'
+    insertafter: '.*--foreman-proxy-registration-url.*'
   when:
     - "'capsule_lbs' in groups"
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.13.0', '>=')
 
 - name: "Configure MQTT transport for remote execution"
   ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
-    insertafter: '.*--enable-foreman-proxy-plugin-remote-execution-script'
+    insertafter: '.*--enable-foreman-proxy-plugin-remote-execution-script.*'
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
-
-- name: "Make sure Ansible plugin is enabled"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --enable-foreman-proxy-plugin-ansible\'
-    insertafter: '.*--scenario capsule.*'
 
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
