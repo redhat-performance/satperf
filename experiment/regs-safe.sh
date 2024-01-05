@@ -15,7 +15,7 @@ rels="${PARAM_rels:-rhel8}"
 
 lces="${PARAM_lces:-Test}"
 
-ak="${PARAM_ak:-AK_RHEL8}"
+ak="${PARAM_ak:-AK_rhel8_Test}"
 
 basearch='x86_64'
 
@@ -234,8 +234,6 @@ ap 40-capsules-populate.log \
 
 
 section "Prepare for registrations"
-ak='AK_rhel8_Test'
-
 ap 44-generate-host-registration-command.log \
   -e "organization='{{ sat_org }}'" \
   -e "ak='$ak'" \
