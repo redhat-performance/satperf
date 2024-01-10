@@ -23,7 +23,7 @@
       when:
         - "'capsules' in group_names"
 
-    - name: "Check if running in a capsule"
+    - name: "Add --smart-proxy-id parameter"
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
       when:
