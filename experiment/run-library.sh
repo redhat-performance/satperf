@@ -559,6 +559,8 @@ function jsr() {
               -H 'Content-Type: application/json' \
               https://$satellite_host/api/v2/job_invocations/${job_invocation_id} |
               python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
+
+            (( counter++ ))
         fi
     done
 
