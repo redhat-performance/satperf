@@ -410,7 +410,7 @@ ap 44-generate-host-registration-command.log \
   -e "ak='$ak'" \
   playbooks/satellite/host-registration_generate-command.yaml
 
-ap 44-recreate-client-scripts.log \
+ap 45-recreate-client-scripts.log \
   playbooks/satellite/client-scripts.yaml
 unset skip_measurement
 
@@ -426,8 +426,8 @@ fi
 job_template_ansible_default='Run Command - Ansible Default'
 job_template_ssh_default='Run Command - Script Default'
 
-skip_measurement='true' h 50-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
-skip_measurement='true' a 51-rex-cleanup-know_hosts.log \
+skip_measurement='true' h 46-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
+skip_measurement='true' a 47-rex-cleanup-know_hosts.log \
   -m "shell" \
   -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
   satellite6
@@ -444,13 +444,13 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
 
     (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
 
-    skip_measurement='true' ap 44-register-$concurrent_registrations.log \
+    skip_measurement='true' ap 48-register-$concurrent_registrations.log \
       -e "size='$concurrent_registrations_per_container_host'" \
-      -e "registration_logs='../../$logs/44-register-docker-host-client-logs'" \
+      -e "registration_logs='../../$logs/48-register-docker-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
       playbooks/tests/registrations.yaml
-      e Register $logs/44-register-$concurrent_registrations.log
+      e Register $logs/48-register-$concurrent_registrations.log
 
     (( total_registered += concurrent_registrations ))
 
