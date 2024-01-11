@@ -544,13 +544,15 @@ function jsr() {
       python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
 
     local counter=0
+    local max_counter=30
+    local sleep_time=60
     while [[ "${task_state}" == 'running' ]]; do
-        if (( counter >= 30 )); then
+        if (( counter >= max_counter )); then
             log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
 
             return 1
         else
-            sleep 60
+            sleep ${sleep_time}
 
             task_state="$( curl --silent --insecure \
               -u "${satellite_creds}" \
