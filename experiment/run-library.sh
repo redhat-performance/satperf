@@ -546,12 +546,8 @@ function jsr() {
     local counter=0
     local max_counter=30
     local sleep_time=60
-    while [[ "${task_state}" == 'running' ]]; do
-        if (( counter >= max_counter )); then
-            log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
-
-            return 1
-        else
+    while [[ "${task_state}" != 'stopped' ]]; do
+        if (( counter < max_counter )); then
             sleep ${sleep_time}
 
             task_state="$( curl --silent --insecure \
@@ -563,6 +559,10 @@ function jsr() {
               python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
 
             (( counter++ ))
+        else
+            log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
+
+            return 1
         fi
     done
 
