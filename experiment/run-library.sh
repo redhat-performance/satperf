@@ -224,7 +224,7 @@ function status_data_create() {
         if [[ $pof_rc -eq 0 ]]; then
             sd_result='PASS'
         elif [[ $pof_rc -eq 1 ]]; then
-            sd_result='FALSE'
+            sd_result='FAIL'
         else
             sd_result='ERROR'
         fi
