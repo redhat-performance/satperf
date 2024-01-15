@@ -172,39 +172,39 @@ function status_data_create() {
     # Create status data file
     set -x
     status_data.py --status-data-file $sd_file --set \
-        "id=$sd_run" \
-        "name=$sd_section/$sd_name" \
-        "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
-        "parameters.katello_version=$sd_kat_ver" \
-        "parameters.katello_version-y-stream=$sd_kat_ver_short" \
-        "parameters.version=$sd_sat_ver" \
-        "parameters.version-y-stream=$sd_sat_ver_short" \
-        "parameters.run=$sd_run" \
-        "parameters.hostname=$sd_hostname" \
-        "results.log=$sd_log" \
-        "results.rc=$sd_rc" \
-        "results.duration=$sd_duration" \
-        "results.jenkins.build_url=${BUILD_URL:-NA}" \
-        "results.jenkins.node_name=${NODE_NAME:-NA}" \
-        "started=$sd_start" \
-        "ended=$sd_end" \
-        "golden=${GOLDEN:-false}" \
-        $sd_additional
+      "id=$sd_run" \
+      "name=$sd_section/$sd_name" \
+      "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
+      "parameters.katello_version=$sd_kat_ver" \
+      "parameters.katello_version-y-stream=$sd_kat_ver_short" \
+      "parameters.version=$sd_sat_ver" \
+      "parameters.version-y-stream=$sd_sat_ver_short" \
+      "parameters.run=$sd_run" \
+      "parameters.hostname=$sd_hostname" \
+      "results.log=$sd_log" \
+      "results.rc=$sd_rc" \
+      "results.duration=$sd_duration" \
+      "results.jenkins.build_url=${BUILD_URL:-NA}" \
+      "results.jenkins.node_name=${NODE_NAME:-NA}" \
+      "started=$sd_start" \
+      "ended=$sd_end" \
+      "golden=${GOLDEN:-false}" \
+      $sd_additional
     set +x
 
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
         set -x
         status_data.py -d --status-data-file $sd_file \
-            --additional "$PARAM_cluster_read_config" \
-            --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
-            --grafana-host "$PARAM_grafana_host" \
-            --grafana-port "$PARAM_grafana_port" \
-            --grafana-prefix "$PARAM_grafana_prefix" \
-            --grafana-datasource "$PARAM_grafana_datasource" \
-            --grafana-interface "$PARAM_grafana_interface" \
-            --grafana-token "$PARAM_grafana_token" \
-            --grafana-node "$PARAM_grafana_node"
+          --additional "$PARAM_cluster_read_config" \
+          --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
+          --grafana-host "$PARAM_grafana_host" \
+          --grafana-port "$PARAM_grafana_port" \
+          --grafana-prefix "$PARAM_grafana_prefix" \
+          --grafana-datasource "$PARAM_grafana_datasource" \
+          --grafana-interface "$PARAM_grafana_interface" \
+          --grafana-token "$PARAM_grafana_token" \
+          --grafana-node "$PARAM_grafana_node"
         set +x
     fi
 
@@ -216,8 +216,8 @@ function status_data_create() {
         set +e
         set -x
         pass_or_fail.py \
-            --config "$PARAM_investigator_config" \
-            --current-file "$sd_file" 2>&1 | tee $sd_result_log
+          --config "$PARAM_investigator_config" \
+          --current-file "$sd_file" 2>&1 | tee $sd_result_log
         pof_rc=$?
         set +x
         set -e
@@ -238,10 +238,12 @@ function status_data_create() {
     # Upload status data to ElasticSearch
     url="http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/${PARAM_elasticsearch_index:-satellite_perf_index}/${PARAM_elasticsearch_mapping:-_doc}/"
     echo "INFO: POSTing '$sd_file' to '$url'"
-    curl --silent -H "Content-Type: application/json" -X POST \
-        "$url" \
-        --data "@$sd_file" \
-            | python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
+    curl --silent \
+      -X POST \
+      -H "Content-Type: application/json" \
+      --data "@$sd_file" \
+      "$url" |
+      python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
     ###status_data.py --status-data-file $sd_file --info
 
     # Enhance log file
@@ -259,8 +261,8 @@ function status_data_create() {
 
     # Create junit.xml file
     junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
-        --name "$sd_name" --result "$sd_result" --out "$tmp" \
-        --start "$sd_start" --end "$sd_end"
+      --name "$sd_name" --result "$sd_result" --out "$tmp" \
+      --start "$sd_start" --end "$sd_end"
 
     # Deactivate tools virtualenv
     deactivate
@@ -292,12 +294,12 @@ function junit_upload() {
     # Show content and upload to ReportPortal
     junit_cli.py --file $logs/junit.xml print
     junit_cli.py --file $logs/junit.xml upload \
-        --host $PARAM_reportportal_host \
-        --project $PARAM_reportportal_project \
-        --token $PARAM_reportportal_token \
-        --launch $launch_name \
-        --noverify \
-        --properties jenkins_build_url=$BUILD_URL run_id=$marker
+      --host $PARAM_reportportal_host \
+      --project $PARAM_reportportal_project \
+      --token $PARAM_reportportal_token \
+      --launch $launch_name \
+      --noverify \
+      --properties jenkins_build_url=$BUILD_URL run_id=$marker
 
     # Deactivate tools virtualenv
     deactivate
@@ -342,14 +344,14 @@ function c() {
     local end=$( date --utc +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
-        "$@" \
-        "$out" \
-        "$rc" \
-        "$start" \
-        "$end" \
-        "$katello_version" \
-        "$satellite_version" \
-        "$marker"
+      "$@" \
+      "$out" \
+      "$rc" \
+      "$start" \
+      "$end" \
+      "$katello_version" \
+      "$satellite_version" \
+      "$marker"
     return $rc
 }
 
@@ -367,14 +369,14 @@ function a() {
     local end=$( date --utc +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
-        "ansible $opts_adhoc $( _format_opts "$@" )" \
-        "$out" \
-        "$rc" \
-        "$start" \
-        "$end" \
-        "$katello_version" \
-        "$satellite_version" \
-        "$marker"
+      "ansible $opts_adhoc $( _format_opts "$@" )" \
+      "$out" \
+      "$rc" \
+      "$start" \
+      "$end" \
+      "$katello_version" \
+      "$satellite_version" \
+      "$marker"
     return $rc
 }
 
@@ -401,14 +403,14 @@ function ap() {
     local end=$( date --utc +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
-        "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
-        "$out" \
-        "$rc" \
-        "$start" \
-        "$end" \
-        "$katello_version" \
-        "$satellite_version" \
-        "$marker"
+      "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
+      "$out" \
+      "$rc" \
+      "$start" \
+      "$end" \
+      "$katello_version" \
+      "$satellite_version" \
+      "$marker"
     return $rc
 }
 
@@ -451,15 +453,15 @@ function e() {
     local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
     measurement_add \
-        "experiment/reg-average.py '$grepper' '$log'" \
-        "$log_report" \
-        "$rc" \
-        "$started_ts" \
-        "$ended_ts" \
-        "$katello_version" \
-        "$satellite_version" \
-        "$marker" \
-        "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
+      "experiment/reg-average.py '$grepper' '$log'" \
+      "$log_report" \
+      "$rc" \
+      "$started_ts" \
+      "$ended_ts" \
+      "$katello_version" \
+      "$satellite_version" \
+      "$marker" \
+      "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
 function task_examine() {
@@ -480,16 +482,16 @@ function task_examine() {
         head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
         log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts)"
         measurement_add \
-            "$command" \
-            "$log_report" \
-            "$rc" \
-            "$started_ts" \
-            "$ended_ts" \
-            "$katello_version" \
-            "$satellite_version" \
-            "$marker" \
-            "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
-            return 0
+          "$command" \
+          "$log_report" \
+          "$rc" \
+          "$started_ts" \
+          "$ended_ts" \
+          "$katello_version" \
+          "$satellite_version" \
+          "$marker" \
+          "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
+        return 0
     else
         log "There were errors examining the task $task_id. Please check $log and $log_report log files"
     fi
@@ -520,7 +522,7 @@ function j() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       https://$satellite_host/api/v2/job_invocations/$job_invocation_id |
-        python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
 
     task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
 }
