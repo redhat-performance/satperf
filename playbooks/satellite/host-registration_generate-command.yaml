@@ -49,7 +49,7 @@
 
     - name: "Set default JWT expiration time"
       ansible.builtin.set_fact:
-        default_jwt_expiration: 720
+        default_jwt_expiration: 999999
 
     - name: "Add --jwt-expiration parameter"
       ansible.builtin.set_fact:
