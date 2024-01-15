@@ -3,7 +3,7 @@
   hosts: satellite6:capsules
   gather_facts: false
   vars:
-    hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --location {{ location }} --jwt-expiration {{ jwt_expiration | default(720) | int }} --insecure true --force true"
+    hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --location {{ location }} --insecure true --force true"
   tasks:
     - name: "Get capsule ID"
       # XXX: Submit PR
@@ -46,6 +46,14 @@
         hgrg: "{{ hgrg }} --packages {{ packages }}"
       when:
         - packages is defined and packages | length > 0
+
+    - name: "Set default JWT expiration time"
+      ansible.builtin.set_fact:
+        default_jwt_expiration: 720
+
+    - name: "Add --jwt-expiration parameter"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --jwt-expiration {{ jwt_expiration | default(default_jwt_expiration) }}"
 
     - name: "Generate the host registration command"
       ansible.builtin.command:
