@@ -16,11 +16,15 @@
     - name: Register
       ansible.builtin.shell:
         cmd: |
+          set -o pipefail
+
           /root/clients_host-registration.sh &>/root/registration.log
           ret=$?
+
           echo "-" >>/root/registration.log
           echo "Return code: $ret" >>/root/registration.log
           echo "-----" >>/root/registration.log
+
           cat /root/registration.log
           exit $ret
       environment:
