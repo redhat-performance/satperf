@@ -546,7 +546,7 @@ function jsr() {
       python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
 
     local counter=0
-    local max_counter=30
+    local max_counter=60
     local sleep_time=60
     while [[ "${task_state}" != 'stopped' ]]; do
         if (( counter < max_counter )); then
