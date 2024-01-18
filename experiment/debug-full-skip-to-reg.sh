@@ -129,6 +129,7 @@ h 43-ak-add-subs-employee.log "activation-key add-subscription --organization '{
 ap 44-generate-host-registration-command.log \
   -e "organization='{{ sat_org }}'" \
   -e "ak=ActivationKey" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/host-registration_generate-command.yaml
 
 ap 44-recreate-client-scripts.log \

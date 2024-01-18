@@ -54,6 +54,7 @@ h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ 
 ap 44-generate-host-registration-command.log \
   -e "organization='{{ sat_org }}'" \
   -e "ak=ActivationKey" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/host-registration_generate-command.yaml
 
 skip_measurement='true' ap 44-recreate-client-scripts.log \

@@ -408,6 +408,7 @@ ak='AK_rhel8_Test'
 ap 44-generate-host-registration-command.log \
   -e "organization='{{ sat_org }}'" \
   -e "ak='$ak'" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/host-registration_generate-command.yaml
 
 ap 45-recreate-client-scripts.log \
