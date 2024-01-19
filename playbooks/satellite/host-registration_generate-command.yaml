@@ -5,6 +5,10 @@
   vars:
     hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --location {{ location }} --insecure true --force true"
   tasks:
+    - name: "Get group name of our location"
+      ansible.builtin.set_fact:
+        location_groupname: "location_{{ location | lower }}"
+
     - name: "Get capsule ID"
       # XXX: Submit PR
       throttle: 1
@@ -72,11 +76,30 @@
       register: cmd
       delegate_to: "{{ groups['satellite6'] | first }}"
 
-    - name: Copy the output of the the host registration command to the Apache pub directory
+    - name: "Copy the output of the the host registration command to the Apache pub directory"
       ansible.builtin.copy:
         content: "{{ cmd.stdout }}"
         dest: /var/www/html/pub/host-registration.sh
         mode: '0644'
       when:
         - cmd.rc == 0
+
+    - name: "Set name of first capsule"
+      ansible.builtin.set_fact:
+        first_capsule: "{{ groups[location_groupname] | intersect(groups['capsules']) | sort | first }}"
+      when:
+        - "'capsule_lbs' in groups"
+        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+
+    - name: "Download host registration script from the first capsule"
+      ansible.builtin.get_url:
+        url: http://{{ first_capsule }}/pub/host-registration.sh
+        dest: /var/www/html/pub/host-registration.sh
+        mode: '0644'
+        force: true
+      when:
+        - "'capsule_lbs' in groups"
+        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
 ...
