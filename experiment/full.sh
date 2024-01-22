@@ -471,8 +471,8 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
     jsr $logs/58-rex-uploadprofile-${total_registered}.log
     j $logs/58-rex-uploadprofile-${total_registered}.log
 done
-grep Register $logs/44-register-*.log >$logs/44-register-overall.log
-e Register $logs/44-register-overall.log
+grep Register $logs/48-register-*.log >$logs/48-register-overall.log
+e Register $logs/48-register-overall.log
 
 
 section "Misc simple tests"
