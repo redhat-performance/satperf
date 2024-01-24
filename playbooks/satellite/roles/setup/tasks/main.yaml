@@ -28,7 +28,13 @@
 
 - name: "Determine Installer command line"
   ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }} {{ sat_installer_additional_ops | default() }}"
+    satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }}"
+
+- name: "Provide additional installer options"
+  ansible.builtin.set_fact:
+    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} {{ sat_installer_additional_ops }}"
+  when:
+    - sat_installer_additional_ops is defined and sat_installer_additional_ops | length > 0
 
 - name: "Configure Insights connection"
   ansible.builtin.set_fact:
