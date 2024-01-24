@@ -40,7 +40,7 @@
   ansible.builtin.set_fact:
     satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
   when:
-    - setup_insights is not defined or setup_insights|bool == False
+    - setup_insights is not defined or not setup_insights
 
 - name: "Configure MQTT transport for remote execution"
   ansible.builtin.set_fact:
