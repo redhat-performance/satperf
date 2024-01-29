@@ -462,17 +462,13 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
     skip_measurement='true' h 56-rex-date-ansible-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
     jsr $logs/56-rex-date-ansible-${total_registered}.log
     j $logs/56-rex-date-ansible-${total_registered}.log
-
-    skip_measurement='true' h 57-rex-sm-facts-update-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='subscription-manager facts --update' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-    jsr $logs/57-rex-sm-facts-update-${total_registered}.log
-    j $logs/57-rex-sm-facts-update-${total_registered}.log
-
-    skip_measurement='true' h 58-rex-uploadprofile-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='dnf uploadprofile --force-upload' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-    jsr $logs/58-rex-uploadprofile-${total_registered}.log
-    j $logs/58-rex-uploadprofile-${total_registered}.log
 done
 grep Register $logs/48-register-*.log >$logs/48-register-overall.log
 e Register $logs/48-register-overall.log
+
+skip_measurement='true' h 59-rex-katello_package_update-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ container'"
+jsr $logs/59-katello_package_update-${total_registered}.log
+j $logs/59-katello_package_update-${total_registered}.log
 
 
 section "Misc simple tests"
