@@ -467,8 +467,8 @@ grep Register $logs/48-register-*.log >$logs/48-register-overall.log
 e Register $logs/48-register-overall.log
 
 skip_measurement='true' h 59-rex-katello_package_update-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ container'"
-jsr $logs/59-katello_package_update-${total_registered}.log
-j $logs/59-katello_package_update-${total_registered}.log
+jsr $logs/59-rex-katello_package_update-${total_registered}.log
+j $logs/59-rex-katello_package_update-${total_registered}.log
 
 
 section "Misc simple tests"
