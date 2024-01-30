@@ -103,6 +103,7 @@
 
           grep '"msg". "Register' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
       register: clients_yaml_grepper_timings
+      ignore_errors: true
 
     - name: "Append registration timings to central list"
       ansible.builtin.set_fact:
@@ -152,6 +153,7 @@
                 all \
                 &> rhsm_${client_ip}.log
           done
+      ignore_errors: true
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - debug_rhsm
