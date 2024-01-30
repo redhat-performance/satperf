@@ -206,6 +206,8 @@
     - name: "Reconfigure RHSM rhsm.baseurl and server.hostname"
       ansible.builtin.shell:
         cmd: |
+          set -o pipefail
+
           ansible \
             --private-key /root/id_rsa_key \
             --inventory clients.ini \
