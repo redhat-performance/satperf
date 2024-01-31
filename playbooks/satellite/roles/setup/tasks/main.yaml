@@ -139,17 +139,18 @@
 
 - name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
   ansible.builtin.copy:
-    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
     content: |
       [Service]
-      LimitNOFILE=65536
+      LimitNOFILE=infinity
+    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
+    mode: '0444'
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
 
 - name: Restart mosquitto service unit
-  ansible.builtin.systemd:
+  ansible.builtin.systemd_service:
     name: mosquitto
-    daemon_reload: yes
+    daemon_reload: true
     state: restarted
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
