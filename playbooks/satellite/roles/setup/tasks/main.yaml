@@ -4,16 +4,6 @@
     filter: ansible_distribution_major_version
   when: ansible_distribution_major_version is not defined
 
-- name: "Detect number of available processors"
-  ansible.builtin.setup:
-    filter: ansible_processor_nproc
-  when: ansible_processor_nproc is not defined
-
-- name: "Detect size of available memory"
-  ansible.builtin.setup:
-    filter: ansible_memtotal_mb
-  when: ansible_memtotal_mb is not defined
-
 # RHEL8 requirements
 - name: "Enable satellite:el8 module"
   command: dnf -y module enable satellite:el8
@@ -25,70 +15,24 @@
     name: "satellite"
     state: present
 
-- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
-  include_role:
-    name: apply_custom-hiera
-  when:
-    - custom_hiera_content is defined and custom_hiera_content | length > 0
-
 # Figure out installer options
 - name: "Determine base installer options"
   ansible.builtin.set_fact:
-    sat_installer_options: "--foreman-initial-admin-username {{ sat_user | default('admin') }} --foreman-initial-admin-password {{ sat_pass }}"
+    sat_installer_opts: "--foreman-initial-admin-username {{ sat_user | default('admin') }} --foreman-initial-admin-password {{ sat_pass }}"
 
 - name: "Determine Installer command line"
   ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_options }}"
-
-- name: "Provide additional installer options"
-  ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} {{ sat_installer_additional_ops }}"
-  when:
-    - sat_installer_additional_ops is defined and sat_installer_additional_ops | length > 0
-
-- name: "Determine if a 'medium' tuning profile should be applied"
-  ansible.builtin.set_fact:
-     tuning_profile: "medium"
-  when:
-    - ansible_memtotal_mb >= 32000
-    - ansible_processor_nproc >= 8
-
-- name: "Determine if a 'large' tuning profile should be applied"
-  ansible.builtin.set_fact:
-     tuning_profile: "large"
-  when:
-    - ansible_processor_nproc >= 16
-    - ansible_memtotal_mb >= 64000
-
-- name: "Determine if an 'extra-large' tuning profile should be applied"
-  ansible.builtin.set_fact:
-     tuning_profile: "extra-large"
-  when:
-    - ansible_processor_nproc >= 32
-    - ansible_memtotal_mb >= 128000
-
-- name: "Determine if an 'extra-extra-large' tuning profile should be applied"
-  ansible.builtin.set_fact:
-     tuning_profile: "extra-extra-large"
-  when:
-    - ansible_processor_nproc > 48
-    - ansible_memtotal_mb > 256000
-
-- name: "Configure tuning"
-  ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --tuning {{ tuning_profile }}"
-  when:
-    - tuning_profile is defined and tuning_profile | length > 0
+    sat_installer_cmd_line: "satellite-installer --scenario satellite {{ sat_installer_opts }}"
 
 - name: "Configure Insights connection"
   ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
+    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
   when:
     - setup_insights is not defined or not setup_insights
 
 - name: "Configure MQTT transport for remote execution"
   ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
+    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
 
@@ -99,7 +43,7 @@
 
 - name: "Configure Redis as Foreman cache on Satellite 6.14"
   ansible.builtin.set_fact:
-    satellite_installer_cmd_line: "{{ satellite_installer_cmd_line }} --foreman-rails-cache-store type:redis"
+    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} --foreman-rails-cache-store type:redis"
   when:
     - configure_redis_cache is defined and configure_redis_cache
     - sat_version == '6.14.0'
@@ -112,11 +56,11 @@
 
 - name: "Show Installer command line"
   debug:
-    msg: "{{ satellite_installer_cmd_line }}"
+    msg: "{{ sat_installer_cmd_line }}"
 
 # Run the installer
 - name: "Run Satellite configuration"
-  shell: "{{ satellite_installer_cmd_line }}"
+  shell: "{{ sat_installer_cmd_line }}"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
