@@ -474,7 +474,7 @@ function task_examine() {
     [ -z "$satellite_host" ] && return 2
     local log_report="$( echo "$log" | sed "s/\.log$/-duration.log/" )"
 
-    scripts/get-task-fuzzy-duration.py --hostname $satellite_host --task-id "$task_id" --percentage 5 --output status-data &>$log_report
+    scripts/get-task-fuzzy-duration.py --hostname $satellite_host --task-id "$task_id" --timeout 150 --percentage 5 --output status-data &>$log_report
     local rc=$?
     if (( "$rc" == 0 )); then
         started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
@@ -546,7 +546,7 @@ function jsr() {
       python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
 
     local counter=0
-    local max_counter=60
+    local max_counter=150
     local sleep_time=60
     while [[ "${task_state}" != 'stopped' ]]; do
         if (( counter < max_counter )); then
