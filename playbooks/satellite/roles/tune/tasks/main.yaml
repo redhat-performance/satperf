@@ -9,22 +9,6 @@
     filter: ansible_memtotal_mb
   when: ansible_memtotal_mb is not defined
 
-- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
-  include_role:
-    name: apply_custom-hiera
-  when:
-    - custom_hiera_content is defined and custom_hiera_content | length > 0
-
-- name: "Determine Installer command line"
-  ansible.builtin.set_fact:
-    sat_installer_cmd_line: "satellite-installer"
-
-- name: "Provide additional installer options"
-  ansible.builtin.set_fact:
-    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} {{ sat_installer_additional_opts }}"
-  when:
-    - sat_installer_additional_opts is defined and sat_installer_additional_opts | length > 0
-
 - name: "Determine if a 'medium' tuning profile should be applied"
   ansible.builtin.set_fact:
      tuning_profile: "medium"
@@ -53,19 +37,42 @@
     - ansible_processor_nproc > 48
     - ansible_memtotal_mb > 256000
 
-- name: "Configure tuning"
+- name: "End play if no tuning is required"
+  ansible.builtin.meta: end_host
+  when:
+    - custom_hiera_content is not defined or custom_hiera_content | length == 0
+    - sat_installer_additional_opts is not defined or sat_installer_additional_opts | length == 0
+    - tuning_profile is not defined or tuning_profile | length == 0
+
+- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
+  include_role:
+    name: apply_custom-hiera
+  when:
+    - custom_hiera_content is defined and custom_hiera_content | length > 0
+
+- name: "Determine Installer command line"
+  ansible.builtin.set_fact:
+    sat_installer_cmd_line: "satellite-installer"
+
+- name: "Set tuning profile"
   ansible.builtin.set_fact:
     sat_installer_cmd_line: "{{ sat_installer_cmd_line }} --tuning {{ tuning_profile }}"
   when:
     - tuning_profile is defined and tuning_profile | length > 0
 
+- name: "Provide additional installer options"
+  ansible.builtin.set_fact:
+    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} {{ sat_installer_additional_opts }}"
+  when:
+    - sat_installer_additional_opts is defined and sat_installer_additional_opts | length > 0
+
 - name: "Show Installer tuning command line"
-  debug:
+  ansible.builtin.debug:
     msg: "{{ sat_installer_cmd_line }}"
 
 # Run the installer
 - name: "Run Satellite tuning"
-  shell: "{{ sat_installer_cmd_line }}"
+  ansible.builtin.shell: "{{ sat_installer_cmd_line }}"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
