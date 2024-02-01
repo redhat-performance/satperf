@@ -90,7 +90,7 @@ function generic_environment_check() {
         ansible_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
         if [ "$ansible_container_hosts" -gt 0 ]; then
             ap 00-tierdown-containers.log ansible-container-host-mgr/tierdown.yaml
-            a 00-delete-private-connection.log container_hosts -m "ansible.builtin.command" -a "nmcli con delete {{ private_nic }}"
+            a 00-delete-private-connection.log container_hosts -m "ansible.builtin.shell" -a "nmcli con delete {{ private_nic }} 2>/dev/null; echo"
             ap 00-tierup-containers.log ansible-container-host-mgr/tierup.yaml
         fi
         ap 00-remove-hosts-if-any.log playbooks/satellite/satellite-remove-hosts.yaml
