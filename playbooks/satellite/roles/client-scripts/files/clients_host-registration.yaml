@@ -44,4 +44,10 @@
       ansible.builtin.command:
         cmd: |
           insights-client --disable-schedule
+
+    - name: "Enable and start rhsmcertd systemd service unit"
+      ansible.builtin.systemd_service:
+        name: rhsmcertd
+        state: started
+        enabled: true
 ...
