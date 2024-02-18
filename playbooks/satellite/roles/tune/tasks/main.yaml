@@ -9,6 +9,13 @@
     filter: ansible_memtotal_mb
   when: ansible_memtotal_mb is not defined
 
+- name: "Determine if a 'default' tuning profile should be applied"
+  ansible.builtin.set_fact:
+     tuning_profile: "default"
+  when:
+    - ansible_memtotal_mb >= 20000
+    - ansible_processor_nproc >= 4
+
 - name: "Determine if a 'medium' tuning profile should be applied"
   ansible.builtin.set_fact:
      tuning_profile: "medium"
