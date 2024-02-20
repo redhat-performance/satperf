@@ -168,9 +168,17 @@ function status_data_create() {
         sd_file="$sd_log.json"
         rm -f "$sd_file"
     fi
+    if [ -n "${RDD_FILE}" -a -f "${RDD_FILE}" ]; then
+        rdd_file=${RDD_FILE}
+    else
+        rdd_file="${sd_log}.rdd.json"
+        rm -f "${rdd_file}"
+    fi
     if [ -n "$PARAM_inventory" ]; then
         sd_hostname="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     fi
+    workdir_url="${PARAM_workdir_url:-https://workdir-exporter.example.com/workspace}"
+    sd_link="${workdir_url}/${JOB_NAME:-NA}/${sd_log}"
 
     # Create status data file
     set -x
@@ -200,7 +208,8 @@ function status_data_create() {
         set -x
         status_data.py -d --status-data-file $sd_file \
           --additional "$PARAM_cluster_read_config" \
-          --monitoring-start "$sd_start" --monitoring-end "$sd_end" \
+          --monitoring-start "$sd_start" \
+          --monitoring-end "$sd_end" \
           --grafana-host "$PARAM_grafana_host" \
           --grafana-port "$PARAM_grafana_port" \
           --grafana-prefix "$PARAM_grafana_prefix" \
@@ -248,6 +257,32 @@ function status_data_create() {
       "$url" |
       python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
     ###status_data.py --status-data-file $sd_file --info
+
+    # Create "results-dashboard-data" data file
+    set -x
+    status_data.py \
+      --status-data-file ${rdd_file} \
+      --set \
+        "group=Core Platforms" \
+        "product=Red Hat Satellite" \
+        "version=${sd_sat_ver}" \
+        "release=${sd_sat_ver_short}" \
+        "date=${sd_start}" \
+        "link=${sd_link}" \
+        "result_id=${marker_date}" \
+        "test=${sd_name}" \
+        "result=${sd_result}"
+    set +x
+
+    # Upload status data to "results-dashboard-data" ElasticSearch
+    url="http://${PARAM_elasticsearch_host}:${PARAM_elasticsearch_port}/results-dashboard-data/${PARAM_elasticsearch_mapping:-_doc}/"
+    echo "INFO: POSTing results data to '$url'"
+    curl --silent \
+      -X POST \
+      -H "Content-Type: application/json" \
+      --data "@${rdd_file}" \
+      "$url" |
+      python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
 
     # Enhance log file
     tmp=$( mktemp )
