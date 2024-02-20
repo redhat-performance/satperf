@@ -9,8 +9,9 @@ set -e
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
+marker_date="$(date --utc --iso-8601=seconds)"
 if [ -z "$marker" ]; then
-    marker=${1:-run-$(date --utc --iso-8601=seconds)}
+    marker="${1:-run-${marker_date}}"
 fi
 
 opts=${opts:-"--forks 100 -i conf/hosts.ini"}
