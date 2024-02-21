@@ -260,18 +260,25 @@ function status_data_create() {
 
     # Create "results-dashboard-data" data file
     set -x
-    status_data.py \
-      --status-data-file ${rdd_file} \
-      --set \
-        "group=Core Platforms" \
-        "product=Red Hat Satellite" \
-        "version=${sd_sat_ver}" \
-        "release=${sd_sat_ver_short}" \
-        "date=${sd_start}" \
-        "link=${sd_link}" \
-        "result_id=${marker_date}" \
-        "test=${sd_name}" \
-        "result=${sd_result}"
+    jq -n \
+      --arg version ${sd_sat_ver} \
+      --arg release ${sd_sat_ver_short} \
+      --arg date ${sd_start} \
+      --arg link ${sd_link} \
+      --arg result_id ${marker_date} \
+      --arg test ${sd_name} \
+      --arg result ${sd_result} \
+      '{
+        "group": "Core Platforms",
+        "product": "Red Hat Satellite",
+        "version": $version,
+        "release": $release,
+        "date": $date,
+        "link": $link,
+        "result_id": $result_id,
+        "test": $test,
+        "result": $result,
+      }' >${rdd_file}
     set +x
 
     # Upload status data to "results-dashboard-data" ElasticSearch
