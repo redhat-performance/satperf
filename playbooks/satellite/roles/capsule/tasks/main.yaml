@@ -53,7 +53,7 @@
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Run capsule-certs-generate"
-  # XXX: Cannot run concurrently -> Submit PR
+  # XXX: Bug 2265385 - `capsule-certs-generate` cannot be run concurrently for different capsules
   throttle: 1
   ansible.builtin.shell:
     cmd: |
