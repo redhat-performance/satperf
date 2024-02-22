@@ -14,12 +14,16 @@ if [ -z "$marker" ]; then
     marker="${1:-run-${marker_date}}"
 fi
 
-opts=${opts:-"--forks 100 -i conf/hosts.ini"}
+branch="${PARAM_branch:-satcpt}"
+sat_version="${PARAM_sat_version:-stream}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+
+opts=${opts:-"--forks 100 -i $inventory"}
 opts_adhoc=${opts_adhoc:-"$opts"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
-satellite_version="${satellite_version:-N/A}"   # will be determined automatically by run-bench.sh
+satellite_version="${satellite_version:-${sat_version}}"   # will be determined automatically by run-bench.sh
 katello_version="${katello_version:-N/A}"   # will be determined automatically by run-bench.sh
 
 # Requirements check
