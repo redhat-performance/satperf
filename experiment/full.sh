@@ -244,8 +244,8 @@ h 33-cv-filtered-publish.log "content-view publish --organization '{{ sat_org }}
 export skip_measurement='true'
 section "Sync from CDN do not measure"   # do not measure because of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_full'"
-
-h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+# 
+# h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 for rel in $rels; do
     case $rel in
