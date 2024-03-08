@@ -23,7 +23,7 @@ repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellit
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_${basearch}/}"
 repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_${basearch}/}"
 
-initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-25}"
+initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-64}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
 test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
