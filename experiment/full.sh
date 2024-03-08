@@ -424,6 +424,7 @@ if (( initial_expected_concurrent_registrations > number_container_hosts )); the
 else
     initial_concurrent_registrations_per_container_host=1
 fi
+num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
 job_template_ansible_default='Run Command - Ansible Default'
 job_template_ssh_default='Run Command - Script Default'
 
@@ -447,6 +448,7 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
 
     skip_measurement='true' ap 48-register-$concurrent_registrations.log \
       -e "size='$concurrent_registrations_per_container_host'" \
+      -e "num_retry_forks='$num_retry_forks'" \
       -e "registration_logs='../../$logs/48-register-docker-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
