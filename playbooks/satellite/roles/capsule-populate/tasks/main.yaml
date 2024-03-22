@@ -18,14 +18,14 @@
   ansible.builtin.set_fact:
     id: "{{ capsule_id_cmd.stdout }}"
 
-- name: "Set capsule download policy to immediate"
+- name: "Set capsule download policy"
   # XXX: Submit PR
   throttle: 1
   ansible.builtin.command:
-    cmd: "hammer -u {{ user }} -p {{ password }} capsule update --id '{{ id }}' --download-policy immediate"
+    cmd: "hammer -u {{ user }} -p {{ password }} capsule update --id '{{ id }}' --download-policy {{ download_policy }}"
   delegate_to: "{{ groups['satellite6'] | first }}"
   when:
-    - download_policy is defined and download_policy == 'immediate'
+    - download_policy is defined and download_policy != 'inherit'
 
 - name: "Assign lifecycle environment(s): '{{ lces }}'"
   # XXX: Submit PR
