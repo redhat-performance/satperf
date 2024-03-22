@@ -21,6 +21,8 @@ repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellit
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
 repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_x86_64/}"
 
+capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
+
 initial_index="${PARAM_initial_index:-0}"
 
 dl='Default Location'
@@ -235,6 +237,7 @@ for (( iter=0, last=-1; last < (num_capsules - 1); iter++ )); do
           --limit capsules["$limit"] \
           -e "organization='{{ sat_org }}'" \
           -e "lces='$lces'" \
+          -e "download_policy='${capsule_download_policy}'" \
           -e "num_concurrent_capsules='$num_concurrent_capsules'" \
           playbooks/satellite/capsules-populate.yaml
     fi
