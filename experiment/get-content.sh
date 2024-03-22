@@ -207,7 +207,6 @@ if [[ "$skip_down_setup" != "true" ]]; then
         h 36-ccv-component-add-${rel}-sat-client.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
         h 37-ccv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
-        # Promotion to LCE(s)
         tmp="$( mktemp )"
         h_out "--no-headers --csv content-view version list --organization '{{ sat_org }}' --content-view '$ccv'" | grep '^[0-9]\+,' >$tmp
         version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
@@ -215,7 +214,14 @@ if [[ "$skip_down_setup" != "true" ]]; then
 
         prior='Library'
         for lce in $lces; do
+            ak="AK_${rel}_${lce}"
+
+            # CCV promotion to LCE
             h 38-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+
+            # AK creation
+            h 39-ak-create-${rel}-${lce}.log "activation-key create --content-view '$ccv' --lifecycle-environment '$lce' --name '$ak' --organization '{{ sat_org }}'"
+
             prior="${lce}"
         done
     done
