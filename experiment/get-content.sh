@@ -22,7 +22,9 @@ repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellit
 repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_x86_64/}"
 
 skip_down_setup="${PARAM_skip_down_setup:-false}"
+satellite_download_policy="${PARAM_satellite_download_policy:-on_demand}"
 skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
+capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
 
 dl='Default Location'
 
@@ -48,6 +50,10 @@ if [[ "$skip_down_setup" != "true" ]]; then
         h 20-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_full'"
     fi
     h 21-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+
+    if [[ "${satellite_download_policy}" != 'on_demand' ]]; then
+        h 22-set-download-policy.log "settings set --organization '{{ sat_org }}' --name default_redhat_download_policy --value ${satellite_download_policy}"
+    fi
 
     for rel in $rels; do
         case $rel in
@@ -233,6 +239,7 @@ if [[ "$skip_push_to_capsules_setup" != "true" ]]; then
     ap 40-capsules-populate.log \
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
+      -e "download_policy='${capsule_download_policy}'" \
       playbooks/satellite/capsules-populate.yaml
 fi
 
