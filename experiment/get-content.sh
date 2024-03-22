@@ -36,7 +36,7 @@ section "Checking environment"
 generic_environment_check
 
 
-if [[ "$skip_down_setup" != "true" ]]; then
+if [[ "${skip_down_setup}" != "true" ]]; then
     section "Upload manifest"
     a 12-manifest-deploy.log \
       -m ansible.builtin.copy \
@@ -46,8 +46,8 @@ if [[ "$skip_down_setup" != "true" ]]; then
 
 
     section "Get OS content"
-    if [[ "$cdn_url_full" != 'https://cdn.redhat.com/' ]]; then
-        h 20-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_full'"
+    if [[ "${cdn_url_full}" != 'https://cdn.redhat.com/' ]]; then
+        h 20-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '${cdn_url_full}'"
     fi
     h 21-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
@@ -61,13 +61,13 @@ if [[ "$skip_down_setup" != "true" ]]; then
                 os_product='Red Hat Enterprise Linux Server'
                 os_releasever='6Server'
                 os_reposet_name='Red Hat Enterprise Linux 6 Server (RPMs)'
-                os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch $os_releasever"
+                os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch ${os_releasever}"
                 ;;
             rhel7)
                 os_product='Red Hat Enterprise Linux Server'
                 os_releasever='7Server'
                 os_reposet_name='Red Hat Enterprise Linux 7 Server (RPMs)'
-                os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch $os_releasever"
+                os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch ${os_releasever}"
                 os_extras_reposet_name='Red Hat Enterprise Linux 7 Server - Extras (RPMs)'
                 os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
                 ;;
@@ -75,38 +75,38 @@ if [[ "$skip_down_setup" != "true" ]]; then
                 os_product='Red Hat Enterprise Linux for x86_64'
                 os_releasever='8'
                 os_reposet_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS (RPMs)"
-                os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
+                os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs ${os_releasever}"
                 os_appstream_reposet_name="Red Hat Enterprise Linux 8 for $basearch - AppStream (RPMs)"
-                os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
+                os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs ${os_releasever}"
                 ;;
             rhel9)
                 os_product='Red Hat Enterprise Linux for x86_64'
                 os_releasever='9'
                 os_reposet_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS (RPMs)"
-                os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
+                os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs ${os_releasever}"
                 os_appstream_reposet_name="Red Hat Enterprise Linux 9 for $basearch - AppStream (RPMs)"
-                os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs $os_releasever"
+                os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs ${os_releasever}"
                 ;;
         esac
 
         case $rel in
             rhel6)
-                h 25-reposet-enable-${rel}.log "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h 26-repo-sync-${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
+                h 25-reposet-enable-${rel}.log "repository-set enable --organization '{{ sat_org }}' --product '${os_product}' --name '${os_reposet_name}' --releasever '${os_releasever}' --basearch '$basearch'"
+                h 26-repo-sync-${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '${os_product}' --name '${os_repo_name}'"
                 ;;
             rhel7)
-                h 25-reposet-enable-${rel}.log "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h 26-repo-sync-${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
+                h 25-reposet-enable-${rel}.log "repository-set enable --organization '{{ sat_org }}' --product '${os_product}' --name '${os_reposet_name}' --releasever '${os_releasever}' --basearch '$basearch'"
+                h 26-repo-sync-${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '${os_product}' --name '${os_repo_name}'"
 
-                h 25-reposet-enable-${rel}-extras.log "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h 26-repo-sync-${rel}-extras.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
+                h 25-reposet-enable-${rel}-extras.log "repository-set enable --organization '{{ sat_org }}' --product '${os_product}' --name '${os_extras_reposet_name}' --releasever '${os_releasever}' --basearch '$basearch'"
+                h 26-repo-sync-${rel}-extras.log "repository synchronize --organization '{{ sat_org }}' --product '${os_product}' --name '${os_extras_repo_name}'"
                 ;;
             rhel8|rhel9)
-                h 25-reposet-enable-${rel}-baseos.log "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h 26-repo-sync-${rel}-baseos.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
+                h 25-reposet-enable-${rel}-baseos.log "repository-set enable --organization '{{ sat_org }}' --product '${os_product}' --name '${os_reposet_name}' --releasever '${os_releasever}' --basearch '$basearch'"
+                h 26-repo-sync-${rel}-baseos.log "repository synchronize --organization '{{ sat_org }}' --product '${os_product}' --name '${os_repo_name}'"
 
-                h 25-reposet-enable-${rel}-appstream.log "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_appstream_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h 26-repo-sync-${rel}-appstream.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_appstream_repo_name'"
+                h 25-reposet-enable-${rel}-appstream.log "repository-set enable --organization '{{ sat_org }}' --product '${os_product}' --name '${os_appstream_reposet_name}' --releasever '${os_releasever}' --basearch '$basearch'"
+                h 26-repo-sync-${rel}-appstream.log "repository synchronize --organization '{{ sat_org }}' --product '${os_product}' --name '${os_appstream_repo_name}'"
                 ;;
         esac
     done
@@ -114,30 +114,30 @@ if [[ "$skip_down_setup" != "true" ]]; then
 
     section "Get Satellite Client content"
     # Satellite Client
-    h 27-product-create-sat-client.log "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
+    h 27-product-create-sat-client.log "product create --organization '{{ sat_org }}' --name '${sat_client_product}'"
 
     for rel in $rels; do
         case $rel in
             rhel6)
                 sat_client_repo_name='Satellite Client for RHEL 6'
-                sat_client_repo_url="$repo_sat_client_6"
+                sat_client_repo_url="${repo_sat_client_6}"
                 ;;
             rhel7)
                 sat_client_repo_name='Satellite Client for RHEL 7'
-                sat_client_repo_url="$repo_sat_client_7"
+                sat_client_repo_url="${repo_sat_client_7}"
                 ;;
             rhel8)
                 sat_client_repo_name='Satellite Client for RHEL 8'
-                sat_client_repo_url="$repo_sat_client_8"
+                sat_client_repo_url="${repo_sat_client_8}"
                 ;;
             rhel9)
                 sat_client_repo_name='Satellite Client for RHEL 9'
-                sat_client_repo_url="$repo_sat_client_9"
+                sat_client_repo_url="${repo_sat_client_9}"
                 ;;
         esac
 
-        h 28-repository-create-${rel}-sat-client.log "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
-        h 29-repository-sync-${rel}-sat-client.log "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'"
+        h 28-repository-create-${rel}-sat-client.log "repository create --organization '{{ sat_org }}' --product '${sat_client_product}' --name '${sat_client_repo_name}' --content-type yum --url '${sat_client_repo_url}'"
+        h 29-repository-sync-${rel}-sat-client.log "repository synchronize --organization '{{ sat_org }}' --product '${sat_client_product}' --name '${sat_client_repo_name}'"
     done
 
 
@@ -159,58 +159,58 @@ if [[ "$skip_down_setup" != "true" ]]; then
             rhel6)
                 os_product='Red Hat Enterprise Linux Server'
                 os_releasever='6Server'
-                os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch $os_releasever"
-                os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
+                os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch ${os_releasever}"
+                os_rids="$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_repo_name}" )"
                 sat_client_repo_name='Satellite Client for RHEL 6'
-                sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
+                sat_client_rids="$( get_repo_id '{{ sat_org }}' "${sat_client_product}" "${sat_client_repo_name}" )"
                 ;;
             rhel7)
                 os_product='Red Hat Enterprise Linux Server'
                 os_releasever='7Server'
-                os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch $os_releasever"
+                os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch ${os_releasever}"
                 os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
-                os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-                os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
+                os_rids="$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_repo_name}" )"
+                os_rids="${os_rids},$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_extras_repo_name}" )"
                 sat_client_repo_name='Satellite Client for RHEL 7'
-                sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
+                sat_client_rids="$( get_repo_id '{{ sat_org }}' "${sat_client_product}" "${sat_client_repo_name}" )"
                 ;;
             rhel8)
                 os_product='Red Hat Enterprise Linux for x86_64'
                 os_releasever='8'
-                os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
-                os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
-                os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-                os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
+                os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs ${os_releasever}"
+                os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs ${os_releasever}"
+                os_rids="$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_repo_name}" )"
+                os_rids="${os_rids},$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_appstream_repo_name}" )"
                 sat_client_repo_name='Satellite Client for RHEL 8'
-                sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
+                sat_client_rids="$( get_repo_id '{{ sat_org }}' "${sat_client_product}" "${sat_client_repo_name}" )"
                 ;;
             rhel9)
                 os_product='Red Hat Enterprise Linux for x86_64'
                 os_releasever='9'
-                os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
-                os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs $os_releasever"
-                os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-                os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
+                os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs ${os_releasever}"
+                os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs ${os_releasever}"
+                os_rids="$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_repo_name}" )"
+                os_rids="${os_rids},$( get_repo_id '{{ sat_org }}' "${os_product}" "${os_appstream_repo_name}" )"
                 sat_client_repo_name='Satellite Client for RHEL 9'
-                sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
+                sat_client_rids="$( get_repo_id '{{ sat_org }}' "${sat_client_product}" "${sat_client_repo_name}" )"
                 ;;
         esac
 
         # OS
-        h 31-cv-create-${rel}-os.log "content-view create --organization '{{ sat_org }}' --name '$cv_os' --repository-ids '$os_rids'"
-        h 32-cv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$cv_os'"
+        h 31-cv-create-${rel}-os.log "content-view create --organization '{{ sat_org }}' --name '${cv_os}' --repository-ids '${os_rids}'"
+        h 32-cv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '${cv_os}'"
 
         # Satellite Client
-        h 33-cv-create-${rel}-sat-client.log "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
-        h 34-cv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
+        h 33-cv-create-${rel}-sat-client.log "content-view create --organization '{{ sat_org }}' --name '${cv_sat_client}' --repository-ids '${sat_client_rids}'"
+        h 34-cv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '${cv_sat_client}'"
 
         # CCV
         h 35-ccv-create-${rel}.log "content-view create --organization '{{ sat_org }}' --composite --auto-publish yes --name '$ccv'"
 
-        h 36-ccv-component-add-${rel}-os.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
+        h 36-ccv-component-add-${rel}-os.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '${cv_os}' --latest"
         h 37-ccv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
-        h 36-ccv-component-add-${rel}-sat-client.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
+        h 36-ccv-component-add-${rel}-sat-client.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '${cv_sat_client}' --latest"
         h 37-ccv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
         tmp="$( mktemp )"
@@ -234,7 +234,7 @@ if [[ "$skip_down_setup" != "true" ]]; then
 fi
 
 
-if [[ "$skip_push_to_capsules_setup" != "true" ]]; then
+if [[ "${skip_push_to_capsules_setup}" != "true" ]]; then
     section "Push content to capsules"
     ap 40-capsules-populate.log \
       -e "organization='{{ sat_org }}'" \
