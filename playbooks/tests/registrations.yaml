@@ -170,14 +170,14 @@
         cmd: |
           set -o pipefail
 
-          cp -p "{{ clients_yaml_cmd_log }}" "{{ clients_yaml_cmd_retries_log }}"
+          cp -np "{{ clients_yaml_cmd_log }}" "{{ clients_yaml_cmd_retries_log }}"
 
           num_fails=$(grep -c -e ^'fatal: ' -e ^'        "Traceback ' -e ^'        "curl: ' -e ' initial configuration failed' -e 'ERROR: ' -e ^'        "Internal Server Error",'$ {{ clients_yaml_cmd_retries_log }})
 
           while (( num_fails != 0 )); do
               iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
 
-              cp -p "{{ clients_yaml_cmd_retries_log }}" $iter_clients_yaml_cmd_retries_log
+              cp -np "{{ clients_yaml_cmd_retries_log }}" $iter_clients_yaml_cmd_retries_log
 
               unset CLIENT_IP_LIST
 
