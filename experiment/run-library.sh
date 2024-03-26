@@ -590,7 +590,7 @@ function j() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/$job_invocation_id |
+      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
 
     task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
@@ -612,7 +612,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id} |
+      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
 
     local counter=0
@@ -628,7 +628,7 @@ function jsr() {
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               --max-time 30 \
-              https://$satellite_host/api/job_invocations/${job_invocation_id} |
+              https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
               python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
 
             (( counter++ ))
@@ -645,7 +645,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id} |
+      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["succeeded"])' )"
     local total="$( curl --silent --insecure \
       -u "${satellite_creds}" \
@@ -653,7 +653,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id} |
+      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["total"])' )"
 
     log "Examined job invocation $job_invocation_id: $succeeded / $total successful executions"
