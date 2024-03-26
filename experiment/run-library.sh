@@ -590,8 +590,8 @@ function j() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["id"])' )
+      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["id"])' )
 
     task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
 }
@@ -612,8 +612,8 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
+      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
     local counter=0
     local max_counter=150
@@ -628,8 +628,8 @@ function jsr() {
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               --max-time 30 \
-              https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
-              python3 -c 'import json, sys; print(json.load(sys.stdin)["task"]["state"])' )"
+              https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+              python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
             (( counter++ ))
         else
@@ -645,16 +645,16 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["succeeded"])' )"
+      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["succeeded"])' )"
     local total="$( curl --silent --insecure \
       -u "${satellite_creds}" \
       -X GET \
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations/${job_invocation_id}?location_id=2 |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["total"])' )"
+      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
 
     log "Examined job invocation $job_invocation_id: $succeeded / $total successful executions"
 
