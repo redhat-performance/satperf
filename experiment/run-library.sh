@@ -616,10 +616,10 @@ function jsr() {
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
     local counter=0
-    local max_counter=150
+    local max_minutes_counter=300
     local sleep_time=60
     while [[ "${task_state}" != 'stopped' ]]; do
-        if (( counter < max_counter )); then
+        if (( counter < max_minutes_counter )); then
             sleep ${sleep_time}
 
             task_state="$( curl --silent --insecure \
