@@ -1,4 +1,37 @@
 ---
+# - name: "Get group name of our location"
+#   ansible.builtin.set_fact:
+#     location_groupname: "location_{{ location | lower }}"
+
+# - ansible.builtin.set_fact:
+#     location_groupname_groups: "groups[location_groupname]: {{ groups[location_groupname] }}"
+
+# - debug:
+#     msg: "location_groupname_groups: {{ location_groupname_groups }}"
+
+# - name: "Set default variable(s) values"
+#   ansible.builtin.set_fact:
+#     registration_target: "{{ tests_registration_target | default(groups[location_groupname] | intersect(groups['satellite6']) | first) }}"
+#   when:
+#     - groups[location_groupname] | intersect(groups['satellite6']) | length > 0
+
+# - name: "Set default variable(s) values"
+#   ansible.builtin.set_fact:
+#     registration_target: "{{ tests_registration_target | default(groups[location_groupname] | intersect(groups['capsules']) | first) }}"
+#   when:
+#     - "'capsules' in groups"
+#     - groups[location_groupname] | intersect(groups['capsules']) | length > 0
+
+# - name: "Set default variable(s) values"
+#   ansible.builtin.set_fact:
+#     registration_target: "{{ tests_registration_target | default(groups[location_groupname] | intersect(groups['capsule_lbs']) | first) }}"
+#   when:
+#     - "'capsule_lbs' in groups"
+#     - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+
+# - debug:
+#     msg: "registration_target: {{ tests_registration_target }}"
+
 - name: "Download host registration script from registration target"
   ansible.builtin.get_url:
     url: http://{{ tests_registration_target }}/pub/host-registration.sh
