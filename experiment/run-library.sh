@@ -86,10 +86,25 @@ function generic_environment_check() {
 
     export skip_measurement='true'
 
-    a 00-info-rpm-qa.log satellite6 -m "shell" -a "rpm -qa | sort"
-    a 00-info-hostname.log satellite6 -m "shell" -a "hostname"
-    a 00-info-ip-a.log satellite6,capsules,container_hosts -m "shell" -a "ip a"
-    a 00-check-ping-registration-target.log -m "ansible.builtin.shell" -a "ping -c 10 {{ tests_registration_target }}" container_hosts
+    a 00-info-rpm-qa.log \
+      -m ansible.builtin.shell \
+      -a "rpm -qa | sort" \
+      satellite6
+
+    a 00-info-hostname.log \
+      -m ansible.builtin.shell \
+      -a "hostname" \
+      satellite6
+
+    a 00-info-ip-a.log \
+      -m ansible.builtin.shell \
+      -a "ip a" \
+      satellite6,capsules,container_hosts
+
+    a 00-check-ping-registration-target.log \
+      -m ansible.builtin.shell \
+      -a "ping -c 10 {{ tests_registration_target }}" \
+      container_hosts
 
     if $extended; then
         ap 00-remove-hosts-if-any.log \
@@ -114,18 +129,29 @@ function generic_environment_check() {
     fi
 
     if $restarted; then
-        a 00-satellite-drop-caches.log -m shell -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" satellite6
+        a 00-satellite-drop-caches.log \
+          -m ansible.builtin.shell \
+          -a "foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start" \
+          satellite6
     fi
 
-    a 00-info-rpm-q-katello.log satellite6 -m "shell" -a "rpm -q katello"
+    a 00-info-rpm-q-katello.log \
+      -m ansible.builtin.shell \
+      -a "rpm -q katello" \
+      satellite6
     katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
-    a 00-info-rpm-q-satellite.log satellite6 -m "shell" -a "rpm -q satellite || true"
+
+    a 00-info-rpm-q-satellite.log \
+      -m ansible.builtin.shell \
+      -a "rpm -q satellite || true" \
+      satellite6
     satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
+
     log "katello_version = $katello_version"
     log "satellite_version = $satellite_version"
 
     a 00-check-hammer-ping.log \
-      -m "ansible.builtin.shell" \
+      -m ansible.builtin.shell \
       -a "hammer $hammer_opts ping" \
       satellite6
 
@@ -135,10 +161,10 @@ function generic_environment_check() {
 }
 
 function get_repo_id() {
-    local tmp=$( mktemp )
     local organization="$1"
     local product="$2"
     local repo="$3"
+    local tmp=$( mktemp )
     h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >$tmp
     grep '^I[Dd]:' $tmp | cut -d ' ' -f 2
 }
@@ -492,18 +518,27 @@ function s() {
 
 function h() {
     local log_relative=$1; shift
-    a "$log_relative" -m shell -a "hammer $hammer_opts $@" satellite6
+    a "$log_relative" \
+      -m ansible.builtin.shell \
+      -a "hammer $hammer_opts $@" \
+      satellite6
 }
 
 function h_drop() {
     # Run hammer command as usual, but drop its stdout
     local log_relative=$1; shift
-    a "$log_relative" -m shell -a "hammer $hammer_opts $@ >/dev/null" satellite6
+    a "$log_relative" \
+      -m ansible.builtin.shell \
+      -a "hammer $hammer_opts $@ >/dev/null" \
+      satellite6
 }
 
 function h_out() {
     # Just run the hammer command via ansible. No output processing, action logging or measurements
-    a_out -m shell -a "hammer $hammer_opts $@" satellite6
+    a_out \
+      -m ansible.builtin.shell \
+      -a "hammer $hammer_opts $@" \
+      satellite6
 }
 
 function e() {
@@ -543,7 +578,7 @@ function task_examine() {
 
     scripts/get-task-fuzzy-duration.py --hostname $satellite_host --task-id "$task_id" --timeout 150 --percentage 5 --output status-data &>$log_report
     local rc=$?
-    if (( "$rc" == 0 )); then
+    if (( rc == 0 )); then
         started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
         ended_ts="$( date -d "$( grep '^results.tasks.end=' $log_report | cut -d '"' -f 2 )" +%s )"
         duration="$( grep '^results.tasks.duration=' $log_report | cut -d '"' -f 2 )"
@@ -580,9 +615,16 @@ function j() {
     local log="$1"
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [ -z "$job_invocation_id" ] && return 1
-    local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    local satellite_host="$( ansible $opts_adhoc \
+      --list-hosts \
+      satellite6 2>/dev/null |
+      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
-    local satellite_creds="$( ansible $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
+    local satellite_creds="$( ansible $opts_adhoc \
+      -m ansible.builtin.debug \
+      -a "msg={{ sat_user }}:{{ sat_pass }}" \
+      satellite6 2>/dev/null |
+      grep '"msg":' | cut -d '"' -f 4)"
     [ -z "$satellite_creds" ] && return 2
     local task_id=$( curl --silent --insecure \
       -u "$satellite_creds" \
@@ -601,9 +643,16 @@ function jsr() {
     local log="$1"
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [ -z "$job_invocation_id" ] && return 1
-    local satellite_host="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    local satellite_host="$( ansible $opts_adhoc \
+      --list-hosts \
+      satellite6 2>/dev/null |
+      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
     [ -z "$satellite_host" ] && return 2
-    local satellite_creds="$( ansible $opts_adhoc satellite6 -m debug -a "msg={{ sat_user }}:{{ sat_pass }}" 2>/dev/null | grep '"msg":' | cut -d '"' -f 4 )"
+    local satellite_creds="$( ansible $opts_adhoc \
+      -m ansible.builtin.debug \
+      -a "msg={{ sat_user }}:{{ sat_pass }}" \
+      satellite6 2>/dev/null |
+      grep '"msg":' | cut -d '"' -f 4 )"
     [ -z "$satellite_creds" ] && return 2
 
     local task_state="$( curl --silent --insecure \
