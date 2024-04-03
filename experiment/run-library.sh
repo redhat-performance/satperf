@@ -35,40 +35,40 @@ if ! type ansible >/dev/null; then
     echo "ERROR: ansible not installed" >&2
     exit 1
 fi
-if ! type rpmdev-vercmp >/dev/null; then
-    echo "ERROR: rpmdev-vercmp (from rpmdevtools) not installed" >&2
-    exit 1
-fi
+# if ! type rpmdev-vercmp >/dev/null; then
+#     echo "ERROR: rpmdev-vercmp (from rpmdevtools) not installed" >&2
+#     exit 1
+# fi
 
-function _vercmp() {
-    # Return values mimic `rpmdev-vercmp` ones
-    if [[ "$1" == "$2" ]]; then
-        return 0
-    elif [[ "$1" == 'stream' ]]; then
-        return 11
-    elif [[ "$2" == 'stream' ]]; then
-        return 12
-    else
-        ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
-        ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+# function _vercmp() {
+#     # Return values mimic `rpmdev-vercmp` ones
+#     if [[ "$1" == "$2" ]]; then
+#         return 0
+#     elif [[ "$1" == 'stream' ]]; then
+#         return 11
+#     elif [[ "$2" == 'stream' ]]; then
+#         return 12
+#     else
+#         ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+#         ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
 
-        rpmdev-vercmp "$ver1" "$ver2"
-    fi
-}
+#         rpmdev-vercmp "$ver1" "$ver2"
+#     fi
+# }
 
-function vercmp_gt() {
-    # Check if first parameter is greater than second using version string comparision
-    _vercmp "$1" "$2"
-    local rc=$?
-    [ "$rc" -eq 11 ] && return 0 || return 1
-}
+# function vercmp_gt() {
+#     # Check if first parameter is greater than second using version string comparision
+#     _vercmp "$1" "$2"
+#     local rc=$?
+#     [ "$rc" -eq 11 ] && return 0 || return 1
+# }
 
-function vercmp_ge() {
-    # Check if first parameter is greater or equal than second using version string comparision
-    _vercmp "$1" "$2"
-    local rc=$?
-    [ "$rc" -eq 11 -o "$rc" -eq 0 ] && return 0 || return 1
-}
+# function vercmp_ge() {
+#     # Check if first parameter is greater or equal than second using version string comparision
+#     _vercmp "$1" "$2"
+#     local rc=$?
+#     [ "$rc" -eq 11 -o "$rc" -eq 0 ] && return 0 || return 1
+# }
 
 function measurement_add() {
     python -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
