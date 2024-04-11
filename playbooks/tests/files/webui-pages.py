@@ -134,7 +134,7 @@ class SatelliteWebUIPerf(HttpUser):
 
     @task
     def job_invocations(self):
-        _get(self.client, "/job_invocations", "<h1>Job Invocations</h1>")
+        _get(self.client, "/job_invocations", "<title>Job invocations</title>")
 
     @task
     def foreman_tasks_tasks(self):
