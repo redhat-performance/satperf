@@ -281,7 +281,6 @@ log "Going to register $total_number_containers hosts: $concurrent_registrations
 for (( i=initial_batch; i <= ( registration_iterations + 1 ); i++ )); do
     ap 48-register-$i.log \
       -e "size='${concurrent_registrations_per_container_host}'" \
-      -e "num_retry_forks='${num_retry_forks}'" \
       -e "registration_logs='../../$logs/48-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='${sat_version}'" \
