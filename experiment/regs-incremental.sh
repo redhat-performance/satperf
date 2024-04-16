@@ -268,6 +268,7 @@ unset skip_measurement
 section "Incremental registrations"
 number_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
 number_containers_per_container_host=$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
+num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
 if (( initial_expected_concurrent_registrations > number_container_hosts )); then
     initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
 else
@@ -285,19 +286,22 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
 
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    skip_measurement='true' ap 48-register-$concurrent_registrations.log \
-      -e "size='$concurrent_registrations_per_container_host'" \
-      -e "num_retry_forks='$num_retry_forks'" \
+    skip_measurement='true' ap 48-register-${concurrent_registrations}.log \
+      -e "size='${concurrent_registrations_per_container_host}'" \
+      -e "num_retry_forks='${num_retry_forks}'" \
       -e "registration_logs='../../$logs/48-register-docker-host-client-logs'" \
-      -e "sat_version='$sat_version'" \
+      -e "sat_version='${sat_version}'" \
       playbooks/tests/registrations.yaml
-      e Register $logs/48-register-$concurrent_registrations.log
+      e Register $logs/48-register-${concurrent_registrations}.log
 done
 grep Register $logs/48-register-*.log >$logs/48-register-overall.log
 e Register $logs/48-register-overall.log
 
 
 section "Sosreport"
-skip_measurement='true' ap sosreporter-gatherer.log playbooks/satellite/sosreport_gatherer.yaml -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'"
+skip_measurement='true' ap sosreporter-gatherer.log \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
+
 
 junit_upload
