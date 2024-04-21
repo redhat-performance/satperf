@@ -661,6 +661,9 @@ function jsr() {
       grep '"msg":' | cut -d '"' -f 4 )"
     [ -z "$satellite_creds" ] && return 2
 
+    local min_minutes_counter=5
+    local max_minutes_counter=300
+
     local task_state="$( curl --silent --insecure \
       -u "${satellite_creds}" \
       -X GET \
@@ -670,11 +673,31 @@ function jsr() {
       https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
-    local counter=0
-    local max_minutes_counter=300
+    local total_tasks="$( curl --silent --insecure \
+      -u "${satellite_creds}" \
+      -X GET \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      --max-time 30 \
+      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
+
+    local divisor=100
+
+    local ratio="$(( total_tasks / divisor ))"
+
+    if (( ratio < min_minutes_counter )); then
+        local minutes_counter=min_minutes_counter
+    elif (( ratio > min_minutes_counter )); then
+        local minutes_counter=max_minutes_counter
+    else
+        local minutes_counter=ratio
+    fi
+
     local sleep_time=60
+    local rc=0
     while [[ "${task_state}" != 'stopped' ]]; do
-        if (( counter < max_minutes_counter )); then
+        if (( minutes_counter < max_minutes_counter )); then
             sleep ${sleep_time}
 
             task_state="$( curl --silent --insecure \
@@ -686,11 +709,11 @@ function jsr() {
               https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
               python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
-            (( counter++ ))
+            (( minutes_counter++ ))
         else
             log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
 
-            return 1
+            rc=1
         fi
     done
 
@@ -713,7 +736,7 @@ function jsr() {
 
     log "Examined job invocation $job_invocation_id: $succeeded / $total successful executions"
 
-    return 0
+    return $rc
 }
 
 function extract_task() {
