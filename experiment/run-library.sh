@@ -711,6 +711,8 @@ function jsr() {
             log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
 
             rc=1
+
+            break
         fi
     done
 
