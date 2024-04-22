@@ -663,6 +663,7 @@ function jsr() {
 
     local min_minutes_counter=5
     local max_minutes_counter=300
+    local divisor=100
 
     local task_state="$( curl --silent --insecure \
       -u "${satellite_creds}" \
@@ -681,19 +682,15 @@ function jsr() {
       --max-time 30 \
       https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
-
-    local divisor=100
-
     local ratio="$(( total_tasks / divisor ))"
 
     if (( ratio < min_minutes_counter )); then
-        local minutes_counter=min_minutes_counter
-    elif (( ratio > min_minutes_counter )); then
-        local minutes_counter=max_minutes_counter
-    else
-        local minutes_counter=ratio
+        max_minutes_counter=$min_minutes_counter
+    elif (( ratio < max_minutes_counter )); then
+        max_minutes_counter=$ratio
     fi
 
+    local minutes_counter=0
     local sleep_time=60
     local rc=0
     while [[ "${task_state}" != 'stopped' ]]; do
