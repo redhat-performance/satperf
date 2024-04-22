@@ -663,7 +663,7 @@ function jsr() {
 
     local min_minutes_counter=5
     local max_minutes_counter=300
-    local divisor=100
+    local divisor=50
 
     local task_state="$( curl --silent --insecure \
       -u "${satellite_creds}" \
