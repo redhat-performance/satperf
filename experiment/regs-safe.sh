@@ -203,6 +203,7 @@ if [[ "${skip_down_setup}" != "true" ]]; then
                 sat_client_rids="$( get_repo_id '{{ sat_org }}' "${sat_client_product}" "${sat_client_repo_name}" )"
                 ;;
         esac
+        content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"${sat_client_repo_name}\"' --fields 'Content label'" | tail -n1 )"
 
         # OS
         h 31-cv-create-${rel}-os.log "content-view create --organization '{{ sat_org }}' --name '${cv_os}' --repository-ids '${os_rids}'"
@@ -229,12 +230,16 @@ if [[ "${skip_down_setup}" != "true" ]]; then
         prior='Library'
         for lce in $lces; do
             ak="AK_${rel}_${lce}"
+            id="$( h_out "--no-headers --csv activation-key list --organization '{{ sat_org }}' --search 'name = \"$ak\"' --fields id"  | tail -n1 )"
 
             # CCV promotion to LCE
             h 38-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
             # AK creation
             h 39-ak-create-${rel}-${lce}.log "activation-key create --content-view '$ccv' --lifecycle-environment '$lce' --name '$ak' --organization '{{ sat_org }}'"
+
+            # Enable 'Satellite Client' repo in AK
+            h 40-ak-create-${rel}-${lce}.log "activation-key content-override --organization '{{ sat_org }}' --id $id --content-label $content_label --override-name 'enabled' --value 1"
 
             prior="${lce}"
         done
