@@ -41,13 +41,6 @@
     that: sat_version is string
     fail_msg: "Variable 'sat_version' have to be string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
 
-- name: "Configure Redis as Foreman cache on Satellite 6.14"
-  ansible.builtin.set_fact:
-    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} --foreman-rails-cache-store type:redis"
-  when:
-    - configure_redis_cache is defined and configure_redis_cache
-    - sat_version == '6.14.0'
-
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
     cmd: "{{ run_before_sat_installer }}"
