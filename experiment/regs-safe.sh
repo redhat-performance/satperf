@@ -259,8 +259,6 @@ fi
 
 section "Prepare for registrations"
 
-ak='AK_rhel8_Test'
-
 ap 44-generate-host-registration-command.log \
   -e "organization='{{ sat_org }}'" \
   -e "ak='$ak'" \
