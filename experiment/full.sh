@@ -423,7 +423,7 @@ unset skip_measurement
 
 section "Incremental registrations and remote execution"
 number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )"
-number_containers_per_container_host="$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
+number_containers_per_container_host="$( ansible $opts_adhoc -m ansible.builtin.debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 if (( initial_expected_concurrent_registrations > number_container_hosts )); then
     initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
 else
@@ -435,7 +435,7 @@ job_template_ssh_default='Run Command - Script Default'
 
 skip_measurement='true' h 46-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
 skip_measurement='true' a 47-rex-cleanup-know_hosts.log \
-  -m "shell" \
+  -m ansible.builtin.shell \
   -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
   satellite6
 
@@ -492,7 +492,7 @@ skip_measurement='true' ap 62-webui-pages.log \
   playbooks/tests/webui-pages.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration} $logs/62-webui-pages.log
 a 63-foreman_inventory_upload-report-generate.log satellite6 \
-  -m "shell" \
+  -m ansible.builtin.shell \
   -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
 
 
