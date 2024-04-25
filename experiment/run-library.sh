@@ -708,9 +708,39 @@ function jsr() {
 
             (( minutes_counter++ ))
         else
-            log "Ran out of time waiting for job invocation ${job_invocation_id} to finish"
+            log "Ran out of time waiting for job invocation ${job_invocation_id} to finish. Trying to cancel it..."
+
+            curl --silent --insecure \
+              -u "${satellite_creds}" \
+              -X POST \
+              -H 'Accept: application/json' \
+              -H 'Content-Type: application/json' \
+              --max-time 30 \
+              https://${satellite_host}/api/job_invocations/${job_invocation_id}/cancel
 
             rc=1
+
+            # Wait for 10 additional minutes for the job invocation to cancel
+echo 'Wait for 10 additional minutes for the job invocation to cancel'
+            minutes_counter=0
+            while [[ "${task_state}" != 'stopped' ]]; do
+                if (( minutes_counter < max_minutes_counter )); then
+                    sleep ${sleep_time}
+
+                    task_state="$( curl --silent --insecure \
+                      -u "${satellite_creds}" \
+                      -X GET \
+                      -H 'Accept: application/json' \
+                      -H 'Content-Type: application/json' \
+                      --max-time 30 \
+                      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
+                      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
+
+                    (( minutes_counter++ ))
+                else
+                    break
+                fi
+            done
 
             break
         fi
