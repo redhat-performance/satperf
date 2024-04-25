@@ -53,6 +53,16 @@
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
 - name: "Run capsule-certs-generate"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      capsule-certs-generate {{ cap_certs_generate_options }} | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
+  delegate_to: "{{ groups['satellite6'] | first }}"
+  when:
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
+
+- name: "Run capsule-certs-generate"
   # XXX: Bug 2265385 - `capsule-certs-generate` cannot be run concurrently for different capsules
   throttle: 1
   ansible.builtin.shell:
@@ -61,6 +71,8 @@
 
       capsule-certs-generate {{ cap_certs_generate_options }} | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
   delegate_to: "{{ groups['satellite6'] | first }}"
+  when:
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.15.0', '<=')
 
   # Output of this command looks like this:
   # # capsule-certs-generate --certs-tar aaa.tar --capsule-fqdn capsule.example.com
