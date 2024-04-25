@@ -57,6 +57,8 @@
   throttle: 1
   ansible.builtin.shell:
     cmd: |
+      set -o pipefail
+
       capsule-certs-generate {{ cap_certs_generate_options }} | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
   delegate_to: "{{ groups['satellite6'] | first }}"
 
