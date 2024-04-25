@@ -648,18 +648,18 @@ function jsr() {
     # Parse job invocation ID from the log and show its execution success ratio
     local log="$1"
     local job_invocation_id="$( extract_job_invocation "$log" )"
-    [ -z "$job_invocation_id" ] && return 1
+    [ -z "${job_invocation_id}" ] && return 1
     local satellite_host="$( ansible $opts_adhoc \
       --list-hosts \
       satellite6 2>/dev/null |
       tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
-    [ -z "$satellite_host" ] && return 2
+    [ -z "${satellite_host}" ] && return 2
     local satellite_creds="$( ansible $opts_adhoc \
       -m ansible.builtin.debug \
       -a "msg={{ sat_user }}:{{ sat_pass }}" \
       satellite6 2>/dev/null |
       grep '"msg":' | cut -d '"' -f 4 )"
-    [ -z "$satellite_creds" ] && return 2
+    [ -z "${satellite_creds}" ] && return 2
 
     local min_minutes_counter=5
     local max_minutes_counter=300
@@ -671,7 +671,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
     local total_tasks="$( curl --silent --insecure \
@@ -680,7 +680,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
     local ratio="$(( total_tasks / divisor ))"
 
@@ -703,7 +703,7 @@ function jsr() {
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               --max-time 30 \
-              https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+              https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
               python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
             (( minutes_counter++ ))
@@ -722,7 +722,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["succeeded"])' )"
     local total="$( curl --silent --insecure \
       -u "${satellite_creds}" \
@@ -730,7 +730,7 @@ function jsr() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
+      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
 
     log "Examined job invocation $job_invocation_id: $succeeded / $total successful executions"
