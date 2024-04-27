@@ -716,12 +716,11 @@ function jsr() {
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               --max-time 30 \
-              https://${satellite_host}/api/job_invocations/${job_invocation_id}/cancel
+              "https://${satellite_host}/api/job_invocations/${job_invocation_id}/cancel?force=true"
 
             rc=1
 
             # Wait for 10 additional minutes for the job invocation to cancel
-echo 'Wait for 10 additional minutes for the job invocation to cancel'
             minutes_counter=0
             while [[ "${task_state}" != 'stopped' ]]; do
                 if (( minutes_counter < max_minutes_counter )); then
