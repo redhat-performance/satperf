@@ -196,7 +196,7 @@ function status_data_create() {
     sd_name=$( basename $sd_log .log )   # derive testcase name from log name which is descriptive
     sd_rc="$3"
     sd_start="$( date -u -Iseconds -d @$4 )"
-    sd_end="$( date -u -d -Iseconds -d @$5 )"
+    sd_end="$( date -u -Iseconds -d @$5 )"
     sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
     sd_kat_ver="$6"
     sd_kat_ver_short=$( echo "$sd_kat_ver" | sed 's/^katello-//' | sed 's/[^0-9.-]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
