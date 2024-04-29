@@ -71,13 +71,13 @@ fi
 # }
 
 function measurement_add() {
-    python -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
+    python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
     if [ "$skip_measurement" != "true" ]; then
         status_data_create "$@"
     fi
 }
 function measurement_row_field() {
-    python -c "import csv; import sys; reader=csv.reader(sys.stdin); print list(reader)[0][int(sys.argv[1])-1]" $1
+    python3 -c "import csv; import sys; reader=csv.reader(sys.stdin); print list(reader)[0][int(sys.argv[1])-1]" $1
 }
 
 function generic_environment_check() {
@@ -303,7 +303,7 @@ function status_data_create() {
       -H "Content-Type: application/json" \
       --data "@$sd_file" \
       "$url" |
-      python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
+      python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
     ###status_data.py --status-data-file $sd_file --info
 
     # Create "results-dashboard-data" data file
@@ -337,7 +337,7 @@ function status_data_create() {
       -H "Content-Type: application/json" \
       --data "@${rdd_file}" \
       "$url" |
-      python -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
+      python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
 
     # Enhance log file
     tmp=$( mktemp )
