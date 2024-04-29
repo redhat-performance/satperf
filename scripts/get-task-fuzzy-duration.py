@@ -140,7 +140,7 @@ def investigate_task(args):
     sub_tasks = get_all(
         args.hostname, "/foreman_tasks/api/tasks",
         args.username, args.password,
-        {"search": "parent_task_id = %s" % args.task_id},
+        {"search": "parent_task_id = %s and result != cancelled" % args.task_id},
         args.cache)
     # with open('cache', 'w') as fp:
     #     import json
