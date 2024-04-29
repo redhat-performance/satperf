@@ -708,6 +708,8 @@ function jsr() {
 
             (( minutes_counter++ ))
         else
+            rc=1
+
             log "Ran out of time waiting for job invocation ${job_invocation_id} to finish. Trying to cancel it..."
 
             curl --silent --insecure \
@@ -716,9 +718,7 @@ function jsr() {
               -H 'Accept: application/json' \
               -H 'Content-Type: application/json' \
               --max-time 30 \
-              "https://${satellite_host}/api/job_invocations/${job_invocation_id}/cancel?force=true"
-
-            rc=1
+              "https://${satellite_host}/api/job_invocations/${job_invocation_id}/cancel?force=true" &>/dev/null
 
             # Wait for 10 additional minutes for the job invocation to cancel
             minutes_counter=0
