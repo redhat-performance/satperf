@@ -665,15 +665,6 @@ function jsr() {
     local max_minutes_counter=300
     local divisor=50
 
-    local task_state="$( curl --silent --insecure \
-      -u "${satellite_creds}" \
-      -X GET \
-      -H 'Accept: application/json' \
-      -H 'Content-Type: application/json' \
-      --max-time 30 \
-      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
-
     local total_tasks="$( curl --silent --insecure \
       -u "${satellite_creds}" \
       -X GET \
@@ -689,6 +680,15 @@ function jsr() {
     elif (( ratio < max_minutes_counter )); then
         max_minutes_counter=$ratio
     fi
+
+    local task_state="$( curl --silent --insecure \
+      -u "${satellite_creds}" \
+      -X GET \
+      -H 'Accept: application/json' \
+      -H 'Content-Type: application/json' \
+      --max-time 30 \
+      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
 
     local minutes_counter=0
     local sleep_time=60
