@@ -9,7 +9,7 @@ set -e
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
-marker_date="$(date --utc --iso-8601=seconds)"
+marker_date="$(date -u -Iseconds)"
 if [ -z "$marker" ]; then
     marker="${1:-run-${marker_date}}"
 fi
@@ -195,8 +195,8 @@ function status_data_create() {
     sd_log="$2"
     sd_name=$( basename $sd_log .log )   # derive testcase name from log name which is descriptive
     sd_rc="$3"
-    sd_start="$( date --utc -d @$4 -Iseconds )"
-    sd_end="$( date --utc -d @$5 -Iseconds )"
+    sd_start="$( date -u -Iseconds -d @$4 )"
+    sd_end="$( date -u -d -Iseconds -d @$5 )"
     sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
     sd_kat_ver="$6"
     sd_kat_ver_short=$( echo "$sd_kat_ver" | sed 's/^katello-//' | sed 's/[^0-9.-]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
@@ -399,7 +399,7 @@ function junit_upload() {
 }
 
 function log() {
-    echo "[$( date --utc --iso-8601=seconds )] $*"
+    echo "[$( date -u -Iseconds )] $*"
 }
 
 function section() {
@@ -426,7 +426,7 @@ function _format_opts() {
 function c() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
-    local start=$( date --utc +%s )
+    local start=$( date -u +%s )
     log "Start '$*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE command RUN"
@@ -434,7 +434,7 @@ function c() {
     else
         eval "$@" &>$out && local rc=$? || local rc=$?
     fi
-    local end=$( date --utc +%s )
+    local end=$( date -u +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
       "$@" \
@@ -451,7 +451,7 @@ function c() {
 function a() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
-    local start=$( date --utc +%s )
+    local start=$( date -u +%s )
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible RUN"
@@ -459,7 +459,7 @@ function a() {
     else
         ansible $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
     fi
-    local end=$( date --utc +%s )
+    local end=$( date -u +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
       "ansible $opts_adhoc $( _format_opts "$@" )" \
@@ -485,7 +485,7 @@ function a_out() {
 function ap() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
-    local start=$( date --utc +%s )
+    local start=$( date -u +%s )
     log "Start 'ansible-playbook $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible-playbook RUN"
@@ -493,7 +493,7 @@ function ap() {
     else
         ansible-playbook $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
     fi
-    local end=$( date --utc +%s )
+    local end=$( date -u +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
       "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
