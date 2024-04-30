@@ -585,10 +585,10 @@ function task_examine() {
       &>$log_report
     local rc=$?
     if (( rc == 0 )); then
-        started_ts="$( date -d "$( grep '^results.tasks.start=' $log_report | cut -d '"' -f 2 )" +%s )"
-        ended_ts="$( date -d "$( grep '^results.tasks.end=' $log_report | cut -d '"' -f 2 )" +%s )"
-        duration="$( grep '^results.tasks.duration=' $log_report | cut -d '"' -f 2 )"
-        head_tail_perc="$( grep '^results.tasks.percentage_removed=' $log_report | cut -d '"' -f 2 )"
+        started_ts="$( date -d "$( awk -F'"' '/^results.tasks.start=/ {printf ("%s", $2)}' $log_report )" +%s )"
+        ended_ts="$( date -d "$( awk -F'"' '/^results.tasks.end=/ {printf ("%s", $2)}' $log_report )" +%s )"
+        duration="$( awk -F'"' '/^results.tasks.duration=/ {printf ("%.0f", $2)}' $log_report )"
+        head_tail_perc="$( awk -F'"' '/^results.tasks.percentage_removed=/ {printf ("%.2f", $2)}' $log_report )"
         log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts) and has taken $duration seconds"
         measurement_add \
           "$command" \
