@@ -580,7 +580,7 @@ function task_examine() {
       --hostname $satellite_host \
       --task-id "$task_id" \
       --timeout 150 \
-      --percentage 5 \
+      --percentage 0 \
       --output status-data \
       &>$log_report
     local rc=$?
