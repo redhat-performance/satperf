@@ -647,103 +647,36 @@ function j() {
 function jsr() {
     # Parse job invocation ID from the log and show its execution success ratio
     local log="$1"
+    local timeout="${2:-10}"
     local job_invocation_id="$( extract_job_invocation "$log" )"
-    [ -z "${job_invocation_id}" ] && return 1
+    [[ -n "${job_invocation_id}" ]] || return 1
     local satellite_host="$( ansible $opts_adhoc \
       --list-hosts \
       satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
-    [ -z "${satellite_host}" ] && return 2
+      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//')"
+    [[ -n "${satellite_host}" ]] || return 2
     local satellite_creds="$( ansible $opts_adhoc \
       -m ansible.builtin.debug \
       -a "msg={{ sat_user }}:{{ sat_pass }}" \
       satellite6 2>/dev/null |
       grep '"msg":' | cut -d '"' -f 4 )"
-    [ -z "${satellite_creds}" ] && return 2
+    [[ -n "${satellite_creds}" ]] || return 2
+    local satellite_user="$(echo ${satellite_creds} | cut -d':' -f1)"
+    local satellite_pass="$(echo ${satellite_creds} | cut -d':' -f2)"
 
-    local min_minutes_counter=5
-    local max_minutes_counter=300
-    local divisor=50
+    set +e
+    scripts/wait_for_job.py \
+      --hostname ${satellite_host} \
+      --username ${satellite_user} \
+      --password ${satellite_pass} \
+      --job-id ${job_invocation_id} \
+      --timeout ${timeout}
+    local rc=$?
+    set -e
 
-    local total_tasks="$( curl --silent --insecure \
-      -u "${satellite_creds}" \
-      -X GET \
-      -H 'Accept: application/json' \
-      -H 'Content-Type: application/json' \
-      --max-time 30 \
-      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
-    local ratio="$(( total_tasks / divisor ))"
-
-    if (( ratio < min_minutes_counter )); then
-        max_minutes_counter=$min_minutes_counter
-    elif (( ratio < max_minutes_counter )); then
-        max_minutes_counter=$ratio
+    if (( $rc == 2 )); then
+        log "Job invocation ${job_invocation_id} spent more than ${timeout} minutes with no sub-task progress and had to be cancelled"
     fi
-
-    local task_state="$( curl --silent --insecure \
-      -u "${satellite_creds}" \
-      -X GET \
-      -H 'Accept: application/json' \
-      -H 'Content-Type: application/json' \
-      --max-time 30 \
-      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
-
-    local minutes_counter=0
-    local sleep_time=60
-    local rc=0
-    while [[ "${task_state}" != 'stopped' ]]; do
-        if (( minutes_counter < max_minutes_counter )); then
-            sleep ${sleep_time}
-
-            task_state="$( curl --silent --insecure \
-              -u "${satellite_creds}" \
-              -X GET \
-              -H 'Accept: application/json' \
-              -H 'Content-Type: application/json' \
-              --max-time 30 \
-              https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-              python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
-
-            (( minutes_counter++ ))
-        else
-            rc=1
-
-            log "Ran out of time waiting for job invocation ${job_invocation_id} to finish. Trying to cancel it..."
-
-            curl --silent --insecure \
-              -u "${satellite_creds}" \
-              -X POST \
-              -H 'Accept: application/json' \
-              -H 'Content-Type: application/json' \
-              --max-time 30 \
-              "https://${satellite_host}/api/job_invocations/${job_invocation_id}/cancel?force=true" &>/dev/null
-
-            # Wait for 10 additional minutes for the job invocation to cancel
-            minutes_counter=0
-            while [[ "${task_state}" != 'stopped' ]]; do
-                if (( minutes_counter < max_minutes_counter )); then
-                    sleep ${sleep_time}
-
-                    task_state="$( curl --silent --insecure \
-                      -u "${satellite_creds}" \
-                      -X GET \
-                      -H 'Accept: application/json' \
-                      -H 'Content-Type: application/json' \
-                      --max-time 30 \
-                      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-                      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["state"])' )"
-
-                    (( minutes_counter++ ))
-                else
-                    break
-                fi
-            done
-
-            break
-        fi
-    done
 
     local succeeded="$( curl --silent --insecure \
       -u "${satellite_creds}" \
@@ -762,9 +695,7 @@ function jsr() {
       https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
 
-    log "Examined job invocation $job_invocation_id: $succeeded / $total successful executions"
-
-    return $rc
+    log "Examined job invocation ${job_invocation_id}: $succeeded / $total successful executions"
 }
 
 function extract_task() {
