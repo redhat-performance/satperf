@@ -65,6 +65,8 @@ def wait_for_job(args):
             time.sleep(5)
 
     # Wait until we get some output
+    time.sleep(10)
+
     while True:
         task_json = get_json(
           args.hostname,
