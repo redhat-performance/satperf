@@ -84,11 +84,17 @@ def wait_for_job(args):
     while True:
         if task_json['pending']:
             time.sleep(60)
-            task_json = get_json(
-              args.hostname,
-              f"/foreman_tasks/api/tasks/{task_id}",
-              args.username,
-              args.password)
+
+            while True:
+                task_json = get_json(
+                args.hostname,
+                f"/foreman_tasks/api/tasks/{task_id}",
+                args.username,
+                args.password)
+                if task_json['output']['pending_count']:
+                    break
+                else:
+                    time.sleep(5)
 
             pending_count_current = task_json['output']['pending_count']
             if pending_count_before == pending_count_current:
