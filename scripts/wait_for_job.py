@@ -74,11 +74,12 @@ def wait_for_job(args):
           args.username,
           args.password)
         if task_json['output']:
-            pending_count_before = task_json['output']['pending_count']
-            timeout_counter = 0
             break
         else:
             time.sleep(5)
+
+    pending_count_before = task_json['output']['pending_count']
+    timeout_counter = 0
 
     while True:
         if task_json['pending']:
