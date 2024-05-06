@@ -98,7 +98,7 @@ def wait_for_job(args):
                 timeout_counter = 0
 
             if timeout_counter == args.timeout:
-                cancel_job_json = post_json(
+                post_json(
                   args.hostname,
                   f"/api/job_invocations/{args.job_id}/cancel?force=true",
                   args.username,
