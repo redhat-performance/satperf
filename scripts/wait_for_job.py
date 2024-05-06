@@ -73,7 +73,7 @@ def wait_for_job(args):
           f"/foreman_tasks/api/tasks/{task_id}",
           args.username,
           args.password)
-        if task_json['output']:
+        if task_json['output']['pending_count']:
             break
         else:
             time.sleep(5)
