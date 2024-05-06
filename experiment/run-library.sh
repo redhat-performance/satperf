@@ -696,6 +696,8 @@ function jsr() {
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
 
     log "Examined job invocation ${job_invocation_id}: $succeeded / $total successful executions"
+
+    return 0
 }
 
 function extract_task() {
