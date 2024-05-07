@@ -75,7 +75,7 @@ def wait_for_job(args):
           f"/foreman_tasks/api/tasks/{task_id}",
           args.username,
           args.password)
-        if task_json['output']['pending_count'] >= 0:
+        if task_json['output']['pending_count'] or task_json['output']['pending_count'] >= 0:
             break
         else:
             time.sleep(5)
@@ -93,7 +93,7 @@ def wait_for_job(args):
                 f"/foreman_tasks/api/tasks/{task_id}",
                 args.username,
                 args.password)
-                if task_json['output']['pending_count'] >= 0:
+                if task_json['output']['pending_count'] or task_json['output']['pending_count'] >= 0:
                     break
                 else:
                     time.sleep(5)
