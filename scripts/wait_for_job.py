@@ -27,7 +27,8 @@ def get_json(hostname, uri, username, password):
     r = requests.get(
       f"https://{hostname}{uri}",
       auth=(username, password),
-      verify=False)
+      verify=False
+    )
     try:
         return r.json()
     except simplejson.scanner.JSONDecodeError:
@@ -41,7 +42,8 @@ def post_json(hostname, uri, username, password):
       f"https://{hostname}{uri}",
       auth=(username, password),
       headers={'content-type': 'application/json'},
-      verify=False)
+      verify=False
+    )
     try:
         return r.json()
     except simplejson.scanner.JSONDecodeError:
@@ -58,7 +60,8 @@ def wait_for_job(args):
           args.hostname,
           f"/api/job_invocations?search=id={args.job_id}",
           args.username,
-          args.password)
+          args.password
+        )
         if job_json['results'][0]['dynflow_task']:
             if job_json['results'][0]['dynflow_task']['state'] in ('running', 'stopped'):
                 task_id = job_json['results'][0]['dynflow_task']['id']
@@ -66,19 +69,17 @@ def wait_for_job(args):
         else:
             time.sleep(5)
 
-    # Wait until we get some output
-    time.sleep(10)
-
     while True:
         task_json = get_json(
           args.hostname,
           f"/foreman_tasks/api/tasks/{task_id}",
           args.username,
-          args.password)
-        if task_json['output']['pending_count'] or task_json['output']['pending_count'] >= 0:
+          args.password
+        )
+        if task_json['output']:
             break
         else:
-            time.sleep(5)
+            time.sleep(10)
 
     pending_count_before = task_json['output']['pending_count']
     timeout_counter = 0
@@ -89,14 +90,15 @@ def wait_for_job(args):
 
             while True:
                 task_json = get_json(
-                args.hostname,
-                f"/foreman_tasks/api/tasks/{task_id}",
-                args.username,
-                args.password)
-                if task_json['output']['pending_count'] or task_json['output']['pending_count'] >= 0:
+                  args.hostname,
+                  f"/foreman_tasks/api/tasks/{task_id}",
+                  args.username,
+                  args.password
+                )
+                if task_json['output']:
                     break
                 else:
-                    time.sleep(5)
+                    time.sleep(10)
 
             pending_count_current = task_json['output']['pending_count']
             if pending_count_before == pending_count_current:
@@ -110,7 +112,8 @@ def wait_for_job(args):
                   args.hostname,
                   f"/api/job_invocations/{args.job_id}/cancel?force=true",
                   args.username,
-                  args.password)
+                  args.password
+                )
 
                 time.sleep(60)
 
