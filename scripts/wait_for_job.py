@@ -52,14 +52,16 @@ def post_json(hostname, uri, username, password):
 def wait_for_job(args):
     # Wait until we get the task ID
     while True:
+        # Search for the job_id instead of providing it directly to avoid showing
+        # the list of hosts (default with 'Any Location')
         job_json = get_json(
           args.hostname,
-          f"/api/job_invocations/{args.job_id}",
+          f"/api/job_invocations?search=id={args.job_id}",
           args.username,
           args.password)
-        if job_json['task']:
-            if job_json['task']['state'] in ('running', 'stopped'):
-                task_id = job_json['task']['id']
+        if job_json['results'][0]['dynflow_task']:
+            if job_json['results'][0]['dynflow_task']['state'] in ('running', 'stopped'):
+                task_id = job_json['results'][0]['dynflow_task']['id']
                 break
         else:
             time.sleep(5)
