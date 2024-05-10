@@ -1,26 +1,25 @@
 ---
 - name: "Upgrade"
-  yum:
+  ansible.builtin.dnf:
     name: '*'
     state: latest
-  register: yum_upgrade_cmd
+  register: dnf_upgrade_cmd
 
 - name: "Show upgrade result"
-  debug:
-    var: yum_upgrade_cmd
-
-- name: "Make sure we have needs-restarting utility"
-  yum:
-    name: yum-utils
-    state: present
+  ansible.builtin.debug:
+    var: dnf_upgrade_cmd
 
 - name: "Check if reboot is necessary"
-  command: needs-restarting -r
-  register: needs_restarting_cmd
+  ansible.builtin.command:
+    cmd:
+      dnf needs-restarting -r
+  register: dnf_needs_restarting_cmd
   changed_when: false
-  failed_when: "needs_restarting_cmd.rc not in [0, 1]"
+  failed_when:
+    - dnf_needs_restarting_cmd.rc not in [0, 1]
 
 - name: "Reboot"
-  reboot:
-  when: "needs_restarting_cmd.rc == 1"
+  ansible.builtin.reboot:
+  when:
+    - dnf_needs_restarting_cmd.rc == 1
 ...
