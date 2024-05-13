@@ -94,6 +94,19 @@
   debug:
     msg: "SatelliteInstallerTuneScenarioSatellite {{  satellite_installer_tune_cmd.start }} to {{  satellite_installer_tune_cmd.end }}"
 
+- name: "Check whether pull-mqtt mode is enabled"
+  ansible.builtin.lineinfile:
+    path: /etc/foreman-proxy/settings.d/remote_execution_ssh.yml
+    regexp: '^:mode: pull-mqtt$'
+    state: absent
+  check_mode: true
+  register: result
+  failed_when: result is failed
+
+- name: "Set is_pull_mqtt var"
+  ansible.builtin.set_fact:
+    is_pull_mqtt: "{{ result.changed }}"
+
 - name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
   ansible.builtin.copy:
     content: |
@@ -102,7 +115,7 @@
     dest: /etc/systemd/system/mosquitto.service.d/limits.conf
     mode: '0444'
   when:
-    - rex_mode is defined and rex_mode == 'mqtt'
+    - is_pull_mqtt
 
 - name: Restart mosquitto service unit
   ansible.builtin.systemd_service:
@@ -110,5 +123,5 @@
     daemon_reload: true
     state: restarted
   when:
-    - rex_mode is defined and rex_mode == 'mqtt'
+    - is_pull_mqtt
 ...
