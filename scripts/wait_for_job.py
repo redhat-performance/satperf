@@ -81,7 +81,7 @@ def wait_for_job(args):
         else:
             time.sleep(10)
 
-    pending_count_before = task_json['output']['pending_count']
+    total_count_before = task_json['output']['total_count']
     timeout_counter = 0
 
     while True:
@@ -100,11 +100,11 @@ def wait_for_job(args):
                 else:
                     time.sleep(10)
 
-            pending_count_current = task_json['output']['pending_count']
-            if pending_count_before == pending_count_current:
+            total_count_current = task_json['output']['total_count']
+            if total_count_before == total_count_current:
                 timeout_counter += 1
             else:
-                pending_count_before = pending_count_current
+                total_count_before = total_count_current
                 timeout_counter = 0
 
             if timeout_counter == args.timeout:
