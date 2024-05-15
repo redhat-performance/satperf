@@ -62,64 +62,70 @@ def wait_for_job(args):
           args.username,
           args.password
         )
-        if job_json['results'][0]['dynflow_task']:
-            if job_json['results'][0]['dynflow_task']['state'] in ('running', 'stopped'):
-                task_id = job_json['results'][0]['dynflow_task']['id']
+        if ('results' in job_json and
+            'dynflow_task' in job_json['results'][0] and
+            all(k in job_json['results'][0]['dynflow_task'] for k in ('state','id')) and
+            job_json['results'][0]['dynflow_task']['state'] in ('running', 'stopped')):
                 break
         else:
             time.sleep(5)
 
-    while True:
-        task_json = get_json(
-          args.hostname,
-          f"/foreman_tasks/api/tasks/{task_id}",
-          args.username,
-          args.password
-        )
-        if task_json['output']:
-            break
-        else:
-            time.sleep(10)
+    if job_json['results'][0]['dynflow_task']['state'] == 'running':
+        task_id = job_json['results'][0]['dynflow_task']['id']
 
-    total_count_before = task_json['output']['total_count']
-    timeout_counter = 0
-
-    while True:
-        if task_json['pending']:
-            time.sleep(60)
-
-            while True:
-                task_json = get_json(
-                  args.hostname,
-                  f"/foreman_tasks/api/tasks/{task_id}",
-                  args.username,
-                  args.password
-                )
-                if task_json['output']:
-                    break
-                else:
-                    time.sleep(10)
-
-            total_count_current = task_json['output']['total_count']
-            if total_count_before == total_count_current:
-                timeout_counter += 1
+        while True:
+            task_json = get_json(
+            args.hostname,
+            f"/foreman_tasks/api/tasks/{task_id}",
+            args.username,
+            args.password
+            )
+            if ('output' in task_json and
+                'total_count' in task_json['output']):
+                break
             else:
-                total_count_before = total_count_current
-                timeout_counter = 0
+                time.sleep(10)
 
-            if timeout_counter == args.timeout:
-                post_json(
-                  args.hostname,
-                  f"/api/job_invocations/{args.job_id}/cancel?force=true",
-                  args.username,
-                  args.password
-                )
+        total_count_before = task_json['output']['total_count']
+        timeout_counter = 0
 
+        while True:
+            if 'pending' in task_json:
                 time.sleep(60)
 
-                sys.exit(2)
-        else:
-            break
+                while True:
+                    task_json = get_json(
+                    args.hostname,
+                    f"/foreman_tasks/api/tasks/{task_id}",
+                    args.username,
+                    args.password
+                    )
+                    if ('output' in task_json and
+                        'total_count' in task_json['output']):
+                        break
+                    else:
+                        time.sleep(10)
+
+                total_count_current = task_json['output']['total_count']
+                if total_count_before == total_count_current:
+                    timeout_counter += 1
+                else:
+                    total_count_before = total_count_current
+                    timeout_counter = 0
+
+                if timeout_counter == args.timeout:
+                    post_json(
+                    args.hostname,
+                    f"/api/job_invocations/{args.job_id}/cancel?force=true",
+                    args.username,
+                    args.password
+                    )
+
+                    time.sleep(60)
+
+                    sys.exit(2)
+            else:
+                break
 
 
 def doit():
