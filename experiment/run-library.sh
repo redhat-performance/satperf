@@ -664,38 +664,12 @@ function jsr() {
     local satellite_user="$(echo ${satellite_creds} | cut -d':' -f1)"
     local satellite_pass="$(echo ${satellite_creds} | cut -d':' -f2)"
 
-    set +e
     scripts/wait_for_job.py \
       --hostname ${satellite_host} \
       --username ${satellite_user} \
       --password ${satellite_pass} \
       --job-id ${job_invocation_id} \
       --timeout ${timeout}
-    local rc=$?
-    set -e
-
-    if (( $rc == 2 )); then
-        log "Job invocation ${job_invocation_id} spent more than ${timeout} minutes with no sub-task progress and had to be cancelled"
-    fi
-
-    local succeeded="$( curl --silent --insecure \
-      -u "${satellite_creds}" \
-      -X GET \
-      -H 'Accept: application/json' \
-      -H 'Content-Type: application/json' \
-      --max-time 30 \
-      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["succeeded"])' )"
-    local total="$( curl --silent --insecure \
-      -u "${satellite_creds}" \
-      -X GET \
-      -H 'Accept: application/json' \
-      -H 'Content-Type: application/json' \
-      --max-time 30 \
-      https://${satellite_host}/api/job_invocations?search=id=${job_invocation_id} |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["total"])' )"
-
-    log "Examined job invocation ${job_invocation_id}: $succeeded / $total successful executions"
 
     return 0
 }
