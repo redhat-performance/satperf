@@ -57,7 +57,9 @@
     cmd: |
       set -o pipefail
 
-      capsule-certs-generate {{ cap_certs_generate_options }} | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
+      capsule-certs-generate {{ cap_certs_generate_options }} \
+        > >(tee /var/www/html/pub/{{ inventory_hostname }}-out.raw) \
+        2> >(tee /var/tmp/capsule-certs-generate_{{ inventory_hostname }}.err >&2)
   delegate_to: "{{ groups['satellite6'] | first }}"
   when:
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
@@ -69,7 +71,9 @@
     cmd: |
       set -o pipefail
 
-      capsule-certs-generate {{ cap_certs_generate_options }} | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
+      capsule-certs-generate {{ cap_certs_generate_options }} \
+        > >(tee /var/www/html/pub/{{ inventory_hostname }}-out.raw) \
+        2> >(tee /var/tmp/capsule-certs-generate_{{ inventory_hostname }}.err >&2)
   delegate_to: "{{ groups['satellite6'] | first }}"
   when:
     - sat_version != 'stream' and sat_version is ansible.builtin.version('6.15.0', '<=')
