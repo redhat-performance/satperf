@@ -117,6 +117,15 @@ def wait_for_job(args):
 
                 log(f"Job invocation {args.job_id} spent more than {args.timeout} minutes with no sub-task progress and had to be cancelled")
 
+                time.sleep(60)
+
+                task_json = get_json(
+                  args.hostname,
+                  f"/foreman_tasks/api/tasks/{task_id}",
+                  args.username,
+                  args.password
+                )
+
                 break
 
         time.sleep(60)
