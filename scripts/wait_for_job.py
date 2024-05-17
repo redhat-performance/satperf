@@ -130,10 +130,10 @@ def wait_for_job(args):
 
         time.sleep(60)
 
-    success = task_json['output']['success_count']
-    total = task_json['output']['total_count']
-    failed = task_json['output']['failed_count']
-    cancelled = task_json['output']['cancelled_count']
+    success = task_json['output']['success_count'] if 'success_count' in task_json['output'] else '-'
+    total = task_json['output']['total_count'] if 'total_count' in task_json['output'] else '-'
+    failed = task_json['output']['failed_count'] if 'failed_count' in task_json['output'] else '-'
+    cancelled = task_json['output']['cancelled_count'] if 'cancelled_count' in task_json['output'] else '-'
 
     log(f"Examined job invocation {args.job_id}: {success} / {total} successful executions ({failed} failed / {cancelled} cancelled)")
 
