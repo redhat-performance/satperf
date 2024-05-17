@@ -86,11 +86,11 @@ def wait_for_job(args):
 
     while True:
         task_json = get_json(
-            args.hostname,
-            f"/foreman_tasks/api/tasks/{task_id}",
-            args.username,
-            args.password
-            )
+          args.hostname,
+          f"/foreman_tasks/api/tasks/{task_id}",
+          args.username,
+          args.password
+        )
 
         if ('state' in task_json and
             task_json['state'] == 'stopped'):
@@ -109,11 +109,11 @@ def wait_for_job(args):
 
             if timeout_counter == args.timeout:
                 post_json(
-                    args.hostname,
-                    f"/api/job_invocations/{args.job_id}/cancel?force=true",
-                    args.username,
-                    args.password
-                    )
+                  args.hostname,
+                  f"/api/job_invocations/{args.job_id}/cancel?force=true",
+                  args.username,
+                  args.password
+                )
 
                 log(f"Job invocation {args.job_id} spent more than {args.timeout} minutes with no sub-task progress and had to be cancelled")
 
