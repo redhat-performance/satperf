@@ -31,10 +31,10 @@
       register: create_product
       failed_when:
         - create_product.rc != 0
-        - 'Name has already been taken for a product in this organization' not in create_product.stderr
+        - "'Name has already been taken for a product in this organization' not in create_product.stderr"
       changed_when:
         - create_product.rc == 0
-        - 'Product created' in create_product.stdout
+        - "'Product created' in create_product.stdout"
 
     - name: Define download policy (default it to "on_demand")
       ansible.builtin.set_fact:
