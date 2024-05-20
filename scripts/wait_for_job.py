@@ -81,7 +81,7 @@ def wait_for_job(args):
         time.sleep(10)
 
     task_id = job_json['results'][0]['dynflow_task']['id']
-    total_count_before = 0
+    success_count_before = failed_count_before = pending_count_before = 0
     timeout_counter = 0
 
     while True:
@@ -99,34 +99,47 @@ def wait_for_job(args):
 
         if ('output' in task_json and
             task_json['output'] is not None and
-            'total_count' in task_json['output']):
-            total_count_current = task_json['output']['total_count']
-            if total_count_before == total_count_current:
-                timeout_counter += 1
-            else:
-                total_count_before = total_count_current
+            'success_count' in task_json['output'] and
+            'failed_count' in task_json['output'] and
+            'pending_count' in task_json['output']):
+            success_count = task_json['output']['success_count']
+            failed_count = task_json['output']['failed_count']
+            pending_count = task_json['output']['pending_count']
+
+            if (success_count_before != success_count or
+                failed_count_before != failed_count or
+                pending_count_before != pending_count):
                 timeout_counter = 0
 
-            if timeout_counter == args.timeout:
-                post_json(
-                  args.hostname,
-                  f"/api/job_invocations/{args.job_id}/cancel?force=true",
-                  args.username,
-                  args.password
-                )
+                if success_count_before != success_count:
+                    success_count_before = success_count
+                if failed_count_before != failed_count:
+                    failed_count_before = failed_count
+                if pending_count_before != pending_count:
+                    pending_count_before = pending_count
+            else:
+                timeout_counter += 1
 
-                log(f"Job invocation {args.job_id} spent more than {args.timeout} minutes with no sub-task progress and had to be cancelled")
+                if timeout_counter == args.timeout:
+                    post_json(
+                    args.hostname,
+                    f"/api/job_invocations/{args.job_id}/cancel?force=true",
+                    args.username,
+                    args.password
+                    )
 
-                time.sleep(60)
+                    log(f"Job invocation {args.job_id} spent more than {args.timeout} minute(s) with no sub-task progress and had to be cancelled")
 
-                task_json = get_json(
-                  args.hostname,
-                  f"/foreman_tasks/api/tasks/{task_id}",
-                  args.username,
-                  args.password
-                )
+                    time.sleep(60)
 
-                break
+                    task_json = get_json(
+                    args.hostname,
+                    f"/foreman_tasks/api/tasks/{task_id}",
+                    args.username,
+                    args.password
+                    )
+
+                    break
 
         time.sleep(60)
 
@@ -134,8 +147,9 @@ def wait_for_job(args):
     total = task_json['output']['total_count'] if 'total_count' in task_json['output'] else '-'
     failed = task_json['output']['failed_count'] if 'failed_count' in task_json['output'] else '-'
     cancelled = task_json['output']['cancelled_count'] if 'cancelled_count' in task_json['output'] else '-'
+    pending = task_json['output']['pending_count'] if 'pending_count' in task_json['output'] else '-'
 
-    log(f"Examined job invocation {args.job_id}: {success} / {total} successful executions ({failed} failed / {cancelled} cancelled)")
+    log(f"Examined job invocation {args.job_id}: {success} / {total} successful executions ({failed} failed / {cancelled} cancelled / {pending} pending)")
 
 
 def doit():
