@@ -572,6 +572,7 @@ function task_examine() {
     local task_id="$2"
     [[ -n ${task_id} ]] || return 1
     local command="${3:-N/A}"
+    local timeout="${4:-10}"
     local satellite_host="$( ansible ${opts_adhoc} \
       --list-hosts \
       satellite6 2>/dev/null |
@@ -582,7 +583,7 @@ function task_examine() {
     scripts/get-task-fuzzy-duration.py \
       --hostname "${satellite_host}" \
       --task-id "${task_id}" \
-      --timeout 150 \
+      --timeout "${timeout}" \
       --percentage 0 \
       --output status-data \
       &>${log_report}
