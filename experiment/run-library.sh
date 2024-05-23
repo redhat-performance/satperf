@@ -167,6 +167,7 @@ function get_repo_id() {
     local tmp=$( mktemp )
     h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >$tmp
     grep '^I[Dd]:' $tmp | cut -d ' ' -f 2
+    rm -f $tmp
 }
 
 function status_data_create() {
@@ -356,6 +357,7 @@ function status_data_create() {
     junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
       --name "$sd_name" --result "$sd_result" --out "$tmp" \
       --start "$sd_start" --end "$sd_end"
+    rm -f ${sd_result_log} $tmp
 
     # Deactivate tools virtualenv
     deactivate
