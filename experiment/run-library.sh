@@ -113,7 +113,7 @@ function generic_environment_check() {
         number_container_hosts=$( ansible $opts_adhoc \
           --list-hosts \
           container_hosts 2>/dev/null |
-          grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+          grep -v '^  hosts' | wc -l | sed 's/^ *//' )
         if (( number_container_hosts > 0 )); then
             ap 00-tierdown-containers.log \
               ansible-container-host-mgr/tierdown.yaml
