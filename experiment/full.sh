@@ -408,16 +408,19 @@ rm -f $tmp
 
 h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
-ak='AK_rhel8_Test'
+aks='AK_rhel8_Test AK_rhel9_Test'
 
-ap 44-generate-host-registration-command.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "ak='$ak'" \
-  -e "sat_version='$sat_version'" \
-  playbooks/satellite/host-registration_generate-command.yaml
+for ak in $aks; do
+    ap 44-generate-host-registration-command-${ak}.log \
+    -e "organization='{{ sat_org }}'" \
+    -e "ak='$ak'" \
+    -e "sat_version='$sat_version'" \
+    playbooks/satellite/host-registration_generate-command.yaml
 
-ap 45-recreate-client-scripts.log \
-  playbooks/satellite/client-scripts.yaml
+    ap 44-recreate-client-scripts-${ak}.log \
+    -e "ak='$ak'" \
+    playbooks/satellite/client-scripts.yaml
+done
 unset skip_measurement
 
 
