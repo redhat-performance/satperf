@@ -2,6 +2,15 @@
 - hosts: all
   gather_facts: false
   tasks:
+    - name: Detect RHEL release
+      ansible.builtin.setup:
+        filter: ansible_distribution_major_version
+      when: ansible_distribution_major_version is not defined
+
+    - name: Set AK name
+      ansible.builtin.set_fact:
+        ak: "AK_rhel{{ ansible_distribution_major_version }}_Test"
+
     - name: Cleanup
       ansible.builtin.shell:
         cmd: |
@@ -9,8 +18,8 @@
 
     - name: Upload script to content host
       ansible.builtin.copy:
-        src: /root/clients_host-registration.sh
-        dest: /root/clients_host-registration.sh
+        src: /root/host-registration.{{ ak }}.sh
+        dest: /root/host-registration.sh
         mode: '0500'
 
     - name: Register
@@ -18,7 +27,7 @@
         cmd: |
           set -o pipefail
 
-          /root/clients_host-registration.sh &>/root/registration.log
+          /root/host-registration.sh &>/root/registration.log
           ret=$?
 
           echo "-" >>/root/registration.log
@@ -29,6 +38,7 @@
           exit $ret
       environment:
         TZ: UTC   # make sure returned times are in UTC
+        SMDEV_CONTAINER_OFF: 1
       register: reg
 
     - name: "Register - output"

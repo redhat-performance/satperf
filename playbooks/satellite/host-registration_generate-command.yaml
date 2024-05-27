@@ -79,7 +79,7 @@
     - name: "Copy the output of the the host registration command to the Apache pub directory"
       ansible.builtin.copy:
         content: "{{ cmd.stdout }}"
-        dest: /var/www/html/pub/host-registration.sh
+        dest: /var/www/html/pub/host-registration.{{ ak }}.sh
         mode: '0644'
       when:
         - cmd.rc == 0
@@ -94,8 +94,8 @@
 
     - name: "Download host registration script from the first capsule"
       ansible.builtin.get_url:
-        url: http://{{ first_capsule }}/pub/host-registration.sh
-        dest: /var/www/html/pub/host-registration.sh
+        url: http://{{ first_capsule }}/pub/host-registration.{{ ak }}.sh
+        dest: /var/www/html/pub/host-registration.{{ ak }}.sh
         mode: '0644'
         force: true
       when:

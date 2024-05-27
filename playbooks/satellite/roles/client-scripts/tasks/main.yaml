@@ -1,4 +1,8 @@
 ---
+- name: "Set default variable(s) values"
+  ansible.builtin.set_fact:
+    ak: "{{ ak | default('AK') }}"
+
 # - name: "Get group name of our location"
 #   ansible.builtin.set_fact:
 #     location_groupname: "location_{{ location | lower }}"
@@ -34,46 +38,15 @@
 
 - name: "Download host registration script from registration target"
   ansible.builtin.get_url:
-    url: http://{{ tests_registration_target }}/pub/host-registration.sh
-    dest: /root/clients_host-registration.sh
+    url: http://{{ tests_registration_target }}/pub/host-registration.{{ ak }}.sh
+    dest: /root/host-registration.{{ ak }}.sh
     mode: '0400'
     force: true
 
-- name: "Distribute client registration script"
+- name: "Distribute content host registration script"
   throttle: 8
   ansible.builtin.copy:
-    src: "clients_host-registration.yaml"
-    dest: "/root/clients_host-registration.yaml"
-    force: true
-
-- name: "Install Ansible"
-  throttle: 8
-  ansible.builtin.dnf:
-    name: ansible-core
-    state: latest
-
-- name: "Ensure we have Ansible config with default section"
-  throttle: 8
-  ansible.builtin.lineinfile:
-    dest: /etc/ansible/ansible.cfg
-    insertafter: EOF
-    line: '[defaults]'
-    state: present
-
-- name: "Ansible should not check host keys"
-  throttle: 8
-  ansible.builtin.lineinfile:
-    dest: /etc/ansible/ansible.cfg
-    regexp: '^.*host_key_checking'
-    insertafter: '[defaults]'
-    line: 'host_key_checking = False'
-    state: present
-
-- name: "Distribute private key"
-  throttle: 8
-  ansible.builtin.copy:
-    src: "../../{{ ansible_ssh_private_key_file }}"
-    dest: /root/id_rsa_key
-    mode: "u=rw,g=,o="
+    src: host-registration.yaml
+    dest: /root/host-registration.yaml
     force: true
 ...

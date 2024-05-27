@@ -79,14 +79,14 @@
       when:
         - debug_rhsm
 
-    - name: "Run clients_host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
+    - name: "Run host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
       ansible.builtin.shell:
         cmd: |
           ansible-playbook \
             --private-key /root/id_rsa_key \
             --forks {{ size }} \
             --inventory clients.ini \
-            clients_host-registration.yaml \
+            host-registration.yaml \
             &> {{ clients_yaml_cmd_log }}
       register: clients_yaml_cmd
       ignore_errors: true
@@ -230,7 +230,7 @@
                 --private-key /root/id_rsa_key \
                 --inventory ${CLIENT_IP_LIST} \
                 --forks {{ num_retry_forks }} \
-                clients_host-registration.yaml \
+                host-registration.yaml \
                 &> {{ clients_yaml_cmd_retries_log }}
           done
       register: clients_yaml_cmd_retries
