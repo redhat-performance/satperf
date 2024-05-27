@@ -9,11 +9,9 @@ manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-rels="${PARAM_rels:-rhel8}"
+rels="${PARAM_rels:-rhel8 rhel9}"
 
 lces="${PARAM_lces:-Test}"
-
-ak="${PARAM_ak:-AK_rhel8_Test}"
 
 basearch='x86_64'
 
@@ -259,20 +257,25 @@ fi
 
 section "Prepare for registrations"
 
-ap 44-generate-host-registration-command.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "ak='$ak'" \
-  -e "sat_version='$sat_version'" \
-  playbooks/satellite/host-registration_generate-command.yaml
+aks='AK_rhel8_Test AK_rhel9_Test'
 
-ap 44-recreate-client-scripts.log \
-  playbooks/satellite/client-scripts.yaml
+for ak in $aks; do
+    ap 44-generate-host-registration-command-${ak}.log \
+    -e "organization='{{ sat_org }}'" \
+    -e "ak='$ak'" \
+    -e "sat_version='$sat_version'" \
+    playbooks/satellite/host-registration_generate-command.yaml
+
+    ap 44-recreate-client-scripts-${ak}.log \
+    -e "ak='$ak'" \
+    playbooks/satellite/client-scripts.yaml
+done
 
 unset skip_measurement
 
 
 section "Register"
-number_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
+number_container_hosts=$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -v '^  hosts' | wc -l | sed 's/^ *//' )
 number_containers_per_container_host=$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )
 total_number_containers=$(( number_container_hosts * number_containers_per_container_host ))
 concurrent_registrations_per_container_host=$(( expected_concurrent_registrations / number_container_hosts ))
