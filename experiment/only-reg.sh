@@ -58,6 +58,7 @@ ap 44-generate-host-registration-command.log \
   playbooks/satellite/host-registration_generate-command.yaml
 
 skip_measurement='true' ap 44-recreate-client-scripts.log \
+  -e "ak=ActivationKey" \
   playbooks/satellite/client-scripts.yaml
 
 
