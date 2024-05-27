@@ -261,14 +261,14 @@ aks='AK_rhel8_Test AK_rhel9_Test'
 
 for ak in $aks; do
     ap 44-generate-host-registration-command-${ak}.log \
-    -e "organization='{{ sat_org }}'" \
-    -e "ak='$ak'" \
-    -e "sat_version='$sat_version'" \
-    playbooks/satellite/host-registration_generate-command.yaml
+      -e "organization='{{ sat_org }}'" \
+      -e "ak='$ak'" \
+      -e "sat_version='$sat_version'" \
+      playbooks/satellite/host-registration_generate-command.yaml
 
     ap 44-recreate-client-scripts-${ak}.log \
-    -e "ak='$ak'" \
-    playbooks/satellite/client-scripts.yaml
+      -e "ak='$ak'" \
+      playbooks/satellite/client-scripts.yaml
 done
 
 unset skip_measurement
