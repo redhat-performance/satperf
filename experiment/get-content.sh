@@ -36,6 +36,8 @@ section "Checking environment"
 generic_environment_check
 
 
+export skip_measurement='true'
+
 if [[ "${skip_down_setup}" != "true" ]]; then
     section "Upload manifest"
     a 12-manifest-deploy.log \
