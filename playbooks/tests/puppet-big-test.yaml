@@ -28,7 +28,7 @@
 
     - name: "Determine marker variable"
       set_fact:
-        marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
+        marker: "{{ lookup('pipe', 'date -u -Iseconds') }}"
       run_once: yes
       tags: always
 

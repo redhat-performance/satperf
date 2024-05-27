@@ -1,7 +1,7 @@
 ---
   - name: "Determine log name for registration preparation"
     set_fact:
-      prepare_cmd_log: "/root/out-puppet-big-prepare-{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}.log"
+      prepare_cmd_log: "/root/out-puppet-big-prepare-{{ lookup('pipe', 'date -u -Iseconds') }}.log"
     run_once: yes
   - name: "Run puppet-big-client.yaml (log = {{ prepare_cmd_log }}; tags = PREPARE)"
     shell:
@@ -13,7 +13,7 @@
 
   - name: "Determine log name for register"
     set_fact:
-      register_cmd_log: "/root/out-puppet-big-register-{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}.log"
+      register_cmd_log: "/root/out-puppet-big-register-{{ lookup('pipe', 'date -u -Iseconds') }}.log"
     run_once: yes
   - name: "Run puppet-big-client.yaml (log = {{ register_cmd_log }}; tags = REGISTER)"
     shell:

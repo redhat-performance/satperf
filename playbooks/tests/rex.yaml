@@ -7,7 +7,7 @@
   tasks:
     - name: "Determine job description"
       set_fact:
-        job_desc: "Date with 40 ({{ lookup('pipe', 'date --utc --iso-8601=seconds') }})"
+        job_desc: "Date with 40 ({{ lookup('pipe', 'date -u -Iseconds') }})"
     - name: "Start the 'date' job '{{ job_desc }}'"
       shell: |
         # Looks like even with "--async", hammer still waits, so this FIXME way

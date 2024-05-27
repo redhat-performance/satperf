@@ -56,7 +56,7 @@
 
     - name: "Set base log name"
       ansible.builtin.set_fact:
-        clients_yaml_cmd_base: "/root/out-{{ lookup('pipe', 'date --utc --iso-8601=seconds') | regex_replace('[^A-Za-z0-9-]', '_') }}"
+        clients_yaml_cmd_base: "/root/out-{{ lookup('pipe', 'date -u -Iseconds') | regex_replace('[^A-Za-z0-9-]', '_') }}"
       run_once: true
 
     - name: "Set log name"
