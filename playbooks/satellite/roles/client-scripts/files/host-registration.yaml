@@ -38,7 +38,6 @@
           exit $ret
       environment:
         TZ: UTC   # make sure returned times are in UTC
-        SMDEV_CONTAINER_OFF: 1
       register: reg
 
     - name: "Register - output"
