@@ -1,0 +1,8 @@
+---
+- name: Setup Performance Co-Pilot to gather metrics of a Satellite installation.
+  hosts: satellite6
+  roles:
+    - role: theforeman.operations.metrics
+      vars:
+        foreman_metrics_grafana_enabled: false
+...

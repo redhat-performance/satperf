@@ -32,4 +32,6 @@ collections:
   - name: community.general
 
   - name: theforeman.foreman
+
+  - name: theforeman.operations
 ...
