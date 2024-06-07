@@ -238,24 +238,4 @@
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
         - re_register_failed_hosts
-
-    - name: "Reconfigure RHSM rhsm.baseurl and server.hostname"
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-
-          ansible \
-            --private-key /root/id_rsa_key \
-            --inventory clients.ini \
-            -m ansible.builtin.command \
-            -a "subscription-manager config \
-              --rhsm.baseurl=https://{{ tests_registration_target }}/pulp/content \
-              --server.hostname={{ tests_registration_target }}" \
-            all \
-            &> rhsm_config.log
-      ignore_errors: true
-      when:
-        - "'capsule_lbs' in groups"
-        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.13.0', '<')
 ...
