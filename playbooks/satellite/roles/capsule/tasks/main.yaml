@@ -164,7 +164,7 @@
     - "'capsule_lbs' in groups"
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
 
-- name: "Add load balanced capsule host registration URL parameters"
+- name: "Add load balanced capsule proxy template URL parameters"
   ansible.builtin.lineinfile:
     dest: "/root/{{ inventory_hostname }}-script.sh"
     line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
