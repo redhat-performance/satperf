@@ -55,7 +55,7 @@
       ansible.builtin.set_fact:
         default_jwt_expiration: 999999
       when:
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.14.0', '<=')
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.15.0', '<')
 
     - name: "Set default JWT expiration time (0)"
       ansible.builtin.set_fact:

@@ -72,7 +72,7 @@
       capsule-certs-generate {{ cap_certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
   delegate_to: "{{ groups['satellite6'] | first }}"
   # when:
-  #   - sat_version != 'stream' and sat_version is ansible.builtin.version('6.15.0', '<=')
+  #   - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
 
   # Output of this command looks like this:
   # # capsule-certs-generate --certs-tar aaa.tar --capsule-fqdn capsule.example.com

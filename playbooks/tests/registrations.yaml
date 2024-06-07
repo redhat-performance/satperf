@@ -257,5 +257,5 @@
       when:
         - "'capsule_lbs' in groups"
         - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.12.0', '<=')
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.13.0', '<')
 ...
