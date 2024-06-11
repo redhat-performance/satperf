@@ -314,7 +314,7 @@ function status_data_create() {
       --arg release ${sd_sat_ver_short} \
       --arg date ${sd_start} \
       --arg link ${sd_link} \
-      --arg result_id ${marker_date} \
+      --arg result_id ${sd_run} \
       --arg test ${sd_name} \
       --arg result ${sd_result} \
       '{
