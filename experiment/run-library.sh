@@ -106,10 +106,10 @@ function generic_environment_check() {
         ap 00-remove-hosts-if-any.log \
           playbooks/satellite/satellite-remove-hosts.yaml
 
-        number_container_hosts=$( ansible $opts_adhoc \
+        number_container_hosts="$( ansible $opts_adhoc \
           --list-hosts \
           container_hosts 2>/dev/null |
-          grep -cv '^  hosts' )
+          grep -cv '^  hosts' )"
         if (( number_container_hosts > 0 )); then
             ap 00-tierdown-containers.log \
               ansible-container-host-mgr/tierdown.yaml
@@ -135,16 +135,16 @@ function generic_environment_check() {
       -m ansible.builtin.shell \
       -a 'rpm -q katello' \
       satellite6
-    katello_version="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"; echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
+    katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"; echo "$katello_rpm" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
 
     a 00-info-rpm-q-satellite.log \
       -m ansible.builtin.shell \
       -a 'rpm -q satellite || true' \
       satellite6
-    satellite_version="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
+    satellite_rpm="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
 
-    log "katello_version = $katello_version"
-    log "satellite_version = $satellite_version"
+    log "katello_version = $katello_rpm"
+    log "satellite_version = $satellite_rpm"
 
     a 00-check-hammer-ping.log \
       -m ansible.builtin.shell \
@@ -195,16 +195,10 @@ function status_data_create() {
     sd_start="$( date -u -Iseconds -d @$4 )"
     sd_end="$( date -u -Iseconds -d @$5 )"
     sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
-    sd_kat_ver="$6"
-    sd_kat_ver_short="$( echo $sd_kat_ver | sed 's/^katello-//' | sed 's/[^0-9.-]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
-    sd_sat_ver="$7"
-    if [[ "$sd_sat_ver" == 'stream' ]]; then
-        sd_sat_ver_short=stream
-    elif [[ "$(echo $sd_sat_ver | awk -F'.' '{print $(NF-2)}')" == 'stream' ]]; then
-        sd_sat_ver_short=stream
-    else
-        sd_sat_ver_short="$( echo $sd_sat_ver | sed 's/^satellite-//' | sed 's/[^0-9.-]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )"   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
-    fi
+    sd_kat_rpm="$6"
+    sd_kat_ver_short="$( echo $sd_kat_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
+    sd_sat_rpm="$7"
+    sd_sat_ver_short="$( echo $sd_sat_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
     sd_run="$8"
     sd_additional="$9"
     if [[ -n $STATUS_DATA_FILE && -f $STATUS_DATA_FILE ]]; then
@@ -236,9 +230,9 @@ function status_data_create() {
       "id=$sd_run" \
       "name=$sd_section/$sd_name" \
       "parameters.cli=$( echo $sd_cli | sed 's/=/__/g' )" \
-      "parameters.katello_version=$sd_kat_ver" \
+      "parameters.katello_version=$sd_kat_rpm" \
       "parameters.katello_version-y-stream=$sd_kat_ver_short" \
-      "parameters.version=$sd_sat_ver" \
+      "parameters.version=$sd_sat_rpm" \
       "parameters.version-y-stream=$sd_sat_ver_short" \
       "parameters.run=$sd_run" \
       "parameters.hostname=$sd_hostname" \
@@ -314,10 +308,15 @@ function status_data_create() {
     ###status_data.py --status-data-file $sd_file --info
 
     # Create "results-dashboard-data" data file
+    if [[ "$sat_version" == 'stream']]; then
+        sd_sat_release=stream
+    else
+        sd_sat_release="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
+    fi
     set -x
     jq -n \
-      --arg release $sd_sat_ver_short \
-      --arg version $sd_sat_ver \
+      --arg release $sd_sat_release \
+      --arg version $sd_sat_ver_short \
       --arg date $sd_start \
       --arg link $sd_link \
       --arg result_id $sd_run \
@@ -350,12 +349,12 @@ function status_data_create() {
     # Enhance log file
     tmp="$( mktemp )"
     echo "command: $sd_cli" >>$tmp
-    echo "satellite version: $sd_sat_ver" >>$tmp
-    echo "katello version: $sd_kat_ver" >>$tmp
+    echo "satellite version: $sd_sat_rpm" >>$tmp
+    echo "katello version: $sd_kat_rpm" >>$tmp
     echo "hostname: $sd_hostname" >>$tmp
     if [[ "$sd_result" != 'ERROR' ]]; then
         echo 'result determination log:' >>$tmp
-        cat $sd_result_log >>$tmp
+        cat "$sd_result_log" >>$tmp
     fi
     echo >>$tmp
     cat $sd_log >>$tmp
@@ -392,8 +391,8 @@ function junit_upload() {
     # Determine ReportPortal launch name
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
     if echo $launch_name | grep --quiet '%sat_ver%'; then
-        sat_ver="$( echo $satellite_version | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
-        [[ -n $sat_ver ]] || sat_ver="$( echo $katello_version | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        sat_ver="$( echo $satellite_rpm | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        [[ -n $sat_ver ]] || sat_ver="$( echo $katello_rpm | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
         launch_name="$( echo $launch_name | sed "s/%sat_ver%/$sat_ver/g" )"
     fi
     launch_name="$( echo $launch_name | sed "s/[^a-zA-Z0-9._-]/_/g" )"
@@ -452,6 +451,20 @@ function c() {
         eval "$@" &>$out && local rc=$? || local rc=$?
     fi
     local end="$( date -u +%s )"
+    [[ -n $katello_rpm ]] ||
+        katello_rpm="$( ansible $opts_adhoc \
+          -m ansible.builtin.shell \
+          -a "rpm -q katello" \
+          satellite6 2>/dev/null |
+          tail -n 1)"
+        # katello_version="$( echo $katello_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"
+    [[ -n $satellite_rpm ]] ||
+        satellite_rpm="$( ansible $opts_adhoc \
+          -m ansible.builtin.shell \
+          -a "rpm -q satellite" \
+          satellite6 2>/dev/null |
+          tail -n 1)"
+        # satellite_version="$( echo $satellite_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
       "$@" \
@@ -459,8 +472,8 @@ function c() {
       "$rc" \
       "$start" \
       "$end" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker"
     return $rc
 }
@@ -484,8 +497,8 @@ function a() {
       "$rc" \
       "$start" \
       "$end" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker"
     return $rc
 }
@@ -518,8 +531,8 @@ function ap() {
       "$rc" \
       "$start" \
       "$end" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker"
     return $rc
 }
@@ -577,8 +590,8 @@ function e() {
       "$rc" \
       "$started_ts" \
       "$ended_ts" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker" \
       "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
@@ -595,7 +608,7 @@ function task_examine() {
       satellite6 2>/dev/null |
       tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//')"
     [[ -n $satellite_host ]] || return 2
-    local log_report="$( echo "$log" | sed 's/\.log$/-duration.log/' )"
+    local log_report="$( echo $log | sed 's/\.log$/-duration.log/' )"
 
     scripts/get-task-fuzzy-duration.py \
       --hostname "$satellite_host" \
@@ -617,8 +630,8 @@ function task_examine() {
           "$rc" \
           "$started_ts" \
           "$ended_ts" \
-          "$katello_version" \
-          "$satellite_version" \
+          "$katello_rpm" \
+          "$satellite_rpm" \
           "$marker" \
           "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
         return 0
