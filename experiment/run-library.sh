@@ -308,7 +308,7 @@ function status_data_create() {
     ###status_data.py --status-data-file $sd_file --info
 
     # Create "results-dashboard-data" data file
-    if [[ "$sat_version" == 'stream']]; then
+    if [[ "$sat_version" == 'stream' ]]; then
         sd_sat_release=stream
     else
         sd_sat_release="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
