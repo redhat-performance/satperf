@@ -451,20 +451,6 @@ function c() {
         eval "$@" &>$out && local rc=$? || local rc=$?
     fi
     local end="$( date -u +%s )"
-    [[ -n $katello_rpm ]] ||
-        katello_rpm="$( ansible $opts_adhoc \
-          -m ansible.builtin.shell \
-          -a "rpm -q katello" \
-          satellite6 2>/dev/null |
-          tail -n 1)"
-        # katello_version="$( echo $katello_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"
-    [[ -n $satellite_rpm ]] ||
-        satellite_rpm="$( ansible $opts_adhoc \
-          -m ansible.builtin.shell \
-          -a "rpm -q satellite" \
-          satellite6 2>/dev/null |
-          tail -n 1)"
-        # satellite_version="$( echo $satellite_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
     measurement_add \
       "$@" \
