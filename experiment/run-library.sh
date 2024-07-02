@@ -360,8 +360,8 @@ function status_data_create() {
     cat $sd_log >>$tmp
 
     # Create junit.xml file
-    junit_cli.py add \
-      --file $logs/junit.xml \
+    junit_cli.py --file $logs/junit.xml \
+      add \
       --suite "$sd_section" \
       --name "$sd_name" \
       --result "$sd_result" \
@@ -398,11 +398,11 @@ function junit_upload() {
     launch_name="$( echo $launch_name | sed "s/[^a-zA-Z0-9._-]/_/g" )"
 
     # Show content and upload to ReportPortal
-    junit_cli.py print \
-      --file $logs/junit.xml
+    junit_cli.py --file $logs/junit.xml \
+      print
 
-    junit_cli.py upload \
-      --file $logs/junit.xml \
+    junit_cli.py --file $logs/junit.xml \
+      upload \
       --host $PARAM_reportportal_host \
       --project $PARAM_reportportal_project \
       --token $PARAM_reportportal_token \
