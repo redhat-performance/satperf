@@ -23,8 +23,6 @@ opts_adhoc=${opts_adhoc:-"$opts"}
 logs="$marker"
 run_lib_dryrun=false
 hammer_opts="-u admin -p changeme"
-satellite_version="${satellite_version:-${sat_version}}"   # will be determined automatically by run-bench.sh
-katello_version="${katello_version:-N/A}"   # will be determined automatically by run-bench.sh
 
 # Requirements check
 #if ! type bc >/dev/null; then
@@ -139,16 +137,16 @@ function generic_environment_check() {
       -m ansible.builtin.shell \
       -a "rpm -q katello" \
       satellite6
-    katello_version=$( tail -n 1 $logs/00-info-rpm-q-katello.log ); echo "$katello_version" | grep '^katello-[0-9]\.'   # make sure it was detected correctly
+    katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"; echo "$katello_rpm" | grep '^katello-[0-9]\.' # make sure it was detected correctly
 
     a 00-info-rpm-q-satellite.log \
       -m ansible.builtin.shell \
       -a "rpm -q satellite || true" \
       satellite6
-    satellite_version=$( tail -n 1 $logs/00-info-rpm-q-satellite.log )
+    satellite_rpm="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
 
-    log "katello_version = $katello_version"
-    log "satellite_version = $satellite_version"
+    log "katello_version = $katello_rpm"
+    log "satellite_version = $satellite_rpm"
 
     a 00-check-hammer-ping.log \
       -m ansible.builtin.shell \
@@ -199,16 +197,22 @@ function status_data_create() {
     sd_start="$( date -u -Iseconds -d @$4 )"
     sd_end="$( date -u -Iseconds -d @$5 )"
     sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
-    sd_kat_ver="$6"
-    sd_kat_ver_short=$( echo "$sd_kat_ver" | sed 's/^katello-//' | sed 's/[^0-9.-]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16"
-    sd_sat_ver="$7"
-    if [[ "${sd_sat_ver}" == 'stream' ]]; then
-        sd_sat_ver_short=stream
-    elif [[ "$(echo "${sd_sat_ver}" | awk -F'.' '{print $(NF-2)}')" == 'stream' ]]; then
-        sd_sat_ver_short=stream
-    else
-        sd_sat_ver_short=$( echo "${sd_sat_ver}" | sed 's/^satellite-//' | sed 's/[^0-9.-]//g' | sed 's/^\([0-9]\+\.[0-9]\+\)\..*/\1/' | sed 's/^N\/A$/0.0/' )   # "satellite-6.6.0-1.el7.noarch" -> "6.6"
-    fi
+    sd_kat_rpm="$6"
+    [[ -n $sd_kat_rpm ]] ||
+        sd_kat_rpm="$( ansible $opts_adhoc \
+          -m ansible.builtin.shell \
+          -a 'rpm -q katello' \
+          satellite6 2>/dev/null |
+          tail -n 1 )"
+    sd_kat_ver_short="$( echo $sd_kat_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
+    sd_sat_rpm="$7"
+    [[ -n $sd_sat_rpm ]] ||
+        sd_sat_rpm="$( ansible $opts_adhoc \
+          -m ansible.builtin.shell \
+          -a 'rpm -q satellite' \
+          satellite6 2>/dev/null |
+          tail -n 1 )"
+    sd_sat_ver_short="$( echo $sd_sat_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
     sd_run="$8"
     sd_additional="$9"
     if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
@@ -235,9 +239,9 @@ function status_data_create() {
       "id=$sd_run" \
       "name=$sd_section/$sd_name" \
       "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
-      "parameters.katello_version=$sd_kat_ver" \
+      "parameters.katello_version=$sd_kat_rpm" \
       "parameters.katello_version-y-stream=$sd_kat_ver_short" \
-      "parameters.version=$sd_sat_ver" \
+      "parameters.version=$sd_sat_rpm" \
       "parameters.version-y-stream=$sd_sat_ver_short" \
       "parameters.run=$sd_run" \
       "parameters.hostname=$sd_hostname" \
@@ -308,10 +312,16 @@ function status_data_create() {
     ###status_data.py --status-data-file $sd_file --info
 
     # Create "results-dashboard-data" data file
+    if [[ "$sat_version" == 'stream' ]]; then
+        sd_sat_release=stream
+    else
+        sd_sat_release="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
+    fi
+    sd_sat_ver="$sd_sat_ver_short"
     set -x
     jq -n \
+      --arg release ${sd_sat_release} \
       --arg version ${sd_sat_ver} \
-      --arg release ${sd_sat_ver_short} \
       --arg date ${sd_start} \
       --arg link ${sd_link} \
       --arg result_id ${sd_run} \
@@ -343,8 +353,8 @@ function status_data_create() {
     # Enhance log file
     tmp=$( mktemp )
     echo "command: $sd_cli" >>$tmp
-    echo "satellite version: $sd_sat_ver" >>$tmp
-    echo "katello version: $sd_kat_ver" >>$tmp
+    echo "satellite version: $sd_sat_rpm" >>$tmp
+    echo "katello version: $sd_kat_rpm" >>$tmp
     echo "hostname: $sd_hostname" >>$tmp
     if [ "$sd_result" != 'ERROR' ]; then
         echo "result determination log:" >>$tmp
@@ -380,8 +390,8 @@ function junit_upload() {
     # Determine ReportPortal launch name
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
     if echo "$launch_name" | grep --quiet '%sat_ver%'; then
-        sat_ver="$( echo "$satellite_version" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
-        [ -z "$sat_ver" ] && sat_ver="$( echo "$katello_version" | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        sat_ver="$( echo $satellite_rpm | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        [ -z "$sat_ver" ] && sat_ver="$( echo $katello_rpm | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
         launch_name="$( echo "$launch_name" | sed "s/%sat_ver%/$sat_ver/g" )"
     fi
     launch_name="$( echo "$launch_name" | sed "s/[^a-zA-Z0-9._-]/_/g" )"
@@ -438,14 +448,15 @@ function c() {
     fi
     local end=$( date -u +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+
     measurement_add \
       "$@" \
       "$out" \
       "$rc" \
       "$start" \
       "$end" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker"
     return $rc
 }
@@ -463,14 +474,15 @@ function a() {
     fi
     local end=$( date -u +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+
     measurement_add \
       "ansible $opts_adhoc $( _format_opts "$@" )" \
       "$out" \
       "$rc" \
       "$start" \
       "$end" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker"
     return $rc
 }
@@ -497,14 +509,15 @@ function ap() {
     fi
     local end=$( date -u +%s )
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+
     measurement_add \
       "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
       "$out" \
       "$rc" \
       "$start" \
       "$end" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker"
     return $rc
 }
@@ -556,14 +569,15 @@ function e() {
     local passed=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )
     local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
+
     measurement_add \
       "experiment/reg-average.py '$grepper' '$log'" \
       "$log_report" \
       "$rc" \
       "$started_ts" \
       "$ended_ts" \
-      "$katello_version" \
-      "$satellite_version" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
       "$marker" \
       "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
@@ -596,6 +610,7 @@ function task_examine() {
         duration="$( awk -F'"' '/^results.tasks.duration=/ {printf ("%.0f", $2)}' ${log_report} )"
         head_tail_perc="$( awk -F'"' '/^results.tasks.percentage_removed=/ {printf ("%.2f", $2)}' ${log_report} )"
         log "Examined task ${task_id} and it has ${head_tail_perc} % of head/tail (ranging from ${started_ts} to ${ended_ts}) and has taken $duration seconds"
+
         measurement_add \
           "${command}" \
           "${log_report}" \
