@@ -205,6 +205,7 @@ function status_data_create() {
           satellite6 2>/dev/null |
           tail -n 1 )"
     sd_kat_ver_short="$( echo $sd_kat_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
+    sd_kat_ver_y="$( echo $sd_kat_ver_short | awk -F'.' '{print $1"."$2}' )"
     sd_sat_rpm="$7"
     [[ -n $sd_sat_rpm ]] ||
         sd_sat_rpm="$( ansible $opts_adhoc \
@@ -213,6 +214,7 @@ function status_data_create() {
           satellite6 2>/dev/null |
           tail -n 1 )"
     sd_sat_ver_short="$( echo $sd_sat_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
+    sd_sat_ver_y="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
     sd_run="$8"
     sd_additional="$9"
     if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
@@ -240,9 +242,9 @@ function status_data_create() {
       "name=$sd_section/$sd_name" \
       "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
       "parameters.katello_version=$sd_kat_rpm" \
-      "parameters.katello_version-y-stream=$sd_kat_ver_short" \
+      "parameters.katello_version-y-stream=$sd_kat_ver_y" \
       "parameters.version=$sd_sat_rpm" \
-      "parameters.version-y-stream=$sd_sat_ver_short" \
+      "parameters.version-y-stream=$sd_sat_ver_y" \
       "parameters.run=$sd_run" \
       "parameters.hostname=$sd_hostname" \
       "results.log=$sd_log" \
