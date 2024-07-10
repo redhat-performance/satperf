@@ -114,7 +114,7 @@ class SatelliteWebUIPerf(HttpUser):
         try:
             # csrf_token = self.client.cookies["csrf-token"]
             # <meta name="csrf-token" content="pN+PkZI8OHLvYlXPXisAbwRVXeSm8hcNk5LKuysAvD979wlbEPQX+/yn0PBouxkxChEAttUMUms0V9ANDrZyLQ==" />
-            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+/=]+?)\"", response.text).group(1)
+            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
         except AttributeError:
             logging.fatal("Unable to gather CSRF token")
             raise
