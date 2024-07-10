@@ -192,6 +192,26 @@ class SatelliteWebUIPerf(HttpUser):
     def katello_api_v2_packages_organization_id(self):
         _get(self.client, f"/katello/api/v2/packages?organization_id={self.satellite_org_id}&paged=true&search=", "\"results\":")
 
+    @task
+    def pub(self):
+        _get(self.client, "/pub", "<title>Index of /pub</title>")
+
+    @task
+    def api_ping(self):
+        _get(self.client, "/api/ping", "\"results\":")
+
+    @task
+    def pulp_api_v3_status(self):
+        _get(self.client, "/pulp/api/v3/status", "\"versions\":")
+
+    @task
+    def rhsm(self):
+        _get(self.client, "/rhsm", "\"consumers\"")
+
+    @task
+    def rhsm_status(self):
+        _get(self.client, "/rhsm/status", "\"mode\":")
+
 
 def doit(args, status_data):
     test_set = getattr(sys.modules[__name__], args.test_set)
