@@ -1,0 +1,145 @@
+- hosts: satellite6
+  vars_files: 
+   - Downloads/satperf.yaml
+  vars:
+   test_sync_repositories_count: 8
+   test_sync_repositories_product: "test_sync_repositories_product"
+   test_sync_repositories_upstream_url_template: "https://galaxy.ansible.com/"
+   test_sync_repositories_repo_template: "test_sync_repositories_repo*"
+   test_sync_repositories_max_sync_secs: 3600
+   test_sync_repositories_cv_template: "test_sync_repositories_cv*"
+   test_sync_repositories_le: "test_sync_repositories_le"
+   sat_user: admin
+   sat_pass: changeme
+   organization: Default Organization
+  tasks:
+   - name: "Create product"
+     ansible.builtin.command:
+        cmd: |
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" product create --organization "{{ organization }}" --name "{{ test_sync_repositories_product }}"
+     register: create_product
+     failed_when:
+        - create_product.rc != 0
+        - "'Name has already been taken for a product in this organization' not in create_product.stderr"
+     changed_when:
+        - create_product.rc == 0
+        - "'Product created' in create_product.stdout"
+
+   - name: "Create requirements file"
+     ansible.builtin.copy:
+      dest: "/tmp/blabllbl"
+      content: |
+       ---
+       collections:
+         - name: ansible.posix
+           version: 1.5.4
+         - name: ansible.utils
+           version: 5.0.0
+         - name: community.general
+           version: 9.1.0
+       ...
+
+   - name: "Create repos"
+     ansible.builtin.command:
+        cmd: |
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_repositories_product }}" --content-type ansible_collection --url "{{ test_sync_repositories_upstream_url_template }}"  --requirements "/tmp/blabllbl"  --name "{{ test_sync_repositories_repo_template | replace('*', item) }}" 
+     register: create_repo
+     loop: "{{ range(1, test_sync_repositories_count | int + 1) | list }}" 
+
+    # Sync
+   - name: "Start sync asynchronously"
+     ansible.builtin.command:
+        cmd: |
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_repositories_product }}" --name "{{ test_sync_repositories_repo_template | replace('*', item) }}" --async
+     loop: "{{ range(1, test_sync_repositories_count | int + 1) | list }}"
+     register: start_sync
+     ignore_errors: true
+
+   - name: "Check that start message is sane"
+     ansible.builtin.assert:
+        that: "'Repository is being synchronized in task' in item.stdout"
+        msg: 'Pass'
+        quiet: true
+     loop: "{{ start_sync.results }}"
+     loop_control:
+        label: "{{ test_sync_repositories_repo_template | replace('*', item.item) }}"
+
+   - name: "Wait for synces to finish"
+     ansible.builtin.command:
+        cmd: |
+          /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[6].split('.')[0] }}" "{{ test_sync_repositories_max_sync_secs }}"
+     loop: "{{ start_sync.results }}"
+     loop_control:
+        label: "{{ test_sync_repositories_repo_template | replace('*', item.item) }}"
+     register: wait_sync
+     ignore_errors: true
+
+   - name: "Print sync results"
+     ansible.builtin.debug:
+        msg: "SyncRepositories {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+     loop: "{{ wait_sync.results }}"
+     when: "item.rc is defined and item.rc == 0"
+
+   - name: "Create lifecycle environment"
+     ansible.builtin.command:
+        cmd: |
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" lifecycle-environment create --organization "{{ organization }}" --prior Library --name "{{ test_sync_repositories_le }}"
+     register: create_le
+
+   - name: "Create content views"
+     ansible.builtin.command:
+        cmd: |
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view create --organization "{{ organization }}" --name "{{ test_sync_repositories_cv_template | replace('*', item) }}"
+     register: create_cv
+     loop: "{{ range(1, test_sync_repositories_count | int + 1) | list }}"
+
+    # Publish
+   - name: "Publish content views"
+     ansible.builtin.command:
+        cmd: |
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view publish --async --organization "{{ organization }}" --name "{{ test_sync_repositories_cv_template | replace('*', item) }}"
+     register: start_publish
+     loop: "{{ range(1, test_sync_repositories_count | int + 1) | list }}"
+
+   - name: "Wait for publish to finish"
+     ansible.builtin.command:
+        cmd: |
+          /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_repositories_max_sync_secs }}"
+     loop: "{{ start_publish.results }}"
+     loop_control:
+        label: "{{ test_sync_repositories_cv_template | replace('*', item.item) }}"
+     register: wait_publish
+     ignore_errors: true
+
+   - name: "Print publish results"
+     ansible.builtin.debug:
+        msg: "PublishContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+     loop: "{{ wait_publish.results }}"
+     when: "item.rc is defined and item.rc == 0"
+
+    # Promote
+   - name: "Promote content views"
+     ansible.builtin.command:
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" content-view version promote --async --organization "{{ organization }}" --content-view "{{ test_sync_repositories_cv_template | replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_repositories_le }}"
+     register: start_promote
+     loop: "{{ range(1, test_sync_repositories_count | int + 1) | list }}"
+
+   - name: "Wait for promote to finish"
+     ansible.builtin.command:
+        cmd: |
+          /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[7].split('.')[0] }}" "{{ test_sync_repositories_max_sync_secs }}"
+     loop: "{{ start_promote.results }}"
+     loop_control:
+        label: "{{ test_sync_repositories_cv_template | replace('*', item.item) }}"
+     register: wait_promote
+     ignore_errors: true
+
+   - ansible.builtin.debug:
+        var: wait_promote
+
+   - name: "Print promote results"
+     ansible.builtin.debug:
+        msg: "PromoteContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+     loop: "{{ wait_promote.results }}"
+     when: "item.rc is defined and item.rc == 0"
+...
