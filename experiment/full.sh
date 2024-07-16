@@ -34,6 +34,9 @@ test_sync_iso_max_sync_secs="${PARAM_test_sync_iso_max_sync_secs:-600}"
 test_sync_docker_count="${PARAM_test_sync_docker_count:-8}"
 test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://registry-1.docker.io}"
 test_sync_docker_max_sync_secs="${PARAM_test_sync_docker_max_sync_secs:-600}"
+test_sync_ansible_collections_count="${test_sync_ansible_collections_count:-8}"
+test_sync_ansible_collections_upstream_url_template="${test_sync_ansible_collections_upstream_url_template:-https://galaxy.ansible.com/}"
+test_sync_ansible_collections_max_sync_secs="${test_sync_ansible_collections_max_sync_secs:-600}"
 
 ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
 ui_pages_duration="${PARAM_ui_pages_duration:-300}"
@@ -544,6 +547,19 @@ ap 82-test-sync-docker.log \
 e SyncRepositories $logs/82-test-sync-docker.log
 e PublishContentViews $logs/82-test-sync-docker.log
 e PromoteContentViews $logs/82-test-sync-docker.log
+
+
+section "Sync ansible collections"
+ap 83-test-sync-ansible-collections.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
+  -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
+  -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
+  playbooks/tests/sync-docker.yaml
+
+e SyncRepositories $logs/83-test-sync-ansible-collections.log
+e PublishContentViews $logs/83-test-sync-ansible-collections.log
+e PromoteContentViews $logs/83-test-sync-ansible-collections.log
 
 
 section "Delete all content hosts"
