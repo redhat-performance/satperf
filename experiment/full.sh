@@ -65,9 +65,29 @@ skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/r
 section "Create LCE(s)"
 prior='Library'
 for lce in $lces; do
-    h 09-lce-create-${lce}.log "lifecycle-environment create --organization '{{ sat_org }}' --prior '$prior' --name '$lce'"
+    # LCE creation
+    h 05-lce-create-${lce}.log "lifecycle-environment create --organization '{{ sat_org }}' --name '$lce' --prior '$prior'"
 
     prior="${lce}"
+done
+
+
+section "Create CCV(s) and AK(s)"
+for rel in $rels; do
+    # CCV creation
+    ccv="CCV_$rel"
+
+    h 05-ccv-create-${rel}.log "content-view create --organization '{{ sat_org }}' --name '$ccv' --composite --auto-publish yes"
+
+    prior='Library'
+    for lce in $lces; do
+        # AK creation
+        ak="AK_${rel}_${lce}"
+
+        h 05-ak-create-${rel}-${lce}.log "activation-key create --organization '{{ sat_org }}' --name '$ak' --content-view '$ccv' --lifecycle-environment '$lce'"
+
+        prior="${lce}"
+    done
 done
 
 
@@ -180,8 +200,6 @@ for rel in $rels; do
     h 13b-cv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$cv_os'"
 
     # CCV
-    h 13c-ccv-create-${rel}.log "content-view create --organization '{{ sat_org }}' --composite --auto-publish yes --name '$ccv'"
-
     h 13c-ccv-component-add-${rel}-os.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
     h 13c-ccv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
@@ -376,9 +394,6 @@ for rel in $rels; do
 
         # CCV promotion to LCE
         h 38-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-
-        # AK creation
-        h 39-ak-create-${rel}-${lce}.log "activation-key create --content-view '$ccv' --lifecycle-environment '$lce' --name '$ak' --organization '{{ sat_org }}'"
 
         # Enable 'Satellite Client' repo in AK
         id="$( h_out "--no-headers --csv activation-key list --organization '{{ sat_org }}' --search 'name = \"$ak\"' --fields id"  | tail -n1 )"
