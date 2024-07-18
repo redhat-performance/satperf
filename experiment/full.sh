@@ -81,6 +81,14 @@ for rel in $rels; do
 
     prior='Library'
     for lce in $lces; do
+        # Promotion to LCE(s)
+        tmp="$( mktemp )"
+        h_out "--no-headers --csv content-view version list --organization '{{ sat_org }}' --content-view '$ccv'" | grep '^[0-9]\+,' >$tmp
+        version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
+        rm -f $tmp
+
+        h 05-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+
         # AK creation
         ak="AK_${rel}_${lce}"
 
