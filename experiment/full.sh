@@ -358,21 +358,18 @@ for rel in $rels; do
     case $rel in
         rhel6)
             sat_client_repo_name='Satellite Client for RHEL 6'
-            sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
             ;;
         rhel7)
             sat_client_repo_name='Satellite Client for RHEL 7'
-            sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
             ;;
         rhel8)
             sat_client_repo_name='Satellite Client for RHEL 8'
-            sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
             ;;
         rhel9)
             sat_client_repo_name='Satellite Client for RHEL 9'
-            sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
             ;;
     esac
+    sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
     content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$sat_client_repo_name\"' --fields 'Content label'" | tail -n1 )"
 
     # Satellite Client CV
