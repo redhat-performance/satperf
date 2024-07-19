@@ -62,39 +62,42 @@ e ManifestDelete $logs/01-manifest-excercise.log
 skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 
 
-section "Create LCE(s)"
+section "Create LCE(s), CCV(s) and AK(s)"
+# LCE creation
 prior='Library'
 for lce in $lces; do
-    # LCE creation
     h 05-lce-create-${lce}.log "lifecycle-environment create --organization '{{ sat_org }}' --name '$lce' --prior '$prior'"
 
-    prior="${lce}"
+    prior="$lce"
 done
 
-
-section "Create CCV(s) and AK(s)"
+# CCV creation
 for rel in $rels; do
-    # CCV creation
     ccv="CCV_$rel"
 
     h 05-ccv-create-${rel}.log "content-view create --organization '{{ sat_org }}' --name '$ccv' --composite --auto-publish yes"
+    h 05-ccv-publish-${rel}.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+
+    # CCV promotion to LCE(s)
+    prior='Library'
+    for lce in $lces; do
+        h 05-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+
+        prior="$lce"
+    done
+done
+
+# AK creation
+for rel in $rels; do
+    ccv="CCV_$rel"
 
     prior='Library'
     for lce in $lces; do
-        # Promotion to LCE(s)
-        tmp="$( mktemp )"
-        h_out "--no-headers --csv content-view version list --organization '{{ sat_org }}' --content-view '$ccv'" | grep '^[0-9]\+,' >$tmp
-        version="$( head -n1 $tmp | cut -d ',' -f 3 | tr '\n' ',' | sed 's/,$//' )"
-        rm -f $tmp
-
-        h 05-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-
-        # AK creation
         ak="AK_${rel}_${lce}"
 
         h 05-ak-create-${rel}-${lce}.log "activation-key create --organization '{{ sat_org }}' --name '$ak' --content-view '$ccv' --lifecycle-environment '$lce'"
 
-        prior="${lce}"
+        prior="$lce"
     done
 done
 
@@ -207,7 +210,7 @@ for rel in $rels; do
     h 13b-cv-create-${rel}-os.log "content-view create --organization '{{ sat_org }}' --name '$cv_os' --repository-ids '$os_rids'"
     h 13b-cv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$cv_os'"
 
-    # CCV
+    # CCV with OS
     h 13c-ccv-component-add-${rel}-os.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
     h 13c-ccv-publish-${rel}-os.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
@@ -221,7 +224,7 @@ for rel in $rels; do
     for lce in $lces; do
         h 13d-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
-        prior="${lce}"
+        prior="$lce"
     done
 done
 
@@ -248,7 +251,7 @@ for lce in BenchLifeEnvAAA BenchLifeEnvBBB BenchLifeEnvCCC; do
     skip_measurement='true' h 22-le-create-${prior}-${lce}.log "lifecycle-environment create --organization '{{ sat_org }}' --prior '$prior' --name '$lce'"
     h 23-cv-promote-big-${prior}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
-    prior="${lce}"
+    prior="$lce"
     (( counter++ ))
 done
 
@@ -384,7 +387,7 @@ for rel in $rels; do
     h 34-cv-create-${rel}-sat-client.log "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
     h 35-cv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
-    # CCV
+    # CCV with Satellite Client
     h 36-ccv-component-add-${rel}-sat-client.log "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
     h 37-ccv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
@@ -404,7 +407,7 @@ for rel in $rels; do
         id="$( h_out "--no-headers --csv activation-key list --organization '{{ sat_org }}' --search 'name = \"$ak\"' --fields id"  | tail -n1 )"
         h 40-ak-content-override-${rel}-${lce}.log "activation-key content-override --organization '{{ sat_org }}' --id $id --content-label $content_label --override-name 'enabled' --value 1"
 
-        prior="${lce}"
+        prior="$lce"
     done
 done
 unset skip_measurement
@@ -484,7 +487,7 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
       playbooks/tests/registrations.yaml
-      e Register $logs/48-register-$concurrent_registrations.log
+      e Register $logs/48-register-${concurrent_registrations}.log
 
     (( total_registered += concurrent_registrations ))
 
