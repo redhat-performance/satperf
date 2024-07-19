@@ -108,10 +108,10 @@ function generic_environment_check() {
         ap 00-remove-hosts-if-any.log \
           playbooks/satellite/satellite-remove-hosts.yaml
 
-        number_container_hosts=$( ansible $opts_adhoc \
+        number_container_hosts="$( ansible $opts_adhoc \
           --list-hosts \
           container_hosts 2>/dev/null |
-          grep -v '^  hosts' | wc -l | sed 's/^ *//' )
+          grep -cv '^  hosts' )"
         if (( number_container_hosts > 0 )); then
             ap 00-tierdown-containers.log \
               ansible-container-host-mgr/tierdown.yaml
