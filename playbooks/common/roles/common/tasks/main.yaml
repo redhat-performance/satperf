@@ -6,7 +6,7 @@
     msg: "Satellite not specified or too many of them specified"
   when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
 
-- name: "Get group name of our location"
+- name: "Get group name of current location"
   ansible.builtin.set_fact:
     location_groupname: "location_{{ location | lower }}"
 
@@ -130,7 +130,7 @@
     regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].public_ip }} {{ item }}"
     state: present
-  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules']) | intersect(groups[location_groupname]) }}"
+  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
   when:
     - "'container_hosts' in group_names"
     - hostvars[item].public_ip is defined
@@ -151,7 +151,7 @@
     regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].private_ip }} {{ item }}"
     state: present
-  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules']) | intersect(groups[location_groupname]) }}"
+  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
   when:
     - "'container_hosts' in group_names"
     - private_ip is defined
