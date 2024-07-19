@@ -495,6 +495,10 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
     skip_measurement='true' h 56-rex-date-ansible-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
     jsr $logs/56-rex-date-ansible-${total_registered}.log
     j $logs/56-rex-date-ansible-${total_registered}.log
+
+    skip_measurement='true' h 57-rex-katello_package_install-podman-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ container'"
+    jsr $logs/57-rex-katello_package_install-podman-${total_registered}.log
+    j $logs/57-rex-katello_package_install-podman-${total_registered}.log
 done
 grep Register $logs/48-register-*.log >$logs/48-register-overall.log
 e Register $logs/48-register-overall.log
