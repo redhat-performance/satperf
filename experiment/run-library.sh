@@ -379,6 +379,11 @@ function status_data_create() {
 }
 
 function junit_upload() {
+    if [[ "$GOLDEN" != 'true' ]]; then
+        echo "Build has not set GOLDEN variable, so results won't be uploaded to ReportPortal"
+        return 0
+    fi
+
     # Upload junit.xml into ReportPortal for test result investigation
 
     # Make the file available for Jenkins on the same path every time
