@@ -702,7 +702,7 @@ function extract_task() {
     # anything if more task IDs are found or in case of any other error.
     log="$1"
     candidates=$( grep '^Task [0-9a-zA-Z-]\+ running' "$log" | cut -d ' ' -f 2 | uniq )
-    # Only print f we have exactly one task ID
+    # Only print if we have exactly one task ID
     if [ $( echo "$candidates" | wc -l | cut -d ' ' -f 1 ) -eq 1 ]; then
         echo "$candidates"
         return 0
