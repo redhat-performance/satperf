@@ -16,7 +16,7 @@
         cmd: |
           rm -f /etc/yum.repos.d/*.repo
 
-    - name: Upload script to content host
+    - name: Upload host registration script to content host
       ansible.builtin.copy:
         src: /root/host-registration.{{ ak }}.sh
         dest: /root/host-registration.sh
@@ -63,4 +63,10 @@
         name: rhsmcertd
         state: started
         enabled: true
+
+    - name: Upload podman pull script to content host
+      ansible.builtin.copy:
+        src: /root/podman-pull.sh
+        dest: /root/podman-pull.sh
+        mode: '0500'
 ...

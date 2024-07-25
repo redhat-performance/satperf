@@ -38,15 +38,21 @@
 
 - name: "Download host registration script from registration target"
   ansible.builtin.get_url:
-    url: http://{{ tests_registration_target }}/pub/host-registration.{{ ak }}.sh
-    dest: /root/host-registration.{{ ak }}.sh
+    url: "http://{{ tests_registration_target }}/pub/host-registration.{{ ak }}.sh"
+    dest: "/root/host-registration.{{ ak }}.sh"
     mode: '0400'
     force: true
 
-- name: "Distribute content host registration script"
+- name: "Distribute content host registration playbook"
   throttle: 8
   ansible.builtin.copy:
     src: host-registration.yaml
     dest: /root/host-registration.yaml
+    force: true
+
+- name: "Distribute podman pull script"
+  ansible.builtin.template:
+    src: podman-pull.sh.j2
+    dest: /root/podman-pull.sh
     force: true
 ...
