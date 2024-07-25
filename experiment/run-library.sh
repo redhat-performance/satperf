@@ -683,30 +683,30 @@ function j() {
 
 function jsr() {
     # Parse job invocation ID from the log and show its execution success ratio
-    local log="$1"
+    local log=$1
     local timeout="${2:-10}"
     local job_invocation_id="$( extract_job_invocation "$log" )"
-    [[ -n "${job_invocation_id}" ]] || return 1
+    [[ -n $job_invocation_id ]] || return 1
     local satellite_host="$( ansible $opts_adhoc \
       --list-hosts \
       satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//')"
-    [[ -n "${satellite_host}" ]] || return 2
+      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    [[ -n $satellite_host ]] || return 2
     local satellite_creds="$( ansible $opts_adhoc \
       -m ansible.builtin.debug \
       -a "msg={{ sat_user }}:{{ sat_pass }}" \
       satellite6 2>/dev/null |
       grep '"msg":' | cut -d '"' -f 4 )"
-    [[ -n "${satellite_creds}" ]] || return 2
-    local satellite_user="$(echo ${satellite_creds} | cut -d':' -f1)"
-    local satellite_pass="$(echo ${satellite_creds} | cut -d':' -f2)"
+    [[ -n $satellite_creds ]] || return 2
+    local satellite_user="$( echo $satellite_creds | cut -d':' -f1 )"
+    local satellite_pass="$( echo $satellite_creds | cut -d':' -f2 )"
 
     scripts/wait_for_job.py \
-      --hostname ${satellite_host} \
-      --username ${satellite_user} \
-      --password ${satellite_pass} \
-      --job-id ${job_invocation_id} \
-      --timeout ${timeout}
+      --hostname $satellite_host \
+      --username $satellite_user \
+      --password $satellite_pass \
+      --job-id $job_invocation_id \
+      --timeout $timeout
 
     return 0
 }
