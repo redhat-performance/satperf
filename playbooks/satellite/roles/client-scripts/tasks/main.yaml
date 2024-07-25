@@ -1,7 +1,7 @@
 ---
 - name: "Set default variable(s) values"
   ansible.builtin.set_fact:
-    ak: "{{ ak | default('AK') }}"
+    aks: "{{ aks | default('AK') }}"
 
 # - name: "Get group name of our location"
 #   ansible.builtin.set_fact:
@@ -38,10 +38,11 @@
 
 - name: "Download host registration script from registration target"
   ansible.builtin.get_url:
-    url: "http://{{ tests_registration_target }}/pub/host-registration.{{ ak }}.sh"
-    dest: "/root/host-registration.{{ ak }}.sh"
+    url: "http://{{ tests_registration_target }}/pub/host-registration.{{ item }}.sh"
+    dest: "/root/host-registration.{{ item }}.sh"
     mode: '0400'
     force: true
+  loop: "{{ aks | split }}"
 
 - name: "Distribute content host registration playbook"
   throttle: 8
