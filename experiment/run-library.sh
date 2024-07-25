@@ -450,17 +450,17 @@ function _format_opts() {
 }
 
 function c() {
-    local out=$logs/$1; shift
+    local out="$logs/$1"; shift
     mkdir -p $( dirname $out )
-    local start=$( date -u +%s )
+    local start="$( date -u +%s )"
     log "Start '$*' with log in $out"
     if $run_lib_dryrun; then
-        log "FAKE command RUN"
+        log 'FAKE command RUN'
         local rc=0
     else
         eval "$@" &>$out && local rc=$? || local rc=$?
     fi
-    local end=$( date -u +%s )
+    local end="$( date -u +%s )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
 
     measurement_add \
@@ -478,7 +478,7 @@ function c() {
 function a() {
     local out=$logs/$1; shift
     mkdir -p $( dirname $out )
-    local start=$( date -u +%s )
+    local start="$( date -u +%s )"
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log "FAKE ansible RUN"
