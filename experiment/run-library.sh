@@ -177,9 +177,9 @@ function status_data_create() {
     (
     set -x
 
-    [ -z "$PARAM_elasticsearch_host" ] && return 0
+    [[ -n $PARAM_elasticsearch_host ]] || return 0
 
-    if [ -z "$4" -o -z "$5" ]; then
+    if [ -z $4 -o -z $5 ]; then
         echo "WARNING: Either start '$4' or end '$5' timestamps are empty, not going to create status data" >&2
         return 1
     fi
@@ -188,15 +188,15 @@ function status_data_create() {
     source venv/bin/activate
 
     # Load variables
-    sd_section=${SECTION:-default}
-    sd_cli="$1"
-    sd_log="$2"
-    sd_name=$( basename $sd_log .log )   # derive testcase name from log name which is descriptive
-    sd_rc="$3"
+    sd_section="${SECTION:-default}"
+    sd_cli=$1
+    sd_log=$2
+    sd_name="$( basename $sd_log .log )"   # derive testcase name from log name which is descriptive
+    sd_rc=$3
     sd_start="$( date -u -Iseconds -d @$4 )"
     sd_end="$( date -u -Iseconds -d @$5 )"
     sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
-    sd_kat_rpm="$6"
+    sd_kat_rpm=$6
     [[ -n $sd_kat_rpm ]] ||
         sd_kat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
@@ -205,7 +205,7 @@ function status_data_create() {
           tail -n 1 )"
     sd_kat_ver_short="$( echo $sd_kat_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
     sd_kat_ver_y="$( echo $sd_kat_ver_short | awk -F'.' '{print $1"."$2}' )"
-    sd_sat_rpm="$7"
+    sd_sat_rpm=$7
     [[ -n $sd_sat_rpm ]] ||
         sd_sat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
@@ -214,22 +214,25 @@ function status_data_create() {
           tail -n 1 )"
     sd_sat_ver_short="$( echo $sd_sat_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
     sd_sat_ver_y="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
-    sd_run="$8"
-    sd_additional="$9"
-    if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
+    sd_run=$8
+    sd_additional=$9
+    if [ -n $STATUS_DATA_FILE -a -f $STATUS_DATA_FILE ]; then
         sd_file=$STATUS_DATA_FILE
     else
         sd_file="$sd_log.json"
-        rm -f "$sd_file"
+        rm -f $sd_file
     fi
-    if [ -n "${RDD_FILE}" -a -f "${RDD_FILE}" ]; then
-        rdd_file=${RDD_FILE}
+    if [ -n $RDD_FILE -a -f $RDD_FILE ]; then
+        rdd_file=$RDD_FILE
     else
-        rdd_file="${sd_log}.rdd.json"
-        rm -f "${rdd_file}"
+        rdd_file="$sd_log.rdd.json"
+        rm -f $rdd_file
     fi
-    if [ -n "$PARAM_inventory" ]; then
-        sd_hostname="$( ansible $opts_adhoc --list-hosts satellite6 2>/dev/null | tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
+    if [ -n $PARAM_inventory ]; then
+        sd_hostname="$( ansible $opts_adhoc \
+          --list-hosts \
+          satellite6 2>/dev/null |
+          tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
     fi
     workdir_url="${PARAM_workdir_url:-https://workdir-exporter.example.com/workspace}"
     sd_link="${workdir_url}/${JOB_NAME:-NA}/${sd_log}"
@@ -258,57 +261,58 @@ function status_data_create() {
     set +x
 
     # Add monitoring data to the status data file
-    if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
+    if [ -n $PARAM_cluster_read_config -a -n $PARAM_grafana_host ]; then
         set -x
         status_data.py -d --status-data-file $sd_file \
-          --additional "$PARAM_cluster_read_config" \
-          --monitoring-start "$sd_start" \
-          --monitoring-end "$sd_end" \
-          --grafana-host "$PARAM_grafana_host" \
-          --grafana-port "$PARAM_grafana_port" \
-          --grafana-prefix "$PARAM_grafana_prefix" \
-          --grafana-datasource "$PARAM_grafana_datasource" \
-          --grafana-interface "$PARAM_grafana_interface" \
-          --grafana-token "$PARAM_grafana_token" \
-          --grafana-node "$PARAM_grafana_node"
+          --additional $PARAM_cluster_read_config \
+          --monitoring-start $sd_start \
+          --monitoring-end $sd_end \
+          --grafana-host $PARAM_grafana_host \
+          --grafana-port $PARAM_grafana_port \
+          --grafana-prefix $PARAM_grafana_prefix \
+          --grafana-datasource $PARAM_grafana_datasource \
+          --grafana-interface $PARAM_grafana_interface \
+          --grafana-token $PARAM_grafana_token \
+          --grafana-node $PARAM_grafana_node
         set +x
     fi
 
     # Based on historical data, determine result of this test
-    sd_result_log=$( mktemp )
-    if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
+    sd_result_log="$( mktemp )"
+    if [ $sd_rc -eq 0 -a -n $PARAM_investigator_config ]; then
         export sd_section
         export sd_name
         set +e
         set -x
         pass_or_fail.py \
-          --config "$PARAM_investigator_config" \
-          --current-file "$sd_file" 2>&1 | tee $sd_result_log
+          --config $PARAM_investigator_config \
+          --current-file $sd_file 2>&1 | tee $sd_result_log
         pof_rc=$?
         set +x
         set -e
-        if [[ $pof_rc -eq 0 ]]; then
-            sd_result='PASS'
-        elif [[ $pof_rc -eq 1 ]]; then
-            sd_result='FAIL'
+        if (( pof_rc == 0 )); then
+            sd_result=PASS
+        elif (( pof_rc == 1 )); then
+            sd_result=FAIL
         else
-            sd_result='ERROR'
+            sd_result=ERROR
         fi
     else
-        sd_result='ERROR'
+        sd_result=ERROR
     fi
 
     # Add result to the status data so it is complete
-    status_data.py --status-data-file $sd_file --set "result=$sd_result"
+    status_data.py --status-data-file $sd_file --set \
+      "result=$sd_result"
 
     # Upload status data to ElasticSearch
     url="http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/${PARAM_elasticsearch_index:-satellite_perf_index}/${PARAM_elasticsearch_mapping:-_doc}/"
     echo "INFO: POSTing '$sd_file' to '$url'"
     curl --silent \
       -X POST \
-      -H "Content-Type: application/json" \
+      -H 'Content-Type: application/json' \
       --data "@$sd_file" \
-      "$url" |
+      $url |
       python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
     ###status_data.py --status-data-file $sd_file --info
 
@@ -318,16 +322,16 @@ function status_data_create() {
     else
         sd_sat_release="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
     fi
-    sd_sat_ver="$sd_sat_ver_short"
+    sd_sat_ver=$sd_sat_ver_short
     set -x
     jq -n \
-      --arg release ${sd_sat_release} \
-      --arg version ${sd_sat_ver} \
-      --arg date ${sd_start} \
-      --arg link ${sd_link} \
-      --arg result_id ${sd_run} \
-      --arg test ${sd_name} \
-      --arg result ${sd_result} \
+      --arg release $sd_sat_release \
+      --arg version $sd_sat_ver \
+      --arg date $sd_start \
+      --arg link $sd_link \
+      --arg result_id $sd_run \
+      --arg test $sd_name \
+      --arg result $sd_result \
       '{
         "group": "Core Platforms",
         "product": "Red Hat Satellite",
@@ -338,7 +342,7 @@ function status_data_create() {
         "result_id": $result_id,
         "test": $test,
         "result": $result,
-      }' >${rdd_file}
+      }' >$rdd_file
     set +x
 
     # Upload status data to "results-dashboard-data" ElasticSearch
@@ -346,29 +350,33 @@ function status_data_create() {
     echo "INFO: POSTing results data to '$url'"
     curl --silent \
       -X POST \
-      -H "Content-Type: application/json" \
-      --data "@${rdd_file}" \
-      "$url" |
+      -H 'Content-Type: application/json' \
+      --data "@$rdd_file" \
+      $url |
       python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
 
     # Enhance log file
-    tmp=$( mktemp )
+    tmp="$( mktemp )"
     echo "command: $sd_cli" >>$tmp
     echo "satellite version: $sd_sat_rpm" >>$tmp
     echo "katello version: $sd_kat_rpm" >>$tmp
     echo "hostname: $sd_hostname" >>$tmp
-    if [ "$sd_result" != 'ERROR' ]; then
-        echo "result determination log:" >>$tmp
-        cat "$sd_result_log" >>$tmp
+    if [[ "$sd_result" != 'ERROR' ]]; then
+        echo 'result determination log:' >>$tmp
+        cat $sd_result_log >>$tmp
     fi
-    echo "" >>$tmp
-    cat "$sd_log" >>$tmp
+    echo >>$tmp
+    cat $sd_log >>$tmp
 
     # Create junit.xml file
-    junit_cli.py --file $logs/junit.xml add --suite "$sd_section" \
-      --name "$sd_name" --result "$sd_result" --out "$tmp" \
-      --start "$sd_start" --end "$sd_end"
-    rm -f ${sd_result_log} $tmp
+    junit_cli.py --file $logs/junit.xml add \
+      --suite $sd_section \
+      --name $sd_name \
+      --result $sd_result \
+      --out $tmp \
+      --start $sd_start \
+      --end $sd_end
+    rm -f $sd_result_log $tmp
 
     # Deactivate tools virtualenv
     deactivate
