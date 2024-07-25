@@ -572,16 +572,16 @@ function h_out() {
 
 function e() {
     # Examine log for specific measure using reg-average.py
-    local grepper="$1"
-    local log="$2"
-    local log_report="$( echo "$log" | sed "s/\.log$/-$grepper.log/" )"
+    local grepper=$1
+    local log=$2
+    local log_report="$( echo $log | sed "s/\.log$/-$grepper.log/" )"
     experiment/reg-average.py "$grepper" "$log" &>$log_report
     local rc=$?
-    local started_ts=$( grep "^min in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
-    local ended_ts=$( grep "^max in" $log_report | tail -n 1 | cut -d ' ' -f 4 )
-    local duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 4 )
-    local passed=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )
-    local avg_duration=$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )
+    local started_ts="$( grep '^min in' $log_report | tail -n 1 | cut -d ' ' -f 4 )"
+    local ended_ts="$( grep '^max in' $log_report | tail -n 1 | cut -d ' ' -f 4 )"
+    local duration="$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 4 )"
+    local passed="$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )"
+    local avg_duration="$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )"
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
 
     measurement_add \
