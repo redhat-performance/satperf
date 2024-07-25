@@ -430,9 +430,9 @@ function log() {
 
 function section() {
     name="${1:-default}"
-    label="$( echo "$name" | sed 's/[^a-zA-Z0-9_-]/_/g' | sed 's/_\+/_/g' )"
+    label="$( echo $name | sed 's/[^a-zA-Z0-9_-]/_/g' | sed 's/_\+/_/g' )"
     log "===== $name ====="
-    export SECTION="$label"
+    export SECTION=$label
 }
 
 function _format_opts() {
