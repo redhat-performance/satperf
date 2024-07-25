@@ -3,12 +3,10 @@
   hosts: satellite6:capsules
   gather_facts: false
   vars:
-    hgrg: "host-registration generate-command --organization '{{ organization }}' --activation-key {{ ak }} --location {{ location }} --insecure true --force true"
+    aks: "{{ aks | default('AK') | split }}"
+    hgrg: "host-registration generate-command --organization '{{ organization }}' --location {{ location }} --insecure true --force true"
+    location_groupname: "location_{{ location | lower }}"
   tasks:
-    - name: "Get group name of our location"
-      ansible.builtin.set_fact:
-        location_groupname: "location_{{ location | lower }}"
-
     - name: "Get capsule ID"
       # XXX: Submit PR
       throttle: 1
@@ -72,17 +70,19 @@
       throttle: 1
       ansible.builtin.command:
         cmd: |
-          hammer -u {{ sat_user }} -p {{ sat_pass }} {{ hgrg }}
+          hammer -u {{ sat_user }} -p {{ sat_pass }} {{ hgrg }} --activation-key {{ item }}
+      loop: "{{ aks | split }}"
       register: cmd
       delegate_to: "{{ groups['satellite6'] | first }}"
 
     - name: "Copy the output of the the host registration command to the Apache pub directory"
       ansible.builtin.copy:
-        content: "{{ cmd.stdout }}"
-        dest: /var/www/html/pub/host-registration.{{ ak }}.sh
+        content: "{{ item.stdout }}\n"
+        dest: /var/www/html/pub/host-registration.{{ item.item }}.sh
         mode: '0644'
+      loop: "{{ cmd.results }}"
       when:
-        - cmd.rc == 0
+        - item.rc == 0
 
     - name: "Set name of first capsule"
       ansible.builtin.set_fact:
@@ -90,14 +90,15 @@
       when:
         - "'capsule_lbs' in groups"
         - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
-        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostnameme
 
     - name: "Download host registration script from the first capsule"
       ansible.builtin.get_url:
-        url: http://{{ first_capsule }}/pub/host-registration.{{ ak }}.sh
-        dest: /var/www/html/pub/host-registration.{{ ak }}.sh
+        url: http://{{ first_capsule }}/pub/host-registration.{{ item }}.sh
+        dest: /var/www/html/pub/host-registration.{{ item }}.sh
         mode: '0644'
         force: true
+      loop: "{{ aks | split }}"
       when:
         - "'capsule_lbs' in groups"
         - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
