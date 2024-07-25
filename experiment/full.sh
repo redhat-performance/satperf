@@ -572,7 +572,7 @@ ap 83-test-sync-ansible-collections.log \
   -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
   -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
   -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
-  playbooks/tests/sync-docker.yaml
+  playbooks/tests/sync-ansible-collections.yaml
 
 e SyncRepositories $logs/83-test-sync-ansible-collections.log
 e PublishContentViews $logs/83-test-sync-ansible-collections.log
