@@ -448,7 +448,7 @@ e PromoteContentViews $logs/83-test-sync-ansible-collections.log
 
 
 export skip_measurement='true'
-section "Push content to capsules"   # We just added up2date content from CDN and $sat_client_product, so no reason to measure this now
+section "Push content to capsules"
 ap 14b-capsync-populate.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
