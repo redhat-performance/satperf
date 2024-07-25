@@ -646,11 +646,11 @@ function task_examine() {
 
 function t() {
     # Parse task ID from the log and examine the task
-    local log="$1"
+    local log=$1
     local task_id="$( extract_task "$log" )"
-    [ -z "$task_id" ] && return 1
+    [[ -n $task_id ]] || return 1
 
-    task_examine "$log" $task_id "Investigating task $task_id"
+    task_examine "$log" "$task_id" "Investigating task $task_id"
 }
 
 function j() {
