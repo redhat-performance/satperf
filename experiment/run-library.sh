@@ -598,46 +598,48 @@ function e() {
 
 function task_examine() {
     # Show task duration without outliners
-    local log="$1"
-    local task_id="$2"
-    [[ -n ${task_id} ]] || return 1
+    local log=$1
+    local task_id=$2
+    [[ -n $task_id ]] || return 1
     local command="${3:-N/A}"
     local timeout="${4:-10}"
-    local satellite_host="$( ansible ${opts_adhoc} \
+    local satellite_host="$( ansible $opts_adhoc \
       --list-hosts \
       satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//')"
-    [[ -n ${satellite_host} ]] || return 2
-    local log_report="$( echo "$log" | sed 's/\.log$/-duration.log/' )"
+      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    [[ -n $satellite_host ]] || return 2
+    local log_report="$( echo $log | sed 's/\.log$/-duration.log/' )"
 
     scripts/get-task-fuzzy-duration.py \
-      --hostname "${satellite_host}" \
-      --task-id "${task_id}" \
-      --timeout "${timeout}" \
+      --hostname $satellite_host \
+      --task-id $task_id \
+      --timeout $timeout \
       --percentage 0 \
       --output status-data \
       &>${log_report}
     local rc=$?
     if (( rc == 0 )); then
-        started_ts="$( date -d "$( awk -F'"' '/^results.tasks.start=/ {printf ("%s", $2)}' ${log_report} )" +%s )"
-        ended_ts="$( date -d "$( awk -F'"' '/^results.tasks.end=/ {printf ("%s", $2)}' ${log_report} )" +%s )"
-        duration="$( awk -F'"' '/^results.tasks.duration=/ {printf ("%.0f", $2)}' ${log_report} )"
-        head_tail_perc="$( awk -F'"' '/^results.tasks.percentage_removed=/ {printf ("%.2f", $2)}' ${log_report} )"
-        log "Examined task ${task_id} and it has ${head_tail_perc} % of head/tail (ranging from ${started_ts} to ${ended_ts}) and has taken $duration seconds"
+        started="$( awk -F'"' '/^results.tasks.start=/ {printf ("%s", $2)}' $log_report )"
+        started_ts="$( date -d $started +%s )"
+        ended="$( awk -F'"' '/^results.tasks.end=/ {printf ("%s", $2)}' $log_report )"
+        ended_ts="$( date -d $ended +%s )"
+        duration="$( awk -F'"' '/^results.tasks.duration=/ {printf ("%.0f", $2)}' $log_report )"
+        head_tail_perc="$( awk -F'"' '/^results.tasks.percentage_removed=/ {printf ("%.2f", $2)}' $log_report )"
+        log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts) and has taken $duration seconds"
 
         measurement_add \
-          "${command}" \
-          "${log_report}" \
+          "$command" \
+          "$log_report" \
           "$rc" \
-          "${started_ts}" \
-          "${ended_ts}" \
-          "${katello_version}" \
-          "${satellite_version}" \
+          "$started_ts" \
+          "$ended_ts" \
+          "$katello_version" \
+          "$satellite_version" \
           "$marker" \
-          "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' ${log_report} )"
+          "$( grep '^results.tasks.[a-zA-Z0-9_]*="[^"]*"$' $log_report )"
         return 0
     else
-        log "There were errors examining the task ${task_id}. Please check $log and ${log_report} log files"
+        log "There were errors examining the task $task_id. Please check $log and $log_report log files"
         return 1
     fi
 }
