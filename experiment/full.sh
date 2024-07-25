@@ -405,7 +405,7 @@ for rel in $rels; do
         rhel8|rhel9)
             rhsop_repo_name="rhosp-${rel}/openstack-base"
 
-            h 40-repository-create-rhosp-${rel}_openstack-base.log "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '{{ rhosp_registry_username }}' --upstream-password '{{ rhosp_registry_password }}"
+            h 40-repository-create-rhosp-${rel}_openstack-base.log "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '{{ rhosp_registry_username }}' --upstream-password '{{ rhosp_registry_password }}'"
             h 40-repository-sync-rhosp-${rel}_openstack-base.log "repository synchronize --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name'" &
 
             rhosp_rids="$( get_repo_id '{{ sat_org }}' "$rhosp_product" "$rhsop_repo_name" )"
