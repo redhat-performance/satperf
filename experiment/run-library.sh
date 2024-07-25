@@ -740,41 +740,41 @@ function extract_job_invocation() {
 
 function table_row() {
     # Format row for results table with average duration
-    local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
-    local description="$2"
-    local grepper="$3"
+    local identifier="/$( echo $1 | sed 's/\./\./g' ),"
+    local description=$2
+    local grepper=$3
     export IFS=$'\n'
     local count=0
     local sum=0
-    local note=""
+    local note=''
     for row in $( grep "$identifier" $logs/measurement.log ); do
-        local rc="$( echo "$row" | measurement_row_field 3 )"
-        if [ "$rc" -ne 0 ]; then
+        local rc="$( echo $row | measurement_row_field 3 )"
+        if (( rc != 0 )); then
             echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
             continue
         fi
-        if [ -n "$grepper" ]; then
-            local log="$( echo "$row" | measurement_row_field 2 )"
-            local out=$( experiment/reg-average.py "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )
-            local passed=$( echo "$out" | cut -d ' ' -f 6 )
-            [ -z "$note" ] && note="Number of passed:"
+        if [ -n $grepper ]; then
+            local log="$( echo $row | measurement_row_field 2 )"
+            local out="$( experiment/reg-average.py "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )"
+            local passed="$( echo $out | cut -d ' ' -f 6 )"
+            [[ -n $note ]] || note='Number of passed:'
             local note="$note $passed"
-            local diff=$( echo "$out" | cut -d ' ' -f 8 )
-            if [ -n "$diff" ]; then
-                sum=$( echo "$sum + $diff" | bc )
-                let count+=1
+            local diff="$( echo $out | cut -d ' ' -f 8 )"
+            if [ -n $diff ]; then
+                (( sum += diff ))
+                (( count++ ))
             fi
         else
-            local start="$( echo "$row" | measurement_row_field 4 )"
-            local end="$( echo "$row" | measurement_row_field 5 )"
-            sum=$( echo "$sum + $end - $start" | bc )
-            let count+=1
+            local start="$( echo $row | measurement_row_field 4 )"
+            local end="$( echo $row | measurement_row_field 5 )"
+            (( sum += end - start ))
+            (( count++ ))
         fi
     done
-    if [ "$count" -eq 0 ]; then
-        local avg="N/A"
+    if (( count == 0 )); then
+        local avg='N/A'
     else
-        local avg=$( echo "scale=2; $sum / $count" | bc )
+        local avg="$( echo "scale=2; $sum / $count" | bc )"
     fi
     echo -e "$description\t$avg\t$note"
 }
