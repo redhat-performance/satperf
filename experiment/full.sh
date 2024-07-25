@@ -387,6 +387,66 @@ wait
 unset skip_measurement
 
 
+section "Sync yum repo"
+ap 80-test-sync-repositories.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "test_sync_repositories_count='$test_sync_repositories_count'" \
+  -e "test_sync_repositories_url_template='$test_sync_repositories_url_template'" \
+  -e "test_sync_repositories_max_sync_secs='$test_sync_repositories_max_sync_secs'" \
+  playbooks/tests/sync-repositories.yaml
+
+lces+=' test_sync_repositories_le'
+
+e SyncRepositories $logs/80-test-sync-repositories.log
+e PublishContentViews $logs/80-test-sync-repositories.log
+e PromoteContentViews $logs/80-test-sync-repositories.log
+
+
+section "Sync iso"
+ap 81-test-sync-iso.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "test_sync_iso_count='$test_sync_iso_count'" \
+  -e "test_sync_iso_url_template='$test_sync_iso_url_template'" \
+  -e "test_sync_iso_max_sync_secs='$test_sync_iso_max_sync_secs'" \
+  playbooks/tests/sync-iso.yaml
+
+lces+=' test_sync_iso_le'
+
+e SyncRepositories $logs/81-test-sync-iso.log
+e PublishContentViews $logs/81-test-sync-iso.log
+e PromoteContentViews $logs/81-test-sync-iso.log
+
+
+section "Sync docker repo"
+ap 82-test-sync-docker.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "test_sync_docker_count='$test_sync_docker_count'" \
+  -e "test_sync_docker_url_template='$test_sync_docker_url_template'" \
+  -e "test_sync_docker_max_sync_secs='$test_sync_docker_max_sync_secs'" \
+  playbooks/tests/sync-docker.yaml
+
+lces+=' test_sync_docker_le'
+
+e SyncRepositories $logs/82-test-sync-docker.log
+e PublishContentViews $logs/82-test-sync-docker.log
+e PromoteContentViews $logs/82-test-sync-docker.log
+
+
+section "Sync ansible collections"
+ap 83-test-sync-ansible-collections.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
+  -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
+  -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
+  playbooks/tests/sync-ansible-collections.yaml
+
+lces+=' test_sync_ansible_collections_le'
+
+e SyncRepositories $logs/83-test-sync-ansible-collections.log
+e PublishContentViews $logs/83-test-sync-ansible-collections.log
+e PromoteContentViews $logs/83-test-sync-ansible-collections.log
+
+
 export skip_measurement='true'
 section "Push content to capsules"   # We just added up2date content from CDN and $sat_client_product, so no reason to measure this now
 ap 14b-capsync-populate.log \
@@ -509,58 +569,6 @@ e BackupOffline $logs/70-backup.log
 e RestoreOffline $logs/70-backup.log
 e BackupOnline $logs/70-backup.log
 e RestoreOnline $logs/70-backup.log
-
-
-section "Sync yum repo"
-ap 80-test-sync-repositories.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_repositories_count='$test_sync_repositories_count'" \
-  -e "test_sync_repositories_url_template='$test_sync_repositories_url_template'" \
-  -e "test_sync_repositories_max_sync_secs='$test_sync_repositories_max_sync_secs'" \
-  playbooks/tests/sync-repositories.yaml
-
-e SyncRepositories $logs/80-test-sync-repositories.log
-e PublishContentViews $logs/80-test-sync-repositories.log
-e PromoteContentViews $logs/80-test-sync-repositories.log
-
-
-section "Sync iso"
-ap 81-test-sync-iso.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_iso_count='$test_sync_iso_count'" \
-  -e "test_sync_iso_url_template='$test_sync_iso_url_template'" \
-  -e "test_sync_iso_max_sync_secs='$test_sync_iso_max_sync_secs'" \
-  playbooks/tests/sync-iso.yaml
-
-e SyncRepositories $logs/81-test-sync-iso.log
-e PublishContentViews $logs/81-test-sync-iso.log
-e PromoteContentViews $logs/81-test-sync-iso.log
-
-
-section "Sync docker repo"
-ap 82-test-sync-docker.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_docker_count='$test_sync_docker_count'" \
-  -e "test_sync_docker_url_template='$test_sync_docker_url_template'" \
-  -e "test_sync_docker_max_sync_secs='$test_sync_docker_max_sync_secs'" \
-  playbooks/tests/sync-docker.yaml
-
-e SyncRepositories $logs/82-test-sync-docker.log
-e PublishContentViews $logs/82-test-sync-docker.log
-e PromoteContentViews $logs/82-test-sync-docker.log
-
-
-section "Sync ansible collections"
-ap 83-test-sync-ansible-collections.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
-  -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
-  -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
-  playbooks/tests/sync-ansible-collections.yaml
-
-e SyncRepositories $logs/83-test-sync-ansible-collections.log
-e PublishContentViews $logs/83-test-sync-ansible-collections.log
-e PromoteContentViews $logs/83-test-sync-ansible-collections.log
 
 
 section "Delete all content hosts"
