@@ -49,6 +49,7 @@ opts_adhoc="$opts"
 
 section "Checking environment"
 generic_environment_check
+# set +e
 
 
 section "Prepare for Red Hat content"
