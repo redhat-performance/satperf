@@ -481,12 +481,12 @@ function a() {
     local start="$( date -u +%s )"
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
-        log "FAKE ansible RUN"
+        log 'FAKE ansible RUN'
         local rc=0
     else
         ansible $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
     fi
-    local end=$( date -u +%s )
+    local end="$( date -u +%s )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
 
     measurement_add \
@@ -504,7 +504,7 @@ function a() {
 function a_out() {
     # Just run the ansible command. No output processing, action logging or measurements
     if $run_lib_dryrun; then
-        echo "FAKE ansible RUN"
+        echo 'FAKE ansible RUN'
     else
         ansible $opts_adhoc "$@"
     fi
