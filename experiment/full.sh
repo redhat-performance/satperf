@@ -94,12 +94,14 @@ for rel in $rels; do
 done
 
 # AK creation
+unset aks
 for rel in $rels; do
     ccv="CCV_$rel"
 
     prior='Library'
     for lce in $lces; do
         ak="AK_${rel}_${lce}"
+        aks+="$ak "
 
         h 05-ak-create-${rel}-${lce}.log "activation-key create --organization '{{ sat_org }}' --name '$ak' --content-view '$ccv' --lifecycle-environment '$lce'"
 
@@ -518,19 +520,14 @@ rm -f $tmp
 
 h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
-aks='AK_rhel8_Test AK_rhel9_Test'
-
-for ak in $aks; do
-    ap 44-generate-host-registration-command-${ak}.log \
-      -e "organization='{{ sat_org }}'" \
-      -e "ak='$ak'" \
-      -e "sat_version='$sat_version'" \
-      playbooks/satellite/host-registration_generate-command.yaml
-
-    ap 44-recreate-client-scripts-${ak}.log \
-      -e "ak='$ak'" \
-      playbooks/satellite/client-scripts.yaml
-done
+ap 44-generate-host-registration-commands.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "aks='$aks'" \
+  -e "sat_version='$sat_version'" \
+  playbooks/satellite/host-registration_generate-commands.yaml
+ap 44-recreate-client-scripts.log \
+  -e "aks='$aks'" \
+  playbooks/satellite/client-scripts.yaml
 unset skip_measurement
 
 
