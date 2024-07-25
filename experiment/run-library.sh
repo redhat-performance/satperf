@@ -179,7 +179,7 @@ function status_data_create() {
 
     [[ -n $PARAM_elasticsearch_host ]] || return 0
 
-    if [ -z $4 -o -z $5 ]; then
+    if [ -z "$4" -o -z "$5" ]; then
         echo "WARNING: Either start '$4' or end '$5' timestamps are empty, not going to create status data" >&2
         return 1
     fi
@@ -216,19 +216,19 @@ function status_data_create() {
     sd_sat_ver_y="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
     sd_run=$8
     sd_additional=$9
-    if [ -n $STATUS_DATA_FILE -a -f $STATUS_DATA_FILE ]; then
+    if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
         sd_file=$STATUS_DATA_FILE
     else
         sd_file="$sd_log.json"
         rm -f $sd_file
     fi
-    if [ -n $RDD_FILE -a -f $RDD_FILE ]; then
+    if [ -n "$RDD_FILE" -a -f "$RDD_FILE" ]; then
         rdd_file=$RDD_FILE
     else
         rdd_file="$sd_log.rdd.json"
         rm -f $rdd_file
     fi
-    if [ -n $PARAM_inventory ]; then
+    if [ -n "$PARAM_inventory" ]; then
         sd_hostname="$( ansible $opts_adhoc \
           --list-hosts \
           satellite6 2>/dev/null |
@@ -261,7 +261,7 @@ function status_data_create() {
     set +x
 
     # Add monitoring data to the status data file
-    if [ -n $PARAM_cluster_read_config -a -n $PARAM_grafana_host ]; then
+    if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
         set -x
         status_data.py -d --status-data-file $sd_file \
           --additional $PARAM_cluster_read_config \
@@ -279,7 +279,7 @@ function status_data_create() {
 
     # Based on historical data, determine result of this test
     sd_result_log="$( mktemp )"
-    if [ $sd_rc -eq 0 -a -n $PARAM_investigator_config ]; then
+    if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
         export sd_section
         export sd_name
         set +e
@@ -753,14 +753,14 @@ function table_row() {
             echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
             continue
         fi
-        if [ -n $grepper ]; then
+        if [ -n "$grepper" ]; then
             local log="$( echo $row | measurement_row_field 2 )"
             local out="$( experiment/reg-average.py "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )"
             local passed="$( echo $out | cut -d ' ' -f 6 )"
             [[ -n $note ]] || note='Number of passed:'
             local note="$note $passed"
             local diff="$( echo $out | cut -d ' ' -f 8 )"
-            if [ -n $diff ]; then
+            if [ -n "$diff" ]; then
                 (( sum += diff ))
                 (( count++ ))
             fi
