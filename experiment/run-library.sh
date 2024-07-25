@@ -394,29 +394,29 @@ function junit_upload() {
     # Upload junit.xml into ReportPortal for test result investigation
 
     # Make the file available for Jenkins on the same path every time
-    cp "$logs/junit.xml" latest-junit.xml
+    cp $logs/junit.xml latest-junit.xml
 
-    [ -z "$PARAM_reportportal_host" ] && return 0
+    [[ -n $PARAM_reportportal_host ]] || return 0
 
     # Activate tools virtualenv
     source venv/bin/activate
 
     # Determine ReportPortal launch name
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
-    if echo "$launch_name" | grep --quiet '%sat_ver%'; then
+    if echo $launch_name | grep -q '%sat_ver%'; then
         sat_ver="$( echo $satellite_rpm | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
-        [ -z "$sat_ver" ] && sat_ver="$( echo $katello_rpm | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
-        launch_name="$( echo "$launch_name" | sed "s/%sat_ver%/$sat_ver/g" )"
+        [[ -n $sat_ver ]] || sat_ver="$( echo $katello_rpm | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        launch_name="$( echo $launch_name | sed "s/%sat_ver%/$sat_ver/g" )"
     fi
-    launch_name="$( echo "$launch_name" | sed "s/[^a-zA-Z0-9._-]/_/g" )"
+    launch_name="$( echo $launch_name | sed 's/[^a-zA-Z0-9._-]/_/g' )"
 
     # Show content and upload to ReportPortal
     junit_cli.py --file $logs/junit.xml print
     junit_cli.py --file $logs/junit.xml upload \
-      --host $PARAM_reportportal_host \
-      --project $PARAM_reportportal_project \
-      --token $PARAM_reportportal_token \
-      --launch $launch_name \
+      --host ${PARAM_reportportal_host} \
+      --project ${PARAM_reportportal_project} \
+      --token ${PARAM_reportportal_token} \
+      --launch ${launch_name} \
       --noverify \
       --properties jenkins_build_url=$BUILD_URL run_id=$marker
 
