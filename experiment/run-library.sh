@@ -9,20 +9,18 @@ set -e
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
-marker_date="$(date -u -Iseconds)"
-if [ -z "$marker" ]; then
-    marker="${1:-run-${marker_date}}"
-fi
+marker_date="$( date -u -Iseconds )"
+[[ -n $marker ]] || marker="${1:-run-${marker_date}}"
 
 branch="${PARAM_branch:-satcpt}"
 sat_version="${PARAM_sat_version:-stream}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-opts=${opts:-"--forks 100 -i $inventory"}
-opts_adhoc=${opts_adhoc:-"$opts"}
-logs="$marker"
+opts="${opts:-"--forks 100 -i $inventory"}"
+opts_adhoc="${opts_adhoc:-$opts}"
+logs=$marker
 run_lib_dryrun=false
-hammer_opts="-u admin -p changeme"
+hammer_opts='-u admin -p changeme'
 
 # Requirements check
 #if ! type bc >/dev/null; then
@@ -47,8 +45,8 @@ fi
 #     elif [[ "$2" == 'stream' ]]; then
 #         return 12
 #     else
-#         ver1=$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
-#         ver2=$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )
+#         ver1="$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )"
+#         ver2="$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )"
 
 #         rpmdev-vercmp "$ver1" "$ver2"
 #     fi
