@@ -333,6 +333,9 @@ section "Get Satellite Client content"
 h 30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
 
 for rel in $rels; do
+    cv_sat_client="CV_${rel}-sat-client"
+    ccv="CCV_${rel}"
+
     case $rel in
         rhel6)
             sat_client_repo_name='Satellite Client for RHEL 6'
@@ -354,28 +357,7 @@ for rel in $rels; do
 
     h 30-repository-create-sat-client_${rel}.log "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
     h 30-repository-sync-sat-client_${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'" &
-done
-wait
 
-
-for rel in $rels; do
-    cv_sat_client="CV_${rel}-sat-client"
-    ccv="CCV_${rel}"
-
-    case $rel in
-        rhel6)
-            sat_client_repo_name='Satellite Client for RHEL 6'
-            ;;
-        rhel7)
-            sat_client_repo_name='Satellite Client for RHEL 7'
-            ;;
-        rhel8)
-            sat_client_repo_name='Satellite Client for RHEL 8'
-            ;;
-        rhel9)
-            sat_client_repo_name='Satellite Client for RHEL 9'
-            ;;
-    esac
     sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
     content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$sat_client_repo_name\"' --fields 'Content label'" | tail -n1 )"
 
@@ -396,11 +378,12 @@ for rel in $rels; do
 
         # Enable 'Satellite Client' repo in AK
         id="$( h_out "--no-headers --csv activation-key list --organization '{{ sat_org }}' --search 'name = \"$ak\"' --fields id"  | tail -n1 )"
-        h 40-ak-content-override-${rel}-${lce}.log "activation-key content-override --organization '{{ sat_org }}' --id $id --content-label $content_label --override-name 'enabled' --value 1"
+        h 39-ak-content-override-${rel}-${lce}.log "activation-key content-override --organization '{{ sat_org }}' --id $id --content-label $content_label --override-name 'enabled' --value 1"
 
         prior="$lce"
     done
 done
+wait
 unset skip_measurement
 
 
