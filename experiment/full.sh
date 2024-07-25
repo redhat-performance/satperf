@@ -14,7 +14,7 @@ rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
 
 lces="${PARAM_lces:-Test QA Pre Prod}"
 
-basearch='x86_64'
+basearch=x86_64
 
 sat_client_product='Satellite Client'
 
@@ -32,7 +32,7 @@ test_sync_iso_count="${PARAM_test_sync_iso_count:-8}"
 test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
 test_sync_iso_max_sync_secs="${PARAM_test_sync_iso_max_sync_secs:-600}"
 test_sync_docker_count="${PARAM_test_sync_docker_count:-8}"
-test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://registry-1.docker.io}"
+test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://registry.example.io}"
 test_sync_docker_max_sync_secs="${PARAM_test_sync_docker_max_sync_secs:-600}"
 test_sync_ansible_collections_count="${test_sync_ansible_collections_count:-8}"
 test_sync_ansible_collections_upstream_url_template="${test_sync_ansible_collections_upstream_url_template:-https://galaxy.ansible.com/}"
@@ -41,7 +41,7 @@ test_sync_ansible_collections_max_sync_secs="${test_sync_ansible_collections_max
 ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
 ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 
-dl="Default Location"
+dl='Default Location'
 
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
@@ -62,7 +62,7 @@ e ManifestDelete $logs/01-manifest-excercise.log
 skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 
 
-section "Create LCE(s), CCV(s) and AK(s)"
+section "Create base LCE(s), CCV(s) and AK(s)"
 # LCE creation
 prior='Library'
 for lce in $lces; do
@@ -102,7 +102,7 @@ for rel in $rels; do
 done
 
 
-section "Sync from mirror"
+section "Sync OS from mirror"
 if [[ "$cdn_url_mirror" != 'https://cdn.redhat.com/' ]]; then
     skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_mirror'"
 fi
@@ -167,7 +167,7 @@ for rel in $rels; do
 done
 
 
-section "Create, publish and promote CVs / CCVs to LCE(s)s"
+section "Create, publish and promote OS CVs / CCVs to LCE(s)s"
 for rel in $rels; do
     cv_os="CV_$rel"
     cv_sat_client="CV_${rel}-sat-client"
@@ -217,14 +217,14 @@ for rel in $rels; do
     # CCV promotion to LCE(s)
     prior='Library'
     for lce in $lces; do
-        h 13d-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+        h 13d-ccv-promote-${rel}-os-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
         prior="$lce"
     done
 done
 
 
-section "Push content to capsules"
+section "Push OS content to capsules"
 ap 14-capsync-populate.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
