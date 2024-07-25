@@ -413,10 +413,10 @@ function junit_upload() {
     # Show content and upload to ReportPortal
     junit_cli.py --file $logs/junit.xml print
     junit_cli.py --file $logs/junit.xml upload \
-      --host ${PARAM_reportportal_host} \
-      --project ${PARAM_reportportal_project} \
-      --token ${PARAM_reportportal_token} \
-      --launch ${launch_name} \
+      --host $PARAM_reportportal_host \
+      --project $PARAM_reportportal_project \
+      --token $PARAM_reportportal_token \
+      --launch $launch_name \
       --noverify \
       --properties jenkins_build_url=$BUILD_URL run_id=$marker
 
