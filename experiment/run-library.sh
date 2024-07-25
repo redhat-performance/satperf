@@ -437,16 +437,16 @@ function section() {
 
 function _format_opts() {
     out=""
-    while [ -n "$1" ]; do
-        if echo "$1" | grep --quiet ' '; then
+    while [[ -n $1 ]]; do
+        if echo $1 | grep -q ' '; then
             out_add="\"$1\""
         else
-            out_add="$1"
+            out_add=$1
         fi
         out="$out $out_add"
         shift
     done
-    echo "$out"
+    echo $out
 }
 
 function c() {
