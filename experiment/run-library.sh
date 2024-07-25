@@ -158,10 +158,10 @@ function generic_environment_check() {
 }
 
 function get_repo_id() {
-    local organization="$1"
-    local product="$2"
-    local repo="$3"
-    local tmp=$( mktemp )
+    local organization=$1
+    local product=$2
+    local repo=$3
+    local tmp="$( mktemp )"
     h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >$tmp
     grep '^I[Dd]:' $tmp | cut -d ' ' -f 2
     rm -f $tmp
