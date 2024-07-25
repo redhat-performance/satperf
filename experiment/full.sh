@@ -506,7 +506,7 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
     if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
         concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
     else
-        concurrent_registrations_per_container_host="$(( remaining_containers_per_container_host ))"
+        concurrent_registrations_per_container_host=$remaining_containers_per_container_host
     fi
     concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
 
@@ -514,7 +514,7 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
 
     (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
 
-    skip_measurement='true' ap 48-register-$concurrent_registrations.log \
+    skip_measurement='true' ap 48-register-${concurrent_registrations}.log \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "num_retry_forks='$num_retry_forks'" \
       -e "registration_logs='../../$logs/48-register-docker-host-client-logs'" \
