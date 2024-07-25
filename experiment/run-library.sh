@@ -539,7 +539,7 @@ function ap() {
 function s() {
     log "Sleep for $1 seconds"
     if $run_lib_dryrun; then
-        log "FAKE SLEEP"
+        log 'FAKE SLEEP'
     else
         sleep $1
     fi
