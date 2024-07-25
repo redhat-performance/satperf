@@ -781,5 +781,5 @@ function table_row() {
 
 
 # Create dir for logs
-mkdir -p "$logs/"
+mkdir -p $logs
 log "Logging into '$logs/' directory"
