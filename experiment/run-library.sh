@@ -729,10 +729,10 @@ function extract_job_invocation() {
     # job invocation ID from it. Do not return anything if more IDs are found
     # or in case of any other error.
     log=$1
-    candidates=$( grep '^Job invocation [0-9]\+ created' "$log" | cut -d ' ' -f 3 | uniq )
+    candidates="$( grep '^Job invocation [0-9]\+ created' $log | cut -d ' ' -f 3 | uniq )"
     # Only print if we have exactly one job invocation ID
-    if [ $( echo "$candidates" | wc -l | cut -d ' ' -f 1 ) -eq 1 ]; then
-        echo "$candidates"
+    if (( "$( echo $candidates | wc -l | sed 's/^ *//' )" == 1 )); then
+        echo $candidates
         return 0
     fi
     return 1
