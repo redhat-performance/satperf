@@ -655,30 +655,30 @@ function t() {
 
 function j() {
     # Parse job invocation ID from the log, get parent task ID and examine it
-    local log="$1"
+    local log=$1
     local job_invocation_id="$( extract_job_invocation "$log" )"
-    [ -z "$job_invocation_id" ] && return 1
+    [[ -n $job_invocation_id ]] || return 1
     local satellite_host="$( ansible $opts_adhoc \
       --list-hosts \
       satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' )"
-    [ -z "$satellite_host" ] && return 2
+      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    [[ -n $satellite_host ]] || return 2
     local satellite_creds="$( ansible $opts_adhoc \
       -m ansible.builtin.debug \
       -a "msg={{ sat_user }}:{{ sat_pass }}" \
       satellite6 2>/dev/null |
       grep '"msg":' | cut -d '"' -f 4)"
-    [ -z "$satellite_creds" ] && return 2
-    local task_id=$( curl --silent --insecure \
+    [[ -n $satellite_creds ]] || return 2
+    local task_id="$( curl --silent --insecure \
       -u "$satellite_creds" \
       -X GET \
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations?search=id=${job_invocation_id} |
-      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["id"])' )
+      https://$satellite_host/api/job_invocations?search=id=$job_invocation_id |
+      python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["id"])' )"
 
-    task_examine "$log" $task_id "Investigating job invocation $job_invocation_id (task $task_id)"
+    task_examine "$log" "$task_id" "Investigating job invocation $job_invocation_id (task $task_id)"
 }
 
 function jsr() {
