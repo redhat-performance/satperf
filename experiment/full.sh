@@ -57,17 +57,6 @@ generic_environment_check
 # set +e
 
 
-section "Prepare for Red Hat content"
-skip_measurement='true' ap 01-manifest-excercise.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "manifest=../../$manifest" \
-  playbooks/tests/manifest-excercise.yaml
-e ManifestUpload $logs/01-manifest-excercise.log
-e ManifestRefresh $logs/01-manifest-excercise.log
-e ManifestDelete $logs/01-manifest-excercise.log
-skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-
-
 section "Create base LCE(s), CCV(s) and AK(s)"
 # LCE creation
 prior='Library'
@@ -110,13 +99,20 @@ for rel in $rels; do
 done
 
 
-section "Sync OS from mirror"
-if [[ "$cdn_url_mirror" != 'https://cdn.redhat.com/' ]]; then
-    skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_mirror'"
-fi
-skip_measurement='true' h 00-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+section "Prepare for Red Hat content"
+skip_measurement='true' ap 01-manifest-excercise.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "manifest=../../$manifest" \
+  playbooks/tests/manifest-excercise.yaml
+e ManifestUpload $logs/01-manifest-excercise.log
+e ManifestRefresh $logs/01-manifest-excercise.log
+e ManifestDelete $logs/01-manifest-excercise.log
+skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
 
-sca_status="$(h_out "--no-headers --csv simple-content-access status --organization '{{ sat_org }}'" | grep -v "^$satellite_host \| ")"
+
+section "Sync OS from mirror"
+skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_mirror'"
+skip_measurement='true' h 00-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 for rel in $rels; do
     case $rel in
@@ -279,8 +275,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '{{ sat_org }}
 export skip_measurement='true'
 section "Sync from CDN do not measure"   # do not measure because of unpredictable network latency
 h 00b-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_full'"
-# 
-# h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 for rel in $rels; do
     case $rel in
