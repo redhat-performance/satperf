@@ -90,7 +90,7 @@
       when:
         - "'capsule_lbs' in groups"
         - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
-        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostnameme
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
 
     - name: "Download host registration script from the first capsule"
       ansible.builtin.get_url:
