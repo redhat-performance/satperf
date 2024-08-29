@@ -7,8 +7,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
-cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
-cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
+cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com}"
 
 rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
 
@@ -274,7 +273,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '{{ sat_org }}
 
 export skip_measurement='true'
 section "Sync from CDN do not measure"   # do not measure because of unpredictable network latency
-h 00b-set-cdn-stage.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_full'"
+h 00b-set-cdn.log "organization configure-cdn --name '{{ sat_org }}' --type redhat_cdn"
 h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 for rel in $rels; do
