@@ -364,6 +364,10 @@ for rel in $rels; do
 
     # Satellite Client CV
     h 34-cv-create-${rel}-sat-client.log "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
+
+    # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
+    wait
+
     h 35-cv-publish-${rel}-sat-client.log "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
     # CCV with Satellite Client
