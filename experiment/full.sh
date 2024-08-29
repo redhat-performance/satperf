@@ -7,8 +7,6 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
-cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com}"
-
 rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
 
 lces="${PARAM_lces:-Test QA Pre Prod}"
@@ -106,13 +104,11 @@ skip_measurement='true' ap 01-manifest-excercise.log \
 e ManifestUpload $logs/01-manifest-excercise.log
 e ManifestRefresh $logs/01-manifest-excercise.log
 e ManifestDelete $logs/01-manifest-excercise.log
-skip_measurement='true' h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
+skip_measurement=true h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
+h 02-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 
-section "Sync OS from mirror"
-skip_measurement='true' h 00-set-local-cdn-mirror.log "organization update --name '{{ sat_org }}' --redhat-repository-url '$cdn_url_mirror'"
-skip_measurement='true' h 00-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
-
+section "Sync OS from CDN"
 for rel in $rels; do
     case $rel in
         rhel6)
@@ -227,13 +223,6 @@ for rel in $rels; do
 done
 
 
-section "Push OS content to capsules"
-ap 14-capsync-populate.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "lces='$lces'" \
-  playbooks/satellite/capsules-populate.yaml
-
-
 section "Publish and promote big CV"
 cv='BenchContentView'
 rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 6 Server RPMs $basearch 6Server" )"
@@ -271,64 +260,7 @@ unset skip_measurement
 h 33-cv-filtered-publish.log "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
 
-export skip_measurement='true'
-section "Sync from CDN do not measure"   # do not measure because of unpredictable network latency
-h 00b-set-cdn.log "organization configure-cdn --name '{{ sat_org }}' --type redhat_cdn"
-h 00b-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
-
-for rel in $rels; do
-    case $rel in
-        rhel6)
-            os_product='Red Hat Enterprise Linux Server'
-            os_releasever='6Server'
-            os_reposet_name='Red Hat Enterprise Linux 6 Server (RPMs)'
-            os_repo_name="Red Hat Enterprise Linux 6 Server RPMs $basearch $os_releasever"
-            ;;
-        rhel7)
-            os_product='Red Hat Enterprise Linux Server'
-            os_releasever='7Server'
-            os_reposet_name='Red Hat Enterprise Linux 7 Server (RPMs)'
-            os_repo_name="Red Hat Enterprise Linux 7 Server RPMs $basearch $os_releasever"
-            os_extras_reposet_name='Red Hat Enterprise Linux 7 Server - Extras (RPMs)'
-            os_extras_repo_name="Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch"
-            ;;
-        rhel8)
-            os_product="Red Hat Enterprise Linux for $basearch"
-            os_releasever='8'
-            os_reposet_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS (RPMs)"
-            os_repo_name="Red Hat Enterprise Linux 8 for $basearch - BaseOS RPMs $os_releasever"
-            os_appstream_reposet_name="Red Hat Enterprise Linux 8 for $basearch - AppStream (RPMs)"
-            os_appstream_repo_name="Red Hat Enterprise Linux 8 for $basearch - AppStream RPMs $os_releasever"
-            ;;
-        rhel9)
-            os_product="Red Hat Enterprise Linux for $basearch"
-            os_releasever='9'
-            os_reposet_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS (RPMs)"
-            os_repo_name="Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs $os_releasever"
-            os_appstream_reposet_name="Red Hat Enterprise Linux 9 for $basearch - AppStream (RPMs)"
-            os_appstream_repo_name="Red Hat Enterprise Linux 9 for $basearch - AppStream RPMs $os_releasever"
-            ;;
-    esac
-
-    case $rel in
-        rhel6)
-            h 12b-repo-sync-${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'" &
-            ;;
-        rhel7)
-            h 12b-repo-sync-${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'" &
-            h 12b-repo-sync-${rel}extras.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'" &
-            ;;
-        rhel8|rhel9)
-            h 12b-repo-sync-${rel}baseos.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'" &
-            h 12b-repo-sync-${rel}appstream.log "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_appstream_repo_name'" &
-            ;;
-    esac
-done
-wait
-unset skip_measurement
-
-
-export skip_measurement='true'
+export skip_measurement=true
 section "Get Satellite Client content"
 # Satellite Client
 h 30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
@@ -414,7 +346,7 @@ for rel in $rels; do
             # RHOSP CV
             h 40-cv-create-rhosp-${rel}.log "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
 
-            # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't haeve any content
+            # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
             wait
 
             h 40-cv-publish-rhosp-${rel}.log "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
@@ -497,13 +429,11 @@ e PublishContentViews $logs/83-test-sync-ansible-collections.log
 e PromoteContentViews $logs/83-test-sync-ansible-collections.log
 
 
-export skip_measurement='true'
 section "Push content to capsules"
-ap 14b-capsync-populate.log \
+ap 14c-capsync-populate.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/satellite/capsules-populate.yaml
-unset skip_measurement
 
 
 export skip_measurement='true'
