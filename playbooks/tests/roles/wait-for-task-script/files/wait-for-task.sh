@@ -4,7 +4,7 @@ user=$1
 pass=$2
 task=$3
 timeout=$4
-log=$( mktemp )
+log="$( mktemp )"
 
 echo "DEBUG user: $user, pass: $pass, task: $task, timeout: $timeout, log: $log"
 
@@ -12,24 +12,24 @@ while true; do
     hammer --output yaml -u "$user" -p "$pass" task info --id "$task" >$log
 
     # Check if we are in correct state
-    if grep --quiet '^State:\s\+stopped' $log \
-        && grep --quiet '^Result:\s\+success' $log; then
-        echo "INFO Task $task is in stopped/success now"
+    if grep --quiet '^State:\s\+stopped' $log &&
+      grep --quiet '^Result:\s\+success' $log; then
+        echo "INFO Task $task is in stopped/success state now"
         break
     fi
 
     # Check for timeout
-    started_at=$( date --utc -d "$( grep 'Started at:' $log | sed 's/^[^:]\+: //' )" +%s )
-    now=$( date --utc +%s )
-    if [ "$( expr $now - $started_at )" -gt "$timeout" ]; then
+    started_at="$( date -u -d "$( grep 'Started at:' $log | sed 's/^[^:]\+: //' )" +%s )"
+    now="$( date -u +%s )"
+    if (( $(( now - started_at )) < timeout )); then
         echo "TIMEOUT waiting on task $task" >&2
         exit 1
     fi
 
     # Check if we are in some incorrect state
-    if grep --quiet '^State:\s\+stopped' $log \
-        && grep --quiet '^Result:\s\+warning' $log; then
-        echo "ERROR Task $task is in stopped/warning" >&2
+    if grep --quiet '^State:\s\+stopped' $log &&
+      grep --quiet '^Result:\s\+warning' $log; then
+        echo "ERROR Task $task is in stopped/warning state" >&2
         exit 2
     fi
 
