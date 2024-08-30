@@ -122,19 +122,19 @@
 
     - name: "Print Docker sync results"
       debug:
-        msg: "SyncRepositoriesDocker {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "SyncRepositoriesDocker {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync_docker.results }}"
       when: "item.rc is defined and item.rc == 0"
 
     - name: "Print ISO sync results"
       debug:
-        msg: "SyncRepositoriesISO {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "SyncRepositoriesISO {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync_iso.results }}"
       when: "item.rc is defined and item.rc == 0"
 
     - name: "Print Yum sync results"
       debug:
-        msg: "SyncRepositoriesYum {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "SyncRepositoriesYum {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync_yum.results }}"
       when: "item.rc is defined and item.rc == 0"
 
@@ -184,7 +184,7 @@
       ignore_errors: yes
     - name: "Print publish results"
       debug:
-        msg: "PublishContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "PublishContentViews {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_publish.results }}"
       when: "item.rc is defined and item.rc == 0"
 
@@ -206,7 +206,7 @@
         var: wait_promote
     - name: "Print promote results"
       debug:
-        msg: "PromoteContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "PromoteContentViews {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_promote.results }}"
       when: "item.rc is defined and item.rc == 0"
 ...

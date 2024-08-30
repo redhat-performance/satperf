@@ -71,7 +71,7 @@
 
     - name: "Print synchronizations results"
       ansible.builtin.debug:
-        msg: "SyncRepositories {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "SyncRepositories {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync.results }}"
       when: "item.rc is defined and item.rc == 0"
 
@@ -108,7 +108,7 @@
 
     - name: "Print publication results"
       ansible.builtin.debug:
-         msg: "PublishContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+         msg: "PublishContentViews {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_publish.results }}"
       when: "item.rc is defined and item.rc == 0"
 
@@ -131,7 +131,7 @@
 
     - name: "Print promotion results"
       ansible.builtin.debug:
-        msg: "PromoteContentViews {{ item.stdout_lines[-2] }} to {{ item.stdout_lines[-1] }}"
+        msg: "PromoteContentViews {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_promote.results }}"
       when: "item.rc is defined and item.rc == 0"
 ...
