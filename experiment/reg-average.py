@@ -45,7 +45,7 @@ for line in args.log_file:
         start = parse_time(m.group('start'))
         end = parse_time(m.group('end'))
         duration = m.group('duration')
-        logging.debug("Parsed start, end, duration times on line %d: %s, %s, %s, %s" % (count, start, end, duration))
+        logging.debug("Parsed start, end, duration times on line %d: %s, %s, %s" % (count, start, end, duration))
 
         if start_min is None or start < start_min:
             start_min = start
