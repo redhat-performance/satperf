@@ -40,8 +40,6 @@ test_sync_ansible_collections_max_sync_secs="${PARAM_test_sync_ansible_collectio
 ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
 ui_pages_duration="${PARAM_ui_pages_duration:-300}"
 
-dl='Default Location'
-
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
 
