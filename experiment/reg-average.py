@@ -40,19 +40,19 @@ end_max = None
 for line in args.log_file:
     if re.match('.*"%s .*' % args.matcher, line):
         logging.debug("Processing line %d: %s" % (count, line.strip()))
-        m = re.match('^.*"%s (?P<start>[0-9:. -]+) to (?P<end>[0-9:. -]+)".*$' % args.matcher, line)
+        m = re.match('^.*"%s (?P<start>[0-9:. -]+) to (?P<end>[0-9:. -]+) taking (?P<duration>[0-9.]+) seconds".*$' % args.matcher, line)
 
         start = parse_time(m.group('start'))
         end = parse_time(m.group('end'))
-        diff = end - start
-        logging.debug("Parsed start, end, diff times on line %d: %s, %s, %s" % (count, start, end, diff))
+        duration = m.group('duration')
+        logging.debug("Parsed start, end, duration times on line %d: %s, %s, %s, %s" % (count, start, end, duration))
 
         if start_min is None or start < start_min:
             start_min = start
         if end_max is None or end > end_max:
             end_max = end
         count += 1
-        total += diff.total_seconds()
+        total += float(duration)
 
 if count == 0:
     logging.error("No matcher %s found in log %s" % (args.matcher, args.log_file.name))
