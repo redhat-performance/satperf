@@ -15,10 +15,7 @@ basearch=x86_64
 
 sat_client_product='Satellite Client'
 
-repo_sat_client_6="${PARAM_repo_sat_client_6:-http://mirror.example.com/Satellite_Client_6_${basearch}/}"
-repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_${basearch}/}"
-repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_${basearch}/}"
-repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellite_Client_9_${basearch}/}"
+repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 
 rhosp_product=RHOSP
 rhosp_registry_url="${PARAM_rhosp_registry_url:-https://registry.example.io}"
@@ -271,22 +268,20 @@ for rel in $rels; do
 
     case $rel in
         rhel6)
-            sat_client_repo_name='Satellite Client for RHEL 6'
-            sat_client_repo_url="$repo_sat_client_6"
+            os_rel=6
             ;;
         rhel7)
-            sat_client_repo_name='Satellite Client for RHEL 7'
-            sat_client_repo_url="$repo_sat_client_7"
+            os_rel=7
             ;;
         rhel8)
-            sat_client_repo_name='Satellite Client for RHEL 8'
-            sat_client_repo_url="$repo_sat_client_8"
+            os_rel=8
             ;;
         rhel9)
-            sat_client_repo_name='Satellite Client for RHEL 9'
-            sat_client_repo_url="$repo_sat_client_9"
+            os_rel=9
             ;;
     esac
+    sat_client_repo_name="Satellite Client for RHEL $os_rel"
+    sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}"
 
     h 30-repository-create-sat-client_${rel}.log "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
     h 30-repository-sync-sat-client_${rel}.log "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'" &
