@@ -368,6 +368,7 @@ for rel in $rels; do
             ;;
     esac
 done
+unset skip_measurement
 
 
 section 'Sync yum repo'
