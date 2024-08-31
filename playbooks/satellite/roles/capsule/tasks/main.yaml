@@ -208,7 +208,7 @@
 
 - name: "Print capsule installer run duration"
   ansible.builtin.debug:
-    msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }}"
+    msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }} taking {{ configuration.delta }} seconds"
 
 - name: "Get capsule ID"
   ansible.builtin.command:
