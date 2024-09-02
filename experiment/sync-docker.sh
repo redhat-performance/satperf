@@ -13,8 +13,8 @@ opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
 
 
-#section "Checking environment"
-#generic_environment_check false
+section "Checking environment"
+generic_environment_check false true
 
 
 section "Sync docker repo"
