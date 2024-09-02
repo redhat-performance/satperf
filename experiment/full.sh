@@ -462,8 +462,8 @@ unset skip_measurement
 
 
 section 'Incremental registrations and remote execution'
-number_container_hosts="$( ansible "$opts_adhoc" --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
-number_containers_per_container_host="$( ansible "$opts_adhoc" -m ansible.builtin.debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
+number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
+number_containers_per_container_host="$( ansible $opts_adhoc -m ansible.builtin.debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 if (( initial_expected_concurrent_registrations > number_container_hosts )); then
     initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
 else
