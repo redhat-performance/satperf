@@ -5,9 +5,9 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-test_sync_ansible_collections_count="${test_sync_ansible_collections_count:-8}"
-test_sync_ansible_collections_upstream_url_template="${test_sync_ansible_collections_upstream_url_template:-https://galaxy.ansible.com/}"
-test_sync_ansible_collections_max_sync_secs="${test_sync_ansible_collections_max_sync_secs:-600}"
+test_sync_ansible_collections_count="${PARAM_test_sync_ansible_collections_count:-8}"
+test_sync_ansible_collections_upstream_url_template="${PARAM_test_sync_ansible_collections_upstream_url_template:-https://galaxy.ansible.com/}"
+test_sync_ansible_collections_max_sync_secs="${PARAM_test_sync_ansible_collections_max_sync_secs:-600}"
 
 # dl="Default Location"
 
