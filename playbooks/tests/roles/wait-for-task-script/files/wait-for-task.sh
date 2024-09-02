@@ -21,7 +21,7 @@ while true; do
     # Check for timeout
     started_at="$( date -u -d "$( grep 'Started at:' $log | sed 's/^[^:]\+: //' )" +%s )"
     now="$( date -u +%s )"
-    if (( $(( now - started_at )) < timeout )); then
+    if (( $(( now - started_at )) > timeout )); then
         echo "TIMEOUT waiting on task $task" >&2
         exit 1
     fi
