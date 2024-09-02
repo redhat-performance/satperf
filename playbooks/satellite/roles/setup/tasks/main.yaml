@@ -64,9 +64,13 @@
   ansible.builtin.debug:
     var: satellite_installer_cmd.stdout_lines
 
+- name: "Calculate run duration"
+  set_fact:
+    duration: "{{ (satellite_installer_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (satellite_installer_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
 - name: "Print installer run duration"
   debug:
-    msg: "SatelliteInstallerScenarioSatellite {{ satellite_installer_cmd.start }} to {{ satellite_installer_cmd.end }} taking {{ satellite_installer_cmd.delta }} seconds"
+    msg: "SatelliteInstallerScenarioSatellite {{ satellite_installer_cmd.start }} to {{ satellite_installer_cmd.end }} taking {{ duration }} seconds"
 
 - name: "Run desired shell commands after installation"
   ansible.builtin.shell:

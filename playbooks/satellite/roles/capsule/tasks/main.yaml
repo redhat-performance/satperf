@@ -206,9 +206,13 @@
   ansible.builtin.debug:
     var: configuration.stdout_lines
 
+- name: "Calculate run duration"
+  set_fact:
+    duration: "{{ (configuration.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (configuration.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
 - name: "Print capsule installer run duration"
   ansible.builtin.debug:
-    msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }} taking {{ configuration.delta }} seconds"
+    msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }} taking {{ duration }} seconds"
 
 - name: "Get capsule ID"
   ansible.builtin.command:
