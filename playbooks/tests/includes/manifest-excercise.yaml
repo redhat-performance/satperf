@@ -9,9 +9,14 @@
   environment:
     TZ: UTC
   register: manifest_upload
+
+- name: "Calculate upload duration"
+  set_fact:
+    manifest_upload_duration: "{{ (manifest_upload.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (manifest_upload.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
 - name: "Print upload results"
   debug:
-    msg: "ManifestUpload {{ manifest_upload.start }} to {{ manifest_upload.end }}"
+    msg: "ManifestUpload {{ manifest_upload.start }} to {{ manifest_upload.end }} taking {{ manifest_upload_duration }} seconds"
 
 - name: "Upload refresh"
   shell:
@@ -19,9 +24,14 @@
   environment:
     TZ: UTC
   register: manifest_refresh
+
+- name: "Calculate refresh duration"
+  set_fact:
+    manifest_refresh_duration: "{{ (manifest_refresh.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (manifest_refresh.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
 - name: "Print refresh results"
   debug:
-    msg: "ManifestRefresh {{ manifest_refresh.start }} to {{ manifest_refresh.end }}"
+    msg: "ManifestRefresh {{ manifest_refresh.start }} to {{ manifest_refresh.end }} taking {{ manifest_refresh_duration }} seconds"
 
 #- name: "Wait few seconds"
 #  pause:
@@ -33,7 +43,12 @@
   environment:
     TZ: UTC
   register: manifest_delete
+
+- name: "Calculate delete duration"
+  set_fact:
+    manifest_delete_duration: "{{ (manifest_delete.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (manifest_delete.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
 - name: "Print delete results"
   debug:
-    msg: "ManifestDelete {{ manifest_delete.start }} to {{ manifest_delete.end }}"
+    msg: "ManifestDelete {{ manifest_delete.start }} to {{ manifest_delete.end }} taking {{ manifest_delete_duration }} seconds"
 ...
