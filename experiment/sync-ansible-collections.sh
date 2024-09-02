@@ -9,8 +9,6 @@ test_sync_ansible_collections_count="${PARAM_test_sync_ansible_collections_count
 test_sync_ansible_collections_upstream_url_template="${PARAM_test_sync_ansible_collections_upstream_url_template:-https://galaxy.ansible.com/}"
 test_sync_ansible_collections_max_sync_secs="${PARAM_test_sync_ansible_collections_max_sync_secs:-600}"
 
-# dl="Default Location"
-
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
 

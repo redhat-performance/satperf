@@ -4,16 +4,10 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 test_sync_iso_count="${PARAM_test_sync_iso_count:-8}"
 test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
 test_sync_iso_max_sync_secs="${PARAM_test_sync_iso_max_sync_secs:-600}"
-
-cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
-cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
-
-dl="Default Location"
 
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
