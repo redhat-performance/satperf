@@ -39,8 +39,8 @@ while true; do
     sleep 10
 done
 
-rm -f $log
-
 grep '^Started at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
 grep '^Ended at:' $log | sed -e 's/^[^:]\+: //' -e 's/ UTC//'
 awk '/^Duration:/ {print $NF}' $log | cut -d"'" -f2
+
+rm -f $log
