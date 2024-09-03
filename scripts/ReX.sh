@@ -50,6 +50,7 @@ function run_job() {
   done
   kill $pid
   task_uuid=$( grep '^Task [0-9a-f-]\+ \(planned\|running\):' $log | tail -n 1 | sed "s/^Task \([0-9a-f-]\+\) \(planned\|running\):.*/\1/" )
+  rm -f $log
   echo "DEBUG: Task UUID is: $task_uuid"
 
   # Wait for a job to finish

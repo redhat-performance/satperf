@@ -55,9 +55,10 @@ fi
 section "Util: Prepare for registrations"
 h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
     || skip_measurement='true' h 42-domain-create.log "domain create --name '{{ domain }}' --organizations '{{ sat_org }}'"
-tmp=$( mktemp )
+tmp="$( mktemp )"
 h_out "--no-headers --csv location list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
+rm -f $tmp
 skip_measurement='true' h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
 skip_measurement='true' h 43-ak-create.log "activation-key create --content-view '{{ sat_org }} View' --lifecycle-environment Library --name ActivationKey --organization '{{ sat_org }}'"

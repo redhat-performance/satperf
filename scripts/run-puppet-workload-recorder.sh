@@ -29,6 +29,7 @@ for grepper in "PuppetOne" "PuppetBunch"; do
         ./reg-average.py PickupPuppet $LOGS_DIR_P/$number-$grepper.log 2>/dev/null | tail -n 1 >$tmp
         dataC1=$( cut -d ' ' -f 8 $tmp )
         dataC2=$( cut -d ' ' -f 6 $tmp )
+        rm -f $tmp
 
         curl -X PUT "$RECORDER_URL/Sat6ContPerf/1/1/$grepper/$sat_hostname/$sat_ver/$score/$number/${dataA1:--}/${dataA2:--}/${dataB1:--}/${dataB2:--}/${dataC1:--}/${dataC2:--}"
     done

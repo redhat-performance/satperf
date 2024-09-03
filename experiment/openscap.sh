@@ -62,9 +62,10 @@ skip_measurement='false' h regs-30-repository-sync-sat-client_8.log "repository 
 section "Prepare for registrations"
 h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --quiet '^[0-9]\+,' \
     || h regs-40-domain-create.log "domain create --name '{{ domain }}' --organizations '{{ sat_org }}'"
-tmp=$( mktemp )
+tmp="$( mktemp )"
 h_out "--no-headers --csv location list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
+rm -f $tmp
 h regs-40-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
 h regs-40-ak-create.log "activation-key create --content-view '{{ sat_org }} View' --lifecycle-environment Library --name ActivationKey --organization '{{ sat_org }}'"

@@ -53,12 +53,13 @@ generic_environment_check false
 ###h 12-repo-sync-rhel7optional.log "repository synchronize --organization '{{ sat_org }}' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server'"
 ###
 ###section "Synchronise capsules"
-###tmp=$( mktemp )
+###tmp="$( mktemp )"
 ###h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 ###for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v -e '1' ); do
 ###    skip_measurement='true' h 13-capsule-add-library-lce-$capsule_id.log "capsule content add-lifecycle-environment  --organization '{{ sat_org }}' --id '$capsule_id' --lifecycle-environment 'Library'"
 ###    h 13-capsule-sync-$capsule_id.log "capsule content synchronize --organization '{{ sat_org }}' --id '$capsule_id'"
 ###done
+###rm -f $tmp
 ###
 ###section "Publish and promote big CV"
 ###rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' 'Red Hat Enterprise Linux 6 Server RPMs x86_64 6Server' )"
@@ -103,11 +104,12 @@ generic_environment_check false
 ###
 ###
 ###section "Synchronise capsules again do not measure"   # We just added up2date content from CDN, so no reason to measure this now
-###tmp=$( mktemp )
+###tmp="$( mktemp )"
 ###h_out "--no-headers --csv capsule list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 ###for capsule_id in $( cat $tmp | cut -d ',' -f 1 | grep -v '1' ); do
 ###    h 13b-capsule-sync-$capsule_id.log "capsule content synchronize --organization '{{ sat_org }}' --id '$capsule_id'"
 ###done
+###rm -f $tmp
 
 
 section "Prepare for registrations"
@@ -116,6 +118,7 @@ h_out "--no-headers --csv domain list --search 'name = {{ domain }}'" | grep --q
 tmp=$( mktemp )
 h_out "--no-headers --csv location list --organization '{{ sat_org }}'" | grep '^[0-9]\+,' >$tmp
 location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
+rm -f $tmp
 h 42-domain-update.log "domain update --name '{{ domain }}' --organizations '{{ sat_org }}' --location-ids '$location_ids'"
 
 h 43-ak-create.log "activation-key create --content-view '{{ sat_org }} View' --lifecycle-environment Library --name ActivationKey --organization '{{ sat_org }}'"
