@@ -44,9 +44,13 @@
       ansible.builtin.debug:
         var: reg.stdout_lines
 
+    - name: "Calculate registration duration"
+      ansible.builtin.set_fact:
+        reg_duration: "{{ (reg.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (reg.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
     - name: "Register - timings"
       ansible.builtin.debug:
-        msg: "Register {{ reg.start }} to {{ reg.end }}"
+        msg: "Register {{ reg.start }} to {{ reg.end }} taking {{ reg_duration }} seconds"
       when: "reg.rc == 0"
 
     - name: "Disable insights-client automatic scheduling"

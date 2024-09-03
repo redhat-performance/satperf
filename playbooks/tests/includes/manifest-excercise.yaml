@@ -4,33 +4,33 @@
 # Expects that /root/manifest-auto.zip file is available on a Satellite host
 
 - name: "Upload manifest"
-  shell:
+  ansible.builtin.shell:
     hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription upload --file '/root/manifest-auto.zip' --organization '{{ organization }}'
   environment:
     TZ: UTC
   register: manifest_upload
 
 - name: "Calculate upload duration"
-  set_fact:
+  ansible.builtin.set_fact:
     manifest_upload_duration: "{{ (manifest_upload.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (manifest_upload.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
 - name: "Print upload results"
-  debug:
+  ansible.builtin.debug:
     msg: "ManifestUpload {{ manifest_upload.start }} to {{ manifest_upload.end }} taking {{ manifest_upload_duration }} seconds"
 
 - name: "Upload refresh"
-  shell:
+  ansible.builtin.shell:
     hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription refresh-manifest --organization '{{ organization }}'
   environment:
     TZ: UTC
   register: manifest_refresh
 
 - name: "Calculate refresh duration"
-  set_fact:
+  ansible.builtin.set_fact:
     manifest_refresh_duration: "{{ (manifest_refresh.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (manifest_refresh.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
 - name: "Print refresh results"
-  debug:
+  ansible.builtin.debug:
     msg: "ManifestRefresh {{ manifest_refresh.start }} to {{ manifest_refresh.end }} taking {{ manifest_refresh_duration }} seconds"
 
 #- name: "Wait few seconds"
@@ -38,17 +38,17 @@
 #    minutes: 0.2
 
 - name: "Delete manifest"
-  shell:
+  ansible.builtin.shell:
     hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ organization }}'
   environment:
     TZ: UTC
   register: manifest_delete
 
 - name: "Calculate delete duration"
-  set_fact:
+  ansible.builtin.set_fact:
     manifest_delete_duration: "{{ (manifest_delete.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (manifest_delete.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
 - name: "Print delete results"
-  debug:
+  ansible.builtin.debug:
     msg: "ManifestDelete {{ manifest_delete.start }} to {{ manifest_delete.end }} taking {{ manifest_delete_duration }} seconds"
 ...

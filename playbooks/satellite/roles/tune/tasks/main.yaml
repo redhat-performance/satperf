@@ -90,9 +90,13 @@
   ansible.builtin.debug:
     var:  satellite_installer_tune_cmd.stdout_lines
 
+- name: "Calculate installer tuning run duration"
+  ansible.builtin.set_fact:
+    satellite_installer_tune_cmd_duration: "{{ (satellite_installer_tune_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (satellite_installer_tune_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
 - name: "Print installer tuning run duration"
-  debug:
-    msg: "SatelliteInstallerTuneScenarioSatellite {{  satellite_installer_tune_cmd.start }} to {{  satellite_installer_tune_cmd.end }}"
+  ansible.builtin.debug:
+    msg: "SatelliteInstallerTuneScenarioSatellite {{ satellite_installer_tune_cmd.start }} to {{ satellite_installer_tune_cmd.end }} taking {{ satellite_installer_tune_cmd_duration }} seconds"
 
 - name: "Check whether pull-mqtt mode is enabled"
   ansible.builtin.lineinfile:

@@ -20,7 +20,7 @@
     - wait-for-task-script
   tasks:
     - name: "Create product"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization "{{ organization }}" --name "{{ test_sync_mixed_product }}"
       register: create_product
       failed_when: "create_product.rc != 0 and 'Name has already been taken for a product in this organization' not in create_product.stderr"
@@ -28,47 +28,47 @@
 
 
     - name: "Create Docker repos"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --content-type docker --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --url "{{ test_sync_docker_url_template|replace('*', item) }}"  --docker-upstream-name "{{ test_sync_docker_upstream_template|replace('*',item) }}"
       register: create_repo_docker
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Create ISO repos"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --content-type file --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --url "{{ test_sync_iso_url_template|replace('*', item) }}"
       register: create_repo_iso
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Create Yum repos"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --content-type yum --download-policy on_demand --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --url "{{ test_sync_repositories_url_template|replace('*', item) }}"
       register: create_repo_yum
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
 
     - name: "Start Docker repos sync asynchronously"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_docker
       ignore_errors: true
 
     - name: "Start ISO repos sync asynchronously"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_iso
       ignore_errors: true
 
     - name: "Start Yum repos sync asynchronously"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_yum
       ignore_errors: true
 
     - name: "Check that Docker start message is sane"
-      assert:
+      ansible.builtin.assert:
         that: "'Repository is being synchronized in task' in item.stdout"
         msg: 'Pass'
       loop: "{{ start_sync_docker.results }}"
@@ -76,7 +76,7 @@
         label: "{{ test_sync_docker_repo_template|replace('*', item.item) }}"
 
     - name: "Check that ISO start message is sane"
-      assert:
+      ansible.builtin.assert:
         that: "'Repository is being synchronized in task' in item.stdout"
         msg: 'Pass'
       loop: "{{ start_sync_iso.results }}"
@@ -84,7 +84,7 @@
         label: "{{ test_sync_iso_repo_template|replace('*', item.item) }}"
 
     - name: "Check that Yum start message is sane"
-      assert:
+      ansible.builtin.assert:
         that: "'Repository is being synchronized in task' in item.stdout"
         msg: 'Pass'
       loop: "{{ start_sync_yum.results }}"
@@ -92,7 +92,7 @@
         label: "{{ test_sync_repositories_repo_template|replace('*', item.item) }}"
 
     - name: "Wait for Docker synces to finish"
-      command:
+      ansible.builtin.command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[6].split('.')[0] }}" "{{ test_sync_mixed_max_sync_secs }}"
       loop: "{{ start_sync_docker.results }}"
       loop_control:
@@ -101,7 +101,7 @@
       ignore_errors: yes
 
     - name: "Wait for ISO synces to finish"
-      command:
+      ansible.builtin.command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[6].split('.')[0] }}" "{{ test_sync_mixed_max_sync_secs }}"
       loop: "{{ start_sync_iso.results }}"
       loop_control:
@@ -110,7 +110,7 @@
       ignore_errors: yes
 
     - name: "Wait for Yum synces to finish"
-      command:
+      ansible.builtin.command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[6].split('.')[0] }}" "{{ test_sync_mixed_max_sync_secs }}"
       loop: "{{ start_sync_yum.results }}"
       loop_control:
@@ -119,61 +119,61 @@
       ignore_errors: yes
 
     - name: "Print Docker sync results"
-      debug:
+      ansible.builtin.debug:
         msg: "SyncRepositoriesDocker {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync_docker.results }}"
       when: "item.rc is defined and item.rc == 0"
 
     - name: "Print ISO sync results"
-      debug:
+      ansible.builtin.debug:
         msg: "SyncRepositoriesISO {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync_iso.results }}"
       when: "item.rc is defined and item.rc == 0"
 
     - name: "Print Yum sync results"
-      debug:
+      ansible.builtin.debug:
         msg: "SyncRepositoriesYum {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_sync_yum.results }}"
       when: "item.rc is defined and item.rc == 0"
 
 
     - name: "Create lifecycle environment"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization "{{ organization }}" --prior Library --name "{{ test_sync_mixed_le }}"
       register: create_le
 
     - name: "Create content views (>= 6.6)"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization "{{ organization }}" --name "{{ test_sync_mixed_cv_template }}"
       register: create_cv
       #loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add Yum repositories to content views"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_yum_to_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add ISO repositories to content views"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_iso_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_iso_to_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add Docker repositories to content views"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_docker_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_docker_to_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
 
     - name: "Publish content views"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization "{{ organization }}" --name "{{ test_sync_mixed_cv_template }}"
       register: start_publish
 
     - name: "Wait for publish to finish"
-      command:
+      ansible.builtin.command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[-1].split('.')[0] }}" "{{ test_sync_mixed_max_sync_secs }}"
       register: wait_publish
       loop:
@@ -181,19 +181,19 @@
       ignore_errors: yes
 
     - name: "Print publish results"
-      debug:
+      ansible.builtin.debug:
         msg: "PublishContentViews {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_publish.results }}"
       when: "item.rc is defined and item.rc == 0"
 
 
     - name: "Promote content views"
-      command:
+      ansible.builtin.command:
         hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization "{{ organization }}" --content-view "{{ test_sync_mixed_cv_template }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_mixed_le }}"
       register: start_promote
 
     - name: "Wait for promote to finish"
-      command:
+      ansible.builtin.command:
         /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "{{ item.stdout.split()[-1].split('.')[0] }}" "{{ test_sync_mixed_max_sync_secs }}"
       loop:
         - "{{ start_promote }}"
@@ -201,7 +201,7 @@
       ignore_errors: yes
 
     - name: "Print promote results"
-      debug:
+      ansible.builtin.debug:
         msg: "PromoteContentViews {{ item.stdout_lines[-3] }} to {{ item.stdout_lines[-2] }} taking {{ item.stdout_lines[-1] }} seconds"
       loop: "{{ wait_promote.results }}"
       when: "item.rc is defined and item.rc == 0"

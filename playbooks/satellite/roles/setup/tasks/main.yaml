@@ -6,7 +6,7 @@
 
 # RHEL8 requirements
 - name: "Enable satellite:el8 module"
-  command: dnf -y module enable satellite:el8
+  ansible.builtin.command: dnf -y module enable satellite:el8
   when: "ansible_distribution_major_version | int == 8"
 
 # Install packages required for Satellite
@@ -48,12 +48,12 @@
     - run_before_sat_installer is defined and run_before_sat_installer | length > 0
 
 - name: "Show Installer command line"
-  debug:
+  ansible.builtin.debug:
     msg: "{{ sat_installer_cmd_line }}"
 
 # Run the installer
 - name: "Run Satellite configuration"
-  shell: "{{ sat_installer_cmd_line }}"
+  ansible.builtin.shell: "{{ sat_installer_cmd_line }}"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
@@ -65,11 +65,11 @@
     var: satellite_installer_cmd.stdout_lines
 
 - name: "Calculate run duration"
-  set_fact:
+  ansible.builtin.set_fact:
     duration: "{{ (satellite_installer_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (satellite_installer_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
 - name: "Print installer run duration"
-  debug:
+  ansible.builtin.debug:
     msg: "SatelliteInstallerScenarioSatellite {{ satellite_installer_cmd.start }} to {{ satellite_installer_cmd.end }} taking {{ duration }} seconds"
 
 - name: "Run desired shell commands after installation"

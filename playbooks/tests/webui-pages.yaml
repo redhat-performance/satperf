@@ -62,7 +62,11 @@
         dest: "/tmp/status-data-webui-pages.json"
         flat: true
 
+    - name: "Calculate run duration"
+      ansible.builtin.set_fact:
+        test_cmd_duration: "{{ (test_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (test_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
     - name: "Print results"
       ansible.builtin.debug:
-        msg: "WebUIPagesTest_c{{ ui_pages_concurrency }}_d{{ ui_pages_duration }} {{ test_cmd.start }} to {{ test_cmd.end }}"
+        msg: "WebUIPagesTest_c{{ ui_pages_concurrency }}_d{{ ui_pages_duration }} {{ test_cmd.start }} to {{ test_cmd.end }} taking {{ test_cmd_duration }} seconds"
 ...

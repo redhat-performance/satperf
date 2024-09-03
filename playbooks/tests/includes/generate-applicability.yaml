@@ -4,7 +4,7 @@
 # Expects these variables to be set:
 #     test_generate_applicability_timeout - timeout in seconds when waiting for task to finish
 - name: "Measure generate applicability task"
-  shell: |
+  ansible.builtin.shell: |
     echo "ForemanTasks.async_task(::Actions::Katello::Host::GenerateApplicability, Host.all)" | foreman-rake console
     task=$( hammer --output yaml -u "{{ sat_user }}" -p "{{ sat_pass }}" task list --search "label = Actions::Katello::Host::GenerateApplicability" --page 1 --per-page 1 --order 'started at' | grep '^- ID:' | cut -d ' ' -f 3 )
     /root/wait-for-task.sh "{{ sat_user }}" "{{ sat_pass }}" "$task" "{{ test_generate_applicability_timeout }}"
@@ -13,12 +13,12 @@
     TZ: UTC
   ignore_errors: yes
 
-- debug:
+- ansible.builtin.debug:
     var: run_applicability
   when: "run_applicability.rc is defined and run_applicability.rc != 0"
 
 - name: "Print results"
-  debug:
-    msg: "GenerateApplicability {{ run_applicability.stdout_lines[-2] }} to {{ run_applicability.stdout_lines[-1] }}"
+  ansible.builtin.debug:
+    msg: "GenerateApplicability {{ run_applicability.stdout_lines[-3] }} to {{ run_applicability.stdout_lines[-2] }} taking {{ run_applicability.stdout_lines[-1] }} seconds"
   when: "run_applicability.rc is defined and run_applicability.rc == 0"
 ...

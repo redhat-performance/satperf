@@ -207,7 +207,7 @@
     var: configuration.stdout_lines
 
 - name: "Calculate run duration"
-  set_fact:
+  ansible.builtin.set_fact:
     duration: "{{ (configuration.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (configuration.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
 - name: "Print capsule installer run duration"
