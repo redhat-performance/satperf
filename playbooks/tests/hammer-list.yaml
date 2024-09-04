@@ -1,20 +1,24 @@
 ---
 - hosts: satellite6
-  gather_facts: False
+  gather_facts: false
   tasks:
     - name: "Run 'hammer host list' command"
       ansible.builtin.shell:
         hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host list --organization "{{ organization }}" --page 1 --per-page 100 >/dev/null
-      register: run_hammer
-      loop: "{{ range(30)|list }}"
       environment:
         TZ: UTC
+      register: run_hammer
+      loop: "{{ range(30) | list }}"
 
     - name: "Calculate command duration"
       ansible.builtin.set_fact:
-        run_hammer_duration: "{{ (run_hammer.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (run_hammer.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+        combined: "{{ combined + [item | combine( { 'duration': (item.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (item.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() } )] }}"
+      vars:
+        combined: []
+      loop: "{{ run_hammer.results }}"
 
     - name: "Print results"
       ansible.builtin.debug:
-        msg: "HammerHostList {{ item.start }} to {{ item.end }} taking {{ run_hammer_duration }} seconds"
-      loop: "{{ run_hammer.results }}"
+        msg: "HammerHostList {{ item.start }} to {{ item.end }} taking {{ item.duration }} seconds"
+      loop: "{{ combined }}"
+...
