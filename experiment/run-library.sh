@@ -582,7 +582,7 @@ function e() {
     local duration="$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 4 )"
     local passed="$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )"
     local avg_duration="$( grep "^$grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )"
-    log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts)"
+    log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts) and has taken $avg_duration seconds"
 
     measurement_add \
       "experiment/reg-average.py '$grepper' '$log'" \
