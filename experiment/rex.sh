@@ -37,9 +37,17 @@ skip_measurement='true' h 14-rex-uploadprofile.log "job-invocation create --asyn
 jsr $logs/14-rex-uploadprofile.log
 j $logs/14-rex-uploadprofile.log
 
-skip_measurement='true' h 15-rex-katello_package_update.log "job-invocation create --async --description-format '%{template_name}' --feature katello_package_update --search-query 'name ~ container'"
-jsr $logs/15-rex-katello_package_update.log
-j $logs/15-rex-katello_package_update.log
+skip_measurement='true' h 15-rex-katello_package_install-podman.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ container'"
+jsr $logs/15-rex-katello_package_install-podman.log
+j $logs/15-rex-katello_package_install-podman.log
+
+skip_measurement='true' h 16-rex-podman_pull.log "job-invocation create --async --description-format '${total_registered} hosts (${concurrent_registrations} new) - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+jsr $logs/16-rex-podman_pull.log
+j $logs/16-rex-podman_pull.log
+
+skip_measurement='true' h 20-rex-katello_package_update.log "job-invocation create --async --description-format '%{template_name}' --feature katello_package_update --search-query 'name ~ container'"
+jsr $logs/20-rex-katello_package_update.log
+j $logs/20-rex-katello_package_update.log
 
 
 junit_upload
