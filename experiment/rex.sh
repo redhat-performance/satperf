@@ -37,7 +37,7 @@ skip_measurement='true' a 11-rex-cleanup-know_hosts.log \
 # jsr $logs/14-rex-uploadprofile.log
 # j $logs/14-rex-uploadprofile.log
 
-skip_measurement='true' h 15-rex-katello_package_install-podman.log "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ container'"
+skip_measurement='true' h 15-rex-katello_package_install-podman.log "job-invocation create --async --description-format 'Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ container'"
 jsr $logs/15-rex-katello_package_install-podman.log
 j $logs/15-rex-katello_package_install-podman.log
 
