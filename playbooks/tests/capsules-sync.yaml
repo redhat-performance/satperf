@@ -1,0 +1,98 @@
+---
+- hosts: satellite6
+  gather_facts: false
+  roles:
+    - wait-for-task-script
+
+- hosts: capsules
+  gather_facts: false
+  vars:
+    sync_max_time: 3600
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+        lces: "{{ lces | default('Library') }}"
+
+    - name: "Get capsule ID"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: "hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id"
+      register: capsule_id_cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Set capsule ID"
+      ansible.builtin.set_fact:
+        id: "{{ capsule_id_cmd.stdout }}"
+
+    - name: "Set capsule download policy"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: "hammer -u {{ user }} -p {{ password }} capsule update --id '{{ id }}' --download-policy {{ download_policy }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      when:
+        - download_policy is defined and download_policy != 'inherit'
+
+    - name: "Assign lifecycle environment(s): '{{ lces }}'"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          for LCE in $(echo "{{ lces }}" | tr ',' ' '); do
+            if ! hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+              if hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content available-lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+                hammer -u {{ user }} -p {{ password }} capsule content add-lifecycle-environment --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment "$LCE"
+              fi
+            fi
+          done
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Set the base synchronization command"
+      ansible.builtin.set_fact:
+        cap_sync_command: "hammer -u {{ user }} -p {{ password }} capsule content synchronize --organization '{{ organization }}' --id '{{ id }}' --async"
+
+    - name: "Set complete synchronization mode"
+      ansible.builtin.set_fact:
+        cap_sync_command: "{{ cap_sync_command }} --skip-metadata-check true"
+      when:
+        - mode is defined and mode == 'complete'
+
+    - name: "Set validate content synchronization mode"
+      ansible.builtin.set_fact:
+        cap_sync_command: "{{ cap_sync_command }} --validate-contents true"
+      when:
+        - mode is defined and mode == 'validate_contents'
+
+    - name: "Sync the content (async)"
+      # XXX: Submit PR
+      throttle: 16
+      ansible.builtin.command:
+        cmd: "{{ cap_sync_command }}"
+      register: start_sync
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Check that start message is sane"
+      ansible.builtin.assert:
+        that: "'Capsule content is being synchronized in task' in start_sync.stdout"
+        msg: 'Pass'
+        quiet: true
+
+    - name: "Wait for syncs to finish"
+      ansible.builtin.command:
+        cmd: |
+          /root/wait-for-task.sh "{{ user }}" "{{ password }}" "{{ start_sync.stdout.split()[7].split('.')[0] }}" "{{ sync_max_time }}"
+      register: wait_sync
+      ignore_errors: true
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Print sync results"
+      ansible.builtin.debug:
+        msg: "CapusuleSync {{ wait_sync.stdout_lines[-3] }} to {{ wait_sync.stdout_lines[-2] }} taking {{ wait_sync.stdout_lines[-1] }} seconds"
+      when: wait_sync is succeeded
+...
