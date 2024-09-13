@@ -432,10 +432,11 @@ e PromoteContentViews "$logs/83-test-sync-ansible-collections.log"
 
 
 section 'Push content to capsules'
-ap 14c-capsync-populate.log \
+ap 43-capsules-sync.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
-  playbooks/satellite/capsules-populate.yaml
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/43-capsules-sync.log"
 
 
 export skip_measurement=true
@@ -455,6 +456,7 @@ ap 44-generate-host-registration-commands.log \
   -e "aks='$aks'" \
   -e "sat_version='$sat_version'" \
   playbooks/satellite/host-registration_generate-commands.yaml
+
 ap 44-recreate-client-scripts.log \
   -e "aks='$aks'" \
   playbooks/satellite/client-scripts.yaml
