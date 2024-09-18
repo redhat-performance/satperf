@@ -14,7 +14,6 @@ lces="${PARAM_lces:-Test QA Pre Prod}"
 basearch=x86_64
 
 sat_client_product='Satellite Client'
-
 repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 
 rhosp_product=RHOSP
@@ -378,12 +377,11 @@ ap 80-test-sync-repositories.log \
   -e "test_sync_repositories_url_template='$test_sync_repositories_url_template'" \
   -e "test_sync_repositories_max_sync_secs='$test_sync_repositories_max_sync_secs'" \
   playbooks/tests/sync-repositories.yaml
-
-lces+=' test_sync_repositories_le'
-
 e SyncRepositories "$logs/80-test-sync-repositories.log"
 e PublishContentViews "$logs/80-test-sync-repositories.log"
 e PromoteContentViews "$logs/80-test-sync-repositories.log"
+
+lces+=' test_sync_repositories_le'
 
 
 section 'Sync iso'
@@ -393,12 +391,11 @@ ap 81-test-sync-iso.log \
   -e "test_sync_iso_url_template='$test_sync_iso_url_template'" \
   -e "test_sync_iso_max_sync_secs='$test_sync_iso_max_sync_secs'" \
   playbooks/tests/sync-iso.yaml
-
-lces+=' test_sync_iso_le'
-
 e SyncRepositories "$logs/81-test-sync-iso.log"
 e PublishContentViews "$logs/81-test-sync-iso.log"
 e PromoteContentViews "$logs/81-test-sync-iso.log"
+
+lces+=' test_sync_iso_le'
 
 
 section 'Sync docker repo'
@@ -408,12 +405,11 @@ ap 82-test-sync-docker.log \
   -e "test_sync_docker_url_template='$test_sync_docker_url_template'" \
   -e "test_sync_docker_max_sync_secs='$test_sync_docker_max_sync_secs'" \
   playbooks/tests/sync-docker.yaml
-
-lces+=' test_sync_docker_le'
-
 e SyncRepositories "$logs/82-test-sync-docker.log"
 e PublishContentViews "$logs/82-test-sync-docker.log"
 e PromoteContentViews "$logs/82-test-sync-docker.log"
+
+lces+=' test_sync_docker_le'
 
 
 section 'Sync ansible collections'
@@ -424,11 +420,11 @@ ap 83-test-sync-ansible-collections.log \
   -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
   playbooks/tests/sync-ansible-collections.yaml
 
-lces+=' test_sync_ansible_collections_le'
-
 e SyncRepositories "$logs/83-test-sync-ansible-collections.log"
 e PublishContentViews "$logs/83-test-sync-ansible-collections.log"
 e PromoteContentViews "$logs/83-test-sync-ansible-collections.log"
+
+lces+=' test_sync_ansible_collections_le'
 
 
 section 'Push content to capsules'
