@@ -34,6 +34,7 @@ opts_adhoc="$opts"
 
 section 'Checking environment'
 generic_environment_check
+# set +e
 
 
 export skip_measurement=true
@@ -350,7 +351,7 @@ concurrent_registrations_per_container_host="$(( expected_concurrent_registratio
 real_concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
 registration_iterations="$(( ( total_number_containers + real_concurrent_registrations - 1 ) / real_concurrent_registrations ))" # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
 
-log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $(( registration_iterations + 1 )) batches."
+log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $registration_iterations batches."
 
 for (( i=initial_batch; i <= registration_iterations; i++ )); do
     ap "70-register-$i.log" \
