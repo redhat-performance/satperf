@@ -319,11 +319,12 @@ fi
 
 if ! $skip_push_to_capsules_setup ; then
     section 'Push content to capsules'
-    ap 50-capsules-populate.log \
+    ap 50-capsules-sync.log \
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
       -e "download_policy='${capsule_download_policy}'" \
-      playbooks/satellite/capsules-populate.yaml
+      playbooks/tests/capsules-sync.yaml
+    e CapusuleSync "$logs/50-capsules-sync.log"
 fi
 
 
