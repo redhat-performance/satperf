@@ -354,7 +354,7 @@ registration_iterations="$(( ( total_number_containers + real_concurrent_registr
 
 log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $(( registration_iterations + 1 )) batches."
 
-for (( i=initial_batch; i <= ( registration_iterations + 1 ); i++ )); do
+for (( i=initial_batch; i <= registration_iterations; i++ )); do
     ap "70-register-$i.log" \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "registration_logs='../../$logs/70-register-container-host-client-logs'" \
