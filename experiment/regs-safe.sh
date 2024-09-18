@@ -14,7 +14,6 @@ lces="${PARAM_lces:-Test}"
 basearch=x86_64
 
 sat_client_product='Satellite Client'
-
 repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 
 rhosp_product=RHOSP
@@ -22,12 +21,12 @@ rhosp_registry_url="${PARAM_rhosp_registry_url:-https://registry.example.io}"
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
 rhosp_registry_password="${PARAM_rhosp_registry_password:-pass}"
 
-expected_concurrent_registrations="${PARAM_expected_concurrent_registrations:-64}"
-initial_batch="${PARAM_initial_batch:-1}"
-
 skip_down_setup="${PARAM_skip_down_setup:-false}"
 skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
 capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
+
+expected_concurrent_registrations="${PARAM_expected_concurrent_registrations:-64}"
+initial_batch="${PARAM_initial_batch:-1}"
 
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
@@ -331,17 +330,15 @@ fi
 section 'Prepare for registrations'
 aks='AK_rhel8_Test AK_rhel9_Test'
 
-for ak in $aks; do
-    ap "60-generate-host-registration-command-${ak}.log" \
-      -e "organization='{{ sat_org }}'" \
-      -e "aks='$aks'" \
-      -e "sat_version='$sat_version'" \
-      playbooks/satellite/host-registration_generate-commands.yaml
+ap 60-generate-host-registration-commands.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "aks='$aks'" \
+  -e "sat_version='$sat_version'" \
+  playbooks/satellite/host-registration_generate-commands.yaml
 
-    ap "61-recreate-client-scripts-${ak}.log" \
-      -e "aks='$aks'" \
-      playbooks/satellite/client-scripts.yaml
-done
+ap 61-recreate-client-scripts.log \
+  -e "aks='$aks'" \
+  playbooks/satellite/client-scripts.yaml
 
 unset skip_measurement
 
