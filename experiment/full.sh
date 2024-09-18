@@ -371,7 +371,7 @@ unset skip_measurement
 
 
 section 'Sync yum repo'
-ap 80-test-sync-repositories.log \
+skip_measurement=true ap 80-test-sync-repositories.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_repositories_count='$test_sync_repositories_count'" \
   -e "test_sync_repositories_url_template='$test_sync_repositories_url_template'" \
@@ -385,7 +385,7 @@ lces+=' test_sync_repositories_le'
 
 
 section 'Sync iso'
-ap 81-test-sync-iso.log \
+skip_measurement=true ap 81-test-sync-iso.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_iso_count='$test_sync_iso_count'" \
   -e "test_sync_iso_url_template='$test_sync_iso_url_template'" \
@@ -399,7 +399,7 @@ lces+=' test_sync_iso_le'
 
 
 section 'Sync docker repo'
-ap 82-test-sync-docker.log \
+skip_measurement=true ap 82-test-sync-docker.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_docker_count='$test_sync_docker_count'" \
   -e "test_sync_docker_url_template='$test_sync_docker_url_template'" \
@@ -413,7 +413,7 @@ lces+=' test_sync_docker_le'
 
 
 section 'Sync ansible collections'
-ap 83-test-sync-ansible-collections.log \
+skip_measurement=true ap 83-test-sync-ansible-collections.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
   -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
@@ -428,7 +428,7 @@ lces+=' test_sync_ansible_collections_le'
 
 
 section 'Push content to capsules'
-ap 43-capsules-sync.log \
+skip_measurement=true ap 43-capsules-sync.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
@@ -525,7 +525,7 @@ j "$logs/59-rex-katello_package_update-${total_registered}.log"
 
 
 section 'Misc simple tests'
-ap 61-hammer-list.log \
+skip_measurement=true ap 61-hammer-list.log \
   -e "organization='{{ sat_org }}'" \
   playbooks/tests/hammer-list.yaml
 e HammerHostList "$logs/61-hammer-list.log"
