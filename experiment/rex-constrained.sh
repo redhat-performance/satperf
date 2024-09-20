@@ -38,7 +38,7 @@ jsr "$logs/17-rex-podman_pull.log"
 j "$logs/17-rex-podman_pull.log"
 
 skip_measurement='true' h 18-rex-fake_dnf_upgrade.log \
-  "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='TMPDIR="\\$(mktemp -d)" && dnf upgrade -y --downloadonly --destdir=$TMPDIR && dnf clean all && rm -rf $TMPDIR' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
+  "job-invocation create --async --description-format 'Run %{command} (%{template_name})' --inputs command='TMPDIR=\"\$(mktemp -d)\" && dnf upgrade -y --downloadonly --destdir=\$TMPDIR && dnf clean all && rm -rf \$TMPDIR' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
 jsr "$logs/18-rex-fake_dnf_upgrade.log"
 j "$logs/18-rex-fake_dnf_upgrade.log"
 
