@@ -41,61 +41,14 @@ set +e
 export skip_measurement=true
 
 if ! $skip_down_setup; then
-    section 'Create base LCE(s), CCV(s) and AK(s)'
-    # LCE creation
-    prior=Library
-    for lce in $lces; do
-        h "01-lce-create-${lce}.log" \
-          "lifecycle-environment create --organization '{{ sat_org }}' --name '$lce' --prior '$prior'"
-
-        prior=$lce
-    done
-
-    # CCV creation
-    for rel in $rels; do
-        ccv="CCV_$rel"
-
-        h "06-ccv-create-${rel}.log" \
-          "content-view create --organization '{{ sat_org }}' --name '$ccv' --composite --auto-publish yes"
-        h "06-ccv-publish-${rel}.log" \
-          "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
-
-        # CCV promotion to LCE(s)
-        prior=Library
-        for lce in $lces; do
-            h "06-ccv-promote-${rel}-${lce}.log" \
-              "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
-
-            prior=$lce
-        done
-    done
-
-    # AK creation
-    unset aks
-    for rel in $rels; do
-        ccv="CCV_$rel"
-
-        prior=Library
-        for lce in $lces; do
-            ak="AK_${rel}_${lce}"
-            aks+="$ak "
-
-            h "07-ak-create-${rel}-${lce}.log" \
-              "activation-key create --organization '{{ sat_org }}' --name '$ak' --content-view '$ccv' --lifecycle-environment '$lce'"
-
-            prior=$lce
-        done
-    done
-
-
     section 'Upload manifest'
-    a 09-manifest-deploy.log \
+    a 01-manifest-deploy.log \
       -m ansible.builtin.copy \
       -a "src=$manifest dest=/root/manifest-auto.zip force=true" \
       satellite6
-    h 09-manifest-upload.log \
+    h 01-manifest-upload.log \
       "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-    h 09-manifest-refresh.log \
+    h 01-manifest-refresh.log \
       "subscription refresh-manifest --organization '{{ sat_org }}'"
 
 
@@ -140,40 +93,86 @@ if ! $skip_down_setup; then
 
         case $rel in
             rhel6)
-                h "12-reposet-enable-${rel}.log" \
+                h "05-reposet-enable-${rel}.log" \
                   "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}.log" \
+                h "06-repo-sync-${rel}.log" \
                   "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
                 ;;
             rhel7)
-                h "12-reposet-enable-${rel}.log" \
+                h "05-reposet-enable-${rel}.log" \
                   "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}.log" \
+                h "06-repo-sync-${rel}.log" \
                   "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
-                h "12-reposet-enable-${rel}extras.log" \
+                h "05-reposet-enable-${rel}extras.log" \
                   "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}extras.log" \
+                h "06-repo-sync-${rel}extras.log" \
                   "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
                 ;;
             rhel8|rhel9)
-                h "12-reposet-enable-${rel}baseos.log" \
+                h "05-reposet-enable-${rel}baseos.log" \
                   "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}baseos.log" \
+                h "06-repo-sync-${rel}baseos.log" \
                   "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
-                h "12-reposet-enable-${rel}appstream.log" \
+                h "05-reposet-enable-${rel}appstream.log" \
                   "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_appstream_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}appstream.log" \
+                h "06-repo-sync-${rel}appstream.log" \
                   "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_appstream_repo_name'"
                 ;;
         esac
     done
 
 
+    section 'Create base LCE(s), CCV(s) and AK(s)'
+    # LCE creation
+    prior=Library
+    for lce in $lces; do
+        h "11-lce-create-${lce}.log" \
+          "lifecycle-environment create --organization '{{ sat_org }}' --name '$lce' --prior '$prior'"
+
+        prior=$lce
+    done
+
+    # CCV creation
+    for rel in $rels; do
+        ccv="CCV_$rel"
+
+        h "12-ccv-create-${rel}.log" \
+          "content-view create --organization '{{ sat_org }}' --name '$ccv' --composite --auto-publish yes"
+        h "12-ccv-publish-${rel}.log" \
+          "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+
+        # CCV promotion to LCE(s)
+        prior=Library
+        for lce in $lces; do
+            h "12-ccv-promote-${rel}-${lce}.log" \
+              "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+
+            prior=$lce
+        done
+    done
+
+    # AK creation
+    unset aks
+    for rel in $rels; do
+        ccv="CCV_$rel"
+
+        prior=Library
+        for lce in $lces; do
+            ak="AK_${rel}_${lce}"
+            aks+="$ak "
+
+            h "13-ak-create-${rel}-${lce}.log" \
+              "activation-key create --organization '{{ sat_org }}' --name '$ak' --content-view '$ccv' --lifecycle-environment '$lce'"
+
+            prior=$lce
+        done
+    done
+
+
     section 'Create, publish and promote OS CVs / CCVs to LCE(s)s'
     for rel in $rels; do
-        cv_os="CV_$rel"
         ccv="CCV_$rel"
 
         case $rel in
@@ -214,6 +213,8 @@ if ! $skip_down_setup; then
         esac
 
         # OS CV
+        cv_os="CV_$rel"
+
         h "15-cv-create-${rel}-os.log" \
           "content-view create --organization '{{ sat_org }}' --name '$cv_os' --repository-ids '$os_rids'"
 
@@ -221,19 +222,16 @@ if ! $skip_down_setup; then
           "content-view publish --organization '{{ sat_org }}' --name '$cv_os'"
 
         # Filtered OS CV
-        cv_filtered_os="CV_${rel}_Filtered"
-        filter_cv_filtered_os=Erratum_Inclusive
+        cv_os_filtered="CV_${rel}_Filtered"
+        filter_cv_os_filtered=Erratum_Inclusive
 
         h "15-cv-create-${rel}-os-filtered.log" \
-          "content-view create --organization '{{ sat_org }}' --name '$cv_filtered_os' --repository-ids '$os_rids'"
+          "content-view create --organization '{{ sat_org }}' --name '$cv_os_filtered' --repository-ids '$os_rids'"
 
         h "15-cv-filter-create-${rel}-os-filtered.log" \
-          "content-view filter create --organization '{{ sat_org }}' --content-view '$cv_filtered_os' --name '$filter_cv_filtered_os' --type erratum --inclusion true"
+          "content-view filter create --organization '{{ sat_org }}' --content-view '$cv_os_filtered' --name '$filter_cv_os_filtered' --type erratum --inclusion true"
         h "15-cv-filter-rule-create-${rel}-os-filtered.log" \
-          "content-view filter rule create --organization '{{ sat_org }}' --content-view '$cv_filtered_os' --content-view-filter '$filter_cv_filtered_os' --date-type 'updated' --end-date '$filter_cv_rule_end_date' --types '$filter_cv_rule_types'"
-
-        h "15-cv-publish-${rel}-os-filtered.log" \
-          "content-view publish --organization '{{ sat_org }}' --name '$cv_filtered_os'"
+          "content-view filter rule create --organization '{{ sat_org }}' --content-view '$cv_os_filtered' --content-view-filter '$filter_cv_os_filtered' --date-type 'updated' --end-date '$filter_cv_rule_end_date' --types '$filter_cv_rule_types'"
 
         # CCV with OS
         if ! $filter_cv; then
@@ -241,8 +239,12 @@ if ! $skip_down_setup; then
               "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
         else
             h "16-ccv-component-add-${rel}-os-filtered.log" \
-              "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_filtered_os' --latest"
+              "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os_filtered' --latest"
         fi
+
+        h "15-cv-publish-${rel}-os-filtered.log" \
+          "content-view publish --organization '{{ sat_org }}' --name '$cv_os_filtered'"
+
         h "16-ccv-publish-${rel}-os.log" \
           "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
@@ -261,7 +263,6 @@ if ! $skip_down_setup; then
       "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
 
     for rel in $rels; do
-        cv_sat_client="CV_${rel}-sat-client"
         ccv="CCV_${rel}"
 
         case $rel in
@@ -290,18 +291,21 @@ if ! $skip_down_setup; then
         content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$sat_client_repo_name\"' --fields 'Content label'" | tail -n1 )"
 
         # Satellite Client CV
+        cv_sat_client="CV_${rel}-sat-client"
+
         h "35-cv-create-${rel}-sat-client.log" \
           "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
 
         # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
         wait
 
+         # CCV with Satellite Client
+        h "36-ccv-component-add-${rel}-sat-client.log" \
+          "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
+
         h "35-cv-publish-${rel}-sat-client.log" \
           "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
-        # CCV with Satellite Client
-        h "36-ccv-component-add-${rel}-sat-client.log" \
-          "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
         h "36-ccv-publish-${rel}-sat-client.log" \
           "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
@@ -329,7 +333,6 @@ if ! $skip_down_setup; then
     h 40-product-create-rhsop.log "product create --organization '{{ sat_org }}' --name '$rhosp_product'"
 
     for rel in $rels; do
-        cv_osp="CV_${rel}-osp"
         ccv="CCV_${rel}"
 
         case $rel in
@@ -345,18 +348,21 @@ if ! $skip_down_setup; then
                 content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$rhosp_rids\"' --fields 'Content label'" | tail -n1 )"
 
                 # RHOSP CV
+                cv_osp="CV_${rel}-osp"
+
                 h "45-cv-create-rhosp-${rel}.log" \
                   "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
 
                 # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
                 wait
 
-                h "45-cv-publish-rhosp-${rel}.log" \
-                  "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
-
                 # CCV with RHOSP
                 h "46-ccv-component-add-rhosp-${rel}.log" \
                   "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_osp' --latest"
+
+                h "45-cv-publish-rhosp-${rel}.log" \
+                  "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
+
                 h "46-ccv-publish-rhosp-${rel}.log" \
                   "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
