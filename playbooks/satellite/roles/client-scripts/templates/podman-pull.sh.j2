@@ -1,15 +1,13 @@
 #!/bin/bash
 
+set -eu
+
+
 MAJOR_RHEL_VERSION="$(awk -F'[=".]' '/VERSION_ID/ {print $3}' /etc/os-release)"
 IMAGE_LOCATION=default_organization-test-ccv_rhel${MAJOR_RHEL_VERSION}-rhosp-rhosp-rhel${MAJOR_RHEL_VERSION}_openstack-base
 MAJOR_RHOSP_VERSION=17
 
-if [[ "{{ tests_registration_target }}" == 'capsule-lb-'* ]]; then
-    NUM_CAPSULES="$(awk '$2 ~ /^capsule-/ {print $2}' /etc/hosts | grep -cv capsule-lb-)"
-    REGISTRY="$(awk '$2 ~ /^capsule-/ {print $2}' /etc/hosts | grep -v capsule-lb- | head -n$(( RANDOM % NUM_CAPSULES + 1)) | tail -n1)"
-else
-    REGISTRY={{ tests_registration_target }}
-fi
+REGISTRY={{ tests_registration_target }}
 
 podman login --tls-verify=false --username {{ sat_user }} --password {{ sat_pass }} $REGISTRY
 
