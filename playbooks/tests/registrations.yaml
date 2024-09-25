@@ -139,6 +139,7 @@
             -e ' initial configuration failed' \
             -e ^'        "Internal Server Error",'$ \
             -e 'ERROR: ' \
+            -e ^'Error: Failed to download metadata for repo' \
             {{ clients_yaml_cmd_log }}
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
@@ -188,6 +189,7 @@
             -e ' initial configuration failed' \
             -e ^'        "Internal Server Error",'$ \
             -e 'ERROR: ' \
+            -e ^'Error: Failed to download metadata for repo' \
             {{ clients_yaml_cmd_retries_log }})" != 0 )); do
               num_fails="$(grep -c \
                 -e ^'fatal: ' \
@@ -196,6 +198,7 @@
                 -e ' initial configuration failed' \
                 -e ^'        "Internal Server Error",'$ \
                 -e 'ERROR: ' \
+                -e ^'Error: Failed to download metadata for repo' \
                 {{ clients_yaml_cmd_retries_log }})"
               iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
 
@@ -215,13 +218,15 @@
                 -e ' initial configuration failed' \
                 -e ^'        "Internal Server Error",'$ \
                 -e 'ERROR: ' \
+                -e ^'Error: Failed to download metadata for repo' \
                 $iter_clients_yaml_cmd_retries_log |
                 uniq | grep -B1 \
                 -e ^'        "Traceback ' \
                 -e ^'        "curl: ' \
                 -e ' initial configuration failed' \
                 -e ^'        "Internal Server Error",'$ \
-                -e 'ERROR: ' |
+                -e 'ERROR: ' \
+                -e ^'Error: Failed to download metadata for repo' |
                 awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
                   CLIENT_IP_LIST+="${client_ip},"
               done
