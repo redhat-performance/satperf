@@ -15,6 +15,7 @@ marker_date="$( date -u -Iseconds )"
 branch="${PARAM_branch:-satcpt}"
 sat_version="${PARAM_sat_version:-stream}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
 
 opts="${opts:-"--forks 100 -i $inventory"}"
 opts_adhoc="${opts_adhoc:-$opts}"
@@ -120,6 +121,7 @@ function generic_environment_check() {
               container_hosts
 
             ap 00-tierup-containers.log \
+              -e "content_host_base_image='$content_host_base_image'" \
               ansible-container-host-mgr/tierup.yaml
         fi
     fi
