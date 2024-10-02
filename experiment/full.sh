@@ -36,8 +36,9 @@ test_sync_ansible_collections_count="${PARAM_test_sync_ansible_collections_count
 test_sync_ansible_collections_upstream_url_template="${PARAM_test_sync_ansible_collections_upstream_url_template:-https://galaxy.example.com/}"
 test_sync_ansible_collections_max_sync_secs="${PARAM_test_sync_ansible_collections_max_sync_secs:-600}"
 
-ui_pages_concurrency="${PARAM_ui_pages_concurrency:-10}"
-ui_pages_duration="${PARAM_ui_pages_duration:-300}"
+ui_concurrency="${PARAM_ui_concurrency:-10}"
+ui_duration="${PARAM_ui_duration:-300}"
+ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
 
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
@@ -533,10 +534,20 @@ e HammerHostList "$logs/61-hammer-list.log"
 rm -f /tmp/status-data-webui-pages.json
 skip_measurement=true ap 62-webui-pages.log \
   -e "sat_version='$sat_version'" \
-  -e "ui_pages_concurrency='$ui_pages_concurrency'" \
-  -e "ui_pages_duration='$ui_pages_duration'" \
+  -e "ui_concurrency='$ui_concurrency'" \
+  -e "ui_duration='$ui_duration'" \
   playbooks/tests/webui-pages.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_pages_concurrency}_d${ui_pages_duration}" "$logs/62-webui-pages.log"
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "$logs/62-webui-pages.log"
+
+rm -f /tmp/status-data-webui-static-distributed.json
+skip_measurement=true ap 62-webui-static-distributed.log \
+  -e "sat_version='$sat_version'" \
+  -e "ui_concurrency='$ui_concurrency'" \
+  -e "ui_duration='$ui_duration'" \
+  -e "ui_max_static_size='$ui_max_static_size'" \
+  playbooks/tests/webui-static-distributed.yaml
+STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "$logs/62-webui-static-distributed.log"
+
 a 63-foreman_inventory_upload-report-generate.log satellite6 \
   -m ansible.builtin.shell \
   -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
