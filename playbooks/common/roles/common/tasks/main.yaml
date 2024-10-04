@@ -260,4 +260,9 @@
 # Sanity check yum config
 - name: "Command yum repolist returns"
   ansible.builtin.command: yum repolist
+
+- name: "Persist journal data"
+  ansible.builtin.file:
+    path: /var/log/journal
+    state: directory
 ...
