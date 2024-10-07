@@ -1,4 +1,8 @@
 ---
+- name: Set timezone to UTC
+  community.general.timezone:
+    name: UTC
+    
 - name: "Upgrade"
   ansible.builtin.dnf:
     name: '*'
