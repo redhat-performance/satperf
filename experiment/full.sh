@@ -36,6 +36,8 @@ test_sync_ansible_collections_count="${PARAM_test_sync_ansible_collections_count
 test_sync_ansible_collections_upstream_url_template="${PARAM_test_sync_ansible_collections_upstream_url_template:-https://galaxy.example.com/}"
 test_sync_ansible_collections_max_sync_secs="${PARAM_test_sync_ansible_collections_max_sync_secs:-600}"
 
+rex_search_queries="${PARAM_rex_search_queries:-container110 container10 container0}"
+
 ui_concurrency="${PARAM_ui_concurrency:-10}"
 ui_duration="${PARAM_ui_duration:-300}"
 ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
@@ -460,7 +462,7 @@ ap 44-recreate-client-scripts.log \
 unset skip_measurement
 
 
-section 'Incremental registrations and remote execution'
+section 'Incremental registrations'
 number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
 number_containers_per_container_host="$( ansible $opts_adhoc -m ansible.builtin.debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 if (( initial_expected_concurrent_registrations > number_container_hosts )); then
@@ -469,14 +471,6 @@ else
     initial_concurrent_registrations_per_container_host=1
 fi
 num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
-job_template_ansible_default='Run Command - Ansible Default'
-job_template_ssh_default='Run Command - Script Default'
-
-skip_measurement=true h 46-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
-skip_measurement=true a 47-rex-cleanup-know_hosts.log \
-  -m ansible.builtin.shell \
-  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
-  satellite6
 
 for (( batch=1, remaining_containers_per_container_host=number_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
     if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
@@ -500,57 +494,79 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
       e Register "$logs/48-register-${concurrent_registrations}.log"
 
     (( total_registered += concurrent_registrations ))
-
-    skip_measurement=true h 55-rex-date-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-    jsr "$logs/55-rex-date-${total_registered}.log"
-    j "$logs/55-rex-date-${total_registered}.log"
-
-    skip_measurement=true h 56-rex-date-ansible-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ container'"
-    jsr "$logs/56-rex-date-ansible-${total_registered}.log"
-    j "$logs/56-rex-date-ansible-${total_registered}.log"
-
-    skip_measurement=true h 57-rex-katello_package_install-podman-${total_registered}_${concurrent_registrations}.log "job-invocation create --async --description-format '${total_registered} hosts (${concurrent_registrations} new) - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ container'"
-    jsr "$logs/57-rex-katello_package_install-podman-${total_registered}_${concurrent_registrations}.log"
-    j "$logs/57-rex-katello_package_install-podman-${total_registered}_${concurrent_registrations}.log"
-
-    skip_measurement=true h 57-rex-podman_pull-${total_registered}_${concurrent_registrations}.log "job-invocation create --async --description-format '${total_registered} hosts (${concurrent_registrations} new) - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ container'"
-    jsr "$logs/57-rex-podman_pull-${total_registered}_${concurrent_registrations}.log"
-    j "$logs/57-rex-podman_pull-${total_registered}_${concurrent_registrations}.log"
 done
 grep Register "$logs"/48-register-*.log >"$logs/48-register-overall.log"
 e Register "$logs/48-register-overall.log"
 
-skip_measurement=true h 59-rex-katello_package_update-${total_registered}.log "job-invocation create --async --description-format '${total_registered} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ container'"
-jsr "$logs/59-rex-katello_package_update-${total_registered}.log"
-j "$logs/59-rex-katello_package_update-${total_registered}.log"
-
 
 section 'Misc simple tests'
-skip_measurement=true ap 61-hammer-list.log \
+skip_measurement=true ap 50-hammer-list.log \
   -e "organization='{{ sat_org }}'" \
   playbooks/tests/hammer-list.yaml
-e HammerHostList "$logs/61-hammer-list.log"
+e HammerHostList "$logs/51-hammer-list.log"
 
 rm -f /tmp/status-data-webui-pages.json
-skip_measurement=true ap 62-webui-pages.log \
+skip_measurement=true ap 52-webui-pages.log \
   -e "sat_version='$sat_version'" \
   -e "ui_concurrency='$ui_concurrency'" \
   -e "ui_duration='$ui_duration'" \
   playbooks/tests/webui-pages.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "$logs/62-webui-pages.log"
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "$logs/52-webui-pages.log"
 
 rm -f /tmp/status-data-webui-static-distributed.json
-skip_measurement=true ap 62-webui-static-distributed.log \
+skip_measurement=true ap 52-webui-static-distributed.log \
   -e "sat_version='$sat_version'" \
   -e "ui_concurrency='$ui_concurrency'" \
   -e "ui_duration='$ui_duration'" \
   -e "ui_max_static_size='$ui_max_static_size'" \
   playbooks/tests/webui-static-distributed.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "$logs/62-webui-static-distributed.log"
+STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "$logs/52-webui-static-distributed.log"
 
-a 63-foreman_inventory_upload-report-generate.log satellite6 \
+a 53-foreman_inventory_upload-report-generate.log satellite6 \
   -m ansible.builtin.shell \
   -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
+
+
+section 'Remote execution (ReX)'
+job_template_ansible_default='Run Command - Ansible Default'
+job_template_ssh_default='Run Command - Script Default'
+
+skip_measurement=true h 58-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
+skip_measurement=true a 59-rex-cleanup-know_hosts.log \
+  -m ansible.builtin.shell \
+  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
+  satellite6
+
+for rex_search_query in $rex_search_queries; do
+    num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search 'name ~ $rex_search_query'" | grep -c "$rex_search_query")"
+
+    if (( num_matching_rex_hosts > 0 )); then
+      skip_measurement=true h 60-rex-date-${num_matching_rex_hosts}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
+      jsr "$logs/60-rex-date-${num_matching_rex_hosts}.log"
+      j "$logs/60-rex-date-${num_matching_rex_hosts}.log"
+
+      skip_measurement=true h 61-rex-date-ansible-${num_matching_rex_hosts}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ $rex_search_query'"
+      jsr "$logs/61-rex-date-ansible-${num_matching_rex_hosts}.log"
+      j "$logs/61-rex-date-ansible-${num_matching_rex_hosts}.log"
+
+      skip_measurement=true h 62-rex-katello_package_install-podman-${num_matching_rex_hosts}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ $rex_search_query'"
+      jsr "$logs/62-rex-katello_package_install-podman-${num_matching_rex_hosts}.log"
+      j "$logs/62-rex-katello_package_install-podman-${num_matching_rex_hosts}.log"
+
+      skip_measurement=true h 62-rex-podman_pull-${num_matching_rex_hosts}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
+      jsr "$logs/62-rex-podman_pull-${num_matching_rex_hosts}00.log"
+      j "$logs/62-rex-podman_pull-${num_matching_rex_hosts}.log"
+
+      skip_measurement=true h 65-rex-katello_package_update-${num_matching_rex_hosts}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ $rex_search_query'"
+      jsr "$logs/65-rex-katello_package_update-${num_matching_rex_hosts}.log"
+      j "$logs/65-rex-katello_package_update-${num_matching_rex_hosts}.log"
+    fi
+done
 
 
 section 'BackupTest'
