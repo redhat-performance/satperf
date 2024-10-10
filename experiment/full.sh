@@ -503,15 +503,15 @@ section 'Misc simple tests'
 skip_measurement=true ap 50-hammer-list.log \
   -e "organization='{{ sat_org }}'" \
   playbooks/tests/hammer-list.yaml
-e HammerHostList "$logs/51-hammer-list.log"
+e HammerHostList "$logs/50-hammer-list.log"
 
 rm -f /tmp/status-data-webui-pages.json
-skip_measurement=true ap 52-webui-pages.log \
+skip_measurement=true ap 51-webui-pages.log \
   -e "sat_version='$sat_version'" \
   -e "ui_concurrency='$ui_concurrency'" \
   -e "ui_duration='$ui_duration'" \
   playbooks/tests/webui-pages.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "$logs/52-webui-pages.log"
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "$logs/51-webui-pages.log"
 
 rm -f /tmp/status-data-webui-static-distributed.json
 skip_measurement=true ap 52-webui-static-distributed.log \
