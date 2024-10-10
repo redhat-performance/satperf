@@ -567,7 +567,7 @@ for rex_search_query in $rex_search_queries; do
 
       skip_measurement=true h 62-rex-podman_pull-${num_matching_rex_hosts}.log \
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
-      jsr "$logs/62-rex-podman_pull-${num_matching_rex_hosts}00.log"
+      jsr "$logs/62-rex-podman_pull-${num_matching_rex_hosts}.log"
       j "$logs/62-rex-podman_pull-${num_matching_rex_hosts}.log"
 
       skip_measurement=true h 65-rex-katello_package_update-${num_matching_rex_hosts}.log \
