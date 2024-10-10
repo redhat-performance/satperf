@@ -528,12 +528,12 @@ a 53-foreman_inventory_upload-report-generate.log satellite6 \
 
 
 section 'BackupTest'
-skip_measurement=true ap 70-backup.log \
+skip_measurement=true ap 55-backup.log \
   playbooks/tests/sat-backup.yaml
-e BackupOffline "$logs/70-backup.log"
-e RestoreOffline "$logs/70-backup.log"
-e BackupOnline "$logs/70-backup.log"
-e RestoreOnline "$logs/70-backup.log"
+e BackupOffline "$logs/55-backup.log"
+e RestoreOffline "$logs/55-backup.log"
+e BackupOnline "$logs/55-backup.log"
+e RestoreOnline "$logs/55-backup.log"
 
 
 section 'Remote execution (ReX)'
