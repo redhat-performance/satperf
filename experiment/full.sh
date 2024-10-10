@@ -527,6 +527,15 @@ a 53-foreman_inventory_upload-report-generate.log satellite6 \
   -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
 
 
+section 'BackupTest'
+skip_measurement=true ap 70-backup.log \
+  playbooks/tests/sat-backup.yaml
+e BackupOffline "$logs/70-backup.log"
+e RestoreOffline "$logs/70-backup.log"
+e BackupOnline "$logs/70-backup.log"
+e RestoreOnline "$logs/70-backup.log"
+
+
 section 'Remote execution (ReX)'
 job_template_ansible_default='Run Command - Ansible Default'
 job_template_ssh_default='Run Command - Script Default'
@@ -567,14 +576,6 @@ for rex_search_query in $rex_search_queries; do
       j "$logs/65-rex-katello_package_update-${num_matching_rex_hosts}.log"
     fi
 done
-
-
-section 'BackupTest'
-skip_measurement=true ap 70-backup.log playbooks/tests/sat-backup.yaml
-e BackupOffline "$logs/70-backup.log"
-e RestoreOffline "$logs/70-backup.log"
-e BackupOnline "$logs/70-backup.log"
-e RestoreOnline "$logs/70-backup.log"
 
 
 section 'Delete all content hosts'
