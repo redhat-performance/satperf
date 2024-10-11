@@ -8,6 +8,7 @@
   gather_facts: false
   vars:
     sync_max_time: 3600
+    satellite: "{{ groups['satellite6'] | first }}"
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
@@ -22,7 +23,7 @@
       ansible.builtin.command:
         cmd: "hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id"
       register: capsule_id_cmd
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      delegate_to: "{{ satellite }}"
 
     - name: "Set capsule ID"
       ansible.builtin.set_fact:
@@ -33,7 +34,7 @@
       throttle: 1
       ansible.builtin.command:
         cmd: "hammer -u {{ user }} -p {{ password }} capsule update --id '{{ id }}' --download-policy {{ download_policy }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      delegate_to: "{{ satellite }}"
       when:
         - download_policy is defined and download_policy != 'inherit'
 
@@ -51,7 +52,7 @@
               fi
             fi
           done
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      delegate_to: "{{ satellite }}"
 
     - name: "Set the base synchronization command"
       ansible.builtin.set_fact:
@@ -75,7 +76,7 @@
       ansible.builtin.command:
         cmd: "{{ cap_sync_command }}"
       register: start_sync
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      delegate_to: "{{ satellite }}"
 
     - name: "Check that start message is sane"
       ansible.builtin.assert:
@@ -89,10 +90,33 @@
           /root/wait-for-task.sh "{{ user }}" "{{ password }}" "{{ start_sync.stdout.split()[7].split('.')[0] }}" "{{ sync_max_time }}"
       register: wait_sync
       ignore_errors: true
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      delegate_to: "{{ satellite }}"
 
     - name: "Print sync results"
       ansible.builtin.debug:
         msg: "CapusuleSync {{ wait_sync.stdout_lines[-3] }} to {{ wait_sync.stdout_lines[-2] }} taking {{ wait_sync.stdout_lines[-1] }} seconds"
       when: wait_sync is succeeded
+
+    - name: "Retry failed syncs (async)"
+      # XXX: Submit PR
+      throttle: 16
+      ansible.builtin.command:
+        cmd: "{{ cap_sync_command }}"
+      register: start_sync_retry
+      when: wait_sync is failed
+      delegate_to: "{{ satellite }}"
+
+    - name: "Check that retry message is sane"
+      ansible.builtin.assert:
+        that: "'Capsule content is being synchronized in task' in start_sync_retry.stdout"
+        msg: 'Pass'
+        quiet: true
+      when: wait_sync is failed
+
+    - name: "Wait for retries to finish"
+      ansible.builtin.command:
+        cmd: |
+          /root/wait-for-task.sh "{{ user }}" "{{ password }}" "{{ start_sync_retry.stdout.split()[7].split('.')[0] }}" "{{ sync_max_time }}"
+      when: wait_sync is failed
+      delegate_to: "{{ satellite }}"
 ...
