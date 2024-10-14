@@ -584,7 +584,7 @@ ap 99-remove-hosts-if-any.log \
 
 
 section 'Sosreport'
-ap sosreporter-gatherer.log \
+skip_measurement=true ap sosreporter-gatherer.log \
   -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
   playbooks/satellite/sosreport_gatherer.yaml
 
