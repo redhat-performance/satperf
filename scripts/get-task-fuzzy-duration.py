@@ -136,6 +136,11 @@ def investigate_task(args):
     if parent_task['state'] != 'stopped':
         logging.error("Parent task not finished yet: %s" % parent_task)
         sys.exit(1)
+    if 'success_count' not in parent_task['output']:
+        logging.error("No successful entries in parent task: %s" % parent_task)
+        sys.exit(1)
+
+    success = parent_task['output']['success_count']
 
     sub_tasks = get_all(
         args.hostname, "/foreman_tasks/api/tasks",
@@ -182,6 +187,7 @@ def investigate_task(args):
         'start': start,
         'end': end,
         'duration': duration,
+        'success': success,
         'start_cleaned': start_cleaned,
         'end_cleaned': end_cleaned,
         'duration_cleaned': duration_cleaned,
