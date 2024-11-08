@@ -37,6 +37,7 @@ opts_adhoc="$opts"
 
 section "Checking environment"
 generic_environment_check
+# set +e
 
 
 export skip_measurement='true'
@@ -155,6 +156,7 @@ if [[ "${skip_down_setup}" != "true" ]]; then
 
 
     section "Create, publish and promote CVs / CCVs to LCE(s)s"
+    unset aks
     for rel in $rels; do
         cv_os="CV_$rel"
         cv_sat_client="CV_${rel}-sat-client"
@@ -227,6 +229,7 @@ if [[ "${skip_down_setup}" != "true" ]]; then
         prior='Library'
         for lce in $lces; do
             ak="AK_${rel}_${lce}"
+            aks+="$ak "
 
             # CCV promotion to LCE
             h 38-ccv-promote-${rel}-${lce}.log "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --version '$version' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
@@ -258,17 +261,16 @@ section "Prepare for registrations"
 
 aks='AK_rhel8_Test AK_rhel9_Test'
 
-for ak in $aks; do
-    ap 44-generate-host-registration-command-${ak}.log \
-      -e "organization='{{ sat_org }}'" \
-      -e "ak='$ak'" \
-      -e "sat_version='$sat_version'" \
-      playbooks/satellite/host-registration_generate-command.yaml
+ap 44-generate-host-registration-commands.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "aks='$aks'" \
+  -e "sat_version='$sat_version'" \
+  playbooks/satellite/host-registration_generate-commands.yaml
 
-    ap 44-recreate-client-scripts-${ak}.log \
-      -e "ak='$ak'" \
-      playbooks/satellite/client-scripts.yaml
-done
+ap 44-recreate-client-scripts.log \
+  -e "aks='$aks'" \
+  playbooks/satellite/client-scripts.yaml
+unset skip_measurement
 
 unset skip_measurement
 
