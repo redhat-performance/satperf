@@ -7,6 +7,9 @@
     num_retry_forks: 3
     registration_logs: "registration_logs"
     re_register_failed_hosts: false
+    profile: false
+    concurrent_registrations: 100
+    registration_profile_img: registration_profile.svg
     debug_rhsm: false
   tasks:
     - name: "Set default variable(s) values"
@@ -79,6 +82,31 @@
       when:
         - debug_rhsm
 
+    - name: Create profiling directory
+      ansible.builtin.file:
+        path: /root/profile
+        state: directory
+        mode: '0700'
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
+      when:
+        - profile
+
+    - name: Start gathering BPF profile
+      ansible.builtin.shell:
+        cmd: |
+          /usr/share/bcc/tools/profile \
+            -adf \
+            --stack-storage-size 163840 \
+            >/root/profile/out-{{ concurrent_registrations }}.profile-folded
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      async: 1800
+      poll: 0
+      run_once: true
+      ignore_errors: true
+      when:
+        - profile
+
     - name: "Run host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
       ansible.builtin.shell:
         cmd: |
@@ -90,6 +118,16 @@
             &> {{ clients_yaml_cmd_log }}
       register: clients_yaml_cmd
       ignore_errors: true
+
+    - name: Kill BPF profile process
+      ansible.builtin.command:
+        cmd: |
+          pkill -SIGINT profile
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
+      ignore_errors: true
+      when:
+        - profile
 
     - name: "Fetch client logs"
       ansible.builtin.fetch:
@@ -147,6 +185,32 @@
     - name: "Show number of hosts that failed to register"
       ansible.builtin.debug:
         var: num_failed_hosts.stdout_lines
+
+    - name: Convert BPF profile output to image
+      ansible.builtin.shell:
+        cmd: |
+          flamegraph.pl \
+            --minwidth 5 \
+            --width 2500 \
+            /root/profile/out-{{ concurrent_registrations }}.profile-folded \
+            >/root/profile/registration_profile-{{ concurrent_registrations }}.svg
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
+      ignore_errors: true
+      when:
+        - profile
+
+    - name: Fetch BPF profile image
+      ansible.builtin.fetch:
+        src: /root/profile/registration_profile-{{ concurrent_registrations }}.svg
+        dest: "{{ registration_logs }}/../{{ registration_profile_img }}"
+        flat: true
+      ignore_errors: true
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
+      ignore_errors: true
+      when:
+        - profile
 
     - name: "Try to show errors in /var/log/rhsm/rhsm.log when log file shows rhsm related errors"
       ansible.builtin.shell:
