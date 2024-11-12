@@ -23,6 +23,8 @@ rhosp_registry_password="${PARAM_rhosp_registry_password:-pass}"
 
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-64}"
 
+profile="${PARAM_profile:-false}"
+
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
 test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
 test_sync_repositories_max_sync_secs="${PARAM_test_sync_repositories_max_sync_secs:-600}"
@@ -471,6 +473,7 @@ else
     initial_concurrent_registrations_per_container_host=1
 fi
 num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
+prefix=48-register
 
 for (( batch=1, remaining_containers_per_container_host=number_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
     if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
@@ -479,24 +482,29 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
         concurrent_registrations_per_container_host=$remaining_containers_per_container_host
     fi
     concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
+    (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
+    (( total_registered += concurrent_registrations ))
+
+    registration_log="$prefix-${concurrent_registrations}.log"
+    registration_profile_img="$prefix-${concurrent_registrations}.svg"
+
 
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
-
-    skip_measurement=true ap 48-register-${concurrent_registrations}.log \
+    skip_measurement=true ap $registration_log \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "num_retry_forks='$num_retry_forks'" \
-      -e "registration_logs='../../$logs/48-register-docker-host-client-logs'" \
+      -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
+      -e "profile='${profile}'" \
+      -e "concurrent_registrations='$concurrent_registrations'" \
+      -e "registration_profile_img='$registration_profile_img'" \
       playbooks/tests/registrations.yaml
-      e Register "$logs/48-register-${concurrent_registrations}.log"
-
-    (( total_registered += concurrent_registrations ))
+      e Register "$logs/$registration_log"
 done
-grep Register "$logs"/48-register-*.log >"$logs/48-register-overall.log"
-e Register "$logs/48-register-overall.log"
+grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
+e Register "$logs/$prefix-overall.log"
 
 
 section 'Misc simple tests'

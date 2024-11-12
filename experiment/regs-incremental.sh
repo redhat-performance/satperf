@@ -29,7 +29,7 @@ satellite_download_policy="${PARAM_satellite_download_policy:-on_demand}"
 skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
 capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
 
-dl="Default Location"
+profile="${PARAM_profile:-false}"
 
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
@@ -284,6 +284,7 @@ if (( initial_expected_concurrent_registrations > number_container_hosts )); the
 else
     initial_concurrent_registrations_per_container_host=1
 fi
+prefix=48-register
 
 for (( batch=1, remaining_containers_per_container_host=$number_containers_per_container_host; remaining_containers_per_container_host > 0; batch++ )); do
     if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
@@ -294,18 +295,24 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
     concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
     (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
 
+    registration_log="$prefix-${concurrent_registrations}.log"
+    registration_profile_img="$prefix-${concurrent_registrations}.svg"
+
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    skip_measurement='true' ap 48-register-${concurrent_registrations}.log \
-      -e "size='${concurrent_registrations_per_container_host}'" \
-      -e "num_retry_forks='${num_retry_forks}'" \
-      -e "registration_logs='../../$logs/48-register-docker-host-client-logs'" \
+    skip_measurement='true' ap $registration_log \
+      -e "size='$concurrent_registrations_per_container_host'" \
+      -e "num_retry_forks='$num_retry_forks'" \
+      -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e "sat_version='${sat_version}'" \
+      -e "profile='${profile}'" \
+      -e "concurrent_registrations='$concurrent_registrations'" \
+      -e "registration_profile_img='$registration_profile_img'" \
       playbooks/tests/registrations.yaml
-      e Register $logs/48-register-${concurrent_registrations}.log
+      e Register $logs/$registration_log
 done
-grep Register $logs/48-register-*.log >$logs/48-register-overall.log
-e Register $logs/48-register-overall.log
+grep Register $logs/$prefix-*.log >$logs/$prefix-overall.log
+e Register $logs/$prefix-overall.log
 
 
 section "Sosreport"

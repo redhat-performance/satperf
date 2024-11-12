@@ -28,6 +28,8 @@ capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
 expected_concurrent_registrations="${PARAM_expected_concurrent_registrations:-64}"
 initial_batch="${PARAM_initial_batch:-1}"
 
+profile="${PARAM_profile:-false}"
+
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
 
@@ -350,22 +352,27 @@ number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/d
 number_containers_per_container_host="$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 total_number_containers="$(( number_container_hosts * number_containers_per_container_host ))"
 concurrent_registrations_per_container_host="$(( expected_concurrent_registrations / number_container_hosts ))"
-real_concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
-registration_iterations="$(( ( total_number_containers + real_concurrent_registrations - 1 ) / real_concurrent_registrations ))" # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
+concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
+registration_iterations="$(( ( total_number_containers + concurrent_registrations - 1 ) / concurrent_registrations ))" # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
+prefix=70-register
 
 log "Going to register $total_number_containers hosts: $concurrent_registrations_per_container_host hosts per container host ($number_container_hosts available) in $registration_iterations batches."
 
 for (( i=initial_batch; i <= registration_iterations; i++ )); do
-    ap "70-register-$i.log" \
+    registration_log="$prefix-${concurrent_registrations}-$i.log"
+    registration_profile_img="$prefix-${concurrent_registrations}-$i.svg"
+
+    ap $registration_log \
       -e "size='$concurrent_registrations_per_container_host'" \
+      -e "concurrent_registrations='$concurrent_registrations'" \
       -e "registration_logs='../../$logs/70-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
       playbooks/tests/registrations.yaml
-    e Register "$logs/70-register-$i.log"
+    e Register $logs/$registration_log
 done
-grep Register "$logs"/70-register-*.log >"$logs/70-register-overall.log"
-e Register "$logs/70-register-overall.log"
+grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
+e Register "$logs/$prefix-overall.log"
 
 
 section 'Sosreport'
