@@ -97,7 +97,7 @@
         cmd: |
           /usr/share/bcc/tools/profile \
             -adf \
-            --stack-storage-size 163840 \
+            --stack-storage-size 1638400 \
             >/root/profile/out-{{ concurrent_registrations }}.profile-folded
       delegate_to: "{{ groups['satellite6'] | first }}"
       async: 1800
