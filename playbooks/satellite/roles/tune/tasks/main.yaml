@@ -1,4 +1,12 @@
 ---
+- name: Increase maximum number of opened files for root
+  ansible.builtin.copy:
+    content: |
+      root            soft    nofile          1000000
+      root            hard    nofile          1000000
+    dest: /etc/security/limits.d/25-root-limits.conf
+    mode: '0644'
+
 - name: "Detect number of available processors"
   ansible.builtin.setup:
     filter: ansible_processor_nproc
