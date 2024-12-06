@@ -1,10 +1,12 @@
 ---
 # Check variables
 - name: "Make sure only one Satellite is specified"
-  assert:
-    that: "groups['satellite6']|length == 1"
+  ansible.builtin.assert:
+    that: "groups['satellite6'] | length == 1"
     msg: "Satellite not specified or too many of them specified"
-  when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
+  when:
+    - "'satellite6' in groups"
+    - ignore_satellite is not defined or ignore_satellite != 'true'
 
 - name: "Get group name of current location"
   ansible.builtin.set_fact:
@@ -19,14 +21,14 @@
 
 # Check default in /etc/hosts file
 - name: "We need localhost (IPv4) in hosts file"
-  lineinfile:
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: '^127\.0\.0\.1\s+localhost localhost\.localdomain localhost4 localhost4\.localdomain4$'
     line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"
     state: present
 
-- name: "We might need localhost (IPv6) in hosts file"
-  lineinfile:
+- name: "We need localhost (IPv6) in hosts file"
+  ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: '^::1\s+localhost localhost\.localdomain localhost6 localhost6\.localdomain6$'
     line: "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
@@ -38,9 +40,10 @@
     regexp: ".*{{ inventory_hostname }}$"
     line: "{{ public_ip }} {{ inventory_hostname }}"
     state: present
-  when: "public_ip is defined"
+  when:
+    - public_ip is defined
 
-- name: "Build own entry in hosts file (using privaate network IPs)"
+- name: "Build own entry in hosts file (using private network IPs)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
     regexp: ".*{{ inventory_hostname }}$"
@@ -170,15 +173,15 @@
   with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
   when:
     - "'capsule_lbs' in group_names"
-    - hostvars[item].public_ip is defined and hostvars[item].public_ip | length > 0
-    - private_ip is not defined or private_ip | length == 0 or
-      private_netmask is not defined or private_netmask | length == 0 or
-      hostvars[item].private_ip is not defined or hostvars[item].private_ip | length == 0 or
-      hostvars[item].private_netmask is not defined or hostvars[item].private_netmask | length == 0 or
-      (private_ip is defined and private_ip | length > 0 and
-       private_netmask is defined and private_netmask | length > 0 and
-       hostvars[item].private_ip is defined and hostvars[item].private_ip | length > 0 and
-       hostvars[item].private_netmask is defined and hostvars[item].private_netmask | length > 0 and
+    - hostvars[item].public_ip is defined
+    - private_ip is not defined or
+      private_netmask is not defined or
+      hostvars[item].private_ip is not defined or
+      hostvars[item].private_netmask is not defined or
+      (private_ip is defined and
+       private_netmask is defined and
+       hostvars[item].private_ip is defined and
+       hostvars[item].private_netmask is defined and
        (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') !=
        (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix'))
 
@@ -191,16 +194,17 @@
   with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
   when:
     - "'capsule_lbs' in group_names"
-    - private_ip is defined and private_ip | length > 0
-    - private_netmask is defined and private_netmask | length > 0
-    - hostvars[item].private_ip is defined and hostvars[item].private_ip | length > 0
-    - hostvars[item].private_netmask is defined and hostvars[item].private_netmask | length > 0
+    - private_ip is defined
+    - private_netmask is defined
+    - hostvars[item].private_ip is defined
+    - hostvars[item].private_netmask is defined
     - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
        (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
 
 - name: "File /etc/hosts have correct SELinux context (had issues before)"
-  command:
-    restorecon -vR /etc/hosts
+  ansible.builtin.command:
+    cmd: |
+      restorecon -vR /etc/hosts
 
 # Check SELinux
 - name: "SELinux is in {{ system_selinux_state }} with {{ system_selinux_policy }} policy"
@@ -210,30 +214,30 @@
 
 # Make sure hostname is set
 - name: "Set hostname"
-  hostname:
+  ansible.builtin.hostname:
     name: "{{ inventory_hostname }}"
 
 # Sanity check our networking setup
 - name: "We can ping 127.0.0.1"
-  wait_for:
+  ansible.builtin.wait_for:
     host: 127.0.0.1
     port: 22
     timeout: 3
 
 - name: "We can ping localhost"
-  wait_for:
+  ansible.builtin.wait_for:
     host: localhost
     port: 22
     timeout: 3
 
 - name: "We can ping redhat.com"
-  wait_for:
+  ansible.builtin.wait_for:
     host: redhat.com
     port: 443
     timeout: 10
 
 - name: "We can ping Satellite from Satellite / Capsules"
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ groups['satellite6'] | first }}"
     port: 22
     timeout: 30
@@ -242,7 +246,7 @@
     - ignore_satellite is not defined or ignore_satellite != 'true'
 
 - name: "We can ping registration target from Container hosts"
-  wait_for:
+  ansible.builtin.wait_for:
     host: "{{ tests_registration_target }}"
     port: 22
     timeout: 60
@@ -250,16 +254,19 @@
     - "'container_hosts' in group_names"
 
 - name: "We can ping NTP server"
-  command:
-    ping -c 3 "{{ (timesync_ntp_servers|first).hostname }}"
+  ansible.builtin.command:
+    cmd: |
+      ping -c 3 "{{ (timesync_ntp_servers | first).hostname }}"
   register: cmd
   retries: 5
   delay: 3
-  until: "cmd.rc == 0"
+  until: cmd is succeeded
 
 # Sanity check yum config
 - name: "Command yum repolist returns"
-  ansible.builtin.command: yum repolist
+  ansible.builtin.command:
+    cmd: |
+      yum repolist
 
 - name: "Persist journal data"
   ansible.builtin.file:
