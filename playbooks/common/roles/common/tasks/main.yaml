@@ -37,7 +37,6 @@
 - name: "Build own entry in hosts file (using public network IPs)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ inventory_hostname }}$"
     line: "{{ public_ip }} {{ inventory_hostname }}"
     state: present
   when:
@@ -46,7 +45,6 @@
 - name: "Build own entry in hosts file (using private network IPs)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ inventory_hostname }}$"
     line: "{{ private_ip }} {{ inventory_hostname }}"
     state: present
   when:
@@ -56,7 +54,6 @@
 - name: "Build Satellite hosts file (using public network IPs) - Capsules entries"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].public_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['capsules'] }}"
@@ -77,7 +74,6 @@
 - name: "Build Satellite hosts file (using private network IPs) - Capsules entries"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].private_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['capsules'] }}"
@@ -93,7 +89,6 @@
 - name: "Build capsules hosts file (using public network IPs) - Satellite entry"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].public_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['satellite6'] }}"
@@ -114,7 +109,6 @@
 - name: "Build capsules hosts file (using private network IPs) - Satellite entry"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].private_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['satellite6'] }}"
@@ -130,7 +124,6 @@
 - name: "Build container hosts hosts file (using public network IPs) - Registration target entries)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].public_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
@@ -151,7 +144,6 @@
 - name: "Build container hosts hosts file (using private network IPs) - Registration target entries)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].private_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
@@ -188,7 +180,6 @@
 - name: "Build load balancers hosts file (using private network IPs) - Capsules entries)"
   ansible.builtin.lineinfile:
     dest: /etc/hosts
-    regexp: ".*{{ item }}$"
     line: "{{ hostvars[item].private_ip }} {{ item }}"
     state: present
   with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
@@ -200,6 +191,155 @@
     - hostvars[item].private_netmask is defined
     - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
        (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build own entry in hosts file (using public network IPv6 IPs)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ public_ip6 }} {{ inventory_hostname }}"
+    state: present
+  when:
+    - public_ip6 is defined
+
+- name: "Build own entry in hosts file (using private network IPv6 IPs)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ private_ip6 }} {{ inventory_hostname }}"
+    state: present
+  when:
+    - public_ip6 is not defined
+    - private_ip6 is defined
+
+- name: "Build Satellite hosts file (using public network IPv6 IPs) - Capsules entries"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].public_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] }}"
+  when:
+    - "'satellite6' in group_names"
+    - hostvars[item].public_ip6 is defined
+    - private_ip6 is not defined or
+      private_netmask6 is not defined or
+      hostvars[item].private_ip6 is not defined or
+      hostvars[item].private_netmask6 is not defined or
+      (private_ip6 is defined and
+       private_netmask6 is defined and
+       hostvars[item].private_ip6 is defined and
+       hostvars[item].private_netmask6 is defined and
+       (private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip6 + '/' + (hostvars[item].private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build Satellite hosts file (using private network IPv6 IPs) - Capsules entries"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].private_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] }}"
+  when:
+    - "'satellite6' in group_names"
+    - private_ip6 is defined
+    - hostvars[item].private_ip6 is defined
+    - "(private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build capsules hosts file (using public network IPv6 IPs) - Satellite entry"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].public_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['satellite6'] }}"
+  when:
+    - "'capsules' in group_names"
+    - hostvars[item].public_ip6 is defined
+    - private_ip6 is not defined or
+      private_netmask6 is not defined or
+      hostvars[item].private_ip6 is not defined or
+      hostvars[item].private_netmask6 is not defined or
+      (private_ip6 is defined and
+       private_netmask6 is defined and
+       hostvars[item].private_ip6 is defined and
+       hostvars[item].private_netmask6 is defined and
+       (private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip6 + '/' + (hostvars[item].private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build capsules hosts file (using private network IPv6 IPs) - Satellite entry"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].private_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['satellite6'] }}"
+  when:
+    - "'capsules' in group_names"
+    - private_ip6 is defined
+    - hostvars[item].private_ip6 is defined
+    - "(private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build container hosts hosts file (using public network IPv6 IPs) - Registration target entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].public_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
+  when:
+    - "'container_hosts' in group_names"
+    - hostvars[item].public_ip6 is defined
+    - private_ip6 is not defined or
+      private_netmask6 is not defined or
+      hostvars[item].private_ip6 is not defined or
+      hostvars[item].private_netmask6 is not defined or
+      (private_ip6 is defined and
+       private_netmask6 is defined and
+       hostvars[item].private_ip6 is defined and
+       hostvars[item].private_netmask6 is defined and
+       (private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip6 + '/' + (hostvars[item].private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build container hosts hosts file (using private network IPv6 IPs) - Registration target entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].private_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
+  when:
+    - "'container_hosts' in group_names"
+    - private_ip6 is defined
+    - hostvars[item].private_ip6 is defined
+    - "(private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build load balancers hosts file (using public network IPv6 IPs) - Capsules entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].public_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
+  when:
+    - "'capsule_lbs' in group_names"
+    - hostvars[item].public_ip6 is defined
+    - private_ip6 is not defined or
+      private_netmask6 is not defined or
+      hostvars[item].private_ip6 is not defined or
+      hostvars[item].private_netmask6 is not defined or
+      (private_ip6 is defined and
+       private_netmask6 is defined and
+       hostvars[item].private_ip6 is defined and
+       hostvars[item].private_netmask6 is defined and
+       (private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip6 + '/' + (hostvars[item].private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build load balancers hosts file (using private network IPv6 IPs) - Capsules entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    line: "{{ hostvars[item].private_ip6 }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
+  when:
+    - "'capsule_lbs' in group_names"
+    - private_ip6 is defined
+    - hostvars[item].private_ip6 is defined
+    - "(private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip6 + '/' + (private_netmask6 | string)) | ansible.utils.ipaddr('network/prefix')"
 
 - name: "File /etc/hosts have correct SELinux context (had issues before)"
   ansible.builtin.command:
@@ -221,6 +361,12 @@
 - name: "We can ping 127.0.0.1"
   ansible.builtin.wait_for:
     host: 127.0.0.1
+    port: 22
+    timeout: 3
+
+- name: "We can ping ::1"
+  ansible.builtin.wait_for:
+    host: ::1
     port: 22
     timeout: 3
 
