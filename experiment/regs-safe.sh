@@ -96,33 +96,19 @@ if ! $skip_down_setup; then
     section 'Sync OS from CDN'
     for rel in $rels; do
         case $rel in
-            rhel6)
-                os_rel=6
+            rhel6|rhel7)
+                os_rel="${rel##rhel}"
                 os_product='Red Hat Enterprise Linux Server'
                 os_releasever="${os_rel}Server"
                 os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
                 os_reposet_name="Red Hat Enterprise Linux $os_rel Server (RPMs)"
+                if [[ "$rel" == 'rhel7' ]]; then
+                    os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
+                    os_extras_reposet_name="Red Hat Enterprise Linux $os_rel Server - Extras (RPMs)"
+                fi
                 ;;
-            rhel7)
-                os_rel=7
-                os_product='Red Hat Enterprise Linux Server'
-                os_releasever="${os_rel}Server"
-                os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
-                os_reposet_name="Red Hat Enterprise Linux $os_rel Server (RPMs)"
-                os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
-                os_extras_reposet_name="Red Hat Enterprise Linux $os_rel Server - Extras (RPMs)"
-                ;;
-            rhel8)
-                os_rel=8
-                os_product="Red Hat Enterprise Linux for $basearch"
-                os_releasever=$os_rel
-                os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
-                os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS (RPMs)"
-                os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
-                os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream (RPMs)"
-                ;;
-            rhel9)
-                os_rel=9
+            rhel8|rhel9|rhel10)
+                os_rel="${rel##rhel}"
                 os_product="Red Hat Enterprise Linux for $basearch"
                 os_releasever=$os_rel
                 os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
@@ -133,18 +119,16 @@ if ! $skip_down_setup; then
         esac
 
         case $rel in
-            rhel6)
-                h "12-reposet-enable-${rel}.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
-                ;;
-            rhel7)
+            rhel6|rhel7)
                 h "12-reposet-enable-${rel}.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
                 h "13-repo-sync-${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
-                h "12-reposet-enable-${rel}extras.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-                h "13-repo-sync-${rel}extras.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
+                if [[ "$rel" == 'rhel7' ]]; then
+                    h "12-reposet-enable-${rel}extras.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+                    h "13-repo-sync-${rel}extras.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
+                fi
                 ;;
-            rhel8|rhel9)
+            rhel8|rhel9|rhel10)
                 h "12-reposet-enable-${rel}baseos.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
                 h "13-repo-sync-${rel}baseos.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
@@ -162,33 +146,19 @@ if ! $skip_down_setup; then
         ccv="CCV_$rel"
 
         case $rel in
-            rhel6)
-                os_rel=6
+            rhel6|rhel7)
+                os_rel="${rel##rhel}"
                 os_product='Red Hat Enterprise Linux Server'
                 os_releasever="${os_rel}Server"
                 os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
                 os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
+                if [[ "$rel" == 'rhel7' ]]; then
+                    os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
+                    os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
+                fi
                 ;;
-            rhel7)
-                os_rel=7
-                os_product='Red Hat Enterprise Linux Server'
-                os_releasever="${os_rel}Server"
-                os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
-                os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
-                os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-                os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
-                ;;
-            rhel8)
-                os_rel=8
-                os_product="Red Hat Enterprise Linux for $basearch"
-                os_releasever=$os_rel
-                os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
-                os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
-                os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-                os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
-                ;;
-            rhel9)
-                os_rel=9
+            rhel8|rhel9|rhel10)
+                os_rel="${rel##rhel}"
                 os_product="Red Hat Enterprise Linux for $basearch"
                 os_releasever=$os_rel
                 os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
@@ -224,21 +194,12 @@ if ! $skip_down_setup; then
         ccv="CCV_${rel}"
 
         case $rel in
-            rhel6)
-                os_rel=6
-                ;;
-            rhel7)
-                os_rel=7
-                ;;
-            rhel8)
-                os_rel=8
-                ;;
-            rhel9)
-                os_rel=9
+            rhel6|rhel7|rhel8|rhel9|rhel10)
+                os_rel="${rel##rhel}"
                 ;;
         esac
         sat_client_repo_name="Satellite Client for RHEL $os_rel"
-        sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}"
+        sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}/"
 
         h "32-repository-create-sat-client_${rel}.log" "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
         h "33-repository-sync-sat-client_${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'" &
@@ -284,7 +245,7 @@ if ! $skip_down_setup; then
         ccv="CCV_${rel}"
 
         case $rel in
-            rhel8|rhel9)
+            rhel8|rhel9|rhel10)
                 rhsop_repo_name="rhosp-${rel}/openstack-base"
 
                 h "42-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
@@ -332,7 +293,13 @@ fi
 
 
 section 'Prepare for registrations'
-aks='AK_rhel8_Test AK_rhel9_Test'
+unset aks
+for rel in $rels; do
+    for lce in $lces; do
+        ak="AK_${rel}_${lce}"
+        aks+="$ak "
+    done
+done
 
 ap 60-generate-host-registration-commands.log \
   -e "organization='{{ sat_org }}'" \
