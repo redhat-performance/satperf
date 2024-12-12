@@ -4,5 +4,7 @@
   gather_facts: false
   roles:
     - role: repo_setup
+      when:
+        - product is not defined or product == 'satellite'
     - role: capsule
 ...

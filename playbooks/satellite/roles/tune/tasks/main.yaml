@@ -56,7 +56,7 @@
   ansible.builtin.meta: end_host
   when:
     - custom_hiera_content is not defined or custom_hiera_content | length == 0
-    - sat_installer_additional_opts is not defined or sat_installer_additional_opts | length == 0
+    - installer_additional_opts is not defined or installer_additional_opts | length == 0
     - tuning_profile is not defined or tuning_profile | length == 0
 
 - name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
@@ -65,46 +65,54 @@
   when:
     - custom_hiera_content is defined and custom_hiera_content | length > 0
 
-- name: "Determine Installer command line"
+- name: "Determine Installer command line (Satellite)"
   ansible.builtin.set_fact:
-    sat_installer_cmd_line: "satellite-installer"
+    installer_cmd_line: 'satellite-installer'
+  when:
+    - product is not defined or product == 'satellite'
+
+- name: "Determine Installer command line (Foreman)"
+  ansible.builtin.set_fact:
+    installer_cmd_line: 'foreman-installer'
+  when:
+    - product is defined and product == 'foreman'
 
 - name: "Set tuning profile"
   ansible.builtin.set_fact:
-    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} --tuning {{ tuning_profile }}"
+    installer_cmd_line: "{{ installer_cmd_line }} --tuning {{ tuning_profile }}"
   when:
     - tuning_profile is defined and tuning_profile | length > 0
 
 - name: "Provide additional installer options"
   ansible.builtin.set_fact:
-    sat_installer_cmd_line: "{{ sat_installer_cmd_line }} {{ sat_installer_additional_opts }}"
+    installer_cmd_line: "{{ installer_cmd_line }} {{ installer_additional_opts }}"
   when:
-    - sat_installer_additional_opts is defined and sat_installer_additional_opts | length > 0
+    - installer_additional_opts is defined and installer_additional_opts | length > 0
 
 - name: "Show Installer tuning command line"
   ansible.builtin.debug:
-    msg: "{{ sat_installer_cmd_line }}"
+    msg: "{{ installer_cmd_line }}"
 
 # Run the installer
 - name: "Run Satellite tuning"
-  ansible.builtin.shell: "{{ sat_installer_cmd_line }}"
+  ansible.builtin.shell: "{{ installer_cmd_line }}"
   environment:
     LANG: "en_US.UTF-8"
     LC_ALL: "en_US.UTF-8"
     TZ: "UTC"
-  register:  satellite_installer_tune_cmd
+  register:  installer_tune_cmd
 
 - name: "Show Satellite tuning output"
   ansible.builtin.debug:
-    var:  satellite_installer_tune_cmd.stdout_lines
+    var:  installer_tune_cmd.stdout_lines
 
 - name: "Calculate installer tuning run duration"
   ansible.builtin.set_fact:
-    satellite_installer_tune_cmd_duration: "{{ (satellite_installer_tune_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (satellite_installer_tune_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+    installer_tune_cmd_duration: "{{ (installer_tune_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (installer_tune_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
 - name: "Print installer tuning run duration"
   ansible.builtin.debug:
-    msg: "SatelliteInstallerTuneScenarioSatellite {{ satellite_installer_tune_cmd.start }} to {{ satellite_installer_tune_cmd.end }} taking {{ satellite_installer_tune_cmd_duration }} seconds"
+    msg: "SatelliteInstallerTuneScenarioSatellite {{ installer_tune_cmd.start }} to {{ installer_tune_cmd.end }} taking {{ installer_tune_cmd_duration }} seconds"
 
 - name: "Check whether pull-mqtt mode is enabled"
   ansible.builtin.lineinfile:
