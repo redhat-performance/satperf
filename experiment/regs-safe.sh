@@ -228,7 +228,7 @@ if ! $skip_down_setup; then
 
             # Enable 'Satellite Client' repo in AK
             id="$( h_out "--no-headers --csv activation-key list --organization '{{ sat_org }}' --search 'name = \"$ak\"' --fields id"  | tail -n1 )"
-            h "37-ak-content-override-${rel}-${lce}.log" "activation-key content-override --organization '{{ sat_org }}' --id $id --content-label $content_label --override-name 'enabled' --value 1"
+            h "37-ak-content-override-${rel}-${lce}.log" "activation-key content-override --organization '{{ sat_org }}' --id $id --content-label $content_label --value true"
 
             prior=$lce
         done

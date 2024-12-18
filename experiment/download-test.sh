@@ -47,7 +47,7 @@ if [[ "${skip_down_setup}" != "true" ]]; then
 
     h_out "--csv --no-headers activation-key product-content --organization '{{ sat_org }}' --content-access-mode-all true --name '$ak' --search 'name ~ download_test_repo' --fields label" >$logs/downtest-repo-label.log
     down_test_repo_label="$( tail -n 1 $logs/downtest-repo-label.log )"
-    h downtest-30-ak-content-override-downtest.log "activation-key content-override --organization '{{ sat_org }}' --name '$ak' --content-label '$down_test_repo_label' --override-name 'enabled' --value 1"
+    h downtest-30-ak-content-override-downtest.log "activation-key content-override --organization '{{ sat_org }}' --name '$ak' --content-label '$down_test_repo_label' --value true"
 fi
 
 
