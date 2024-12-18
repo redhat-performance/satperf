@@ -69,7 +69,7 @@ fi
 
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
-    if [[ "$skip_measurement" != 'true' && "$GOLDEN" == 'true' ]]; then
+    if [[ "$skip_measurement" != 'true' ]]; then
         status_data_create "$@"
     fi
 }
@@ -278,6 +278,9 @@ function status_data_create() {
           --grafana-node $PARAM_grafana_node
         set +x
     fi
+
+    # Only continue uploading results to ES and RP if `GOLDEN`
+    [[ "$GOLDEN" == 'true' ]] || return 0
 
     # Based on historical data, determine result of this test
     sd_result_log="$( mktemp )"
