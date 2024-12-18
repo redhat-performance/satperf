@@ -72,7 +72,7 @@
   ansible.builtin.set_fact:
     installer_opts: "--foreman-initial-admin-username {{ user }} --foreman-initial-admin-password {{ password }}"
 
-- name: "Determine installer command lineDetermine"
+- name: "Determine installer command line"
   ansible.builtin.set_fact:
     installer_cmd_line: "{{ installer_name }} --scenario {{ scenario }} {{ installer_opts }}"
 
@@ -94,7 +94,7 @@
   when:
     - run_before_installer is defined and run_before_installer | length > 0
 
-- name: "Show Installer command line"
+- name: "Show installer command line"
   ansible.builtin.debug:
     msg: "{{ installer_cmd_line }}"
 
