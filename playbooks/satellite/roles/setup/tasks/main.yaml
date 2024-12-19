@@ -94,6 +94,12 @@
   when:
     - run_before_installer is defined and run_before_installer | length > 0
 
+- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
+  include_role:
+    name: apply_custom-hiera
+  when:
+    - custom_hiera_content is defined and custom_hiera_content | length > 0
+
 - name: "Show installer command line"
   ansible.builtin.debug:
     msg: "{{ installer_cmd_line }}"
