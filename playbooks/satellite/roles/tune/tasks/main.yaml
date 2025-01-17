@@ -81,6 +81,7 @@
   ansible.builtin.set_fact:
     installer_cmd_line: "{{ installer_cmd_line }} --tuning {{ tuning_profile }}"
   when:
+    - inventory_hostname in groups['satellite6']
     - tuning_profile is defined and tuning_profile | length > 0
 
 - name: "Provide additional installer options"
