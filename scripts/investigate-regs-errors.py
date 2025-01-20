@@ -49,6 +49,10 @@ issues = [
         "name": "Service unavailable or restarting, try later",
         "regexp": r"Service unavailable or restarting, try later",
     },
+    {
+        "name": "PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"index_operatingsystems_on_title\"",
+        "regexp": r"PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \\\"index_operatingsystems_on_title\\\"",
+    },
 ]
 
 
