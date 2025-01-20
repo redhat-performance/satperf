@@ -1,0 +1,9 @@
+---
+system_selinux_policy: targeted
+system_selinux_state: enforcing
+timesync_ntp_servers:
+  - hostname: "{{ ntp_server | default('time.nist.gov') }}"
+    iburst: yes
+    prefer: yes
+    trust: yes
+...

@@ -1,44 +1,59 @@
 ---
-  - name: "Discover operating system we are going to use"
-    shell:
-        hammer --username "{{ sat_user }}" --password "{{ sat_pass }}" os info --id 1 | grep '^Title' | sed 's/^.*:\s\+\(.*\)$/\1/'
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    register: content_operatingsystem_command
-    when: "content_operatingsystem is not defined"
-  - name: "Set operating system we are going to hardcode into clients.yaml"
-    set_fact:
-        content_operatingsystem: "{{ content_operatingsystem_command.stdout }}"
-    run_once: true
-    when: "content_operatingsystem is not defined"
+- name: "Set default variable(s) values"
+  ansible.builtin.set_fact:
+    aks: "{{ aks | default('AK') }}"
 
-  - name: "Make sure operating system exists in Satellite"
-    command:
-      hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" os list
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    register: hammer_os_list_command
-  - name: "Create operating system on Satellite"
-    command:
-      hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" os create --architectures x86_64 --family Redhat --name "{{ content_operatingsystem.split(' ')[0] }}" --major "{{ content_operatingsystem.split(' ')[1].split('.')[0] }}" --minor "{{ content_operatingsystem.split(' ')[1].split('.')[1] }}"
-    when: "',' + content_operatingsystem + ',' not in hammer_os_list_command.stdout"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
+# - name: "Get group name of our location"
+#   ansible.builtin.set_fact:
+#     location_groupname: "location_{{ location | lower }}"
 
-  - name: "Distribute clients.yaml"
-    template:
-      src: "files/clients.yaml.j2"
-      dest: "/root/clients.yaml"
-      force: yes
-  - name: "Please check these are hosts you need in /etc/hosts"
-    debug:
-      var:
-        "groups['satellite6'] + groups['capsules']"
-    run_once: yes
-  - name: "Distribute private key"
-    copy:
-      src: "../../{{ client_private_key }}"
-      dest: /root/id_rsa_key
-      mode: "u=rw,g=,o="
-      force: yes
+# - ansible.builtin.set_fact:
+#     location_groupname_groups: "groups[location_groupname]: {{ groups[location_groupname] }}"
+
+# - debug:
+#     msg: "location_groupname_groups: {{ location_groupname_groups }}"
+
+# - name: "Set default variable(s) values"
+#   ansible.builtin.set_fact:
+#     registration_target: "{{ tests_registration_target | default(groups[location_groupname] | intersect(groups['satellite6']) | first) }}"
+#   when:
+#     - groups[location_groupname] | intersect(groups['satellite6']) | length > 0
+
+# - name: "Set default variable(s) values"
+#   ansible.builtin.set_fact:
+#     registration_target: "{{ tests_registration_target | default(groups[location_groupname] | intersect(groups['capsules']) | first) }}"
+#   when:
+#     - "'capsules' in groups"
+#     - groups[location_groupname] | intersect(groups['capsules']) | length > 0
+
+# - name: "Set default variable(s) values"
+#   ansible.builtin.set_fact:
+#     registration_target: "{{ tests_registration_target | default(groups[location_groupname] | intersect(groups['capsule_lbs']) | first) }}"
+#   when:
+#     - "'capsule_lbs' in groups"
+#     - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+
+# - debug:
+#     msg: "registration_target: {{ tests_registration_target }}"
+
+- name: "Download host registration script from registration target"
+  ansible.builtin.get_url:
+    url: "http://{{ tests_registration_target }}/pub/host-registration.{{ item }}.sh"
+    dest: "/root/host-registration.{{ item }}.sh"
+    mode: '0400'
+    force: true
+  loop: "{{ aks | split }}"
+
+- name: "Distribute content host registration playbook"
+  throttle: 8
+  ansible.builtin.copy:
+    src: host-registration.yaml
+    dest: /root/host-registration.yaml
+    force: true
+
+- name: "Distribute podman pull script"
+  ansible.builtin.template:
+    src: podman-pull.sh.j2
+    dest: /root/podman-pull.sh
+    force: true
 ...

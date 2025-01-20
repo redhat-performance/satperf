@@ -1,104 +1,107 @@
 ---
-  # Create location for this capsule if it does not exist yet and move the location there
-  # Client domain is added to the location
-  - name: "Get id of a domain"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/domains/{{ client_domain }}"
-      method: GET
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-    register: domain_info
-    run_once: true
-  - name: "Determine domain ID"
-    set_fact:
-      domain_id: "{{ domain_info.json.id }}"
+# Create location for this capsule if it does not exist yet and move the location there
+# Client domain is added to the location
+- name: "Set location name"
+  ansible.builtin.set_fact:
+    location: "{{ location | default('Location for {{ inventory_hostname }}') }}"
 
-  - name: "Get id of an environment"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/environments/{{ client_environment }}"
-      method: GET
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-    register: environment_info
-    run_once: true
-  - name: "Determine environment ID"
-    set_fact:
-      environment_id: "{{ environment_info.json.id }}"
+- name: "Get id of a domain"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/domains/{{ domain }}"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: domain_info
+  run_once: true
 
-  - name: "Get list of locations"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
-      method: GET
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-    register: locations
-    run_once: true
-  - name: "Create location for our capsule if it is not already there"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/locations"
-      method: POST
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-      headers:
-        Content-Type: application/json
-        Accept: application/json
-      body: >
-        {"location":{"name":"Location for {{ inventory_hostname }}", "domain_ids":["{{ domain_id }}"], "environment_ids":["{{ environment_id }}"]}}
-      status_code: 201
-      body_format: json
-    when: "'Location for ' + inventory_hostname not in locations.json.results|map(attribute='name')"
+- name: "Determine domain ID"
+  set_fact:
+    domain_id: "{{ domain_info.json.id }}"
+  run_once: true
 
-  - name: "Get updated list of locations if needed"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/locations?per_page=1000000"
-      method: GET
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-    register: locations
-    run_once: true
-  - name: "Determine location ID"
-    set_fact:
-      location_id: "{{ item.id }}"
-    when: "item.name == 'Location for ' + inventory_hostname"
-    with_items: "{{ locations.json.results }}"
+- name: "Get list of locations"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/locations?per_page=1000000"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: locations
+  run_once: true
 
-  - name: "Move capsule's host to the location"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/hosts/{{ inventory_hostname }}"
-      method: PUT
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-      headers:
-        Content-Type: application/json
-        Accept: application/json,version=2
-      body: >
-        {"host":{"location_id":"{{ location_id }}"}}
-      body_format: json
+- name: "Compose location creation request body"
+  ansible.builtin.set_fact:
+    location_body: "{{ {'location': {'name': location, 'domain_ids': [domain_id]}} }}"
 
-  - name: "Move capsule to the location"
-    uri:
-      url: "https://{{ groups['satellite6']|first }}/api/smart_proxies/{{ inventory_hostname }}"
-      method: PUT
-      user: "{{ sat_user }}"
-      password: "{{ sat_pass }}"
-      force_basic_auth: yes
-      validate_certs: no
-      headers:
-        Content-Type: application/json
-        Accept: application/json,version=2
-      body: >
-        {"smart_proxy":{"location_ids":["{{ location_id }}"],"organization_ids":["1"]}}
-      body_format: json
+- name: "Create location for our capsule if it is not already there"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/locations"
+    method: POST
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: "{{ location_body }}"
+    status_code: [201, 422]
+    body_format: json
+  when: "location not in locations.json.results | map(attribute='name')"
+
+- name: "Get updated list of locations if needed"
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/locations?per_page=1000000"
+    method: GET
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+  register: locations
+  run_once: true
+
+- name: "Determine location ID"
+  ansible.builtin.set_fact:
+    location_id: "{{ item.id }}"
+  when: "item.name == location"
+  with_items: "{{ locations.json.results }}"
+
+- name: "Move capsule's host to the location"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ inventory_hostname }}"
+    method: PUT
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: >
+      {"host":{"location_id":{{ location_id }}}}
+    body_format: json
+
+- name: "Move capsule to the location"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.uri:
+    url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies/{{ inventory_hostname }}"
+    method: PUT
+    user: "{{ sat_user }}"
+    password: "{{ sat_pass }}"
+    force_basic_auth: yes
+    validate_certs: no
+    headers:
+      Content-Type: application/json
+      Accept: application/json
+    body: >
+      {"smart_proxy": {"location_ids": ["{{ location_id }}"], "organization_ids": ["1"]}}
+    body_format: json
 ...

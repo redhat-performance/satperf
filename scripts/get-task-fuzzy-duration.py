@@ -1,9 +1,21 @@
 #!/usr/bin/env python3
 
+"""
+Satellite API doc:
+
+    https://<hostname>/apidoc/v2
+
+Using the API:
+
+    curl --silent --insecure -u <user>:<pass> -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost/api/v2/job_invocations/6
+    curl --silent --insecure -u <user>:<pass> -X GET -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost/foreman_tasks/api/tasks/a1845242-34cc-44b7-ae24-f8a1c5748641
+"""
+
 import logging
 import sys
 import os.path
 import datetime
+import time
 import dateutil.parser
 import collections
 import requests
@@ -71,15 +83,49 @@ def print_result(output_format, data):
         data['head'] = data['head'].total_seconds()
         data['tail'] = data['tail'].total_seconds()
         for k, v in data.items():
-            print("results.tasks.%s=\"%s\"" % (k, v))
+            print("results.tasks.%s=\"%s\"" % (k, v.isoformat(timespec="microseconds") if isinstance(v, datetime.datetime) else v))
+    elif output_format == 'json':
+        data['duration'] = data['duration'].total_seconds()
+        data['duration_cleaned'] = data['duration_cleaned'].total_seconds()
+        data['head'] = data['head'].total_seconds()
+        data['tail'] = data['tail'].total_seconds()
+        data = {k: v.isoformat(timespec="microseconds") if isinstance(v, datetime.datetime) else v for k, v in data.items()}
+        print(json.dumps(data))
     else:
-        raise Exception("Do not know how to prin in %s" % output_format)
+        raise Exception("Do not know how to print in %s" % output_format)
 
 
 def investigate_task(args):
-    parent_task = get_json(
-        args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
-        args.username, args.password)
+    # Wait until we get some output
+    while True:
+        parent_task = get_json(
+            args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
+            args.username, args.password)
+        if parent_task['output']:
+            finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+            timeout_counter = 0
+            break
+        else:
+            time.sleep(5)
+
+    while True:
+        if parent_task["pending"]:
+            time.sleep(60)
+            parent_task = get_json(
+                args.hostname, "/foreman_tasks/api/tasks/%s" % args.task_id,
+                args.username, args.password)
+            finished_count_current = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+            if finished_count_current == finished_count_before:
+                timeout_counter += 1
+            else:
+                finished_count_before = parent_task['output']['success_count'] + parent_task['output']['failed_count']
+                timeout_counter = 0
+
+            if timeout_counter == args.timeout:
+                raise Exception(f"Ran out of time waiting for task {args.task_id} to finish")
+        else:
+            break
+
     if 'error' in parent_task:
         logging.error("Error retrieving parent task info: %s" % parent_task)
         sys.exit(1)
@@ -94,7 +140,7 @@ def investigate_task(args):
     sub_tasks = get_all(
         args.hostname, "/foreman_tasks/api/tasks",
         args.username, args.password,
-        {"search": "parent_task_id = %s" % args.task_id},
+        {"search": "parent_task_id = %s and result != cancelled" % args.task_id},
         args.cache)
     # with open('cache', 'w') as fp:
     #     import json
@@ -117,8 +163,12 @@ def investigate_task(args):
     duration = end - start
 
     to_remove = round((args.percentage / 100) * count)
-    starts_cleaned = starts[to_remove:]
-    ends_cleaned = ends[:-to_remove]
+    if to_remove > 0:
+        starts_cleaned = starts[to_remove:]
+        ends_cleaned = ends[:-to_remove]
+    else:
+        starts_cleaned = starts
+        ends_cleaned = ends
 
     start_cleaned = min(starts_cleaned)
     end_cleaned = max(ends_cleaned)
@@ -156,10 +206,12 @@ def doit():
                         help='Satellite hostname')
     parser.add_argument('--task-id', required=True,
                         help='Task ID you want to investigate')
+    parser.add_argument('--timeout', type=int, default=60,
+                        help='How long to wait for the parent task to show progress (in minutes). The progress will be measured against the sum of the failed an successful sub-tasks')
     parser.add_argument('--percentage', type=float, default=3,
                         help='How many %% of earliest and latest starts and ends to drop')
     parser.add_argument('-o', '--output', default='plain',
-                        choices=['plain', 'bash', 'status-data'],
+                        choices=['plain', 'bash', 'status-data', 'json'],
                         help='Format how to present output')
     parser.add_argument('--cache',
                         help='Cache sub-tasks data to this file. Do not cache when option is not provided. Meant for debugging as it does not care about other parameters, it just returns cache content.')

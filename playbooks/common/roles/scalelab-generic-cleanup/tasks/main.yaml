@@ -1,0 +1,37 @@
+---
+- name: "Cleanup interfaces"
+  shell: |
+    ls /etc/sysconfig/network-scripts/ifcfg-*.10?
+    if [ $? -eq 0 ]; then
+      /root/clean-interfaces.sh --nuke
+      nmcli c delete enp1s0f0.101 || true
+      nmcli c delete enp1s0f1.102 || true
+      nmcli c delete enp2s0f1.103 || true
+    else
+      echo "Interfaces seem to be cleaned"
+    fi
+  register: cleanup_interfaces_script
+  changed_when: "cleanup_interfaces_script.rc == 0 and 'Interfaces seem to be cleaned' not in cleanup_interfaces_script.stdout"
+
+- name: "Detect RHEL release"
+  setup:
+    filter: ansible_distribution_major_version
+  when: ansible_distribution_major_version is not defined
+
+- name: "Fix firewalld config"
+  shell: |
+    lock=/root/.fix-firewalld-config.lock
+    if [ -f "$lock" ]; then
+      echo "Firewalld config seem to be already fixed"
+    else
+      if rpm -q firewalld; then
+        systemctl unmask firewalld.service
+        firewall-cmd --add-service ssh
+        rpm -q iptables-services && dnf remove -y iptables-services
+      fi
+      date >"$lock"
+    fi
+  when: "ansible_distribution_major_version|int == 8"
+  register: fix_firewalld_config_script
+  changed_when: "fix_firewalld_config_script.rc == 0 and 'Firewalld config seem to be already fixed' not in fix_firewalld_config_script.stdout"
+...

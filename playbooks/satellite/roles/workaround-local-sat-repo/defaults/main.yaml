@@ -1,0 +1,6 @@
+---
+workaround_local_sat_repo_repos:
+  - Sat6-CI_Red_Hat_Satellite_6_10_Composes_Satellite_6_10_RHEL7
+  - Sat6-CI_Red_Hat_Satellite_6_10_Composes_Satellite_Tools_6_10_RHEL7
+  - Sat6-CI_Red_Hat_Satellite_6_10_Composes_Satellite_Maintenance_Next_RHEL7
+...

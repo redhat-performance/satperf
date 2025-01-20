@@ -1,0 +1,68 @@
+---
+- hosts: satellite6
+  gather_facts: false
+  vars:
+    ui_pages_concurrency: 10
+    ui_pages_duration: 300
+  tasks:
+    - name: "Show settings"
+      ansible.builtin.debug:
+        msg:
+          - "ui_pages_concurrency = {{ ui_pages_concurrency }}"
+          - "ui_pages_duration = {{ ui_pages_duration }}"
+
+    - name: "Create virtualenv"
+      ansible.builtin.shell:
+        cmd: |
+          python3 -m venv /root/venv
+          source /root/venv/bin/activate
+          python3 -m pip install -U pip
+          python3 -m pip install -e "git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team"
+      args:
+        creates: /root/venv
+
+    - name: "Deploy test script"
+      ansible.builtin.copy:
+        src: files/webui-pages.py
+        dest: /root/webui-pages.py
+        mode: '0755'
+        force: yes
+
+    - name: "Run the test"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          export STATUS_DATA_FILE=/tmp/status-data.json
+          rm -rf $STATUS_DATA_FILE
+          export PYTHONWARNINGS="ignore:Unverified HTTPS request"
+          source /root/venv/bin/activate
+
+          python3 /root/webui-pages.py \
+            --satellite-username {{ sat_user }} \
+            --satellite-password {{ sat_pass }} \
+            --satellite-org_id 1 \
+            --satellite-version {{ sat_version }} \
+            --locust-host https://localhost \
+            --locust-num-clients {{ ui_pages_concurrency }} \
+            --test-duration {{ ui_pages_duration }}
+      environment:
+        TZ: UTC
+      ignore_errors: yes
+      register: test_cmd
+
+    - name: "Show output"
+      ansible.builtin.debug:
+        msg: "{{ ['========== Standard output =========='] + test_cmd.stdout_lines + ['', '========== Standard error output =========='] + test_cmd.stderr_lines }}"
+      run_once: yes
+
+    - name: "Fetch status data file from remote host"
+      ansible.builtin.fetch:
+        src: "/tmp/status-data.json"
+        dest: "/tmp/status-data-webui-pages.json"
+        flat: true
+
+    - name: "Print results"
+      ansible.builtin.debug:
+        msg: "WebUIPagesTest_c{{ ui_pages_concurrency }}_d{{ ui_pages_duration }} {{ test_cmd.start }} to {{ test_cmd.end }}"
+...

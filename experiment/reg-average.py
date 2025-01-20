@@ -1,10 +1,21 @@
-#!/usr/bin/env python
+#!/usr/bin/env python3
 # -*- coding: UTF-8 -*-
 
 import argparse
 import datetime
 import logging
 import re
+import sys
+
+
+def parse_time(time_str):
+    try:
+        time_obj = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S.%f')
+    except ValueError:
+        time_obj = datetime.datetime.strptime(time_str, '%Y-%m-%d %H:%M:%S')
+
+    return time_obj.replace(tzinfo=datetime.timezone.utc)
+
 
 parser = argparse.ArgumentParser(description='Compute average from log')
 parser.add_argument('matcher',
@@ -31,8 +42,8 @@ for line in args.log_file:
         logging.debug("Processing line %d: %s" % (count, line.strip()))
         m = re.match('^.*"%s (?P<start>[0-9:. -]+) to (?P<end>[0-9:. -]+)".*$' % args.matcher, line)
 
-        start = datetime.datetime.strptime(m.group('start'), '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=datetime.timezone.utc)
-        end = datetime.datetime.strptime(m.group('end'), '%Y-%m-%d %H:%M:%S.%f').replace(tzinfo=datetime.timezone.utc)
+        start = parse_time(m.group('start'))
+        end = parse_time(m.group('end'))
         diff = end - start
         logging.debug("Parsed start, end, diff times on line %d: %s, %s, %s" % (count, start, end, diff))
 
@@ -43,6 +54,10 @@ for line in args.log_file:
         count += 1
         total += diff.total_seconds()
 
-print("min in %s: %s" % (args.log_file.name, start_min.timestamp()))
-print("max in %s: %s" % (args.log_file.name, end_max.timestamp()))
-print("%s in %s: %f / %d = %f" %(args.matcher, args.log_file.name, total, count, total / count))
+if count == 0:
+    logging.error("No matcher %s found in log %s" % (args.matcher, args.log_file.name))
+    sys.exit(1)
+else:
+    print("min in %s: %s" % (args.log_file.name, start_min.timestamp()))
+    print("max in %s: %s" % (args.log_file.name, end_max.timestamp()))
+    print("%s in %s: %f / %d = %f" %(args.matcher, args.log_file.name, total, count, total / count))

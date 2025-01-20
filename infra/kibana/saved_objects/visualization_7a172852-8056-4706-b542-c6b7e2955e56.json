@@ -1,0 +1,33 @@
+[
+    {
+        "attributes": {
+            "description": "",
+            "kibanaSavedObjectMeta": {
+                "searchSourceJSON": "{\"filter\":[{\"$state\":{\"store\":\"appState\"},\"meta\":{\"alias\":null,\"disabled\":false,\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.filter[0].meta.index\",\"key\":\"query\",\"negate\":false,\"type\":\"custom\",\"value\":\"{\\\"wildcard\\\":{\\\"parameters.version.keyword\\\":\\\"*-6.13.*\\\"}}\"},\"query\":{\"wildcard\":{\"parameters.version.keyword\":\"*-6.13.*\"}}}],\"indexRefName\":\"kibanaSavedObjectMeta.searchSourceJSON.index\",\"query\":{\"language\":\"lucene\",\"query\":\"\"}}"
+            },
+            "title": "Sat 6.13 run to version",
+            "uiStateJSON": "{\"vis\":{\"params\":{\"sort\":{\"columnIndex\":null,\"direction\":null}}}}",
+            "version": 1,
+            "visState": "{\"aggs\":[{\"enabled\":true,\"id\":\"1\",\"params\":{\"customLabel\":\"Number of results\"},\"schema\":\"metric\",\"type\":\"count\"},{\"enabled\":true,\"id\":\"2\",\"params\":{\"customLabel\":\"Test run ID\",\"field\":\"parameters.run.keyword\",\"missingBucket\":false,\"missingBucketLabel\":\"Missing\",\"order\":\"desc\",\"orderBy\":\"_key\",\"otherBucket\":false,\"otherBucketLabel\":\"Other\",\"size\":15},\"schema\":\"bucket\",\"type\":\"terms\"},{\"enabled\":true,\"id\":\"4\",\"params\":{\"customLabel\":\"Satellite version\",\"field\":\"parameters.version.keyword\",\"size\":1},\"schema\":\"bucket\",\"type\":\"significant_terms\"}],\"params\":{\"perPage\":5,\"showMetricsAtAllLevels\":false,\"showPartialRows\":true,\"showTotal\":false,\"sort\":{\"columnIndex\":null,\"direction\":null},\"totalFunc\":\"sum\"},\"title\":\"Sat 6.13 run to version\",\"type\":\"table\"}"
+        },
+        "id": "7a172852-8056-4706-b542-c6b7e2955e56",
+        "migrationVersion": {
+            "visualization": "7.10.0"
+        },
+        "references": [
+            {
+                "id": "293cb4b0-272c-11ea-bfca-3fb30f912ea8",
+                "name": "kibanaSavedObjectMeta.searchSourceJSON.index",
+                "type": "index-pattern"
+            },
+            {
+                "id": "293cb4b0-272c-11ea-bfca-3fb30f912ea8",
+                "name": "kibanaSavedObjectMeta.searchSourceJSON.filter[0].meta.index",
+                "type": "index-pattern"
+            }
+        ],
+        "type": "visualization",
+        "updated_at": "2023-01-09T08:18:07.241Z",
+        "version": "WzcyNDQxLDEwXQ=="
+    }
+]

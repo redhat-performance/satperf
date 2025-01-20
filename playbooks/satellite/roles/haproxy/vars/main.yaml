@@ -1,0 +1,14 @@
+---
+capsule_lbs_sysctl_config_default:
+  # https://www.haproxy.com/documentation/hapee/latest/getting-started/system-tuning/
+
+  net.ipv4.tcp_rmem: '4096 16060 262144'
+  net.ipv4.tcp_wmem: '4096 16060 262144'
+  net.ipv4.tcp_tw_reuse: 1
+  net.ipv4.ip_local_port_range: '1024 65023'
+  net.ipv4.tcp_max_syn_backlog: 60000
+  net.ipv4.tcp_fin_timeout: 30
+  net.ipv4.tcp_synack_retries: 3
+  net.ipv4.ip_nonlocal_bind: 1
+  net.core.somaxconn: 60000
+...

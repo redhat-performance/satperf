@@ -1,123 +1,241 @@
 ---
-- hosts: docker_hosts
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+- name: "Register containers against a registration target"
+  hosts: container_hosts
+  gather_facts: false
   vars:
-    # TODO: Move these variables into conf/satperf.yaml
-    tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,REM"   # Register systems with client timeout tweak and setup ReX
-    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,KAT..."   # Register systems and setup katello-agent
-    ###tags: "untagged,REGTIMEOUTTWEAK,REG,DOWNGRADE,PUP..."   # Register systems and setup Puppet
-    size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of docker hosts
-    use_only_fresh: true   # should we use only containers which were not registered yet?
-    update_used: true
-    forks: "{{ size }}"
-    resting: 0
-    bootstrap_retries: 10
-    bootstrap_activationkey: "SatperfActivationKey"
-    bootstrap_hostgroup: "SatperfHostGroup"
-    bootstrap_additional_args: ""
-    grepper: ''
+    size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
+    num_retry_forks: 3
     registration_logs: "registration_logs"
+    re_register_failed_hosts: false
+    debug_rhsm: false
   tasks:
-    - name: "Ansible on docker host configured to ignore host keys"
-      lineinfile:
-        path: '/etc/ansible/ansible.cfg'
-        regexp: '^\s*host_key_checking\s*='
-        line: 'host_key_checking = False'
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
+
+    - name: "Get group name of the location(s)"
+      ansible.builtin.set_fact:
+        location_groupname: "location_{{ location | lower }}"
+
+    - name: "Check whether we have already registered some containers"
+      ansible.builtin.stat:
+        path: /root/container-used-count
+      register: container_used_count_path
+
+    - name: "Set number of used containers to 0"
+      ansible.builtin.set_fact:
+        containers_used_count: 0
+      when:
+        - not container_used_count_path.stat.exists
 
     - name: "Load number of already registered containers"
-      command:
-        cat /root/container-used-count
+      ansible.builtin.command:
+        cmd: |
+          cat /root/container-used-count
       register: containers_used_count_cmd
       ignore_errors: true
-      when: "use_only_fresh|bool"
-    - name: "Set number of used containers to 0"
-      set_fact:
-        containers_used_count: 0
-    - name: "Set number of used containers based on file"
-      set_fact:
-        containers_used_count: "{{ containers_used_count_cmd.stdout|int }}"   # Warning: this is still string: https://github.com/ansible/ansible/issues/15249
-      when: "use_only_fresh|bool and (containers_used_count_cmd.rc is defined and containers_used_count_cmd.rc == 0)"
+      when:
+        - container_used_count_path.stat.exists
+
+    - name: "Set number of used containers based on file contents"
+      ansible.builtin.set_fact:
+        containers_used_count: "{{ containers_used_count_cmd.stdout }}"   # Warning: this is still a string: https://github.com/ansible/ansible/issues/15249
+      when:
+        - container_used_count_path.stat.exists
+
+    - name: "Ensure we have enough free containers"
+      ansible.builtin.assert:
+        that: "containers_used_count | int < containers_count | int"
 
     - name: "Generate list of containers we are going to use"
-      shell:
-        head -n "{{ containers_used_count|int + size|int }}" /root/container-ips.shuffled | tail -n "{{ size }}" | cut -d ' ' -f 2 > clients.ini
-    - name: "Determine marker for recorder"
-      set_fact:
-        marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
-      run_once: yes
-    - name: "Determine log name"
-      set_fact:
-        clients_yaml_cmd_log: "/root/out-{{ marker }}.log"
-      run_once: yes
-    - name: "Run clients.yaml (log = {{ clients_yaml_cmd_log }}; tags = {{ tags }})"
-      shell:
-        ansible-playbook --private-key /root/id_rsa_key -f "{{ forks }}" -i clients.ini --extra-vars "server={{ tests_registration_target|default(groups['satellite6']|first) }} marker='{{ lookup('pipe', 'date --iso-8601=seconds') }}' bootstrap_retries={{ bootstrap_retries|default(10) }} bootstrap_activationkey='{{ bootstrap_activationkey }}' bootstrap_hostgroup='{{ bootstrap_hostgroup }}' bootstrap_additional_args='{{ bootstrap_additional_args }}'" --tags "{{ tags }}" clients.yaml &> "{{ clients_yaml_cmd_log }}"
+      ansible.builtin.shell:
+        cmd: |
+          awk 'NR > {{ containers_used_count | int }} && NR <= {{ containers_used_count | int + size | int }} {print $NF}' \
+            /root/container-ips.shuffled \
+            >clients.ini
+
+    - name: "Set base log name"
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "/root/out-{{ lookup('pipe', 'date -u -Iseconds') | regex_replace('[^A-Za-z0-9-]', '_') }}"
+      run_once: true
+
+    - name: "Set log name"
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
+      run_once: true
+
+    - name: "Try to patch `rhsm/connection.py` to add some error logging"
+      ansible.builtin.shell:
+        cmd: |
+          ansible \
+            --private-key /root/id_rsa_key \
+            --inventory clients.ini \
+            -m ansible.builtin.shell \
+            -a 'sed -i.orig -e "/\# This really needs an exception mapper too\.\.\./i \
+            \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ log.error(\"Response content: %s\" % response[\"content\"])" \
+            /usr/lib64/python3.6/site-packages/rhsm/connection.py' \
+            all \
+            &> patch_rhsm_{{ size }}.log
+      when:
+        - debug_rhsm
+
+    - name: "Run host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
+      ansible.builtin.shell:
+        cmd: |
+          ansible-playbook \
+            --private-key /root/id_rsa_key \
+            --forks {{ size }} \
+            --inventory clients.ini \
+            host-registration.yaml \
+            &> {{ clients_yaml_cmd_log }}
       register: clients_yaml_cmd
       ignore_errors: true
+
     - name: "Fetch client logs"
-      fetch:
+      ansible.builtin.fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ registration_logs }}"
       ignore_errors: true
 
-    - name: "Get how long '{{ grepper }}' took"
-      shell:
-        grep '"msg". "{{ grepper }}' "{{ clients_yaml_cmd_log }}" | cut -d '"' -f 4
+    - name: "Get how long registration took"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          grep '"msg". "Register' {{ clients_yaml_cmd_log }} | cut -d '"' -f 4
       register: clients_yaml_grepper_timings
-      when: "grepper != ''"
-    - name: "Append '{{ grepper }}' timings to central list"
-      set_fact:
-        grepper_times: "{{ grepper_times|default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
+      ignore_errors: true
+
+    - name: "Append registration timings to central list"
+      ansible.builtin.set_fact:
+        grepper_times: "{{ grepper_times | default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
       with_items: "{{ ansible_play_batch }}"
       run_once: true
-      when: "grepper != ''"
-    - name: "Show how long '{{ grepper }}' took"
-      debug:
+
+    - name: "Show how long registration took"
+      ansible.builtin.debug:
         var: grepper_times
       run_once: true
-      when: "grepper != ''"
-    - name: "Show number of successful '{{ grepper }}' events"
-      debug:
+
+    - name: "Show number of successful registration events"
+      ansible.builtin.debug:
         var: grepper_times|length
       run_once: true
-      when: "grepper != ''"
 
     - name: "Increment number of already registered containers"
-      shell:   # FIXME: Use lineinfile or so
-        echo "{{ containers_used_count|int + size|int }}" >/root/container-used-count
-      when: "update_used|bool"
+      ansible.builtin.lineinfile:
+        path: /root/container-used-count
+        regexp: .*
+        line: "{{ containers_used_count | int + size | int }}"
+        create: true
 
-    ###- debug: var="('2017-05-20 15:59:13.223808'|to_datetime('%Y-%m-%d %H:%M:%S.%f')).epoch"   # FIXME: why this does not work? Replace these lookup usages with this
-    ###  delegate_to: 127.0.0.1
-    ###  run_once: true
-    - name: "Determine timezone"
-      command:
-        date +%z
-      register: date_z_cmd
-    - set_fact:
-        start_time: "{{ lookup('pipe', 'date --utc -d \"{{ clients_yaml_cmd.start }} {{ date_z_cmd.stdout }}\" +%s') }}"
-    - set_fact:
-        end_time: "{{ lookup('pipe', 'date --utc -d \"{{ clients_yaml_cmd.end }} {{ date_z_cmd.stdout }}\" +%s') }}"
+    - name: "Get number of hosts that failed to register"
+      ansible.builtin.shell:
+        cmd: |
+          grep -c \
+            -e ^'fatal: ' \
+            -e ^'        "Traceback ' \
+            -e ^'        "curl: ' \
+            -e ' initial configuration failed' \
+            -e ^'        "Internal Server Error",'$ \
+            -e 'ERROR: ' \
+            {{ clients_yaml_cmd_log }}
+      register: num_failed_hosts
+      failed_when: num_failed_hosts.rc == 2
 
-    - name: "DEBUG: result of clients.yaml"
-      debug:
-        msg: "rc:{{ clients_yaml_cmd.rc }} size:{{ size }} tags:{{ tags }} start:{{ clients_yaml_cmd.start }} end:{{ clients_yaml_cmd.end }} seconds:{{ end_time|int - start_time|int }}"
+    - name: "Show number of hosts that failed to register"
+      ansible.builtin.debug:
+        var: num_failed_hosts.stdout_lines
 
-    - name: "Give server some time to rest"
-      # To workaround https://github.com/ansible/ansible/pull/42217
-      #pause:
-      #  seconds: "{{ resting }}"
-      command:
-        sleep "{{ resting }}"
-      run_once: true
+    - name: "Try to show errors in /var/log/rhsm/rhsm.log when log file shows rhsm related errors"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
 
-    # FIXME: Takes into account start/end time from only one (random) docker host (should from min(start) to max(end))
-    - debug:
-        msg: "Graphs: http://{{ grafana_host }}:{{ grafana_port }}/dashboard/db/satellite6-general-system-performance?from={{ start_time|int - 10 }}000&to={{ end_time|int + resting|int + 10 }}000&var-Cloud=satellite62&var-Node=gprfc019-vm1_sbu_lab_eng_bos_redhat_com"
-      run_once: true
+          for client_ip in $(awk '/^fatal: .* \/var\/log\/rhsm\/rhsm.log / {print $2}' {{ clients_yaml_cmd_log }}" |
+            cut -d'[' -f2 | cut -d']' -f1); do
+              ansible \
+                --private-key /root/id_rsa_key \
+                --inventory ${client_ip}, \
+                -m ansible.builtin.command \
+                -a "cat /var/log/rhsm/rhsm.log" \
+                all \
+                &> rhsm_${client_ip}.log
+          done
       ignore_errors: true
+      when:
+        - num_failed_hosts.stdout_lines[0] | int > 0
+        - debug_rhsm
+
+    - name: "Set additional retries log name (if needed)"
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
+      when:
+        - num_failed_hosts.stdout_lines[0] | int > 0
+        - re_register_failed_hosts
+
+    - name: "Try to re-register failed hosts (if needed)"
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
+
+          while (( "$(grep -c \
+            -e ^'fatal: ' \
+            -e ^'        "Traceback ' \
+            -e ^'        "curl: ' \
+            -e ' initial configuration failed' \
+            -e ^'        "Internal Server Error",'$ \
+            -e 'ERROR: ' \
+            {{ clients_yaml_cmd_retries_log }})" != 0 )); do
+              num_fails="$(grep -c \
+                -e ^'fatal: ' \
+                -e ^'        "Traceback ' \
+                -e ^'        "curl: ' \
+                -e ' initial configuration failed' \
+                -e ^'        "Internal Server Error",'$ \
+                -e 'ERROR: ' \
+                {{ clients_yaml_cmd_retries_log }})"
+              iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
+
+              cp -p {{ clients_yaml_cmd_retries_log }} ${iter_clients_yaml_cmd_retries_log}
+
+              unset CLIENT_IP_LIST
+
+              for client_ip in $(awk '/^fatal: / {print $2}' ${iter_clients_yaml_cmd_retries_log} |
+                cut -d'[' -f2 | cut -d']' -f1); do
+                  CLIENT_IP_LIST+="${client_ip},"
+              done
+
+              for client_ip in $(grep \
+                -e ^'ok:' \
+                -e ^'        "Traceback ' \
+                -e ^'        "curl: ' \
+                -e ' initial configuration failed' \
+                -e ^'        "Internal Server Error",'$ \
+                -e 'ERROR: ' \
+                $iter_clients_yaml_cmd_retries_log |
+                uniq | grep -B1 \
+                -e ^'        "Traceback ' \
+                -e ^'        "curl: ' \
+                -e ' initial configuration failed' \
+                -e ^'        "Internal Server Error",'$ \
+                -e 'ERROR: ' |
+                awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
+                  CLIENT_IP_LIST+="${client_ip},"
+              done
+
+              ansible-playbook \
+                --private-key /root/id_rsa_key \
+                --inventory ${CLIENT_IP_LIST} \
+                --forks {{ num_retry_forks }} \
+                host-registration.yaml \
+                &> {{ clients_yaml_cmd_retries_log }}
+          done
+      register: clients_yaml_cmd_retries
+      ignore_errors: true
+      when:
+        - num_failed_hosts.stdout_lines[0] | int > 0
+        - re_register_failed_hosts
 ...

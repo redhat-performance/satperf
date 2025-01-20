@@ -2,11 +2,7 @@
 # 2 repo, creates lifecycle environment and publishes these repos into it.
 ---
 - hosts: satellite6
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     test_sync_mixed_count: 2
     test_sync_mixed_product: "test_sync_mixed_product"
@@ -27,7 +23,7 @@
         var: test_sync_repositories_url_template
     - name: "Create product"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_mixed_product }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" product create --organization "{{ organization }}" --name "{{ test_sync_mixed_product }}"
       register: create_product
       failed_when: "create_product.rc != 0 and 'Name has already been taken for a product in this organization' not in create_product.stderr"
       changed_when: "create_product.rc == 0 and 'Product created' in create_product.stdout"
@@ -35,40 +31,40 @@
 
     - name: "Create Docker repos"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --content-type docker --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --url "{{ test_sync_docker_url_template|replace('*', item) }}"  --docker-upstream-name "{{ test_sync_docker_upstream_template|replace('*',item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --content-type docker --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --url "{{ test_sync_docker_url_template|replace('*', item) }}"  --docker-upstream-name "{{ test_sync_docker_upstream_template|replace('*',item) }}"
       register: create_repo_docker
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Create ISO repos"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --content-type file --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --url "{{ test_sync_iso_url_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --content-type file --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --url "{{ test_sync_iso_url_template|replace('*', item) }}"
       register: create_repo_iso
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Create Yum repos"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --content-type yum --download-policy on_demand --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --url "{{ test_sync_repositories_url_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository create --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --content-type yum --download-policy on_demand --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --url "{{ test_sync_repositories_url_template|replace('*', item) }}"
       register: create_repo_yum
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
 
     - name: "Start Docker repos sync asynchronously"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --async
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_docker_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_docker
       ignore_errors: true
 
     - name: "Start ISO repos sync asynchronously"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --async
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_iso_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_iso
       ignore_errors: true
 
     - name: "Start Yum repos sync asynchronously"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --async
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" repository synchronize --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --name "{{ test_sync_repositories_repo_template|replace('*', item) }}" --async
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
       register: start_sync_yum
       ignore_errors: true
@@ -145,37 +141,37 @@
 
     - name: "Create lifecycle environment"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization-id "{{ sat_orgid }}" --prior Library --name "{{ test_sync_mixed_le }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization "{{ organization }}" --prior Library --name "{{ test_sync_mixed_le }}"
       register: create_le
 
     - name: "Create content views (>= 6.6)"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization-id "{{ sat_orgid }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view create --organization "{{ organization }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: create_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add Yum repositories to content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_repositories_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_yum_to_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add ISO repositories to content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_iso_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_iso_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_iso_to_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
     - name: "Add Docker repositories to content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization-id "{{ sat_orgid }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_docker_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view add-repository --organization "{{ organization }}" --product "{{ test_sync_mixed_product }}" --repository "{{ test_sync_docker_repo_template|replace('*', item) }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: add_docker_to_cv
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
 
 
     - name: "Publish content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization-id "{{ sat_orgid }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view publish --async --organization "{{ organization }}" --name "{{ test_sync_mixed_cv_template|replace('*', item) }}"
       register: start_publish
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
     - name: "Wait for publish to finish"
@@ -195,7 +191,7 @@
 
     - name: "Promote content views"
       command:
-        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization-id "{{ sat_orgid }}" --content-view "{{ test_sync_mixed_cv_template|replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_mixed_le }}"
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" content-view version promote --async --organization "{{ organization }}" --content-view "{{ test_sync_mixed_cv_template|replace('*', item) }}" --version "1.0" --to-lifecycle-environment "{{ test_sync_mixed_le }}"
       register: start_promote
       loop: "{{ range(1, test_sync_mixed_count|int+1)|list }}"
     - name: "Wait for promote to finish"

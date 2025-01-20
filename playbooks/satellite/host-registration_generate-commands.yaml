@@ -1,0 +1,106 @@
+---
+- name: "Generate the host registration command"
+  hosts: satellite6:capsules
+  gather_facts: false
+  vars:
+    aks: "{{ aks | default('AK') | split }}"
+    hgrg: "host-registration generate-command --organization '{{ organization }}' --location {{ location }} --insecure true --force true"
+    location_groupname: "location_{{ location | lower }}"
+  tasks:
+    - name: "Get capsule ID"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: |
+          hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --organization '{{ organization }}' --search 'name = {{ inventory_hostname }}' --fields id
+      register: capsule_id_cmd
+      changed_when: capsule_id_cmd.rc != 0
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      when:
+        - "'capsules' in group_names"
+
+    - name: "Set capsule ID"
+      ansible.builtin.set_fact:
+        capsule_id: "{{ capsule_id_cmd.stdout }}"
+      when:
+        - "'capsules' in group_names"
+
+    - name: "Add --smart-proxy-id parameter"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
+      when:
+        - "'capsules' in group_names"
+
+    - name: "Check if Insights client should be installed and configured (it won't be by default)"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --setup-insights false"
+      when:
+        - setup_insights is not defined or not setup_insights
+
+    - name: "Check if MQTT REX mode is needed"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --setup-remote-execution-pull true"
+      when:
+        - rex_mode is defined and rex_mode == 'mqtt'
+
+    - name: "Check if some package should be installed"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --packages {{ packages }}"
+      when:
+        - packages is defined and packages | length > 0
+
+    - name: "Set default JWT expiration time (999999)"
+      ansible.builtin.set_fact:
+        default_jwt_expiration: 999999
+      when:
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.15.0', '<')
+
+    - name: "Set default JWT expiration time (0)"
+      ansible.builtin.set_fact:
+        default_jwt_expiration: 0
+      when:
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.15.0', '>=')
+
+    - name: "Add --jwt-expiration parameter"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --jwt-expiration {{ jwt_expiration | default(default_jwt_expiration) }}"
+
+    - name: "Generate the host registration command"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: |
+          hammer -u {{ sat_user }} -p {{ sat_pass }} {{ hgrg }} --activation-key {{ item }}
+      loop: "{{ aks | split }}"
+      register: cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Copy the output of the the host registration command to the Apache pub directory"
+      ansible.builtin.copy:
+        content: "{{ item.stdout }}\n"
+        dest: /var/www/html/pub/host-registration.{{ item.item }}.sh
+        mode: '0644'
+      loop: "{{ cmd.results }}"
+      when:
+        - item.rc == 0
+
+    - name: "Set name of first capsule"
+      ansible.builtin.set_fact:
+        first_capsule: "{{ groups[location_groupname] | intersect(groups['capsules']) | sort | first }}"
+      when:
+        - "'capsule_lbs' in groups"
+        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+
+    - name: "Download host registration script from the first capsule"
+      ansible.builtin.get_url:
+        url: http://{{ first_capsule }}/pub/host-registration.{{ item }}.sh
+        dest: /var/www/html/pub/host-registration.{{ item }}.sh
+        mode: '0644'
+        force: true
+      loop: "{{ aks | split }}"
+      when:
+        - "'capsule_lbs' in groups"
+        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+...

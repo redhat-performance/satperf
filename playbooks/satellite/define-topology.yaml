@@ -1,0 +1,227 @@
+---
+- name: "Create organization(s)"
+  hosts: satellite6:capsules
+  strategy: linear
+  gather_facts: false
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+        location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
+        domain: "{{ domain }}"
+
+    - name: "Get host information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/hosts?search=name+%3D+{{ inventory_hostname }}"
+        method: GET
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: get_host_json
+      failed_when:
+        - get_host_json.json.results | length != 1
+        - get_host_json.json.results[0].name != '{{ inventory_hostname }}'
+
+    - name: "Get host id"
+      ansible.builtin.set_fact:
+        host_id: "{{ get_host_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ inventory_hostname }}'].id | [0]"
+
+    - name: "Get host smart_proxy_id"
+      ansible.builtin.set_fact:
+        smart_proxy_id: "{{ get_host_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ inventory_hostname }}'].infrastructure_facet.smart_proxy_id | [0]"
+
+
+    ### Organizations
+    - name: "Create organization(s)"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
+        method: POST
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization': {'name': organization}} }}"
+        status_code:
+          - 201
+          - 422   # "Name has already been taken"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Get organizations information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/organizations"
+        method: GET
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: organizations_json
+      failed_when: organizations_json.json.results | length == 0
+
+    - name: "Get organization_id(s)"
+      ansible.builtin.set_fact:
+        organization_id: "{{ organizations_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ organization }}'].id | [0]"
+
+
+    ### Locations
+    - name: "Create location(s)"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations"
+        method: POST
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization_id': organization_id, 'location': {'name': location}} }}"
+        status_code:
+          - 201
+          - 422   # "Name has already been taken"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Get locations information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations"
+        method: GET
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: locations_json
+      failed_when: locations_json.json.results | length == 0
+
+    - name: "Get location_id(s)"
+      ansible.builtin.set_fact:
+        location_id: "{{ locations_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ location }}'].id | [0]"
+
+    - name: "Set location organization"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations/{{ location_id }}"
+        method: PUT
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization_id': organization_id, 'location': {'name': location, 'organization_ids': [organization_id]}} }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Set host location"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ host_id }}"
+        method: PUT
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization_id': organization_id, 'host': {'location_id': location_id}} }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Set smart-proxy location"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies/{{ smart_proxy_id }}"
+        method: PUT
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization_id': organization_id, 'smart_proxy': {'location_ids': [location_id]}} }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+
+    ### Subnets
+    - name: "Get subnet from inventory (using private network IPs)"
+      ansible.builtin.set_fact:
+        subnet: "{{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') }}"
+        network: "{{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network') }}"
+        netmask: "{{ private_netmask }}"
+      when:
+        - private_ip is defined
+        - private_netmask is defined
+
+    - name: "Get subnet from inventory (using public network IPs)"
+      ansible.builtin.set_fact:
+        subnet: "{{ (public_ip + '/' + public_netmask) | ansible.utils.ipaddr('network/prefix') }}"
+        network: "{{ (public_ip + '/' + public_netmask) | ansible.utils.ipaddr('network') }}"
+        netmask: "{{ public_netmask }}"
+      when:
+        - private_ip is not defined
+        - private_netmask is not defined
+        - public_ip is defined
+        - public_netmask is defined
+
+    - name: "Get group name of the location(s)"
+      ansible.builtin.set_fact:
+        location_groupname: "location_{{ location | lower }}"
+
+    - name: "Create subnets(s)"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/subnets"
+        method: POST
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization_id': organization_id, 'subnet': {'name': subnet, 'network': network, 'mask': netmask, 'ipam': 'None'}} }}"
+        status_code:
+          - 201
+          - 422   # "Name has already been taken"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Get subnets information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/subnets"
+        method: GET
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: subnets_json
+      failed_when: subnets_json.json.results | length == 0
+
+    - name: "Get subnet_id(s)"
+      ansible.builtin.set_fact:
+        subnet_id: "{{ subnets_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ subnet }}'].id | [0]"
+
+    - name: "Set subnet location"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/subnets/{{ subnet_id }}"
+        method: PUT
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization_id': organization_id, 'subnet': {'location_ids': [location_id]}} }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+...

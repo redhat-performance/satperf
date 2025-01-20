@@ -1,0 +1,46 @@
+[
+    {
+        "attributes": {
+            "description": "",
+            "hits": 0,
+            "kibanaSavedObjectMeta": {
+                "searchSourceJSON": "{\"query\":{\"query\":\"\",\"language\":\"kuery\"},\"filter\":[]}"
+            },
+            "optionsJSON": "{\"useMargins\":true,\"hidePanelTitles\":false}",
+            "panelsJSON": "[{\"version\":\"7.10.0\",\"gridData\":{\"x\":0,\"y\":0,\"w\":48,\"h\":13,\"i\":\"3223c7c4-3b57-4123-bc4c-519867f7d66c\"},\"panelIndex\":\"3223c7c4-3b57-4123-bc4c-519867f7d66c\",\"embeddableConfig\":{},\"panelRefName\":\"panel_0\"},{\"version\":\"7.10.0\",\"gridData\":{\"x\":0,\"y\":13,\"w\":48,\"h\":15,\"i\":\"4e8c03c7-8467-4171-9218-2c253f28aa5d\"},\"panelIndex\":\"4e8c03c7-8467-4171-9218-2c253f28aa5d\",\"embeddableConfig\":{},\"panelRefName\":\"panel_1\"},{\"version\":\"7.10.0\",\"gridData\":{\"x\":0,\"y\":28,\"w\":48,\"h\":15,\"i\":\"ae29310a-45a9-4e76-b297-8974d08b0569\"},\"panelIndex\":\"ae29310a-45a9-4e76-b297-8974d08b0569\",\"embeddableConfig\":{},\"panelRefName\":\"panel_2\"}]",
+            "refreshInterval": {
+                "pause": true,
+                "value": 0
+            },
+            "timeFrom": "now-30d",
+            "timeRestore": true,
+            "timeTo": "now",
+            "title": "Satellite AA",
+            "version": 1
+        },
+        "id": "e5764f00-5e85-11ec-8cd3-5d989c3b9841",
+        "migrationVersion": {
+            "dashboard": "7.9.3"
+        },
+        "references": [
+            {
+                "id": "7f8d3f60-5e84-11ec-8cd3-5d989c3b9841",
+                "name": "panel_0",
+                "type": "visualization"
+            },
+            {
+                "id": "87de7580-5e84-11ec-8cd3-5d989c3b9841",
+                "name": "panel_1",
+                "type": "visualization"
+            },
+            {
+                "id": "e210cac0-71ea-11ec-8e1a-cd6b988c18b9",
+                "name": "panel_2",
+                "type": "visualization"
+            }
+        ],
+        "type": "dashboard",
+        "updated_at": "2022-01-10T07:57:30.910Z",
+        "version": "WzcwMCwxXQ=="
+    }
+]

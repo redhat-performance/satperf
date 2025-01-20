@@ -1,119 +1,263 @@
 ---
-  # Check variables
-  - name: "Make sure only one Satellite is specified"
-    assert:
-      that: "groups['satellite6']|length == 1"
-      msg: "Satellite not specified or too many of them specified"
-    when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
+# Check variables
+- name: "Make sure only one Satellite is specified"
+  assert:
+    that: "groups['satellite6']|length == 1"
+    msg: "Satellite not specified or too many of them specified"
+  when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
 
-  # Make sure we have key deployed
-  - name: "Deploy key"
-    authorized_key:
-      user: root
-      key: "{{ lookup('file', '../../../../../'+satperf_private_key+'.pub') }}"
-      manage_dir: yes
+- name: "Get group name of current location"
+  ansible.builtin.set_fact:
+    location_groupname: "location_{{ location | lower }}"
 
-  # Check /etc/hosts file
-  - name: "We need localhost (IPv4) in hosts file"
-    lineinfile:
-      dest: /etc/hosts
-      regexp: '^127\.0\.0\.1\s+localhost localhost\.localdomain localhost4 localhost4\.localdomain4$'
-      line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"
-      state: present
-  - name: "We might need localhost (IPv6) in hosts file"
-    lineinfile:
-      dest: /etc/hosts
-      regexp: '^::1\s+localhost localhost\.localdomain localhost6 localhost6\.localdomain6$'
-      line: "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
-      state: present
-  # Taken from https://gist.github.com/rothgar/8793800
-  - name: "Build hosts file"
-    lineinfile:
-      dest: /etc/hosts
-      regexp: ".*{{ item }}$"
-      line: "{{ hostvars[item].ip }} {{ item }}"
-      state: present
-    when: "hostvars[item].ip is defined"
-    with_items: "{{ groups['satellite6'] + groups['capsules'] }}"
-  - name: "File /etc/hosts have correct SELinux context (had issues before)"
-    command:
-      restorecon -vR /etc/hosts
+# Make sure we have key deployed
+- name: "Deploy key"
+  ansible.posix.authorized_key:
+    user: root
+    key: "{{ lookup('ansible.builtin.file', '../../../../../{{ ansible_ssh_private_key_file }}.pub') }}"
+    manage_dir: yes
 
-  # Disable firewalld
-  # TODO make this configure firewalld and use it properly
-  # TODO make this part work on RHEL6 as well
-  # Taken from http://stackoverflow.com/questions/21892603/how-to-make-ansible-execute-a-shell-script-if-a-package-is-not-installed
-  - name: "Check if firewalld is installed"
-    command:
-      rpm -q firewalld
-    register: firewalld_is_installed
-    failed_when: firewalld_is_installed.rc > 1
-    changed_when: no
-  - name: "Disable firewalld"
-    service:
-      name: firewalld
-      state: stopped
-      enabled: no
-    when: firewalld_is_installed.rc == 0
+# Check default in /etc/hosts file
+- name: "We need localhost (IPv4) in hosts file"
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '^127\.0\.0\.1\s+localhost localhost\.localdomain localhost4 localhost4\.localdomain4$'
+    line: "127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4"
+    state: present
 
-  # Disable iptables service
-  - name: "Check if iptables-services is installed"
-    command:
-      rpm -q iptables-services
-    register: iptables_is_installed
-    failed_when: iptables_is_installed.rc > 1
-    changed_when: no
-  - name: "Disable iptables service"
-    service:
-      name: iptables
-      state: stopped
-      enabled: no
-    when: iptables_is_installed.rc == 0
+- name: "We might need localhost (IPv6) in hosts file"
+  lineinfile:
+    dest: /etc/hosts
+    regexp: '^::1\s+localhost localhost\.localdomain localhost6 localhost6\.localdomain6$'
+    line: "::1   localhost localhost.localdomain localhost6 localhost6.localdomain6"
+    state: present
 
-  # Check SELinux
-  - name: "SELinux is in Enforcing with Tragetted policy"
-    selinux:
-      policy: targeted
-      state: enforcing
+- name: "Build own entry in hosts file (using public network IPs)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ inventory_hostname }}$"
+    line: "{{ public_ip }} {{ inventory_hostname }}"
+    state: present
+  when: "public_ip is defined"
 
-  # Make sure hostname is set
-  - name: "Set hostname"
-    hostname:
-      name: "{{ inventory_hostname }}"
+- name: "Build own entry in hosts file (using privaate network IPs)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ inventory_hostname }}$"
+    line: "{{ private_ip }} {{ inventory_hostname }}"
+    state: present
+  when:
+    - public_ip is not defined
+    - private_ip is defined
 
-  # Check our networking setup
-  - name: "We can ping 127.0.0.1"
-    wait_for:
-      host: 127.0.0.1
-      port: 22
-      timeout: 3
-  - name: "We can ping localhost"
-    wait_for:
-      host: localhost
-      port: 22
-      timeout: 3
-  - name: "We can ping redhat.com"
-    wait_for:
-      host: redhat.com
-      port: 443
-      timeout: 10
-  - name: "We can ping Satellite"
-    wait_for:
-      host: "{{ groups['satellite6']|first }}"
-      port: 22
-      timeout: 50
-    when: "'satellite6' in groups and ( ignore_satellite is not defined or ignore_satellite != 'true' )"
-  - name: "We can ping Satellite via special network"
-    wait_for:
-      host: "{{ hostvars[groups['satellite6']|first].ip }}"
-      port: 22
-      timeout: 10
-    when: "'satellite6' in groups and ( ( ignore_satellite is not defined or ignore_satellite != 'true' ) and hostvars[groups['satellite6']|first].ip is defined )"
-  - name: "We can ping NTP server"
-    command:
-      ping -c 3 "{{ ntp_server }}"
+- name: "Build Satellite hosts file (using public network IPs) - Capsules entries"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].public_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] }}"
+  when:
+    - "'satellite6' in group_names"
+    - hostvars[item].public_ip is defined
+    - private_ip is not defined or
+      private_netmask is not defined or
+      hostvars[item].private_ip is not defined or
+      hostvars[item].private_netmask is not defined or
+      (private_ip is defined and
+       private_netmask is defined and
+       hostvars[item].private_ip is defined and
+       hostvars[item].private_netmask is defined and
+       (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix'))
 
-  - name: "Command yum repolist returns"
-    command:
-      yum repolist
+- name: "Build Satellite hosts file (using private network IPs) - Capsules entries"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].private_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] }}"
+  when:
+    - "'satellite6' in group_names"
+    - private_ip is defined
+    - private_netmask is defined
+    - hostvars[item].private_ip is defined
+    - hostvars[item].private_netmask is defined
+    - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build capsules hosts file (using public network IPs) - Satellite entry"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].public_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['satellite6'] }}"
+  when:
+    - "'capsules' in group_names"
+    - hostvars[item].public_ip is defined
+    - private_ip is not defined or
+      private_netmask is not defined or
+      hostvars[item].private_ip is not defined or
+      hostvars[item].private_netmask is not defined or
+      (private_ip is defined and
+       private_netmask is defined and
+       hostvars[item].private_ip is defined and
+       hostvars[item].private_netmask is defined and
+       (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build capsules hosts file (using private network IPs) - Satellite entry"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].private_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['satellite6'] }}"
+  when:
+    - "'capsules' in group_names"
+    - private_ip is defined
+    - private_netmask is defined
+    - hostvars[item].private_ip is defined
+    - hostvars[item].private_netmask is defined
+    - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build container hosts hosts file (using public network IPs) - Registration target entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].public_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
+  when:
+    - "'container_hosts' in group_names"
+    - hostvars[item].public_ip is defined
+    - private_ip is not defined or
+      private_netmask is not defined or
+      hostvars[item].private_ip is not defined or
+      hostvars[item].private_netmask is not defined or
+      (private_ip is defined and
+       private_netmask is defined and
+       hostvars[item].private_ip is defined and
+       hostvars[item].private_netmask is defined and
+       (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build container hosts hosts file (using private network IPs) - Registration target entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].private_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsule_lbs'] | union(groups['capsules'] | union(groups['satellite6'])) | intersect(groups[location_groupname]) }}"
+  when:
+    - "'container_hosts' in group_names"
+    - private_ip is defined
+    - private_netmask is defined
+    - hostvars[item].private_ip is defined
+    - hostvars[item].private_netmask is defined
+    - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "Build load balancers hosts file (using public network IPs) - Capsules entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].public_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
+  when:
+    - "'capsule_lbs' in group_names"
+    - hostvars[item].public_ip is defined and hostvars[item].public_ip | length > 0
+    - private_ip is not defined or private_ip | length == 0 or
+      private_netmask is not defined or private_netmask | length == 0 or
+      hostvars[item].private_ip is not defined or hostvars[item].private_ip | length == 0 or
+      hostvars[item].private_netmask is not defined or hostvars[item].private_netmask | length == 0 or
+      (private_ip is defined and private_ip | length > 0 and
+       private_netmask is defined and private_netmask | length > 0 and
+       hostvars[item].private_ip is defined and hostvars[item].private_ip | length > 0 and
+       hostvars[item].private_netmask is defined and hostvars[item].private_netmask | length > 0 and
+       (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') !=
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix'))
+
+- name: "Build load balancers hosts file (using private network IPs) - Capsules entries)"
+  ansible.builtin.lineinfile:
+    dest: /etc/hosts
+    regexp: ".*{{ item }}$"
+    line: "{{ hostvars[item].private_ip }} {{ item }}"
+    state: present
+  with_items: "{{ groups['capsules'] | intersect(groups[location_groupname]) }}"
+  when:
+    - "'capsule_lbs' in group_names"
+    - private_ip is defined and private_ip | length > 0
+    - private_netmask is defined and private_netmask | length > 0
+    - hostvars[item].private_ip is defined and hostvars[item].private_ip | length > 0
+    - hostvars[item].private_netmask is defined and hostvars[item].private_netmask | length > 0
+    - "(private_ip + '/' + private_netmask) | ansible.utils.ipaddr('network/prefix') ==
+       (hostvars[item].private_ip + '/' + hostvars[item].private_netmask) | ansible.utils.ipaddr('network/prefix')"
+
+- name: "File /etc/hosts have correct SELinux context (had issues before)"
+  command:
+    restorecon -vR /etc/hosts
+
+# Check SELinux
+- name: "SELinux is in {{ system_selinux_state }} with {{ system_selinux_policy }} policy"
+  ansible.posix.selinux:
+    policy: "{{ system_selinux_policy }}"
+    state: "{{ system_selinux_state }}"
+
+# Make sure hostname is set
+- name: "Set hostname"
+  hostname:
+    name: "{{ inventory_hostname }}"
+
+# Sanity check our networking setup
+- name: "We can ping 127.0.0.1"
+  wait_for:
+    host: 127.0.0.1
+    port: 22
+    timeout: 3
+
+- name: "We can ping localhost"
+  wait_for:
+    host: localhost
+    port: 22
+    timeout: 3
+
+- name: "We can ping redhat.com"
+  wait_for:
+    host: redhat.com
+    port: 443
+    timeout: 10
+
+- name: "We can ping Satellite from Satellite / Capsules"
+  wait_for:
+    host: "{{ groups['satellite6'] | first }}"
+    port: 22
+    timeout: 30
+  when:
+    - "'satellite6' in group_names or 'capsules' in group_names"
+    - ignore_satellite is not defined or ignore_satellite != 'true'
+
+- name: "We can ping registration target from Container hosts"
+  wait_for:
+    host: "{{ tests_registration_target }}"
+    port: 22
+    timeout: 60
+  when:
+    - "'container_hosts' in group_names"
+
+- name: "We can ping NTP server"
+  command:
+    ping -c 3 "{{ (timesync_ntp_servers|first).hostname }}"
+  register: cmd
+  retries: 5
+  delay: 3
+  until: "cmd.rc == 0"
+
+# Sanity check yum config
+- name: "Command yum repolist returns"
+  ansible.builtin.command: yum repolist
 ...

@@ -49,9 +49,11 @@
     delay: 10
 
   # Make sure only base RHEL repo is attached
-  - name: "Disable all RHSM repos and only enable base RHEL repo"
+  - name: "Disable all RHSM repos and only enable main RHEL8 repos"
     rhsm_repository:
-      name: 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
+      name:
+        - 'rhel-8-for-x86_64-baseos-rpms'
+        - 'rhel-8-for-x86_64-appstream-rpms'
       purge: True
-    when: registering.changed
+    when: ansible_distribution_major_version == 8 and registering.changed
 ...

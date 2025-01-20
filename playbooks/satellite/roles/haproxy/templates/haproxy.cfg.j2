@@ -1,0 +1,153 @@
+#---------------------------------------------------------------------
+# Example configuration for a possible web application.  See the
+# full configuration options online.
+#
+#   https://www.haproxy.org/download/1.8/doc/configuration.txt
+#
+#---------------------------------------------------------------------
+
+#---------------------------------------------------------------------
+# Global settings
+#---------------------------------------------------------------------
+global
+    # to have these messages end up in /var/log/haproxy.log you will
+    # need to:
+    #
+    # 1) configure syslog to accept network log events.  This is done
+    #    by adding the '-r' option to the SYSLOGD_OPTIONS in
+    #    /etc/sysconfig/syslog
+    #
+    # 2) configure local2 events to go to the /var/log/haproxy.log
+    #   file. A line like the following can be added to
+    #   /etc/sysconfig/syslog
+    #
+    #    local2.*                       /var/log/haproxy.log
+    #
+    log         127.0.0.1 local2
+
+    chroot      /var/lib/haproxy
+    pidfile     /var/run/haproxy.pid
+    maxconn     4000
+    user        haproxy
+    group       haproxy
+    daemon
+
+    # turn on stats unix socket
+    stats socket /var/lib/haproxy/stats
+
+    # utilize system-wide crypto-policies
+    ssl-default-bind-ciphers PROFILE=SYSTEM
+    ssl-default-server-ciphers PROFILE=SYSTEM
+
+#---------------------------------------------------------------------
+# common defaults that all the 'listen' and 'backend' sections will
+# use if not designated in their block
+#---------------------------------------------------------------------
+defaults
+    # mode                    http
+    log                     global
+    # option                  httplog
+    # option                  dontlognull
+    # option http-server-close
+    # option forwardfor       except 127.0.0.0/8
+    # option                  redispatch
+    retries                 3
+    timeout http-request    10s
+    timeout queue           1m
+    timeout connect         10s
+    timeout client          1m
+    timeout server          1m
+    timeout http-keep-alive 10s
+    timeout check           10s
+    # maxconn                 3000
+
+#---------------------------------------------------------------------
+# HTTP frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend http
+    bind *:80
+    mode tcp
+    option                  tcplog
+
+    default_backend         http-backend
+
+backend http-backend
+    option tcp-check
+    balance roundrobin
+
+{% for capsule in lb_capsules %}
+    server http-backend-{{loop.index}} {{ capsule }}:80 check
+{% endfor %}
+
+#---------------------------------------------------------------------
+# HTTPS and RHSM frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend https
+    bind *:443
+    mode tcp
+    option                  tcplog
+
+    default_backend         https-backend
+
+backend https-backend
+    option tcp-check
+    balance source
+
+{% for capsule in lb_capsules %}
+    server https-backend-{{loop.index}} {{ capsule }}:443 check
+{% endfor %}
+
+#---------------------------------------------------------------------
+# mosquitto frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend mosquitto
+    bind *:1883
+    mode tcp
+    option                  tcplog
+
+    default_backend         mosquitto-backend
+
+backend mosquitto-backend
+    option tcp-check
+    balance source
+
+{% for capsule in lb_capsules %}
+    server mosquitto-backend-{{loop.index}} {{ capsule }}:1883 check
+{% endfor %}
+
+#---------------------------------------------------------------------
+# Anaconda for template retrievas frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend anaconda
+    bind *:8000
+    mode tcp
+    option                  tcplog
+
+    default_backend         anaconda-backend
+
+backend anaconda-backend
+    option tcp-check
+    balance roundrobin
+
+{% for capsule in lb_capsules %}
+    server anaconda-backend-{{loop.index}} {{ capsule }}:8000 check
+{% endfor %}
+
+#--------------------------------------------------------------------
+# Capsule HTTPS for Host Registration and optionally
+# OpenSCAP frontend which proxys to the backends
+#---------------------------------------------------------------------
+frontend host_registration
+    bind *:9090
+    mode tcp
+    option                  tcplog
+
+    default_backend         host_registration-backend
+
+backend host_registration-backend
+    option tcp-check
+    balance roundrobin
+
+{% for capsule in lb_capsules %}
+    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check
+{% endfor %}

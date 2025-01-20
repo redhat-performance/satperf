@@ -1,29 +1,45 @@
 ---
 - hosts: satellite6
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
+  vars:
+    organization_id: "{{ org_id | default(1) }}"
+    search: "{{ search_query | default('container') }}"
   tasks:
-    - name: "Remove hosts"
-      shell: |
-        for i in $( hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" host list | grep "container[0-9]" | cut -d "," -f 1 ); do
-            attempt=0
-            while ! hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host delete --id "$i"; do
-                if [ $attempt -gt 3 ]; then
-                    echo "ERROR: Fiving up with $i" >&2
-                    break
-                fi
-                let attempt+=1
-                sleep 3
-            done
+    - name: "Delete hosts in bulk"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6']|first }}/api/hosts/bulk/destroy"
+        method: PUT
+        user: "{{ sat_user }}"
+        password: "{{ sat_pass }}"
+        force_basic_auth: yes
+        validate_certs: no
+        headers:
+          Content-Type: application/json
+          Accept: application/json
+        body: >
+          {'organization_id': {{ organization_id }}, 'included': {'search': "{{ search }}"}}
+        body_format: json
+        # If host list is empty katello will return 403 :S
+        # https://github.com/Katello/katello/blob/master/app/controllers/katello/concerns/api/v2/bulk_hosts_extensions.rb
+        status_code:
+          - 202
+          - 403
+    - name: "Wait for the hosts to be deleted"
+      ansible.builtin.shell: |
+        content_host_num="$(hammer --csv --no-headers host list --fields name | grep -c '{{ search }}')"
+        # We expect to delete around 250 hosts / min -> 125 hosts / 30 sec
+        expected_iterations="$(( content_host_num / 125 ))"
+        iter=0
+
+        while (( content_host_num != 0 )); do
+          sleep 30
+
+          content_host_num="$(hammer --csv --no-headers host list --fields name | grep -c '{{ search }}')"
+          (( iter++ ))
+
+          # We iterate up to 5 times (conservative number) more than expected before giving up
+          if (( iter > ( expected_iterations * 5 ) && content_host_num != 0 )); then
+            exit
+          fi
         done
-      register: remove_hosts
-    - name: "Show stdout"
-      debug:
-        var: remove_hosts.stdout_lines
-    - name: "Show stderr"
-      debug:
-        var: remove_hosts.stderr_lines
 ...

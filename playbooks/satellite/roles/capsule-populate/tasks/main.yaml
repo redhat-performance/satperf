@@ -1,24 +1,109 @@
 ---
-  - name: "Assign Library"
-    command:
-      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content add-lifecycle-environment --name {{ item }} --organization '{{ sat_org }}' --environment Library"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    with_items: "{{ groups['capsules'] }}"
-    ignore_errors: true
-  - name: "Syncing in async mode"
-    command:
-      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library --async"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    with_items: "{{ groups['capsules'] }}"
-    when: "capsule_repos_sync == 'async'"
+- name: "Set default variable(s) values"
+  ansible.builtin.set_fact:
+    user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+    password: "{{ password | default('{{ sat_pass }}') }}"
+    organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+    lces: "{{ lces | default('Library') }}"
 
-  - name: "Syncing in sync mode"
-    command:
-      "hammer -u {{ sat_user }} -p {{ sat_pass }} capsule content synchronize --name {{ item }} --organization '{{ sat_org }}' --environment Library"
-    delegate_to: "{{ groups['satellite6']|first }}"
-    run_once: true
-    with_items: "{{ groups['capsules'] }}"
-    when: "capsule_repos_sync == 'sync'"
+- name: "Get capsule ID"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.command:
+    cmd: "hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id"
+  register: capsule_id_cmd
+  delegate_to: "{{ groups['satellite6'] | first }}"
+
+- name: "Set capsule ID"
+  ansible.builtin.set_fact:
+    id: "{{ capsule_id_cmd.stdout }}"
+
+- name: "Set capsule download policy"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.command:
+    cmd: "hammer -u {{ user }} -p {{ password }} capsule update --id '{{ id }}' --download-policy {{ download_policy }}"
+  delegate_to: "{{ groups['satellite6'] | first }}"
+  when:
+    - download_policy is defined and download_policy != 'inherit'
+
+- name: "Assign lifecycle environment(s): '{{ lces }}'"
+  # XXX: Submit PR
+  throttle: 1
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      for LCE in $(echo "{{ lces }}" | tr ',' ' '); do
+        if ! hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+          if hammer --no-headers --csv -u {{ user }} -p {{ password }} capsule content available-lifecycle-environments --organization '{{ organization }}' --id '{{ id }}' --fields name | grep -q ^"$LCE"$; then
+            hammer -u {{ user }} -p {{ password }} capsule content add-lifecycle-environment --organization '{{ organization }}' --id '{{ id }}' --lifecycle-environment "$LCE"
+          fi
+        fi
+      done
+  delegate_to: "{{ groups['satellite6'] | first }}"
+
+- name: "Set the base synchronization command"
+  ansible.builtin.set_fact:
+    cap_sync_command: "hammer -u {{ user }} -p {{ password }} capsule content synchronize --organization '{{ organization }}' --id '{{ id }}' --async"
+
+- name: "Set complete synchronization mode"
+  ansible.builtin.set_fact:
+    cap_sync_command: "{{ cap_sync_command }} --skip-metadata-check true"
+  when:
+    - mode is defined and mode == 'complete'
+
+- name: "Set validate content synchronization mode"
+  ansible.builtin.set_fact:
+    cap_sync_command: "{{ cap_sync_command }} --validate-contents true"
+  when:
+    - mode is defined and mode == 'validate_contents'
+
+- name: "Sync the content (async)"
+  # XXX: Submit PR
+  throttle: 16
+  ansible.builtin.command:
+    cmd: "{{ cap_sync_command }}"
+  register: cap_sync_cmd_out
+  delegate_to: "{{ groups['satellite6'] | first }}"
+
+- name: "Get capsule sync task ID"
+  ansible.builtin.shell:
+    cmd: "echo '{{ cap_sync_cmd_out.stdout }}' | awk '{print $NF}' | tr -d '.'"
+  register: cap_sync_cmd_out_last_word
+
+- name: "Set capsule sync task ID"
+  ansible.builtin.set_fact:
+    cap_sync_task_id: "{{ cap_sync_cmd_out_last_word.stdout }}"
+
+- name: "Set delay period in minutes"
+  ansible.builtin.set_fact:
+    delay_minutes: 10
+
+- name: "Set number of busy-wait retries"
+  ansible.builtin.set_fact:
+    num_retries: "{{ (60 / delay_minutes | int) * (num_concurrent_capsules | default(4) | int + 7) }}"
+
+- name: "Wait for the capsule sync task to finish for up to {{ delay_minutes | int * num_retries | int }} minutes - Checking every {{ delay_minutes }} minutes"
+  # XXX: Submit PR
+  throttle: 16
+  ansible.builtin.command:
+    cmd: "hammer --no-headers --csv -u {{ user }} -p {{ password }} task info --id '{{ cap_sync_task_id }}' --fields state"
+  delegate_to: "{{ groups['satellite6'] | first }}"
+  register: task_state_cmd
+  until: task_state_cmd.stdout == "stopped"
+  delay: "{{ 60 * delay_minutes | int }}"
+  retries: "{{ num_retries | int }}"
+
+- name: "Get capsule sync task duration"
+  # XXX: Submit PR
+  throttle: 16
+  ansible.builtin.command:
+    cmd: "hammer --no-headers --csv -u {{ user }} -p {{ password }} task info --id '{{ cap_sync_task_id }}' --fields duration"
+  register: cap_sync_task_duration_cmd
+  delegate_to: "{{ groups['satellite6'] | first }}"
+
+- name: "Show capsule sync task duration"
+  ansible.builtin.debug:
+    var: cap_sync_task_duration_cmd.stdout
 ...

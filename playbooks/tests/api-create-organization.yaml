@@ -1,0 +1,27 @@
+---
+- name: "Create organization using the REST API"
+  hosts: satellite6
+  gather_facts: false
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+
+    - name: "Create organization"
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
+        method: POST
+        validate_certs: false
+        force_basic_auth: true
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ {'organization': {'name': organization}} }}"
+        status_code:
+          - 201
+          - 422   # "Name has already been taken"
+...

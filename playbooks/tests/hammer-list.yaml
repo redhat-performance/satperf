@@ -1,14 +1,10 @@
 ---
 - hosts: satellite6
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   tasks:
     - name: "Run 'hammer host list' command"
       shell:
-        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host list --organization "{{ sat_org }}" --page 1 --per-page 100 >/dev/null
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host list --organization "{{ organization }}" --page 1 --per-page 100 >/dev/null
       register: run_hammer
       loop: "{{ range(30)|list }}"
       environment:

@@ -1,23 +1,19 @@
 ---
 - hosts: satellite6
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     resting: 0
     save_graphs: true
   tasks:
     - name: "Determine job description"
       set_fact:
-        job_desc: "Date with 40 ({{ lookup('pipe', 'date --utc --iso-8601=seconds') }})"
+        job_desc: "Date with 40 ({{ lookup('pipe', 'date -u -Iseconds') }})"
     - name: "Start the 'date' job '{{ job_desc }}'"
       shell: |
         # Looks like even with "--async", hammer still waits, so this FIXME way
         # we are trying to make sure it started, but we are not going to block
         # script execution
-        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs "command='date'" --async &
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'container' --job-template 'Run Command - SSH Default' --inputs command='date' --async &
         sleep 15
     - name: "Get last job ID"
       shell:

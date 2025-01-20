@@ -1,0 +1,28 @@
+---
+- name: "Check that provided path is a real file"
+  ansible.builtin.stat:
+    path: "{{ custom_hiera_content }}"
+  delegate_to: localhost
+  register: st
+
+- name: "Copy content over to /etc/foreman-installer/custom-hiera.yaml"
+  ansible.builtin.blockinfile:
+    block: "{{ lookup('ansible.builtin.file', '{{ custom_hiera_content }}') }}"
+    path: /etc/foreman-installer/custom-hiera.yaml
+    backup: yes
+  when: st.stat.exists == true
+
+- name: "Insert empty line before the marker to ease readability"
+  ansible.builtin.lineinfile:
+    dest: /etc/foreman-installer/custom-hiera.yaml
+    insertbefore: '^# BEGIN ANSIBLE MANAGED BLOCK$'
+    line: ''
+  when: st.stat.exists == true
+
+- name: "Remove file now that its content have been copied"
+  ansible.builtin.file:
+    path: "{{ custom_hiera_content }}"
+    state: absent
+  delegate_to: localhost
+  when: st.stat.exists == true
+...

@@ -5,7 +5,7 @@
         --username '{{ sat_user }}'
         --password '{{ sat_pass }}'
         repository-set enable
-        --organization '{{ sat_org }}'
+        --organization '{{ organization }}'
         --product '{{ item.product }}'
         --name '{{ item.reposet }}'
         {% if item.basearch is defined %}--basearch '{{ item.basearch }}'{% endif %}

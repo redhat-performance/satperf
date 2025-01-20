@@ -1,7 +1,0 @@
----
-    - shell: |
-        hammer -u {{ sat_user }} -p {{ sat_pass }} subscription upload \
-          --organization-id {{ orgid }} \
-          --file {{ MANIFSET }} --repository-url {{ REPOSERVER }}
-      register: manifest_uploader
-...

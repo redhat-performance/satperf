@@ -1,0 +1,141 @@
+---
+- hosts: container_hosts
+  gather_facts: no
+  vars:
+    target: "{{ groups['satellite6'][0] }}"
+    concurrency: 10
+    spawn_rate: 10
+    duration: 10   # duration needs to be in sec (we need it to be integer, not things like '10s' or '5m')
+    max_static_size: 1024   # only run for these requests with content size <= this limit
+  tasks:
+    - name: "Determine HW info"
+      setup:
+        gather_subset: hardware
+      when: "ansible_processor_vcpus is not defined"
+
+    - name: "Determine total number of followers per host"
+      set_fact:
+        locust_per_host_followers: "{{ (ansible_processor_vcpus / 1)|int }}"   # to be able to experiment with e.g. only half of processes than CPU cores
+
+    - name: "Determine total number of followers"
+      set_fact:
+        locust_followers_count: "{{ locust_followers_count|default(0)|int + hostvars[item]['locust_per_host_followers']|int }}"
+        locust_leader: "{{ groups['container_hosts'][0] }}"
+      run_once: yes
+      loop: "{{ groups['container_hosts'] }}"
+
+    - name: "Show test configuration"
+      debug:
+        msg:
+          - "Leader: {{ locust_leader }}"
+          - "Total number of follower: {{ locust_followers_count }}"
+          - "Settings: target={{ target }} concurrency={{ concurrency }} duration={{ duration|int }}"
+      run_once: yes
+
+    - name: "Add or modify nofile soft limit for the user root"
+      community.general.pam_limits:
+        domain: root
+        limit_type: soft
+        limit_item: nofile
+        value: 32768
+      tags:
+        - setup
+
+    - name: "Add or modify nofile hard limit for the user root"
+      community.general.pam_limits:
+        domain: root
+        limit_type: soft
+        limit_item: nofile
+        value: 65536
+      tags:
+        - setup
+
+    - name: "Install python"
+      package:
+        name:
+          - python3.11
+          - python3.11-pip
+        state: present
+      tags:
+        - setup
+
+    - name: "Create venv"
+      shell: |
+        curl https://raw.githubusercontent.com/redhat-performance/satperf/main/playbooks/tests/files/webui-pages.py -o webui-pages.py
+        python3 -m venv venv
+        source venv/bin/activate
+        python3 -m pip install -U pip
+        python3 -m pip install locust
+        python3 -m pip install -e 'git+https://github.com/redhat-performance/opl.git#egg=opl-rhcloud-perf-team'
+      tags:
+        - setup
+
+    - name: "Open port Locust port on leader"
+      command: firewall-cmd --add-port 5557/tcp
+      when: inventory_hostname == locust_leader
+      tags:
+        - setup
+
+    - name: "Update locust file"
+      command:
+        curl https://raw.githubusercontent.com/redhat-performance/satperf/main/playbooks/tests/files/webui-pages.py -o webui-pages.py
+      tags:
+        - setup
+
+    - name: "Cleanup locust processes"
+      command: killall locust
+      ignore_errors: yes
+
+    - name: "Start Locust leader"
+      shell: |
+        source venv/bin/activate
+        python3 webui-pages.py \
+          --test-set SatelliteWebUIPerfStaticAssets \
+          --locust-host https://{{ target }} \
+          --test-url-suffix / \
+          --test-duration {{ duration|int }} \
+          --locust-num-clients {{ concurrency|int }} \
+          --locust-hatch-rate {{ spawn_rate|int }} \
+          --locust-stop-timeout 100 \
+          --satellite-max-static-size {{ max_static_size|int }} \
+          --locust-master-runner \
+          --locust-master-expect-workers {{ locust_followers_count }} \
+          | tee /root/locust-leader.log
+      async: "{{ (duration|float * 1.1 + ansible_processor_vcpus * 10)|int }}"   # maximum duration in seconds this task should be running, formulla is just a guess
+      poll: 0   # with "poll: 0" we start the task and immediately moves on to the next task without waiting for a result
+      when: inventory_hostname == groups['container_hosts'][0]
+      register: locust_leader_process
+
+    - name: "Start Locust followers"
+      shell: |
+        source venv/bin/activate
+        python3 webui-pages.py \
+          --test-set SatelliteWebUIPerfStaticAssets \
+          --locust-host https://{{ target }} \
+          --test-url-suffix / \
+          --test-duration {{ duration|int }} \
+          --locust-num-clients {{ concurrency|int }} \
+          --locust-hatch-rate {{ spawn_rate|int }} \
+          --locust-stop-timeout 100 \
+          --satellite-max-static-size {{ max_static_size|int }} \
+          --locust-worker-runner \
+          --locust-worker-master-host {{ groups['container_hosts'][0] }} \
+          &>/root/locust-follower-{{ item }}.log
+      async: "{{ (duration|float * 1.1 + 60 + 30)|int }}"   # fire and forget
+      poll: 0
+      loop: "{{ range(locust_per_host_followers|int)|list }}"
+
+    - name: "Wait for Locust leader to finish running the test"
+      async_status:
+        jid: "{{ locust_leader_process.ansible_job_id }}"
+      register: locust_leader_result
+      until: locust_leader_result.finished
+      retries: "{{ ((duration|float * 1.1 + 10) / 10)|int }}"
+      delay: 10
+      when: inventory_hostname == groups['container_hosts'][0]
+
+    - name: "Show output"
+      debug:
+        msg: "{{ ['========== Standard output =========='] + locust_leader_result.stdout_lines + ['', '========== Standard error output =========='] + locust_leader_result.stderr_lines }}"
+      run_once: yes
+...

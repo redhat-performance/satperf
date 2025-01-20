@@ -1,0 +1,19 @@
+---
+- hosts: container_hosts
+  gather_facts: no
+  tasks:
+    - name: "Collect directory names"
+      find:
+        paths: /test-folder/
+        patterns: "*.com"
+        file_type: directory
+      register: dirs_to_delete
+    - name: "Delete directories"
+      file:
+        path: "{{ item.path }}"
+        state: absent
+      with_items: "{{ dirs_to_delete.files }}"
+      register: clean_download_folder
+      until: clean_download_folder is not failed
+      retries: 5
+      delay: 20

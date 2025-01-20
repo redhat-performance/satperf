@@ -1,0 +1,8 @@
+---
+- name: "Specific configuration steps for capsule(s) servers"
+  hosts: capsules
+  gather_facts: false
+  roles:
+    - role: repo_setup
+    - role: capsule
+...

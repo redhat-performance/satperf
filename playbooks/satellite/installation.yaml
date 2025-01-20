@@ -1,25 +1,28 @@
 ---
-- hosts: satellite6
-  remote_user: root
-  ###gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+- name: "Configure Satellite"
+  hosts: satellite6
+  gather_facts: false
   roles:
-    - ../common/roles/scalelab-nic-cleanup
-    - ../common/roles/common
-    - ../common/roles/epel-not-present
-    - ../common/roles/rhsm
-    - ../common/roles/ntp
-    ###- upgrade-restart
-    ###- satellite-ec2-partitioning
-    - ../common/roles/remove-home-extend-root
-    - setup
-    - enable-remote-exec-by-ip
-    - ../common/roles/enlarge-arp-table
-    - puppet-autosign
-    - role: satellite-populate
-      tags: satellite-populate
-    - role: client-content
-      tags: client-content
+    - role: ../common/roles/epel-not-present
+    - role: ../common/roles/scalelab-generic-cleanup
+      when:
+        - "'scalelab' in inventory_hostname"
+    - role: ../common/roles/plain-network
+      when:
+        - configure_plain_network is defined and configure_plain_network | bool == True
+    - role: ../common/roles/common
+    - role: ../common/roles/remove-home-extend-root
+      when:
+        - (remove_home_partition is defined and remove_home_partition | bool == True) or
+          (extend_root_partition is defined and extend_root_partition | bool == True)
+    - role: ../common/roles/enlarge-arp-table
+    - role: linux-system-roles.timesync
+    - role: rhsm_helper
+    - role: upgrade-restart
+    - role: linux-system-roles.firewall
+    - role: linux-system-roles.storage
+    - role: repo_setup
+    - role: setup
+    - role: enable-remote-exec-by-ip
+    - role: puppet-autosign
 ...

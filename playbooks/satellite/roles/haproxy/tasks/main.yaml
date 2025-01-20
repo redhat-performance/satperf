@@ -1,0 +1,45 @@
+---
+- name: "Get group name of our location"
+  ansible.builtin.set_fact:
+    location_groupname: "location_{{ location | lower }}"
+
+- name: "Get capsule names"
+  ansible.builtin.set_fact:
+    lb_capsules: "{{ groups['capsules'] | intersect(groups[location_groupname]) | sort }}"
+
+- name: "Tune sysctl"
+  ansible.posix.sysctl:
+    sysctl_file: "/etc/sysctl.d/30-hapee-2.8.conf"
+    name: "{{ item.key }}"
+    value: "{{ item.value }}"
+    reload: True
+  loop: "{{ capsule_lbs_sysctl_config_default | dict2items }}"
+
+- name: "Install HAProxy"
+  ansible.builtin.dnf:
+    name: haproxy
+    state: latest
+
+- name: "Install policycoreutils-python-utils (`semanage` package)"
+  ansible.builtin.dnf:
+    name: policycoreutils-python-utils
+    state: latest
+
+- name: "Configure SELinux to allow HAProxy to bind any port"
+  ansible.posix.seboolean:
+    name: haproxy_connect_any
+    state: true
+    persistent: true
+
+- name: "Configure HAproxy"
+  ansible.builtin.template:
+    src: haproxy.cfg.j2
+    dest: /etc/haproxy/haproxy.cfg
+    mode: '0644'
+
+- name: "Start and enable HAProxy systemd service unit"
+  ansible.builtin.systemd_service:
+    name: haproxy
+    state: restarted
+    enabled: true
+...

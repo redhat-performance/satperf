@@ -1,21 +1,74 @@
 ---
 # satperf project settings
-satperf_hosts: conf/hosts.ini
 satperf_private_key: conf/id_rsa
-satperf_log_file: log/satperf.log
-satperf_tname: sample_run
-satperf_log_file_size: 10000 # in bytes
+client_private_key: conf/id_rsa
 
-# Credentials for RHSM (for Satellite and Docker host machines  registration, Capsules are registered into Satellite)
-rhsm_user: your_portal_username
-rhsm_pass: your_portal_passowd
-rhsm_pool: 'Pool you want to consume'
+# Variables needed for host configuration
+configure_plain_network: True
+remove_home_partition: True
 
-# Skip, Remove home partition and Extend Root partiion.
-extend_root_partition: 'true'
+# Variables needed by linux-system-roles.timesync Ansible role
+timesync_ntp_servers:
+  - hostname: "clock.redhat.com"
+    iburst: yes
+    prefer: yes
+    trust: yes
 
-# Satellite
-sat_version: "6.3"
+# Required firewall rules to be applied
+satellite_firewall:
+  - service: "RH-Satellite-6"
+    state: enabled
+capsule_firewall:
+  - service: "RH-Satellite-6-capsule"
+    state: enabled
+
+# Partition an additional disk where all the Satellite/capsule data will be stored
+satellite_storage_pools: []
+capsule_storage_pools: []
+# Partition sizes recommended for {{ sat_version }}
+# Don't forget to keep the info updated
+#satellite_storage_pools:
+#  - name: satellite_data
+#    disks:
+#      - sdb
+#    volumes:
+#      - name: opt
+#        size: 3G
+#        mount_point: /opt
+#      - name: postgresql
+#        size: 20G
+#        mount_point: /var/opt/rh/rh-postgresql12/lib/pgsql
+#      - name: pulp
+#        size: 300G
+#        mount_point: /var/lib/pulp
+#      - name: puppetlabs
+#        size: 500M
+#        mount_point: /opt/puppetlabs
+#      - name: qpidd
+#        size: 1G
+#        mount_point: /var/lib/qpidd
+#capsule_storage_pools:
+#  - name: capsule_data
+#    disks:
+#      - sdb
+#    volumes:
+#      - name: opt
+#        size: 500M
+#        mount_point: /opt
+#      - name: postgresql
+#        size: 10G
+#        mount_point: /var/opt/rh/rh-postgresql12/lib/pgsql
+#      - name: pulp
+#        size: 300G
+#        mount_point: /var/lib/pulp
+
+# Containers setup
+containers_host_registration_options: {}
+containers_host_additional_repos: []
+containers_image: rhel8-ubi-init-big_outdated
+
+# Satellite setup
+sat_version: "6.10"
 sat_user: admin
 sat_pass: changeme
 sat_email: root@localhost
@@ -23,154 +76,20 @@ sat_org: Default Organization
 sat_orglabel: Default_Organization
 sat_orgid: 1
 sat_location: Default Location
-sat_releasever: "7Server"
-sat_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '--async', or to 'sync' if you do not want that option
-sat_repos:
-  - product: "Red Hat Enterprise Linux Server"
-    reposet: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server (RPMs)"
-    repo: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server RPMs x86_64 {{ sat_releasever }}"
-    basearch: "x86_64"
-    releasever: "7Server"
-  - product: "Red Hat Enterprise Linux Server"
-    reposet: "Red Hat Satellite Tools {{ sat_version }} for RHEL 7 Server RPMs"
-    repo: "Red Hat Satellite Tools {{ sat_version }} for RHEL 7 Server RPMs x86_64"
-    basearch: "x86_64"
-  - product: "Red Hat Satellite Capsule"
-    reposet: "Red Hat Satellite Capsule {{ sat_version }} (for RHEL {{ ansible_distribution_major_version }} Server) (RPMs)"
-    repo: "Red Hat Satellite Capsule {{ sat_version }} for RHEL {{ ansible_distribution_major_version }} Server RPMs x86_64"
-    basearch: "x86_64"
-  - product: "Red Hat Software Collections (for RHEL Server)"
-    reposet: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server"
-    repo: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server x86_64 {{ sat_releasever }}"
-    basearch: "x86_64"
-    releasever: "7Server"
-  - product: "Red Hat Enterprise Linux Server"
-    reposet: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - Optional (RPMs)"
-    repo: "Red Hat Enterprise Linux {{ ansible_distribution_major_version }} Server - Optional RPMs x86_64 {{ sat_releasever }}"
-    basearch: "x86_64"
-    releasever: "7Server"
+sat_repo_file: ../../../../../conf/sat610.repo
+satellite_registration_options: {}
+satellite_additional_repos: []
 
-# Satellite install options
-sat_install_source: cdn   # either 'cdn' or 'repo'
-                          #   'cdn' ... configure value of 'sat_cdn_reponame'
-                          #   'repo' ... configure value of 'sat_repo_file'
-# Repos needed for the Satellite installation
-sat_installation_repos:
-  - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-  - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
-  - 'rhel-{{ ansible_distribution_major_version }}-server-extras-rpms'
-# Either file or url
-sat_repo_file: ../../../../../conf/sat63.repo
-
-# Additional repos for Satellite installation
-#additional_repo_files:
-#  # URL for additional repo files, if any needed.
-#  # URLs can be either http[s]://, ftp[s]:// or filepath (/file/system/path/repo_file)
-#  # Doesn't have to be defined, but if it is, the stucture should be as follows:
-#  - target_repo_filename: 'additional-file1.repo'
-#    repo_file_url: 'http://server.example.com/pub/repo_file1'
-#  - target_repo_filename: 'additional-file2.repo'
-#    repo_file_url: '/home/user/repo_file'
-
-sat_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-{{ sat_version }}-rpms'
-sat_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Satellite and Software Collections
-                                           # when installing from custom repository, Software Collections should be enough
-# sat_installer_pkg: capsule-installer   # Satellite 6.1
-# sat_installer_cmd: katello-installer   # Satellite 6.1
-sat_installer_pkg: satellite   # Satellite 6.2 and 6.3
-sat_installer_cmd: satellite-installer --scenario satellite   # Satellite 6.2 and 6.3
-sat_manifest: ../../../../../conf/manifest.zip
-
-# Katello nightly install options
-foreman_repositories_version: nightly
-foreman_repository_base: "http://koji.katello.org/releases/yum/foreman-{{ foreman_repositories_version }}/RHEL/{{ ansible_distribution_major_version }}/x86_64/"
-foreman_plugin_repository_base: "http://koji.katello.org/releases/yum/foreman-plugins-{{ foreman_repositories_version }}/RHEL/{{ ansible_distribution_major_version }}/x86_64/"
-katello_repositories_version: nightly
-katello_repositories_pulp_version: 2.15
-katello_repositories_pulp_release: stable
-epel_repo_installer: https://dl.fedoraproject.org/pub/epel/epel-release-latest-7.noarch.rpm
-katello_installer_cmd: foreman-installer --scenario katello
-katello_user: admin
-katello_password: changeme
-katello_ports:
-  - 80/tcp
-  - 443/tcp
-  - 5647/tcp
-  - 9090/tcp
-
-# Content for client testing (RHEL repo with erratas and Satellite tools repo)
-content_rhel_name: RHEL7 x86_64 Base
-content_rhel_label: rhel7-x86_64-base
-content_rhel_url: http://repos.example.com/released/RHEL-7/7.2/Server/x86_64/os/
-content_sattools_name: Sat Tools
-content_sattools_label: sat-x86_64-tools
-content_sattools_url: http://repos.example.com/released/SatTools/7Server/x86_64/os/
-content_content_view_name: SatPerfContentView
-content_hostgroup: "SatperfHostGroup"
-content_activationkey: "SatperfActivationKey"
-client_domain: "example.com"
-client_environment: "production"
-client_private_key: "{{ satperf_private_key }}"   # key to access clients (containers)
-
-base_pool: 'Pool you want to consume' # Pool used by rhsm-satellite role. Needs to contain base RHEL7 repo. If empty '', rhsm-satellite will register, but not attach.
-
-# Capsule install options
-sat_capsule_pool: 'Pool you want to consume'   # Needs to contain Capsule
-capsule_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '--async', or to 'sync' if you do not want that option
-capsule_install_source: cdn   # either 'cdn' or 'repo'
-                              #   'cdn' ... configure value of 'capsule_cdn_reponame'
-                              #   'repo' ... configure value of 'capsule_repo_file'
-capsule_repo_file: ../../../../../conf/capsule63.repo   # either file or url
-capsule_cdn_reponame: 'rhel-{{ ansible_distribution_major_version }}-server-satellite-capsule-{{ sat_version }}-rpms'
-capsule_install_pool: 'Pool you want to use'   # when installing from CDN, this have to contain Capsule
-# capsule_installer_pkg: capsule-installer   # Satellite 6.1
-# capsule_installer_cmd: katello-installer   # Satellite 6.1
-capsule_installer_pkg: satellite-capsule   # Satellite 6.2 and 6.3
-capsule_installer_cmd: satellite-installer --scenario capsule   # Satellite 6.2 and 6.3
-capsule_installation_repos:
-  - 'rhel-{{ ansible_distribution_major_version }}-server-rpms'
-  - 'rhel-server-rhscl-{{ ansible_distribution_major_version }}-rpms'
-  - 'rhel-{{ ansible_distribution_major_version }}-server-ansible-2.6-rpms'
-capsule_additional_repos:
-  #- name: ...
-  #  baseurl: ...
-  #  gpgcheck: ...
-
-# Docker hosts
-docker_host_register_to: satellite   # from where we should install docker host? Either 'satellite' for your Satellite or anythong else for cdn.redhat.com
-docker_host_containers: 50
-docker_host_partitioning: kvm
-docker_host_storage_driver: devicemapper   # which storage driver should Docker use, "devicemapper" or "overlay"
-docker_host_vg: docker   # name of the VG to be used when using Devicemapper direct LVM; when empty, use first VG you find
-
-# Puppet 4 Repos
-puppet4_repo: Sat6-CI_Satellite_6_3_Composes_Satellite_6_3_Puppet_4_RHEL7
-install_puppet4: True
-
-# Environment
-ntp_server: clock.redhat.com
-
-# EPEL
-epel_release_rpm: "https://dl.fedoraproject.org/pub/epel/epel-release-latest-{{ ansible_distribution_major_version }}.noarch.rpm"
-
-# Product names to be created
-tests_products: perf-gen1 perf-gen2 perf-gen3 perf-gen4 perf-gen5 perf-gen6 perf-gen7 perf-gen8
-tests_backup_path: /home/backup
-
-# workload settings
-methods:
-  repo_count: 5 #Number of repos
-  cv_scale: 1 #Content view Scale: True(1), False(0)
-  cv_count: 10 #if CVSCALE=true, then  Number of content views
-  cv_pub: 10 #number of times content publish
-  concurrent: 1 #concurrent (1) or sync (0)
-
-
-# If you have some service where you can add results of experiments, set its hostname
-recorder_server: ''
+# Capsules setup
+capsule_registration_options: {}
+capsule_additional_repos: []
 
 # VMs provisioning
 vms_vg: default
+vms_kss_os: http://repos.example.com/RHEL-7/7.4/Server/x86_64/os/
+vms_ssh_key: "{{ lookup('file', '../../conf/id_rsa.pub') }}"
+vms_ks: rhel7-vm.ks
+vms_static_private_hosts: true
 
 vms:
   kvm1.example.com:
@@ -187,6 +106,4 @@ vms:
       netmask: 255.0.0.0
       rootpw: password
       extra_kernel_args: ""
-vms_kss_os: http://repos.example.com/RHEL-7/7.4/Server/x86_64/os/
-vms_ssh_key: "{{ lookup('file', '../../conf/id_rsa.pub') }}"
 ...

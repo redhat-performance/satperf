@@ -1,10 +1,6 @@
 ---
 - hosts: docker_hosts
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     size: 1   # should be provided via external parameter
     forks: "{{ size }}"   # in how many forks should playbooks run?
@@ -32,7 +28,7 @@
 
     - name: "Determine marker variable"
       set_fact:
-        marker: "{{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
+        marker: "{{ lookup('pipe', 'date -u -Iseconds') }}"
       run_once: yes
       tags: always
 

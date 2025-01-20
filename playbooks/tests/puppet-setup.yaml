@@ -5,11 +5,7 @@
 
 # Get list of containers to use
 - hosts: docker_hosts
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
   tasks:
     - name: "Gather facts"
@@ -48,11 +44,7 @@
 
 # Configure containers on satellite side
 - hosts: satellite6
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     puppet_class_clases:
       - acl
@@ -84,11 +76,7 @@
 
 # Cleanup containers
 - hosts: docker_hosts
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     puppet_class_pkgs:
       - apr
@@ -123,7 +111,6 @@
       copy:
         content: |
           - hosts: all
-            remote_user: root
             gather_facts: no
             tasks:
               - name: "Remove packages"

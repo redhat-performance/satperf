@@ -1,21 +1,17 @@
 ---
 - hosts: satellite6
-  remote_user: root
-  gather_facts: no
-  vars_files:
-    - ../../conf/satperf.yaml
-    - ../../conf/satperf.local.yaml
+  gather_facts: False
   vars:
     resting: 0
     save_graphs: true
   tasks:
     - name: "Determine job description"
       set_fact:
-        job_desc: "Continuous ReX 'date' at {{ lookup('pipe', 'date --utc --iso-8601=seconds') }}"
+        job_desc: "Continuous ReX 'date' at {{ lookup('pipe', 'date -u -Iseconds') }}"
     - name: "Start the 'date' job via Ansible '{{ job_desc }}'"
       command:
-        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'name ~ container' --job-template 'Run Command - Ansible Default' --inputs "command='date'"
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'name ~ container' --job-template 'Run Command - Ansible Default' --inputs command='date'
     - name: "Start the 'date' job via SSH '{{ job_desc }}'"
       command:
-        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'name ~ container' --job-template 'Run Command - SSH Default' --inputs "command='date'"
+        hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" job-invocation create --description-format "{{ job_desc }}" --dynamic --search-query 'name ~ container' --job-template 'Run Command - SSH Default' --inputs command='date'
 ...

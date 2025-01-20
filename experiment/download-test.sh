@@ -2,131 +2,129 @@
 
 source experiment/run-library.sh
 
-manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.ini}"
-private_key="${PARAM_private_key:-conf/contperf/id_rsa_perf}"
-
-wait_interval=${PARAM_wait_interval:-50}
-download_wait_interval=${PARAM_download_wait_interval:-30}
-download_test_batches="${PARAM_download_test_batches:-1 2 3}"
-bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
+branch="${PARAM_branch:-satcpt}"
+inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
+sat_version="${PARAM_sat_version:-stream}"
+manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-repo_sat_tools="${PARAM_repo_sat_tools:-http://mirror.example.com/Satellite_Tools_x86_64/}"
+ak="${PARAM_ak:-ActivationKey}"
 
-repo_download_test="${PARAM_repo_download_test:-http://perf54.perf.lab.eng.bos.redhat.com/pub/satperf/test_sync_repositories/repo*}"
+expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
+
+repo_download_test="${PARAM_repo_download_test:-http://repos.example.com/pub/satperf/test_sync_repositories/repo*}"
 repo_count_download_test="${PARAM_repo_count_download_test:-8}"
 package_name_download_test="${PARAM_package_name_download_test:-foo*}"
+workdir_url="${PARAM_workdir_url:-https://workdir-exporter.example.com/workspace}"
+job_name="${PARAM_job_name:-Sat_Experiment}"
+max_age_input="${PARAM_max_age_input:-19000}"
 
-do="Default Organization"
+skip_down_setup="${PARAM_skip_down_setup:-false}"
+skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
+
 dl="Default Location"
 
-opts="--forks 100 -i $inventory --private-key $private_key"
-opts_adhoc="$opts --user root -e @conf/satperf.yaml -e @conf/satperf.local.yaml"
+opts="--forks 100 -i $inventory"
+opts_adhoc="$opts"
 
 
 section "Checking environment"
 generic_environment_check
 
 
-section "Upload manifest"
-h regs-10-ensure-loc-in-org.log "organization add-location --name 'Default Organization' --location 'Default Location'"
-a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '$do'"
-s $wait_interval
+#If we already have setup ready - all repos synced, etc we can skip directly to registering and downloading batches. PLEASE DELETE ALL HOSTS FROM SATELLITE.
+if [[ "${skip_down_setup}" != "true" ]]; then
+    section "Sync Download Test repo"
+    ap downtest-25-repository-create-downtest.log  \
+      -e "organization='{{ sat_org }}'" \
+      -e "download_test_repo_template='download_test_repo'" \
+      -e "repo_download_test=$repo_download_test" \
+      -e "repo_count_download_test=$repo_count_download_test" \
+      playbooks/tests/downloadtest-syncrepo.yaml
+
+    h downtest-30-ak-create.log "activation-key create --content-view '{{ sat_org }} View' --lifecycle-environment 'Library' --name '$ak' --organization '{{ sat_org }}'"
+
+    h_out "--csv --no-headers activation-key product-content --organization '{{ sat_org }}' --content-access-mode-all true --name '$ak' --search 'name ~ download_test_repo' --fields label" >$logs/downtest-repo-label.log
+    down_test_repo_label="$( tail -n 1 $logs/downtest-repo-label.log )"
+    h downtest-30-ak-content-override-downtest.log "activation-key content-override --organization '{{ sat_org }}' --name '$ak' --content-label '$down_test_repo_label' --override-name 'enabled' --value 1"
+fi
 
 
-section "Sync from CDN"   # do not measure because of unpredictable network latency
-h regs-20-set-cdn-stage.log "organization update --name 'Default Organization' --redhat-repository-url '$cdn_url_full'"
-h regs-20-reposet-enable-rhel7.log  "repository-set enable --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server (RPMs)' --releasever '7Server' --basearch 'x86_64'"
-h regs-20-repo-immediate-rhel7.log "repository update --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server' --download-policy 'immediate'"
-h regs-20-repo-sync-rhel7.log "repository synchronize --organization '$do' --product 'Red Hat Enterprise Linux Server' --name 'Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server'"
-s $wait_interval
+if [[ "${skip_push_to_capsules_setup}" != "true" ]]; then
+    section "Push content to capsules"
+    ap downtest-35-capsync-populate.log \
+      -e "organization='{{ sat_org }}'" \
+      playbooks/satellite/capsules-populate.yaml
+    unset skip_measurement
+fi
 
-
-section "Sync Tools repo"   # do not measure because of unpredictable network latency
-h regs-30-sat-tools-product-create.log "product create --organization '$do' --name SatToolsProduct"
-h regs-30-repository-create-sat-tools.log "repository create --organization '$do' --product SatToolsProduct --name SatToolsRepo --content-type yum --url '$repo_sat_tools'"
-h regs-30-repository-sync-sat-tools.log "repository synchronize --organization '$do' --product SatToolsProduct --name SatToolsRepo"
-s $wait_interval
-
-section "Sync Download Test repo"
-#h product-create-downtest.log "product create --organization '$do' --name DownTestProduct"
-ap repository-create-downtest.log playbooks/tests/downloadtest-syncrepo.yaml -e "repo_download_test=$repo_download_test repo_count_download_test=$repo_count_download_test"
-# h repository-create-downtest.log "repository create --organization '$do' --product DownTestProduct --name DownTestRepo --content-type yum --url '$repo_download_test'"
-# h repo-sync-downtest.log "repository synchronize --organization '$do' --product DownTestProduct --name DownTestRepo"
-s $wait_interval
 
 section "Prepare for registrations"
-ap regs-40-recreate-client-scripts.log playbooks/satellite/client-scripts.yaml   # this detects OS, so need to run after we synces one
+skip_measurement='true' ap downtest-44-generate-host-registration-command.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "ak='$ak'" \
+  -e "sat_version='$sat_version'" \
+  playbooks/satellite/host-registration_generate-command.yaml
 
-h_out "--no-headers --csv domain list --search 'name = {{ client_domain }}'" | grep --quiet '^[0-9]\+,' \
-    || h regs-40-domain-create.log "domain create --name '{{ client_domain }}' --organizations '$do'"
-tmp=$( mktemp )
-h_out "--no-headers --csv location list --organization '$do'" | grep '^[0-9]\+,' >$tmp
-location_ids=$( cut -d ',' -f 1 $tmp | tr '\n' ',' | sed 's/,$//' )
-h regs-40-domain-update.log "domain update --name '{{ client_domain }}' --organizations '$do' --location-ids '$location_ids'"
+skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
+  -e "ak='$ak'" \
+  playbooks/satellite/client-scripts.yaml
 
-tmp=$( mktemp )
-h_out "--no-headers --csv capsule list --organization '$do'" | grep '^[0-9]\+,' >$tmp
-for row in $( cut -d ' ' -f 1 $tmp ); do
-    capsule_id=$( echo "$row" | cut -d ',' -f 1 )
-    capsule_name=$( echo "$row" | cut -d ',' -f 2 )
-    subnet_name="subnet-for-$capsule_name"
-    hostgroup_name="hostgroup-for-$capsule_name"
-    if [ "$capsule_id" -eq 1 ]; then
-        location_name="$dl"
+
+section "Incremental registrations and remote execution"
+number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
+number_containers_per_container_host="$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
+if (( initial_expected_concurrent_registrations > number_container_hosts )); then
+    initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
+else
+    initial_concurrent_registrations_per_container_host=1
+fi
+num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
+job_template_ssh_default='Run Command - Script Default'
+
+skip_measurement='true' h downtest-46-rex-set-via-ip.log "settings set --name remote_execution_connect_by_ip --value true"
+skip_measurement='true' a downtest-47-rex-cleanup-know_hosts.log \
+  -m "ansible.builtin.shell" \
+  -a "rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*" \
+  satellite6
+
+for (( batch=1, remaining_containers_per_container_host=$number_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
+    if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
+        concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
     else
-        location_name="Location for $capsule_name"
+        concurrent_registrations_per_container_host="$(( remaining_containers_per_container_host ))"
     fi
-    h_out "--no-headers --csv subnet list --search 'name = $subnet_name'" | grep --quiet '^[0-9]\+,' \
-        || h regs-44-subnet-create-$capsule_name.log "subnet create --name '$subnet_name' --ipam None --domains '{{ client_domain }}' --organization '$do' --network 172.0.0.0 --mask 255.0.0.0 --location '$location_name'"
-    subnet_id=$( h_out "--output yaml subnet info --name '$subnet_name'" | grep '^Id:' | cut -d ' ' -f 2 )
-    a regs-45-subnet-add-rex-capsule-$capsule_name.log satellite6 -m "shell" -a "curl --silent --insecure -u {{ sat_user }}:{{ sat_pass }} -X PUT -H 'Accept: application/json' -H 'Content-Type: application/json' https://localhost//api/v2/subnets/$subnet_id -d '{\"subnet\": {\"remote_execution_proxy_ids\": [\"$capsule_id\"]}}'"
-    h_out "--no-headers --csv hostgroup list --search 'name = $hostgroup_name'" | grep --quiet '^[0-9]\+,' \
-        || h regs-41-hostgroup-create-$capsule_name.log "hostgroup create --content-view 'Default Organization View' --lifecycle-environment Library --name '$hostgroup_name' --query-organization '$do' --subnet '$subnet_name'"
+    concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
+
+    log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
+
+    (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
+
+    # Register
+    ap downtest-50-register-${batch}-${concurrent_registrations}.log \
+      -e "size='${concurrent_registrations_per_container_host}'" \
+      -e "num_retry_forks='$num_retry_forks'" \
+      -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
+      -e 're_register_failed_hosts=true' \
+      -e "sat_version='${sat_version}'" \
+      playbooks/tests/registrations.yaml
+    e Register $logs/downtest-50-register-${batch}-${concurrent_registrations}.log
+
+    (( total_registered += concurrent_registrations ))
+
+    # Run download test via ReX
+    ap downtest-50-${batch}-${total_registered}-Download.log \
+      -e "job_template_ssh_default='${job_template_ssh_default}'" \
+      -e "package_name_download_test='${package_name_download_test}'" \
+      -e "max_age_task='${max_age_input}'" \
+      playbooks/tests/downloadtest.yaml
+    log "$(grep 'RESULT:' $logs/downtest-50-${batch}-${total_registered}-Download.log)"
 done
 
-h regs-40-ak-create.log "activation-key create --content-view 'Default Organization View' --lifecycle-environment Library --name ActivationKey --organization '$do'"
-h regs-40-subs-list-tools.log "--csv subscription list --organization '$do' --search 'name = SatToolsProduct'"
-tools_subs_id=$( tail -n 1 $logs/regs-40-subs-list-tools.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-tools.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$tools_subs_id'"
-h regs-40-subs-list-employee.log "--csv subscription list --organization '$do' --search 'name = \"Employee SKU\"'"
-employee_subs_id=$( tail -n 1 $logs/regs-40-subs-list-employee.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-employee.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$employee_subs_id'"
-h regs-40-subs-list-downtest.log "--csv subscription list --organization '$do' --search 'name = DownTestProduct'"
-down_test_subs_id=$( tail -n 1 $logs/regs-40-subs-list-downtest.log | cut -d ',' -f 1 )
-h regs-40-ak-add-subs-downtest.log "activation-key add-subscription --organization '$do' --name ActivationKey --subscription-id '$down_test_subs_id'"
-
-
-section "Register more and more"
-ansible_docker_hosts=$( ansible -i $inventory --list-hosts docker_hosts 2>/dev/null | grep '^  hosts' | sed 's/^  hosts (\([0-9]\+\)):$/\1/' )
-sum=0
-for b in $download_test_batches; do
-    let sum+=$( expr $b \* $ansible_docker_hosts )
-done
-log "Going to register $sum hosts in total. Make sure there is enough hosts available."
-
-iter=1
-sum=0
-totalclients=0
-for batch in $download_test_batches; do
-    ap regs-50-register-$iter-$batch.log playbooks/tests/registrations.yaml -e "size=$batch tags=untagged,REG,REM bootstrap_activationkey='ActivationKey' bootstrap_hostgroup='hostgroup-for-{{ tests_registration_target }}' grepper='Register' registration_logs='../../$logs/regs-50-register-docker-host-client-logs'"
-    e Register $logs/regs-50-register-$iter-$batch.log
-    s $download_wait_interval
-    let sum=$(($sum + $batch))
-    let totalclients=$( expr $sum \* $ansible_docker_hosts )
-    ap downrepo-50-$iter-$sum-$totalclients.log playbooks/tests/downloadtest.yaml -e "package_name_download_test=$package_name_download_test"
-    let iter+=1
-    s $wait_interval
-done
 
 section "Summary"
-# iter=1
-# for batch in $registrations_batches; do
-#     log "$( experiment/reg-average.py Register $logs/regs-50-register-$iter-$batch.log | tail -n 1 )"
-#     let iter+=1
-# done
+log "$(grep 'RESULT:' $logs/downtest-50-*-*-Download.log | sort -V)"
+
 
 junit_upload

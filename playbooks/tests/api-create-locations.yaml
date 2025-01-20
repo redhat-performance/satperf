@@ -1,0 +1,93 @@
+---
+- name: "Create location(s) using the REST API"
+  hosts: satellite6:capsules
+  strategy: linear
+  gather_facts: false
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+        location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
+
+    - name: "Get organizations information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
+        method: GET
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+      run_once: True
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: organizations_json
+      failed_when: organizations_json.json.results | length == 0
+
+    - name: "Get '{{ organization }}' organization_id"
+      ansible.builtin.set_fact:
+        organization_id: "{{ organizations_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ organization }}'].id | [0]"
+
+    - name: "Get locations information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations"
+        method: GET
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: locations_json
+      failed_when: locations_json.json.results | length == 0
+
+    - name: "Create location(s)"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations"
+        method: POST
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ { 'organization_id': organization_id, 'location': {'name': location } } }}"
+        status_code:
+          - 201
+          - 422   # "Name has already been taken"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: "Get locations information"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations"
+        method: GET
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      register: locations_json
+      failed_when: locations_json.json.results | length == 0
+
+    - name: "Get location(s) location_id"
+      ansible.builtin.set_fact:
+        location_id: "{{ locations_json.json | community.general.json_query(query) }}"
+      vars:
+        query: "results[?name=='{{ location }}'].id | [0]"
+      when:
+        - location is defined and location | length > 0
+
+    - name: "Set organization for location"
+      ansible.builtin.uri:
+        url: "https://{{ groups['satellite6'] | first }}/api/locations/{{ location_id }}"
+        method: PUT
+        validate_certs: False
+        force_basic_auth: True
+        user: "{{ user }}"
+        password: "{{ password }}"
+        body_format: json
+        body: "{{ { 'organization_id': organization_id, 'location': {'name': location, 'organization_ids': [organization_id] } } }}"
+        status_code:
+          - 422   # "Name has already been taken"
+      delegate_to: "{{ groups['satellite6'] | first }}"
+...

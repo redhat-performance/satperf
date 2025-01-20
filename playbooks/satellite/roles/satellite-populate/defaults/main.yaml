@@ -1,0 +1,27 @@
+---
+sat_repos_sync: 'async'   # Set to 'async' if you want to sync repos with '--async', or to 'sync' if you do not want that option
+sat_repos:
+  - product: "Red Hat Enterprise Linux Server"
+    reposet: "Red Hat Enterprise Linux 7 Server (RPMs)"
+    repo: "Red Hat Enterprise Linux 7 Server RPMs x86_64 7Server"
+    basearch: "x86_64"
+    releasever: "7Server"
+  - product: "Red Hat Enterprise Linux Server"
+    reposet: "Red Hat Satellite Tools {{ sat_version }} for RHEL 7 Server RPMs"
+    repo: "Red Hat Satellite Tools {{ sat_version }} for RHEL 7 Server RPMs x86_64"
+    basearch: "x86_64"
+  - product: "Red Hat Satellite Capsule"
+    reposet: "Red Hat Satellite Capsule {{ sat_version }} (for RHEL 7 Server) (RPMs)"
+    repo: "Red Hat Satellite Capsule {{ sat_version }} for RHEL 7 Server RPMs x86_64"
+    basearch: "x86_64"
+  - product: "Red Hat Software Collections (for RHEL Server)"
+    reposet: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux 7 Server"
+    repo: "Red Hat Software Collections RPMs for Red Hat Enterprise Linux 7 Server x86_64 7Server"
+    basearch: "x86_64"
+    releasever: "7Server"
+  - product: "Red Hat Enterprise Linux Server"
+    reposet: "Red Hat Enterprise Linux 7 Server - Optional (RPMs)"
+    repo: "Red Hat Enterprise Linux 7 Server - Optional RPMs x86_64 7Server"
+    basearch: "x86_64"
+    releasever: "7Server"
+...

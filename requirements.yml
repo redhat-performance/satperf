@@ -1,0 +1,37 @@
+---
+roles:
+  - name: linux-system-roles.firewall
+    version: 1.6.4
+
+  - name: linux-system-roles.network
+    version: 1.13.2
+
+  - name: linux-system-roles.storage
+    version: 1.12.4
+
+  - name: linux-system-roles.timesync
+    version: 1.7.7
+
+  - name: rhsm_helper
+    src: git+https://github.com/jhutar/ansible-role-rhsm_helper.git
+    version: origin/main
+
+  - name: repo_setup
+    src: git+https://github.com/jhutar/ansible-role-repo_setup.git
+    version: origin/main
+
+  - name: sosreport_gatherer
+    src: git+https://github.com/jhutar/ansible-role-sosreport_gatherer.git
+    version: origin/main
+
+collections:
+  - name: ansible.posix
+
+  - name: ansible.utils
+
+  - name: community.general
+
+  - name: theforeman.foreman
+
+  - name: theforeman.operations
+...

@@ -5,7 +5,7 @@
 
 - name: "Upload manifest"
   shell:
-    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'
+    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription upload --file '/root/manifest-auto.zip' --organization '{{ organization }}'
   environment:
     TZ: UTC
   register: manifest_upload
@@ -15,7 +15,7 @@
 
 - name: "Upload refresh"
   shell:
-    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription refresh-manifest --organization '{{ sat_org }}'
+    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription refresh-manifest --organization '{{ organization }}'
   environment:
     TZ: UTC
   register: manifest_refresh
@@ -29,7 +29,7 @@
 
 - name: "Delete manifest"
   shell:
-    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ sat_org }}'
+    hammer -u '{{ sat_user }}' -p '{{ sat_pass }}' subscription delete-manifest --organization '{{ organization }}'
   environment:
     TZ: UTC
   register: manifest_delete
