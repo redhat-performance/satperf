@@ -53,6 +53,10 @@ issues = [
         "name": "PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \"index_operatingsystems_on_title\"",
         "regexp": r"PG::UniqueViolation: ERROR:  duplicate key value violates unique constraint \\\"index_operatingsystems_on_title\\\"",
     },
+    {
+        "name": "Unable to verify server's identity: [SSL: UNEXPECTED_EOF_WHILE_READING]",
+        "regexp": r"Unable to verify server's identity: \[SSL: UNEXPECTED_EOF_WHILE_READING\] unexpected eof while reading \(_ssl.c:[0-9.]+\)",
+    },
 ]
 
 
