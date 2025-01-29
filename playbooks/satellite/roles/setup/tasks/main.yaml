@@ -88,6 +88,13 @@
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
 
+- name: "Add IOP advisor engine parameter"
+  ansible.builtin.set_fact:
+    installer_cmd_line: "{{ installer_cmd_line }} --foreman-plugin-rh-cloud-enable-iop-advisor-engine true"
+  when:
+    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+
 - name: "Run desired shell commands before installation"
   ansible.builtin.shell:
     cmd: "{{ run_before_installer }}"
