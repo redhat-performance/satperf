@@ -79,6 +79,7 @@ ap 44-generate-host-registration-command.log \
 
 skip_measurement='true' ap 44-recreate-client-scripts.log \
   -e "ak=ActivationKey" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/client-scripts.yaml
 
 

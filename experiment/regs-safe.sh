@@ -309,6 +309,7 @@ ap 60-generate-host-registration-commands.log \
 
 ap 61-recreate-client-scripts.log \
   -e "aks='$aks'" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/client-scripts.yaml
 
 unset skip_measurement
