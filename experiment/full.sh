@@ -7,7 +7,7 @@ inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
-rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
+rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9 rhel10}"
 
 lces="${PARAM_lces:-Test QA Pre Prod}"
 
@@ -123,12 +123,23 @@ for rel in $rels; do
             ;;
         rhel8|rhel9|rhel10)
             os_rel="${rel##rhel}"
-            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever=$os_rel
-            os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
-            os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS (RPMs)"
-            os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
-            os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream (RPMs)"
+            if [[ "$rel" != 'rhel10' ]]; then
+                os_product="Red Hat Enterprise Linux for $basearch"
+                os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
+                os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS (RPMs)"
+                os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
+                os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream (RPMs)"
+            else
+                os_product="Red Hat Enterprise Linux for $basearch Beta"
+                os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS Beta RPMs"
+                os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS Beta (RPMs)"
+                os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta RPMs"
+                os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta (RPMs)"
+            fi
+            ;;
+        *)
+            break
             ;;
     esac
 
@@ -173,12 +184,21 @@ for rel in $rels; do
             ;;
         rhel8|rhel9|rhel10)
             os_rel="${rel##rhel}"
-            os_product="Red Hat Enterprise Linux for $basearch"
             os_releasever=$os_rel
-            os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
-            os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
+            if [[ "$rel" != 'rhel10' ]]; then
+                os_product="Red Hat Enterprise Linux for $basearch"
+                os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
+                os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
+            else
+                os_product="Red Hat Enterprise Linux for $basearch Beta"
+                os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS Beta RPMs"
+                os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta RPMs"
+            fi
             os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
             os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
+            ;;
+        *)
+            break
             ;;
     esac
 
@@ -250,6 +270,9 @@ for rel in $rels; do
         rhel6|rhel7|rhel8|rhel9|rhel10)
             os_rel="${rel##rhel}"
             ;;
+        *)
+            break
+            ;;
     esac
     sat_client_repo_name="Satellite Client for RHEL $os_rel"
     sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}"
@@ -300,7 +323,8 @@ for rel in $rels; do
     ccv="CCV_${rel}"
 
     case $rel in
-        rhel8|rhel9|rhel10)
+        # rhel8|rhel9|rhel10)
+        rhel8|rhel9)
             rhsop_repo_name="rhosp-${rel}/openstack-base"
 
             h "40-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
