@@ -220,6 +220,14 @@ for rel in $rels; do
 done
 
 
+section 'Push OS content to capsules'
+skip_measurement=true ap 43-capsules-syn-os.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "lces='$lces'" \
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/43-capsules-sync-os.log"
+
+
 section 'Publish and promote big CV'
 cv=BenchContentView
 rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 6 Server RPMs $basearch 6Server" )"
@@ -313,6 +321,14 @@ wait
 unset skip_measurement
 
 
+section 'Push Satellite Client content to capsules'
+skip_measurement=true ap 43-capsules-sync-sat-client.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "lces='$lces'" \
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/43-capsules-sync-sat-client.log"
+
+
 export skip_measurement=true
 section 'Get RHOSP content'
 # RHOSP
@@ -358,6 +374,14 @@ for rel in $rels; do
     esac
 done
 unset skip_measurement
+
+
+section 'Push RHOSP content to capsules'
+skip_measurement=true ap 43-capsules-sync-rhosp.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "lces='$lces'" \
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/43-capsules-sync-rhosp.log"
 
 
 section 'Sync yum repo'
