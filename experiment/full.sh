@@ -221,7 +221,7 @@ done
 
 
 section 'Push OS content to capsules'
-skip_measurement=true ap 43-capsules-syn-os.log \
+skip_measurement=true ap 43-capsules-sync-os.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
