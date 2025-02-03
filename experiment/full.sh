@@ -339,8 +339,8 @@ for rel in $rels; do
     ccv="CCV_${rel}"
 
     case $rel in
-    # rhel[89]|rhel10)
     rhel[89])
+    # rhel[89]|rhel10)
         rhsop_repo_name="rhosp-${rel}/openstack-base"
 
         h "40-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
