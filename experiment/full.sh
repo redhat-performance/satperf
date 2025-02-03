@@ -339,38 +339,41 @@ for rel in $rels; do
     ccv="CCV_${rel}"
 
     case $rel in
-        # rhel8|rhel9|rhel10)
-        rhel8|rhel9)
-            rhsop_repo_name="rhosp-${rel}/openstack-base"
+    # rhel[89]|rhel10)
+    rhel[89])
+        rhsop_repo_name="rhosp-${rel}/openstack-base"
 
-            h "40-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
-            h "40-repository-sync-rhosp-${rel}_openstack-base.log" "repository synchronize --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name'" &
+        h "40-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
+        h "40-repository-sync-rhosp-${rel}_openstack-base.log" "repository synchronize --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name'" &
 
-            rhosp_rids="$( get_repo_id '{{ sat_org }}' "$rhosp_product" "$rhsop_repo_name" )"
-            content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$rhosp_rids\"' --fields 'Content label'" | tail -n1 )"
+        rhosp_rids="$( get_repo_id '{{ sat_org }}' "$rhosp_product" "$rhsop_repo_name" )"
+        content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$rhosp_rids\"' --fields 'Content label'" | tail -n1 )"
 
-            # RHOSP CV
-            h "40-cv-create-rhosp-${rel}.log" "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
+        # RHOSP CV
+        h "40-cv-create-rhosp-${rel}.log" "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
 
-            # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
-            wait
+        # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
+        wait
 
-            h "40-cv-publish-rhosp-${rel}.log" "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
+        h "40-cv-publish-rhosp-${rel}.log" "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
 
-            # CCV with RHOSP
-            h "40-ccv-component-add-rhosp-${rel}.log" "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_osp' --latest"
-            h "40-ccv-publish-rhosp-${rel}.log" "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+        # CCV with RHOSP
+        h "40-ccv-component-add-rhosp-${rel}.log" "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_osp' --latest"
+        h "40-ccv-publish-rhosp-${rel}.log" "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
-            prior=Library
-            for lce in $lces; do
-                ak="AK_${rel}_${lce}"
+        prior=Library
+        for lce in $lces; do
+            ak="AK_${rel}_${lce}"
 
-                # CCV promotion to LCE
-                h "40-ccv-promote-rhosp-${rel}-${lce}.log" "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+            # CCV promotion to LCE
+            h "40-ccv-promote-rhosp-${rel}-${lce}.log" "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
-                prior=$lce
-            done
-            ;;
+            prior=$lce
+        done
+        ;;
+    *)
+        break
+        ;;
     esac
 done
 unset skip_measurement
