@@ -335,25 +335,22 @@ section 'Get RHOSP content'
 h 40-product-create-rhosp.log "product create --organization '{{ sat_org }}' --name '$rhosp_product'"
 
 for rel in $rels; do
-    cv_osp="CV_${rel}-osp"
     ccv="CCV_${rel}"
 
     case $rel in
     rhel[89])
-    # rhel[89]|rhel10)
         rhsop_repo_name="rhosp-${rel}/openstack-base"
 
         h "40-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
-        h "40-repository-sync-rhosp-${rel}_openstack-base.log" "repository synchronize --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name'" &
+        h "40-repository-sync-rhosp-${rel}_openstack-base.log" "repository synchronize --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name'"
 
         rhosp_rids="$( get_repo_id '{{ sat_org }}' "$rhosp_product" "$rhsop_repo_name" )"
         content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$rhosp_rids\"' --fields 'Content label'" | tail -n1 )"
 
         # RHOSP CV
-        h "40-cv-create-rhosp-${rel}.log" "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
+        cv_osp="CV_${rel}-osp"
 
-        # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
-        wait
+        h "40-cv-create-rhosp-${rel}.log" "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
 
         h "40-cv-publish-rhosp-${rel}.log" "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
 
