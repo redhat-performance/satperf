@@ -109,9 +109,10 @@ h 02-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_
 
 section 'Sync OS from CDN'
 for rel in $rels; do
+    os_rel="${rel##rhel}"
+
     case $rel in
     rhel[67])
-        os_rel="${rel##rhel}"
         os_releasever="${os_rel}Server"
         os_product='Red Hat Enterprise Linux Server'
         os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
@@ -122,7 +123,6 @@ for rel in $rels; do
         fi
         ;;
     rhel[89]|rhel10)
-        os_rel="${rel##rhel}"
         os_releasever=$os_rel
         if [[ "$rel" != 'rhel10' ]]; then
             os_product="Red Hat Enterprise Linux for $basearch"
@@ -163,13 +163,11 @@ done
 
 section 'Create, publish and promote OS CVs / CCVs to LCE(s)s'
 for rel in $rels; do
-    cv_os="CV_$rel"
-    cv_sat_client="CV_${rel}-sat-client"
     ccv="CCV_$rel"
+    os_rel="${rel##rhel}"
 
     case $rel in
     rhel[67])
-        os_rel="${rel##rhel}"
         os_releasever="${os_rel}Server"
         os_product='Red Hat Enterprise Linux Server'
         os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
@@ -180,7 +178,6 @@ for rel in $rels; do
         fi
         ;;
     rhel[89]|rhel10)
-        os_rel="${rel##rhel}"
         os_releasever=$os_rel
         if [[ "$rel" != 'rhel10' ]]; then
             os_product="Red Hat Enterprise Linux for $basearch"
@@ -197,6 +194,8 @@ for rel in $rels; do
     esac
 
     # OS CV
+    cv_os="CV_$rel"
+
     h "13b-cv-create-${rel}-os.log" "content-view create --organization '{{ sat_org }}' --name '$cv_os' --repository-ids '$os_rids'"
     h "13b-cv-publish-${rel}-os.log" "content-view publish --organization '{{ sat_org }}' --name '$cv_os'"
 
@@ -266,14 +265,9 @@ h 30-sat-client-product-create.log "product create --organization '{{ sat_org }}
 
 for rel in $rels; do
     ccv="CCV_${rel}"
-
-    case $rel in
-    rhel[6-9]|rhel10)
-        os_rel="${rel##rhel}"
-        ;;
-    esac
+    os_rel="${rel##rhel}"
     sat_client_repo_name="Satellite Client for RHEL $os_rel"
-    sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}"
+    sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}/"
 
     h "30-repository-create-sat-client_${rel}.log" "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
     h "30-repository-sync-sat-client_${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'"
@@ -327,6 +321,7 @@ for rel in $rels; do
 
     case $rel in
     rhel[89])
+    # rhel[89]|rhel10)
         rhsop_repo_name="rhosp-${rel}/openstack-base"
 
         h "40-repository-create-rhosp-${rel}_openstack-base.log" "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
