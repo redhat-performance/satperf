@@ -110,10 +110,10 @@ h 02-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_
 section 'Sync OS from CDN'
 for rel in $rels; do
     case $rel in
-    rhel6|rhel7)
+    rhel[67])
         os_rel="${rel##rhel}"
-        os_product='Red Hat Enterprise Linux Server'
         os_releasever="${os_rel}Server"
+        os_product='Red Hat Enterprise Linux Server'
         os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
         os_reposet_name="Red Hat Enterprise Linux $os_rel Server (RPMs)"
         if [[ "$rel" == 'rhel7' ]]; then
@@ -121,7 +121,7 @@ for rel in $rels; do
             os_extras_reposet_name="Red Hat Enterprise Linux $os_rel Server - Extras (RPMs)"
         fi
         ;;
-    rhel8|rhel9|rhel10)
+    rhel[89]|rhel10)
         os_rel="${rel##rhel}"
         os_releasever=$os_rel
         if [[ "$rel" != 'rhel10' ]]; then
@@ -138,13 +138,10 @@ for rel in $rels; do
             os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta (RPMs)"
         fi
         ;;
-    *)
-        break
-        ;;
     esac
 
     case $rel in
-    rhel6|rhel7)
+    rhel[67])
         skip_measurement=true h "10-reposet-enable-${rel}.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
         h "12-repo-sync-${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
@@ -153,7 +150,7 @@ for rel in $rels; do
             h "12-repo-sync-${rel}extras.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
         fi
         ;;
-    rhel8|rhel9|rhel10)
+    rhel[89]|rhel10)
         skip_measurement=true h "10-reposet-enable-${rel}baseos.log" "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
         h "12-repo-sync-${rel}baseos.log" "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
@@ -171,10 +168,10 @@ for rel in $rels; do
     ccv="CCV_$rel"
 
     case $rel in
-    rhel6|rhel7)
+    rhel[67])
         os_rel="${rel##rhel}"
-        os_product='Red Hat Enterprise Linux Server'
         os_releasever="${os_rel}Server"
+        os_product='Red Hat Enterprise Linux Server'
         os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
         os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
         if [[ "$rel" == 'rhel7' ]]; then
@@ -182,7 +179,7 @@ for rel in $rels; do
             os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
         fi
         ;;
-    rhel8|rhel9|rhel10)
+    rhel[89]|rhel10)
         os_rel="${rel##rhel}"
         os_releasever=$os_rel
         if [[ "$rel" != 'rhel10' ]]; then
@@ -196,9 +193,6 @@ for rel in $rels; do
         fi
         os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
         os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
-        ;;
-    *)
-        break
         ;;
     esac
 
@@ -271,31 +265,26 @@ section 'Get Satellite Client content'
 h 30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
 
 for rel in $rels; do
-    cv_sat_client="CV_${rel}-sat-client"
     ccv="CCV_${rel}"
 
     case $rel in
-    rhel6|rhel7|rhel8|rhel9|rhel10)
+    rhel[6-9]|rhel10)
         os_rel="${rel##rhel}"
-        ;;
-    *)
-        break
         ;;
     esac
     sat_client_repo_name="Satellite Client for RHEL $os_rel"
     sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}"
 
     h "30-repository-create-sat-client_${rel}.log" "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
-    h "30-repository-sync-sat-client_${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'" &
+    h "30-repository-sync-sat-client_${rel}.log" "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'"
 
     sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
     content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$sat_client_repo_name\"' --fields 'Content label'" | tail -n1 )"
 
     # Satellite Client CV
-    h "34-cv-create-${rel}-sat-client.log" "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
+    cv_sat_client="CV_${rel}-sat-client"
 
-    # XXX: Apparently, if we publish the repo "too early" (before it's finished sync'ing???), the version published won't have any content
-    wait
+    h "34-cv-create-${rel}-sat-client.log" "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
 
     h "35-cv-publish-${rel}-sat-client.log" "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
@@ -317,7 +306,6 @@ for rel in $rels; do
         prior=$lce
     done
 done
-wait
 unset skip_measurement
 
 
@@ -500,12 +488,12 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
 
     skip_measurement=true ap $registration_log \
       -e "size='$concurrent_registrations_per_container_host'" \
+      -e "concurrent_registrations='$concurrent_registrations'" \
       -e "num_retry_forks='$num_retry_forks'" \
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
-      -e "profile='${profile}'" \
-      -e "concurrent_registrations='$concurrent_registrations'" \
+      -e "profile='$profile'" \
       -e "registration_profile_img='$registration_profile_img'" \
       playbooks/tests/registrations.yaml
       e Register "$logs/$registration_log"
