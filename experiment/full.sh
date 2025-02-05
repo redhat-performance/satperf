@@ -368,9 +368,6 @@ for rel in $rels; do
             prior=$lce
         done
         ;;
-    *)
-        break
-        ;;
     esac
 done
 unset skip_measurement
