@@ -214,11 +214,11 @@ done
 
 
 section 'Push OS content to capsules'
-skip_measurement=true ap 43-capsules-sync-os.log \
+skip_measurement=true ap 13-capsules-sync-os.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/43-capsules-sync-os.log"
+e CapusuleSync "$logs/13-capsules-sync-os.log"
 
 
 section 'Publish and promote big CV'
@@ -304,11 +304,11 @@ unset skip_measurement
 
 
 section 'Push Satellite Client content to capsules'
-skip_measurement=true ap 43-capsules-sync-sat-client.log \
+skip_measurement=true ap 38-capsules-sync-sat-client.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/43-capsules-sync-sat-client.log"
+e CapusuleSync "$logs/38-capsules-sync-sat-client.log"
 
 
 export skip_measurement=true
@@ -357,11 +357,11 @@ unset skip_measurement
 
 
 section 'Push RHOSP content to capsules'
-skip_measurement=true ap 43-capsules-sync-rhosp.log \
+skip_measurement=true ap 40-capsules-sync-rhosp.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/43-capsules-sync-rhosp.log"
+e CapusuleSync "$logs/40-capsules-sync-rhosp.log"
 
 
 section 'Sync yum repo'
@@ -378,6 +378,14 @@ e PromoteContentViews "$logs/80-test-sync-repositories.log"
 lces+=' test_sync_repositories_le'
 
 
+section 'Push yum content to capsules'
+skip_measurement=true ap 80-capsules-sync-repositories.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "lces='$lces'" \
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/80-capsules-sync-repositories.log"
+
+
 section 'Sync iso'
 skip_measurement=true ap 81-test-sync-iso.log \
   -e "organization='{{ sat_org }}'" \
@@ -392,6 +400,14 @@ e PromoteContentViews "$logs/81-test-sync-iso.log"
 lces+=' test_sync_iso_le'
 
 
+section 'Push iso content to capsules'
+skip_measurement=true ap 81-capsules-sync-iso.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "lces='$lces'" \
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/81-capsules-sync-iso.log"
+
+
 section 'Sync docker repo'
 skip_measurement=true ap 82-test-sync-docker.log \
   -e "organization='{{ sat_org }}'" \
@@ -404,6 +420,14 @@ e PublishContentViews "$logs/82-test-sync-docker.log"
 e PromoteContentViews "$logs/82-test-sync-docker.log"
 
 lces+=' test_sync_docker_le'
+
+
+section 'Push docker content to capsules'
+skip_measurement=true ap 82-capsules-sync-docker.log \
+  -e "organization='{{ sat_org }}'" \
+  -e "lces='$lces'" \
+  playbooks/tests/capsules-sync.yaml
+e CapusuleSync "$logs/82-capsules-sync-docker.log"
 
 
 section 'Sync ansible collections'
@@ -421,12 +445,12 @@ e PromoteContentViews "$logs/83-test-sync-ansible-collections.log"
 lces+=' test_sync_ansible_collections_le'
 
 
-section 'Push content to capsules'
-skip_measurement=true ap 43-capsules-sync.log \
+section 'Push ansible collections content to capsules'
+skip_measurement=true ap 83-capsules-sync-ansible-collections.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/43-capsules-sync.log"
+e CapusuleSync "$logs/83-capsules-sync-ansible-collections.log"
 
 
 export skip_measurement=true
