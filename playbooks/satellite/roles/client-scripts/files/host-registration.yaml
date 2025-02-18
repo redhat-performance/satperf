@@ -53,14 +53,14 @@
         msg: "Register {{ reg.start }} to {{ reg.end }} taking {{ reg_duration }} seconds"
       when: "reg.rc == 0"
 
-    - name: "Disable insights-client automatic scheduling"
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
+    # - name: "Disable insights-client automatic scheduling"
+    #   ansible.builtin.shell:
+    #     cmd: |
+    #       set -o pipefail
 
-          if [[ -x /usr/bin/insights-client ]]; then
-              insights-client --disable-schedule
-          fi
+    #       if [[ -x /usr/bin/insights-client ]]; then
+    #           insights-client --disable-schedule
+    #       fi
 
     - name: "Enable and start rhsmcertd systemd service unit"
       ansible.builtin.systemd_service:
