@@ -37,35 +37,65 @@ fi
 #     exit 1
 # fi
 
-# function _vercmp() {
-#     # Return values mimic `rpmdev-vercmp` ones
-#     if [[ "$1" == "$2" ]]; then
-#         return 0
-#     elif [[ "$1" == 'stream' ]]; then
-#         return 11
-#     elif [[ "$2" == 'stream' ]]; then
-#         return 12
-#     else
-#         ver1="$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )"
-#         ver2="$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )"
+function _vercmp() {
+    # Return values mimic `rpmdev-vercmp` ones
+    if [[ "$1" == "$2" ]]; then
+        return 0
+    elif [[ "$1" == 'stream' ]]; then
+        return 11
+    elif [[ "$2" == 'stream' ]]; then
+        return 12
+    else
+        ver1="$( echo "$1" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )"
+        ver2="$( echo "$2" | sed 's/^\(satellite\|katello\)-//' | sed 's/^\([^-]\+\)-.*$/\1/' )"
 
 #         rpmdev-vercmp "$ver1" "$ver2"
-#     fi
-# }
 
-# function vercmp_gt() {
-#     # Check if first parameter is greater than second using version string comparision
-#     _vercmp "$1" "$2"
-#     local rc=$?
-#     [ "$rc" -eq 11 ] && return 0 || return 1
-# }
+        # FIXME: This parser sucks. Would be better to have rpmdev-vercmp once
+        # CID-5112 is resolved
+        # echo "Comparing $ver1 vs. $ver2"
+        ver1_1="$( echo "$ver1" | cut -d '.' -f 1 )"
+        ver1_2="$( echo "$ver1" | cut -d '.' -f 2 )"
+        ver1_3="$( echo "$ver1" | cut -d '.' -f 3 )"
+        vers1="( $ver1_1 $ver1_2 $ver1_3 )"
+        ver2_1="$( echo "$ver2" | cut -d '.' -f 1 )"
+        ver2_2="$( echo "$ver2" | cut -d '.' -f 2 )"
+        ver2_3="$( echo "$ver2" | cut -d '.' -f 3 )"
+        vers2="( $ver2_1 $ver2_2 $ver2_3 )"
 
-# function vercmp_ge() {
-#     # Check if first parameter is greater or equal than second using version string comparision
-#     _vercmp "$1" "$2"
-#     local rc=$?
-#     [ "$rc" -eq 11 -o "$rc" -eq 0 ] && return 0 || return 1
-# }
+        for i in 0 1 2; do
+            sub_vers1="${vers1[$i]}"
+            sub_vers2="${vers2[$i]}"
+            # echo "Comparing item $sub_vers1 vs. $sub_vers2"
+            if [[ "$sub_vers1" != 'stream' && "$sub_vers2" != 'stream' ]]; then
+                if (( sub_vers1 > sub_vers2 )); then
+                    return 11
+                elif (( sub_vers1 < sub_vers2 )); then
+                    return 12
+                fi
+            elif [[ "$sub_vers1" == 'stream' && "$sub_vers2" != 'stream' ]]; then
+                return 11
+            elif [[ "$sub_vers1" != 'stream' && "$sub_vers2" == 'stream' ]]; then
+                return 12
+            fi
+        done
+        return 0
+    fi
+}
+
+function vercmp_gt() {
+    # Check if first parameter is greater than second using version string comparision
+    _vercmp "$1" "$2"
+    local rc=$?
+    (( rc == 11 )) && return 0 || return 1
+}
+
+function vercmp_ge() {
+    # Check if first parameter is greater or equal than second using version string comparision
+    _vercmp "$1" "$2"
+    local rc=$?
+    (( rc == 11 || rc == 0 )) && return 0 || return 1
+}
 
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
