@@ -541,6 +541,14 @@ function ap() {
     return $rc
 }
 
+function as() {
+    local log_relative=$1; shift
+    a "$log_relative" \
+      -m ansible.builtin.shell \
+      -a "$@" \
+      satellite6
+}
+
 function s() {
     log "Sleep for $1 seconds"
     if $run_lib_dryrun; then
