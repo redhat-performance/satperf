@@ -600,6 +600,13 @@ for rex_search_query in $rex_search_queries; do
 done
 
 
+if vercmp_ge "$sat_version" '6.17.0'; then
+    section 'Generate satellite-maintain report'
+    as 95-satellite-maintain_report_generate.log \
+      'satellite-maintain report generate'
+fi
+
+
 section 'Delete all content hosts'
 ap 99-remove-hosts-if-any.log \
   playbooks/satellite/satellite-remove-hosts.yaml
