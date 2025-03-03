@@ -12,9 +12,9 @@ Using the API:
 """
 
 import argparse
+import json
 import logging
 import requests
-import simplejson.scanner
 import sys
 import time
 import urllib3
@@ -39,7 +39,7 @@ def get_json(hostname, uri, username, password):
     )
     try:
         return r.json()
-    except simplejson.scanner.JSONDecodeError:
+    except json.JSONDecodeError:
         logging.error(f"Error parsing json: {r.text}")
         sys.exit(1)
 
@@ -54,7 +54,7 @@ def post_json(hostname, uri, username, password):
     )
     try:
         return r.json()
-    except simplejson.scanner.JSONDecodeError:
+    except json.JSONDecodeError:
         logging.error("Error parsing json: {r.text}")
         sys.exit(1)
 
