@@ -110,6 +110,7 @@ function measurement_row_field() {
 function generic_environment_check() {
     extended="${1:-true}"
     restarted="${2:-true}"
+    wait_for_ping="${3:-false}"
 
     export skip_measurement=true
 
@@ -179,10 +180,23 @@ function generic_environment_check() {
     log "katello_version = $katello_rpm"
     log "satellite_version = $satellite_rpm"
 
-    a 00-check-hammer-ping.log \
-      -m ansible.builtin.shell \
-      -a "hammer $hammer_opts ping" \
-      satellite6
+    if ! $wait_for_ping; then
+        a 00-check-hammer-ping.log \
+          -m ansible.builtin.shell \
+          -a "hammer $hammer_opts ping" \
+          satellite6
+    else
+        while true; do
+            set +e
+
+            a 00-check-hammer-ping.log \
+              -m ansible.builtin.shell \
+              -a "hammer $hammer_opts ping" \
+              satellite6 && break
+
+            set -e
+        done
+    fi
 
     unset skip_measurement
 
