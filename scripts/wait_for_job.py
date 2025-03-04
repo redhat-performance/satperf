@@ -20,7 +20,7 @@ import time
 import urllib3
 
 from datetime import datetime, timezone
-from tenacity import *
+from tenacity import retry
 
 
 def log(args):
@@ -30,7 +30,7 @@ def log(args):
     print(f"[{iso_date_s}] {args}")
 
 
-@retry(stop=(stop_after_delay(10) | stop_after_attempt(10)))
+@retry
 def get_json(hostname, uri, username, password):
     r = requests.get(
       f"https://{hostname}{uri}",
@@ -44,7 +44,7 @@ def get_json(hostname, uri, username, password):
         sys.exit(1)
 
 
-@retry(stop=(stop_after_delay(10) | stop_after_attempt(10)))
+@retry
 def post_json(hostname, uri, username, password):
     r = requests.post(
       f"https://{hostname}{uri}",
