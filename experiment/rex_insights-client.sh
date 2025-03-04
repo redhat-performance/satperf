@@ -10,7 +10,7 @@ opts_adhoc="$opts"
 
 
 section 'Checking environment'
-generic_environment_check false false
+generic_environment_check false false true
 # set +e
 
 
