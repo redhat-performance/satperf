@@ -17,8 +17,14 @@ generic_environment_check false false true
 section 'Remote execution'
 job_template_ssh_default='Run Command - Script Default'
 
+# This step is crucial for the rest of the experiment to succeed
+set -e
+
 skip_measurement=true h 10-rex-set-via-ip.log \
   'settings set --name remote_execution_connect_by_ip --value true'
+
+set +e
+
 skip_measurement=true a 11-rex-cleanup-know_hosts.log \
   -m ansible.builtin.shell \
   -a 'rm -rf /usr/share/foreman-proxy/.ssh/known_hosts*' \
