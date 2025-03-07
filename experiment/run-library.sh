@@ -628,7 +628,6 @@ function h_out() {
 }
 
 function e() {
-    set -x
     # Examine log for specific measure using reg-average.py
     local grepper=$1
     local log=$2
