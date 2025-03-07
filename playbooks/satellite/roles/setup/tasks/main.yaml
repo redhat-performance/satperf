@@ -125,6 +125,26 @@
   ansible.builtin.debug:
     msg: "SatelliteInstallerScenarioSatellite {{ installer_cmd.start }} to {{ installer_cmd.end }} taking {{ duration }} seconds"
 
+- name: Download `installer-profile` tool
+  ansible.builtin.get_url:
+    url: https://raw.githubusercontent.com/theforeman/foreman-installer/3488fe9d2df663280586c261ed2e03818ea95cf8/bin/installer-profile
+    dest: /tmp/installer-profile
+    mode: '0500'
+
+- name: Run `installer-profile` against the current installation log file
+  ansible.builtin.command:
+    cmd: /tmp/installer-profile /var/log/foreman-installer/satellite.log
+  register: installer_profile_cmd
+
+- name: Show `installer-profile` output
+  ansible.builtin.debug:
+    var: installer_profile_cmd.stdout_lines
+
+- name: Print profiled tasks duration
+  ansible.builtin.debug:
+    msg: "SatelliteInstallerProfile{{ item | regex_replace('^([0-9]+).([0-9]+):  (.*)$', '\\3') }} {{ installer_cmd.start }} to {{ installer_cmd.end }} taking {{ item | regex_replace('^([0-9]+).([0-9]+):  (.*)$', '\\1.\\2') }} seconds"
+  loop: "{{ installer_profile_cmd.stdout_lines }}"
+
 - name: "Enable IOP advisor engine"
   ansible.builtin.shell:
     cmd: |
