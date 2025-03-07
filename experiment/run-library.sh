@@ -638,7 +638,7 @@ function e() {
     local started_ts="$( grep '^min in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
     local ended_ts="$( grep '^max in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
     local duration="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $(NF-4)}' )"
-    local passed="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $(NF-4)}' )"
+    local passed="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $(NF-2)}' )"
     local avg_duration="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $NF}' )"
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts) and has taken $avg_duration seconds"
 
