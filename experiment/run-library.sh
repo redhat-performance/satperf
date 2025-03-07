@@ -208,9 +208,9 @@ function get_repo_id() {
     local product=$2
     local repo=$3
     local tmp="$( mktemp )"
-    h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >$tmp
-    grep '^I[Dd]:' $tmp | cut -d ' ' -f 2
-    rm -f $tmp
+    h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >"$tmp"
+    grep '^I[Dd]:' "$tmp" | cut -d ' ' -f 2
+    rm -f "$tmp"
 }
 
 function status_data_create() {
@@ -236,8 +236,8 @@ function status_data_create() {
     # Load variables
     sd_section="${SECTION:-default}"
     sd_cli=$1
-    sd_log=$2
-    sd_name="$( basename $sd_log .log )"   # derive testcase name from log name which is descriptive
+    sd_log="$2"
+    sd_name="$( basename "$sd_log" .log )"   # derive testcase name from log name which is descriptive
     sd_rc=$3
     sd_start="$( date -u -Iseconds -d @$4 )"
     sd_end="$( date -u -Iseconds -d @$5 )"
@@ -295,7 +295,7 @@ function status_data_create() {
       "parameters.version-y-stream=$sd_sat_ver_y" \
       "parameters.run=$sd_run" \
       "parameters.hostname=$sd_hostname" \
-      "results.log=$sd_log" \
+      "results.log='$sd_log'" \
       "results.rc=$sd_rc" \
       "results.duration=$sd_duration" \
       "results.jenkins.build_url=${BUILD_URL:-NA}" \
@@ -335,7 +335,7 @@ function status_data_create() {
         set -x
         pass_or_fail.py \
           --config $PARAM_investigator_config \
-          --current-file "$sd_file" 2>&1 | tee $sd_result_log
+          --current-file "$sd_file" 2>&1 | tee "$sd_result_log"
         pof_rc=$?
         set +x
         set -e
@@ -377,9 +377,9 @@ function status_data_create() {
       --arg release $sd_sat_release \
       --arg version $sd_sat_ver \
       --arg date $sd_start \
-      --arg link $sd_link \
+      --arg link "$sd_link" \
       --arg result_id $sd_run \
-      --arg test $sd_name \
+      --arg test "$sd_name" \
       --arg result $sd_result \
       '{
         "group": "Core Platforms",
@@ -406,32 +406,32 @@ function status_data_create() {
 
     # Enhance log file
     tmp="$( mktemp )"
-    echo "command: $sd_cli" >>$tmp
-    echo "satellite version: $sd_sat_rpm" >>$tmp
-    echo "katello version: $sd_kat_rpm" >>$tmp
-    echo "hostname: $sd_hostname" >>$tmp
+    echo "command: $sd_cli" >>"$tmp"
+    echo "satellite version: $sd_sat_rpm" >>"$tmp"
+    echo "katello version: $sd_kat_rpm" >>"$tmp"
+    echo "hostname: $sd_hostname" >>"$tmp"
     if [[ "$sd_result" != 'ERROR' ]]; then
-        echo 'result determination log:' >>$tmp
-        cat $sd_result_log >>$tmp
+        echo 'result determination log:' >>"$tmp"
+        cat "$sd_result_log" >>"$tmp"
     fi
-    echo >>$tmp
-    cat $sd_log >>$tmp
+    echo >>"$tmp"
+    cat "$sd_log" >>"$tmp"
 
     # Create junit.xml file
-    junit_cli.py --file $logs/junit.xml add \
+    junit_cli.py --file "$logs/junit.xml" add \
       --suite $sd_section \
-      --name $sd_name \
+      --name "$sd_name" \
       --result $sd_result \
-      --out $tmp \
+      --out "$tmp" \
       --start $sd_start \
       --end $sd_end
-    rm -f $sd_result_log $tmp
+    rm -f "$sd_result_log" "$tmp"
 
     # Deactivate tools virtualenv
     deactivate
 
     set +x
-    ) &>$debug_log
+    ) &>"$debug_log"
 }
 
 function junit_upload() {
@@ -460,8 +460,8 @@ function junit_upload() {
     launch_name="$( echo $launch_name | sed 's/[^a-zA-Z0-9._-]/_/g' )"
 
     # Show content and upload to ReportPortal
-    junit_cli.py --file $logs/junit.xml print
-    junit_cli.py --file $logs/junit.xml upload \
+    junit_cli.py --file "$logs/junit.xml" print
+    junit_cli.py --file "$logs/junit.xml" upload \
       --host $PARAM_reportportal_host \
       --project $PARAM_reportportal_project \
       --token $PARAM_reportportal_token \
@@ -500,7 +500,7 @@ function _format_opts() {
 
 function c() {
     local out="$logs/$1"; shift
-    mkdir -p $( dirname $out )
+    mkdir -p "$( dirname $out )"
     local start="$( date -u +%s )"
     log "Start '$*' with log in $out"
     if $run_lib_dryrun; then
@@ -526,7 +526,7 @@ function c() {
 
 function a() {
     local out=$logs/$1; shift
-    mkdir -p $( dirname $out )
+    mkdir -p "$( dirname $out )"
     local start="$( date -u +%s )"
     log "Start 'ansible $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
@@ -561,7 +561,7 @@ function a_out() {
 
 function ap() {
     local out=$logs/$1; shift
-    mkdir -p $( dirname $out )
+    mkdir -p "$( dirname $out )"
     local start="$( date -u +%s )"
     log "Start 'ansible-playbook $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
