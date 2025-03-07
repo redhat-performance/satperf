@@ -263,16 +263,16 @@ function status_data_create() {
     sd_run=$8
     sd_additional=$9
     if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
-        sd_file=$STATUS_DATA_FILE
+        sd_file="$STATUS_DATA_FILE"
     else
         sd_file="$sd_log.json"
-        rm -f $sd_file
+        rm -f "$sd_file"
     fi
     if [ -n "$RDD_FILE" -a -f "$RDD_FILE" ]; then
-        rdd_file=$RDD_FILE
+        rdd_file="$RDD_FILE"
     else
         rdd_file="$sd_log.rdd.json"
-        rm -f $rdd_file
+        rm -f "$rdd_file"
     fi
     if [ -n "$PARAM_inventory" ]; then
         sd_hostname="$( ansible $opts_adhoc \
@@ -285,7 +285,7 @@ function status_data_create() {
 
     # Create status data file
     set -x
-    status_data.py --status-data-file $sd_file --set \
+    status_data.py --status-data-file "$sd_file" --set \
       "id=$sd_run" \
       "name=$sd_section/$sd_name" \
       "parameters.cli=$( echo "$sd_cli" | sed 's/=/__/g' )" \
@@ -309,7 +309,7 @@ function status_data_create() {
     # Add monitoring data to the status data file
     if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
         set -x
-        status_data.py -d --status-data-file $sd_file \
+        status_data.py -d --status-data-file "$sd_file" \
           --additional $PARAM_cluster_read_config \
           --monitoring-start $sd_start \
           --monitoring-end $sd_end \
@@ -335,7 +335,7 @@ function status_data_create() {
         set -x
         pass_or_fail.py \
           --config $PARAM_investigator_config \
-          --current-file $sd_file 2>&1 | tee $sd_result_log
+          --current-file "$sd_file" 2>&1 | tee $sd_result_log
         pof_rc=$?
         set +x
         set -e
@@ -351,7 +351,7 @@ function status_data_create() {
     fi
 
     # Add result to the status data so it is complete
-    status_data.py --status-data-file $sd_file --set \
+    status_data.py --status-data-file "$sd_file" --set \
       "result=$sd_result"
 
     # Upload status data to ElasticSearch
@@ -391,7 +391,7 @@ function status_data_create() {
         "result_id": $result_id,
         "test": $test,
         "result": $result,
-      }' >$rdd_file
+      }' >"$rdd_file"
     set +x
 
     # Upload status data to "results-dashboard-data" ElasticSearch
@@ -628,18 +628,19 @@ function h_out() {
 }
 
 function e() {
+    set -x
     # Examine log for specific measure using reg-average.py
     local grepper=$1
     local log=$2
     local log_report="$( echo $log | sed "s/\.log$/-$grepper.log/" )"
     local hardened_grepper="$( echo $grepper | sed -e 's/\[/\\[/' -e 's/\]/\\]/' )"
-    experiment/reg-average.py "$hardened_grepper" "$log" | sed -e 's/\\\[/[/' -e 's/\\\]/]/' &>$log_report
+    experiment/reg-average.py "$hardened_grepper" "$log" | sed -e 's/\\\[/[/' -e 's/\\\]/]/' &>"$log_report"
     local rc=$?
-    local started_ts="$( grep '^min in' $log_report | tail -n 1 | cut -d ' ' -f 4 )"
-    local ended_ts="$( grep '^max in' $log_report | tail -n 1 | cut -d ' ' -f 4 )"
-    local duration="$( grep "^$hardened_grepper" $log_report | tail -n 1 | cut -d ' ' -f 4 )"
-    local passed="$( grep "^$hardened_grepper" $log_report | tail -n 1 | cut -d ' ' -f 6 )"
-    local avg_duration="$( grep "^$hardened_grepper" $log_report | tail -n 1 | cut -d ' ' -f 8 )"
+    local started_ts="$( grep '^min in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
+    local ended_ts="$( grep '^max in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
+    local duration="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $(NF-4)}' )"
+    local passed="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $(NF-4)}' )"
+    local avg_duration="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $NF}' )"
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts) and has taken $avg_duration seconds"
 
     measurement_add \
