@@ -169,7 +169,7 @@ function generic_environment_check() {
       -a 'rpm -q katello' \
       satellite6
     katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"
-    echo $katello_rpm | grep '^katello-[0-9]\.' # make sure it's been detected correctly
+    echo "$katello_rpm" | grep '^katello-[0-9]\.' # make sure it's been detected correctly
 
     a 00-info-rpm-q-satellite.log \
       -m ansible.builtin.shell \
@@ -249,8 +249,8 @@ function status_data_create() {
           -a 'rpm -q katello' \
           satellite6 2>/dev/null |
           tail -n 1 )"
-    sd_kat_ver_short="$( echo $sd_kat_rpm | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
-    sd_kat_ver_y="$( echo $sd_kat_ver_short | awk -F'.' '{print $1"."$2}' )"
+    sd_kat_ver_short="$( echo "$sd_kat_rpm" | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
+    sd_kat_ver_y="$( echo "$sd_kat_ver_short" | awk -F'.' '{print $1"."$2}' )"
     sd_sat_rpm=$7
     [[ -n $sd_sat_rpm ]] ||
         sd_sat_rpm="$( ansible $opts_adhoc \
@@ -258,8 +258,8 @@ function status_data_create() {
           -a 'rpm -q satellite' \
           satellite6 2>/dev/null |
           tail -n 1 )"
-    sd_sat_ver_short="$( echo $sd_sat_rpm | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
-    sd_sat_ver_y="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
+    sd_sat_ver_short="$( echo "$sd_sat_rpm" | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
+    sd_sat_ver_y="$( echo "$sd_sat_ver_short" | awk -F'.' '{print $1"."$2}' )"
     sd_run=$8
     sd_additional=$9
     if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
@@ -369,9 +369,9 @@ function status_data_create() {
     if [[ "$sat_version" == 'stream' ]]; then
         sd_sat_release=stream
     else
-        sd_sat_release="$( echo $sd_sat_ver_short | awk -F'.' '{print $1"."$2}' )"
+        sd_sat_release="$( echo "$sd_sat_ver_short" | awk -F'.' '{print $1"."$2}' )"
     fi
-    sd_sat_ver=$sd_sat_ver_short
+    sd_sat_ver="$sd_sat_ver_short"
     set -x
     jq -n \
       --arg release $sd_sat_release \
@@ -452,12 +452,12 @@ function junit_upload() {
 
     # Determine ReportPortal launch name
     launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
-    if echo $launch_name | grep -q '%sat_ver%'; then
-        sat_ver="$( echo $satellite_rpm | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
-        [[ -n $sat_ver ]] || sat_ver="$( echo $katello_rpm | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
-        launch_name="$( echo $launch_name | sed "s/%sat_ver%/$sat_ver/g" )"
+    if echo "$launch_name" | grep -q '%sat_ver%'; then
+        sat_ver="$( echo "$satellite_rpm" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        [[ -n $sat_ver ]] || sat_ver="$( echo "$katello_rpm" | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
+        launch_name="$( echo "$launch_name" | sed "s/%sat_ver%/$sat_ver/g" )"
     fi
-    launch_name="$( echo $launch_name | sed 's/[^a-zA-Z0-9._-]/_/g' )"
+    launch_name="$( echo "$launch_name" | sed 's/[^a-zA-Z0-9._-]/_/g' )"
 
     # Show content and upload to ReportPortal
     junit_cli.py --file "$logs/junit.xml" print
@@ -479,7 +479,7 @@ function log() {
 
 function section() {
     name="${1:-default}"
-    label="$( echo $name | sed 's/[^a-zA-Z0-9_-]/_/g' | sed 's/_\+/_/g' )"
+    label="$( echo "$name" | sed 's/[^a-zA-Z0-9_-]/_/g' | sed 's/_\+/_/g' )"
     log "===== $name ====="
     export SECTION=$label
 }
@@ -487,7 +487,7 @@ function section() {
 function _format_opts() {
     out=""
     while [[ -n $1 ]]; do
-        if echo $1 | grep -q ' '; then
+        if echo "$1" | grep -q ' '; then
             out_add="\"$1\""
         else
             out_add=$1
@@ -495,7 +495,7 @@ function _format_opts() {
         out="$out $out_add"
         shift
     done
-    echo $out
+    echo "$out"
 }
 
 function c() {
@@ -631,9 +631,9 @@ function e() {
     # Examine log for specific measure using reg-average.py
     local grepper=$1
     local log=$2
-    local log_report="$( echo $log | sed "s/\.log$/-$grepper.log/" )"
-    local hardened_grepper="$( echo $grepper | sed -e 's/\[/\\[/' -e 's/\]/\\]/' )"
-    experiment/reg-average.py "$hardened_grepper" "$log" | sed -e 's/\\\[/[/' -e 's/\\\]/]/' &>"$log_report"
+    local log_report="$( echo "$log" | sed "s/\.log$/-$grepper.log/" )"
+    local hardened_grepper="$( echo "$grepper" | sed -e 's#\(\[\)#\\\1#' -e 's#\(\]\)#\\\1#' -e 's#\((\)#\\\1#' -e 's#\()\)#\\\1#' )"
+    experiment/reg-average.py "$hardened_grepper" "$log" | sed -e 's#\\\(\[\)#\1#' -e 's#\\\(\]\)#\1#' -e 's#\\\((\)#\1#' -e 's#\\\()\)#\1#' &>"$log_report"
     local rc=$?
     local started_ts="$( grep '^min in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
     local ended_ts="$( grep '^max in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
@@ -666,7 +666,7 @@ function task_examine() {
       satellite6 2>/dev/null |
       tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
     [[ -n $satellite_host ]] || return 2
-    local log_report="$( echo $log | sed 's/\.log$/-duration.log/' )"
+    local log_report="$( echo "$log" | sed 's/\.log$/-duration.log/' )"
 
     scripts/get-task-fuzzy-duration.py \
       --hostname $satellite_host \
@@ -756,8 +756,8 @@ function jsr() {
       satellite6 2>/dev/null |
       grep '"msg":' | cut -d '"' -f 4 )"
     [[ -n $satellite_creds ]] || return 2
-    local satellite_user="$( echo $satellite_creds | cut -d':' -f1 )"
-    local satellite_pass="$( echo $satellite_creds | cut -d':' -f2 )"
+    local satellite_user="$( echo "$satellite_creds" | cut -d':' -f1 )"
+    local satellite_pass="$( echo "$satellite_creds" | cut -d':' -f2 )"
 
     scripts/wait_for_job.py \
       --hostname $satellite_host \
@@ -775,8 +775,8 @@ function extract_task() {
     log=$1
     candidates="$( grep '^Task [0-9a-zA-Z-]\+ running' $log | cut -d ' ' -f 2 | uniq )"
     # Only print if we have exactly one task ID
-    if (( "$( echo $candidates | wc -l | sed 's/^ *//' )" == 1 )); then
-        echo $candidates
+    if (( "$( echo "$candidates" | wc -l | sed 's/^ *//' )" == 1 )); then
+        echo "$candidates"
         return 0
     fi
     return 1
@@ -798,7 +798,7 @@ function extract_job_invocation() {
 
 function table_row() {
     # Format row for results table with average duration
-    local identifier="/$( echo $1 | sed 's/\./\./g' ),"
+    local identifier="/$( echo "$1" | sed 's/\./\./g' ),"
     local description=$2
     local grepper=$3
     export IFS=$'\n'
@@ -812,19 +812,19 @@ function table_row() {
             continue
         fi
         if [ -n "$grepper" ]; then
-            local log="$( echo $row | measurement_row_field 2 )"
+            local log="$( echo "$row" | measurement_row_field 2 )"
             local out="$( experiment/reg-average.py "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )"
-            local passed="$( echo $out | cut -d ' ' -f 6 )"
+            local passed="$( echo "$out" | cut -d ' ' -f 6 )"
             [[ -n $note ]] || note='Number of passed:'
             local note="$note $passed"
-            local diff="$( echo $out | cut -d ' ' -f 8 )"
+            local diff="$( echo "$out" | cut -d ' ' -f 8 )"
             if [ -n "$diff" ]; then
                 (( sum += diff ))
                 (( count++ ))
             fi
         else
-            local start="$( echo $row | measurement_row_field 4 )"
-            local end="$( echo $row | measurement_row_field 5 )"
+            local start="$( echo "$row" | measurement_row_field 4 )"
+            local end="$( echo "$row"| measurement_row_field 5 )"
             (( sum += end - start ))
             (( count++ ))
         fi
