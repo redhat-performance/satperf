@@ -57,11 +57,11 @@ function _vercmp() {
         ver1_1="$( echo "$ver1" | cut -d '.' -f 1 )"
         ver1_2="$( echo "$ver1" | cut -d '.' -f 2 )"
         ver1_3="$( echo "$ver1" | cut -d '.' -f 3 )"
-        vers1="( $ver1_1 $ver1_2 $ver1_3 )"
+        vers1=( $ver1_1 $ver1_2 $ver1_3 )
         ver2_1="$( echo "$ver2" | cut -d '.' -f 1 )"
         ver2_2="$( echo "$ver2" | cut -d '.' -f 2 )"
         ver2_3="$( echo "$ver2" | cut -d '.' -f 3 )"
-        vers2="( $ver2_1 $ver2_2 $ver2_3 )"
+        vers2=( $ver2_1 $ver2_2 $ver2_3 )
 
         for i in 0 1 2; do
             sub_vers1="${vers1[$i]}"
@@ -789,8 +789,8 @@ function extract_job_invocation() {
     log=$1
     candidates="$( grep '^Job invocation [0-9]\+ created' $log | cut -d ' ' -f 3 | uniq )"
     # Only print if we have exactly one job invocation ID
-    if (( "$( echo $candidates | wc -l | sed 's/^ *//' )" == 1 )); then
-        echo $candidates
+    if (( "$( echo "$candidates" | wc -l | sed 's/^ *//' )" == 1 )); then
+        echo "$candidates"
         return 0
     fi
     return 1
@@ -806,7 +806,7 @@ function table_row() {
     local sum=0
     local note=''
     for row in $( grep "$identifier" $logs/measurement.log ); do
-        local rc="$( echo $row | measurement_row_field 3 )"
+        local rc="$( echo "$row" | measurement_row_field 3 )"
         if (( rc != 0 )); then
             echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
             continue
