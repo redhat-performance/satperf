@@ -617,6 +617,8 @@ skip_measurement=true ap sosreporter-gatherer.log \
   -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
   playbooks/satellite/sosreport_gatherer.yaml
 
+section 'Deleting'
+
 #AK Deletion
 for rel in $rels; do
     for lce in $lces; do
