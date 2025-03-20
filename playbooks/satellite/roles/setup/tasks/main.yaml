@@ -3,6 +3,9 @@
   ansible.builtin.set_fact:
     user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
     password: "{{ password | default('{{ sat_pass }}') }}"
+    iop_registry: "{{ iop_registry | default('registry.redhat.io')}}"
+    iop_registry_username: "{{ iop_registry_username | default('user') }}"
+    iop_registry_password: "{{ iop_registry_password | default('password') }}"
 
 - name: "Ensure sat_version is string to avoid hard to detect issues"
   ansible.builtin.assert:
@@ -145,7 +148,31 @@
     msg: "SatelliteInstallerProfile{{ item | regex_replace('^([0-9]+).([0-9]+):  (.*)$', '\\3') }} {{ installer_cmd.start }} to {{ installer_cmd.end }} taking {{ item | regex_replace('^([0-9]+).([0-9]+):  (.*)$', '\\1.\\2') }} seconds"
   loop: "{{ installer_profile_cmd.stdout_lines }}"
 
-- name: "Enable IOP advisor engine"
+- name: Log in to the registry to pull IoP advisor engine container image
+  containers.podman.podman_login:
+    registry: "{{ iop_registry }}"
+    username: "{{ iop_registry_username }}"
+    password: "{{ iop_registry_password }}"
+  when:
+    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+
+- name: Pull IoP advisor engine container image
+  containers.podman.podman_image:
+    name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}"
+  when:
+    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+
+- name: Set IoP advisor engine image in `custom-hiera.yaml`
+  ansible.builtin.lineinfile:
+    path: /etc/foreman-installer/custom-hiera.yaml
+    line: "iop_advisor_engine::image: '{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}'"
+  when:
+    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+
+- name: Enable IoP advisor engine
   ansible.builtin.shell:
     cmd: |
       {{ installer_name }} --foreman-plugin-rh-cloud-enable-iop-advisor-engine true
