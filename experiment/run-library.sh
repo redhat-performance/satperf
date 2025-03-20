@@ -306,21 +306,31 @@ function status_data_create() {
       $sd_additional
     set +x
 
-    # Add monitoring data to the status data file
-    if [ -n "$PARAM_cluster_read_config" -a -n "$PARAM_grafana_host" ]; then
-        set -x
-        status_data.py -d --status-data-file "$sd_file" \
-          --additional $PARAM_cluster_read_config \
-          --monitoring-start $sd_start \
-          --monitoring-end $sd_end \
-          --grafana-host $PARAM_grafana_host \
-          --grafana-port $PARAM_grafana_port \
-          --grafana-prefix $PARAM_grafana_prefix \
-          --grafana-datasource $PARAM_grafana_datasource \
-          --grafana-interface $PARAM_grafana_interface \
-          --grafana-token $PARAM_grafana_token \
-          --grafana-node $PARAM_grafana_node
-        set +x
+    # Add monitoring data to the status data file (*.log.json)
+    if [[ -n "$PARAM_grafana_host" ]] && [[ -n "$PARAM_cluster_read_config" ]]; then
+        local grafana_nodes="$( ansible $opts_adhoc \
+          --list-hosts \
+          satellite6,capsules 2>/dev/null | \
+          grep -v '^  hosts' | \
+          sed -e 's/^\s\+//' -e 's/\s\+$//' | sed 's/\./_/g' )"
+
+        for PARAM_grafana_node in $grafana_nodes; do
+            set -x
+            # `node_short` will be used as Jinja2 variable in `$PARAM_cluster_read_config`
+            node_short="$( echo $PARAM_grafana_node | cut -d'_' -f1 )" status_data.py -d \
+              --status-data-file "$sd_file" \
+              --additional $PARAM_cluster_read_config \
+              --monitoring-start $sd_start \
+              --monitoring-end $sd_end \
+              --grafana-host $PARAM_grafana_host \
+              --grafana-port $PARAM_grafana_port \
+              --grafana-prefix $PARAM_grafana_prefix \
+              --grafana-datasource $PARAM_grafana_datasource \
+              --grafana-interface $PARAM_grafana_interface \
+              --grafana-token $PARAM_grafana_token \
+              --grafana-node $PARAM_grafana_node
+            set +x
+        done
     fi
 
     # Only continue uploading results to ES and RP if `GOLDEN`
