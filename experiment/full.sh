@@ -17,9 +17,9 @@ sat_client_product='Satellite Client'
 repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 
 rhosp_product=RHOSP
-rhosp_registry_url="${PARAM_rhosp_registry_url:-https://registry.example.io}"
+rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}"
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
-rhosp_registry_password="${PARAM_rhosp_registry_password:-pass}"
+rhosp_registry_password="${PARAM_rhosp_registry_password:-password}"
 
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-64}"
 
