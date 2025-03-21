@@ -334,7 +334,6 @@ for rel in $rels; do
         cv_osp="CV_${rel}-osp"
 
         h "40-cv-create-rhosp-${rel}.log" "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
-
         h "40-cv-publish-rhosp-${rel}.log" "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
 
         # CCV with RHOSP
