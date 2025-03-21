@@ -612,38 +612,39 @@ ap 99-remove-hosts-if-any.log \
   playbooks/satellite/satellite-remove-hosts.yaml
 
 
-section 'Sosreport'
-skip_measurement=true ap sosreporter-gatherer.log \
-  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
-  playbooks/satellite/sosreport_gatherer.yaml
-
-section 'Deleting'
-
-#AK Deletion
+section 'Delete base LCE(s), CCV(s) and AK(s)'
+# AK deletion
 for rel in $rels; do
     for lce in $lces; do
         ak="AK_${rel}_${lce}"
-        h "100-ak-delete-${lce}.log" "activation-key delete --organization-id '{{ sat_org }}' --name '$ak' --lifecycle-environment '$lce'"
+        h "100-ak-delete-${rel}-${lce}.log" "activation-key delete --organization '{{ sat_org }}' --name '$ak' --lifecycle-environment '$lce'"
     done
 done
 
-#LCE Deletion
+# LCE deletion
 for lce in $lces; do
-    h "101-lce-delete-${lce}.log" "lifecycle-environment delete --organization-id '{{ sat_org }}' --name '$lce'"
+    h "101-lce-delete-${lce}.log" "lifecycle-environment delete --organization '{{ sat_org }}' --name '$lce'"
 done
 
-#CVV deletion
+# CVV deletion
 for rel in $rels; do
     ccv="CCV_$rel"
     h "102-ccv-delete-${rel}.log" "content-view delete --organization '{{ sat_org }}' --name '$ccv'"
 done
 
-#Repository Deletion
+# Repository deletion
 for os_rid in $os_rids; do
     h "103-repository-delete-${os_rid}.log" "repository delete --organization '{{ sat_org }}' --name '$os_rid'"
 done
 
-#Product Deletion
+# Product deletion
 h "104-product-delete-${os_product}.log" "product delete --organization '{{ sat_org }}' --name '$os_product'"
+
+
+section 'Sosreport'
+skip_measurement=true ap sosreporter-gatherer.log \
+  -e "sosreport_gatherer_local_dir='../../$logs/sosreport/'" \
+  playbooks/satellite/sosreport_gatherer.yaml
+
 
 junit_upload
