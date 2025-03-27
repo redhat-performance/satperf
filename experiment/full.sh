@@ -628,6 +628,7 @@ done
 # CVV deletion
 for rel in $rels; do
     ccv="CCV_$rel"
+
     h "102-ccv-delete-${rel}.log" "content-view delete --organization '{{ sat_org }}' --name '$ccv'"
 done
 
@@ -637,7 +638,10 @@ for os_rid in $os_rids; do
 done
 
 # Product deletion
-h "104-product-delete-${os_product}.log" "product delete --organization '{{ sat_org }}' --name '$os_product'"
+# Satellite Client
+h 104-product-delete-sat-client.log "product delete --organization '{{ sat_org }}' --name '$sat_client_product'"
+# RHOSP
+h 104-product-delete-rhosp.log "product delete --organization '{{ sat_org }}' --name '$rhosp_product'"
 
 
 section 'Sosreport'
