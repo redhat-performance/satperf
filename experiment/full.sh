@@ -261,7 +261,7 @@ h 33-cv-filtered-publish.log "content-view publish --organization '{{ sat_org }}
 export skip_measurement=true
 section 'Get Satellite Client content'
 # Satellite Client
-h 30-sat-client-product-create.log "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
+h 30-product-create-sat-client.log "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
 
 for rel in $rels; do
     ccv="CCV_${rel}"
