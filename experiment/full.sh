@@ -616,7 +616,7 @@ section 'Delete base LCE(s), CCV(s) and AK(s)'
 for rel in $rels; do
     for lce in $lces; do
         ak="AK_${rel}_${lce}"
-        h "100-ak-delete-${rel}-${lce}.log" "activation-key delete --organization '{{ sat_org }}' --name '$ak' --lifecycle-environment '$lce'"
+        h "100-ak-delete-${rel}-${lce}.log" "activation-key delete --organization '{{ sat_org }}' --name '$ak'"
     done
 done
 
