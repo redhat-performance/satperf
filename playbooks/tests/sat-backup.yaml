@@ -25,17 +25,28 @@
         cmd: satellite-maintain backup online -y {{ backup_online_dir }}
       environment:
         TZ: UTC
+        LANG: en_US.utf-8
       register: backup_online_cmd
+      ignore_errors: true
 
-    - name: "Calculate online backup duration"
+    - name: Show Satellite online backup output if it has failed
+      ansible.builtin.debug:
+        var: backup_online_cmd.stdout_lines
+      when:
+        backup_online_cmd is failed
+
+    - name: End play when Satellite online backup has failed
+      ansible.builtin.meta: end_play
+      when:
+        backup_online_cmd is failed
+
+    - name: Calculate online backup duration
       ansible.builtin.set_fact:
         backup_online_cmd_duration: "{{ (backup_online_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (backup_online_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
-      when: "backup_online_cmd.rc is defined and backup_online_cmd.rc == 0"
 
     - name: Print the online backup duration
       ansible.builtin.debug:
         msg: "BackupOnline {{ backup_online_cmd.start }} to {{ backup_online_cmd.end }} taking {{ backup_online_cmd_duration }} seconds"
-      when: "backup_online_cmd.rc is defined and backup_online_cmd.rc == 0"
 
     - name: Run the online backup restoration script
       ansible.builtin.shell:
@@ -44,16 +55,26 @@
         TZ: UTC
         LANG: en_US.utf-8
       register: restore_online_cmd
+      ignore_errors: true
 
-    - name: "Calculate online backup restore duration"
+    - name: Show Satellite online restore output if it has failed
+      ansible.builtin.debug:
+        var: restore_online_cmd.stdout_lines
+      when:
+        restore_online_cmd is failed
+
+    - name: End play when Satellite online restore has failed
+      ansible.builtin.meta: end_play
+      when:
+        restore_online_cmd is failed
+
+    - name: Calculate online backup restore duration
       ansible.builtin.set_fact:
         restore_online_cmd_duration: "{{ (restore_online_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (restore_online_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
-      when: "restore_online_cmd.rc is defined and restore_online_cmd.rc == 0"
 
     - name: Print the online backup restore duration
       ansible.builtin.debug:
         msg: "RestoreOnline {{ restore_online_cmd.start }} to {{ restore_online_cmd.end }} taking {{ restore_online_cmd_duration }} seconds"
-      when: "restore_online_cmd.rc is defined and restore_online_cmd.rc == 0"
 
     - name: Cleanup the online backup directory
       ansible.builtin.file:
@@ -65,17 +86,28 @@
         cmd: satellite-maintain backup offline -y {{ backup_offline_dir }}
       environment:
         TZ: UTC
+        LANG: en_US.utf-8
       register: backup_offline_cmd
+      ignore_errors: true
 
-    - name: "Calculate offline backup duration"
+    - name: Show Satellite offline backup output if it has failed
+      ansible.builtin.debug:
+        var: backup_offline_cmd.stdout_lines
+      when:
+        backup_offline_cmd is failed
+
+    - name: End play when Satellite offline backup has failed
+      ansible.builtin.meta: end_play
+      when:
+        backup_offline_cmd is failed
+
+    - name: Calculate offline backup duration
       ansible.builtin.set_fact:
         backup_offline_cmd_duration: "{{ (backup_offline_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (backup_offline_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
-      when: "backup_offline_cmd.rc is defined and backup_offline_cmd.rc == 0"
 
     - name: Print the offline backup duration
       ansible.builtin.debug:
         msg: "BackupOffline {{ backup_offline_cmd.start }} to {{ backup_offline_cmd.end }} taking {{ backup_offline_cmd_duration }} seconds"
-      when: "backup_offline_cmd.rc is defined and backup_offline_cmd.rc == 0"
 
     - name: Run the offline backup restoration script
       ansible.builtin.shell:
@@ -84,16 +116,26 @@
         TZ: UTC
         LANG: en_US.utf-8
       register: restore_offline_cmd
+      ignore_errors: true
 
-    - name: "Calculate offline backup restore duration"
+    - name: Show Satellite offline restore output if it has failed
+      ansible.builtin.debug:
+        var: restore_offline_cmd.stdout_lines
+      when:
+        restore_offline_cmd is failed
+
+    - name: End play when Satellite offline restore has failed
+      ansible.builtin.meta: end_play
+      when:
+        restore_offline_cmd is failed
+
+    - name: Calculate offline backup restore duration
       ansible.builtin.set_fact:
         restore_offline_cmd_duration: "{{ (restore_offline_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (restore_offline_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
-      when: "restore_offline_cmd.rc is defined and restore_offline_cmd.rc == 0"
 
     - name: Print the offline backup restore duration
       ansible.builtin.debug:
         msg: "RestoreOffline {{ restore_offline_cmd.start }} to {{ restore_offline_cmd.end }} taking {{ restore_offline_cmd_duration }} seconds"
-      when: "restore_offline_cmd.rc is defined and restore_offline_cmd.rc == 0"
 
     - name: Cleanup the offline backup directory
       ansible.builtin.file:
