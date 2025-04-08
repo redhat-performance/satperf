@@ -6,6 +6,7 @@
     iop_registry: "{{ iop_registry | default('registry.redhat.io')}}"
     iop_registry_username: "{{ iop_registry_username | default('user') }}"
     iop_registry_password: "{{ iop_registry_password | default('password') }}"
+    iop_registry_tag: "{{ iop_registry_tag | default('latest') }}"
 
 - name: "Ensure sat_version is string to avoid hard to detect issues"
   ansible.builtin.assert:
@@ -159,7 +160,7 @@
 
 - name: Pull IoP advisor engine container image
   containers.podman.podman_image:
-    name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}"
+    name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}"
   when:
     - disable_iop is not defined or (disable_iop is defined and not disable_iop)
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
@@ -167,7 +168,7 @@
 - name: Set IoP advisor engine image in `custom-hiera.yaml`
   ansible.builtin.lineinfile:
     path: /etc/foreman-installer/custom-hiera.yaml
-    line: "iop_advisor_engine::image: '{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}'"
+    line: "iop_advisor_engine::image: '{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}'"
   when:
     - disable_iop is not defined or (disable_iop is defined and not disable_iop)
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
