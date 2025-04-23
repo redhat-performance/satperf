@@ -623,6 +623,43 @@ function ap() {
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker"
+
+    return $rc
+}
+
+function apj() {
+    if $run_lib_dryrun; then
+        log 'FAKE ansible-playbook RUN'
+
+        return 0
+    fi
+
+    local test=$1; shift
+    local play_out_json="$logs/$test.json"
+
+    mkdir -p "$logs"
+    log "Start 'ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $*' with JSON log in $play_out_json"
+    ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json && local rc=$? || local rc=$?
+
+    # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
+    local play_start_z="$( jq '.plays[0].play.duration.start' $play_out_json )"
+    local play_end_z="$( jq '.plays[0].play.duration.end' $play_out_json )"
+    local play_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+    local play_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+    local play_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
+    log "Finish after $play_duration seconds with JSON log in $play_out_json and exit code $rc"
+
+    measurement_add \
+      "ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
+      "$play_out_json" \
+      "$rc" \
+      "$play_start" \
+      "$play_end" \
+      "$play_duration" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
+      "$marker"
+
     return $rc
 }
 
