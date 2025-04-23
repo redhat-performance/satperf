@@ -1,0 +1,17 @@
+---
+- hosts: localhost
+  gather_facts: false
+  vars:
+    foreman_manifest_path: "{{ manifest_path | default('~/.ansible/tmp/manifest.zip') }}"
+    test_runs: "{{ runs | default(1) }}"
+  tasks:
+    - name: Run test cyle of import + refresh + delete the manifest
+      include_tasks: includes/manifest_test.yaml
+      vars:
+        foreman_manifest_download: false
+        foreman_manifest_import: true
+        foreman_manifest_refresh: true
+        foreman_manifest_delete: true
+      loop: "{{ range(test_runs | int) | list }}"
+      ignore_errors: true
+...
