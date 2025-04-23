@@ -496,14 +496,18 @@ function section() {
 }
 
 function _format_opts() {
-    out=""
+    out=''
     while [[ -n $1 ]]; do
         if echo "$1" | grep -q ' '; then
             out_add="\"$1\""
         else
             out_add=$1
         fi
-        out="$out $out_add"
+        if [[ -z "$out" ]]; then
+            out="$out_add"
+        else
+            out+=" $out_add"
+        fi
         shift
     done
     echo "$out"
