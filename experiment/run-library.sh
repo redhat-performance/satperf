@@ -103,6 +103,7 @@ function measurement_add() {
         status_data_create "$@"
     fi
 }
+
 function measurement_row_field() {
     python3 -c "import csv; import sys; reader=csv.reader(sys.stdin); print list(reader)[0][int(sys.argv[1])-1]" $1
 }
