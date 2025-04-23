@@ -598,21 +598,24 @@ function a_out() {
 }
 
 function ap() {
-    local out=$logs/$1; shift
-    mkdir -p "$( dirname $out )"
-    local start="$( date -u +%s )"
-    log "Start 'ansible-playbook $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log 'FAKE ansible-playbook RUN'
-        local rc=0
-    else
-        ansible-playbook $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
+
+        return 0
     fi
+
+    local out=$logs/$1; shift
+    local start="$( date -u +%s )"
+
+    mkdir -p "$logs"
+    log "Start 'ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc $*' with log in $out"
+    ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
+
     local end="$( date -u +%s )"
     log "Finish after $(( end - start )) seconds with log in $out and exit code $rc"
 
     measurement_add \
-      "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
+      "ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
       "$out" \
       "$rc" \
       "$start" \
