@@ -209,6 +209,7 @@ function get_repo_id() {
     local product=$2
     local repo=$3
     local tmp="$( mktemp )"
+
     h_out "--output yaml repository info --organization '$organization' --product '$product' --name '$repo'" >"$tmp"
     grep '^I[Dd]:' "$tmp" | cut -d ' ' -f 2
     rm -f "$tmp"
@@ -491,6 +492,7 @@ function log() {
 function section() {
     name="${1:-default}"
     label="$( echo "$name" | sed 's/[^a-zA-Z0-9_-]/_/g' | sed 's/_\+/_/g' )"
+
     log "===== $name ====="
     export SECTION=$label
 }
@@ -562,6 +564,7 @@ function a() {
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker"
+
     return $rc
 }
 
@@ -602,6 +605,7 @@ function ap() {
 
 function as() {
     local log_relative=$1; shift
+
     a "$log_relative" \
       -m ansible.builtin.shell \
       -a "$@" \
@@ -619,6 +623,7 @@ function s() {
 
 function h() {
     local log_relative=$1; shift
+
     a "$log_relative" \
       -m ansible.builtin.shell \
       -a "hammer $hammer_opts $@" \
@@ -628,6 +633,7 @@ function h() {
 function h_drop() {
     # Run hammer command as usual, but drop its stdout
     local log_relative=$1; shift
+
     a "$log_relative" \
       -m ansible.builtin.shell \
       -a "hammer $hammer_opts $@ >/dev/null" \
