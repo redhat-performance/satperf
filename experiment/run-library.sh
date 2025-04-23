@@ -237,14 +237,27 @@ function status_data_create() {
 
     # Load variables
     sd_section="${SECTION:-default}"
-    sd_cli=$1
-    sd_log="$2"
-    sd_name="$( basename "$sd_log" .log )"   # derive testcase name from log name which is descriptive
-    sd_rc=$3
-    sd_start="$( date -u -Iseconds -d @$4 )"
-    sd_end="$( date -u -Iseconds -d @$5 )"
-    sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
-    sd_kat_rpm=$6
+    sd_cli=$1; shift
+    sd_log="$1"; shift
+    sd_rc=$1; shift
+    if [[ "$1" =~ [[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.*\+[[:digit:]]{2}:[[:digit:]]{2} ]]; then
+        sd_start=$1; shift
+    else
+        sd_start_seconds=$1; shift
+        sd_start="$( date -u -Iseconds -d @$sd_start_seconds )"
+    fi
+    if [[ "$1" =~ [[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.*\+[[:digit:]]{2}:[[:digit:]]{2} ]]; then
+        sd_end=$1; shift
+    else
+        sd_end_seconds=$1; shift
+        sd_end="$( date -u -Iseconds -d @$sd_end_seconds )"
+    fi
+    if [[ "$1" =~ [[:digit:]]+\.[[:digit:]]{6} ]]; then
+        sd_duration=$1; shift
+    else
+        sd_duration="$(( $( date -d @$sd_end_seconds +%s ) - $( date -d @$sd_start_seconds +%s ) ))"
+    fi
+    sd_kat_rpm=$1; shift
     [[ -n $sd_kat_rpm ]] ||
         sd_kat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
@@ -253,7 +266,7 @@ function status_data_create() {
           tail -n 1 )"
     sd_kat_ver_short="$( echo "$sd_kat_rpm" | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
     sd_kat_ver_y="$( echo "$sd_kat_ver_short" | awk -F'.' '{print $1"."$2}' )"
-    sd_sat_rpm=$7
+    sd_sat_rpm=$1; shift
     [[ -n $sd_sat_rpm ]] ||
         sd_sat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
@@ -262,8 +275,15 @@ function status_data_create() {
           tail -n 1 )"
     sd_sat_ver_short="$( echo "$sd_sat_rpm" | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
     sd_sat_ver_y="$( echo "$sd_sat_ver_short" | awk -F'.' '{print $1"."$2}' )"
-    sd_run=$8
-    sd_additional=$9
+    sd_run=$1; shift
+    sd_additional=$1
+
+    # derive testcase name from log name which is descriptive
+    if [[ "$sd_log" =~ \.json$ ]]; then
+        sd_name="$( basename "$sd_log" .json )"
+    elif [[ "$sd_log" =~ \.log$ ]]; then
+        sd_name="$( basename "$sd_log" .log )"
+    fi
     if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
         sd_file="$STATUS_DATA_FILE"
     else
