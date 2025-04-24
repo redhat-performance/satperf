@@ -5,7 +5,8 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 sat_version="${PARAM_sat_version:-stream}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
+
+manifest_exercise_runs="${PARAM_manifest_exercise_runs:-5}"
 
 rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9 rhel10}"
 
@@ -96,15 +97,21 @@ done
 
 
 section 'Prepare for Red Hat content'
-skip_measurement=true ap 01-manifest-excercise.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "manifest=../../$manifest" \
-  playbooks/tests/manifest-excercise.yaml
-e ManifestUpload "$logs/01-manifest-excercise.log"
-e ManifestRefresh "$logs/01-manifest-excercise.log"
-e ManifestDelete "$logs/01-manifest-excercise.log"
-skip_measurement=true h 02-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-h 02-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+test=00-manifest-test-download
+skip_measurement=true apj $test \
+  playbooks/tests/manifest_test_download.yaml
+
+test=01-manifest-excercise
+skip_measurement=true apj $test \
+  -e runs=$manifest_exercise_runs \
+  playbooks/tests/manifest_test.yaml
+ej ManifestImport $test
+ej ManifestRefresh $test
+ej ManifestDelete $test
+
+test=02-manifest-test-reimport
+skip_measurement=true apj $test \
+  playbooks/tests/manifest_test_reimport.yaml
 
 
 section 'Sync OS from CDN'

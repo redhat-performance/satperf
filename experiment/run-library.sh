@@ -237,14 +237,27 @@ function status_data_create() {
 
     # Load variables
     sd_section="${SECTION:-default}"
-    sd_cli=$1
-    sd_log="$2"
-    sd_name="$( basename "$sd_log" .log )"   # derive testcase name from log name which is descriptive
-    sd_rc=$3
-    sd_start="$( date -u -Iseconds -d @$4 )"
-    sd_end="$( date -u -Iseconds -d @$5 )"
-    sd_duration="$(( $( date -d @$5 +%s ) - $( date -d @$4 +%s ) ))"
-    sd_kat_rpm=$6
+    sd_cli=$1; shift
+    sd_log="$1"; shift
+    sd_rc=$1; shift
+    if [[ "$1" =~ [[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.*\+[[:digit:]]{2}:[[:digit:]]{2} ]]; then
+        sd_start=$1; shift
+    else
+        sd_start_seconds=$1; shift
+        sd_start="$( date -u -Iseconds -d @$sd_start_seconds )"
+    fi
+    if [[ "$1" =~ [[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.*\+[[:digit:]]{2}:[[:digit:]]{2} ]]; then
+        sd_end=$1; shift
+    else
+        sd_end_seconds=$1; shift
+        sd_end="$( date -u -Iseconds -d @$sd_end_seconds )"
+    fi
+    if [[ "$1" =~ [[:digit:]]+\.[[:digit:]]{6} ]]; then
+        sd_duration=$1; shift
+    else
+        sd_duration="$(( $( date -d @$sd_end_seconds +%s ) - $( date -d @$sd_start_seconds +%s ) ))"
+    fi
+    sd_kat_rpm=$1; shift
     [[ -n $sd_kat_rpm ]] ||
         sd_kat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
@@ -253,7 +266,7 @@ function status_data_create() {
           tail -n 1 )"
     sd_kat_ver_short="$( echo "$sd_kat_rpm" | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
     sd_kat_ver_y="$( echo "$sd_kat_ver_short" | awk -F'.' '{print $1"."$2}' )"
-    sd_sat_rpm=$7
+    sd_sat_rpm=$1; shift
     [[ -n $sd_sat_rpm ]] ||
         sd_sat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
@@ -262,8 +275,15 @@ function status_data_create() {
           tail -n 1 )"
     sd_sat_ver_short="$( echo "$sd_sat_rpm" | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
     sd_sat_ver_y="$( echo "$sd_sat_ver_short" | awk -F'.' '{print $1"."$2}' )"
-    sd_run=$8
-    sd_additional=$9
+    sd_run=$1; shift
+    sd_additional=$1
+
+    # derive testcase name from log name which is descriptive
+    if [[ "$sd_log" =~ \.json$ ]]; then
+        sd_name="$( basename "$sd_log" .json )"
+    elif [[ "$sd_log" =~ \.log$ ]]; then
+        sd_name="$( basename "$sd_log" .log )"
+    fi
     if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
         sd_file="$STATUS_DATA_FILE"
     else
@@ -578,21 +598,24 @@ function a_out() {
 }
 
 function ap() {
-    local out=$logs/$1; shift
-    mkdir -p "$( dirname $out )"
-    local start="$( date -u +%s )"
-    log "Start 'ansible-playbook $opts_adhoc $*' with log in $out"
     if $run_lib_dryrun; then
         log 'FAKE ansible-playbook RUN'
-        local rc=0
-    else
-        ansible-playbook $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
+
+        return 0
     fi
+
+    local out=$logs/$1; shift
+    local start="$( date -u +%s )"
+
+    mkdir -p "$logs"
+    log "Start 'ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc $*' with log in $out"
+    ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc "$@" &>$out && local rc=$? || local rc=$?
+
     local end="$( date -u +%s )"
     log "Finish after $(( end - start )) seconds with log in $out and exit code $rc"
 
     measurement_add \
-      "ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
+      "ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
       "$out" \
       "$rc" \
       "$start" \
@@ -600,6 +623,43 @@ function ap() {
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker"
+
+    return $rc
+}
+
+function apj() {
+    if $run_lib_dryrun; then
+        log 'FAKE ansible-playbook RUN'
+
+        return 0
+    fi
+
+    local test=$1; shift
+    local play_out_json="$logs/$test.json"
+
+    mkdir -p "$logs"
+    log "Start 'ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $*' with JSON log in $play_out_json"
+    ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json && local rc=$? || local rc=$?
+
+    # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
+    local play_start_z="$( jq '.plays[0].play.duration.start' $play_out_json )"
+    local play_end_z="$( jq '.plays[0].play.duration.end' $play_out_json )"
+    local play_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+    local play_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+    local play_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
+    log "Finish after $play_duration seconds with JSON log in $play_out_json and exit code $rc"
+
+    measurement_add \
+      "ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
+      "$play_out_json" \
+      "$rc" \
+      "$play_start" \
+      "$play_end" \
+      "$play_duration" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
+      "$marker"
+
     return $rc
 }
 
@@ -673,6 +733,64 @@ function e() {
       "$satellite_rpm" \
       "$marker" \
       "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
+}
+
+function ej() {
+    if $run_lib_dryrun; then
+        log 'FAKE ansible-playbook RUN'
+
+        return 0
+    fi
+
+    local task_name=$1; shift
+    local test=$1; shift
+    local play_out_json="$logs/$test.json"
+    local play_out_json_prefix="$( echo $play_out_json | cut -d'.' -f1 )"
+    local tasks_out_json="$play_out_json_prefix-$task_name.json"
+
+    jq --arg TASK_NAME "$task_name" \
+      '.plays[0].tasks[] | select(.task.name==$TASK_NAME and .hosts.localhost.changed) | .task' \
+      $play_out_json >$tasks_out_json
+
+    task_ids="$( jq -r '.id' $tasks_out_json )"
+
+    local num_tasks=0
+    local aggregated_task_duration=0
+    for task_id in $task_ids; do
+        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
+        local task_start_z="$( jq --arg TASK_ID "$task_id" \
+          'select(.id==$TASK_ID) | .duration.start' \
+          $tasks_out_json )"
+        local task_end_z="$( jq --arg TASK_ID "$task_id" \
+          'select(.id==$TASK_ID) | .duration.end' \
+          $tasks_out_json )"
+        local task_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local task_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local task_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
+        if (( num_tasks == 0 )); then
+            local first_task_start=$task_start
+        fi
+        local last_task_end=$task_end
+        local aggregated_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration + $task_duration))" )"
+        (( num_tasks++ ))
+    done
+    local average_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration / $num_tasks))" )"
+    local rc=0
+    log "Examined $tasks_out_json for $task_name: $aggregated_task_duration / $num_tasks = $average_task_duration (ranging from $first_task_start to $last_task_end) and has taken $average_task_duration seconds"
+
+    measurement_add \
+      "experiment/reg-average.py '$task_name' '$play_out_json'" \
+      "$tasks_out_json" \
+      "$rc" \
+      "$first_task_start" \
+      "$last_task_end" \
+      "$aggregated_task_duration" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
+      "$marker" \
+      "results.items.duration=$aggregated_task_duration results.items.passed=$num_tasks results.items.avg_duration=$average_task_duration results.items.report_rc=$rc"
+
+    return $rc
 }
 
 function task_examine() {

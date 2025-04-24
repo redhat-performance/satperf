@@ -1,0 +1,14 @@
+---
+- hosts: localhost
+  gather_facts: false
+  vars:
+    foreman_manifest_path: "{{ manifest_path | default('~/.ansible/tmp/manifest.zip') }}"
+  tasks:
+    - name: Download the manifest
+      theforeman.foreman.redhat_manifest:
+        validate_certs: "{{ foreman_rhsm_validate_certs }}"
+        uuid: "{{ foreman_manifest_uuid }}"
+        username: "{{ foreman_rhsm_username }}"
+        password: "{{ foreman_rhsm_password }}"
+        path: "{{ foreman_manifest_path }}"
+...

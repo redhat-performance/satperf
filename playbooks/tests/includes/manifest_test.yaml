@@ -1,0 +1,41 @@
+---
+- name: ManifestDownload
+  theforeman.foreman.redhat_manifest:
+    validate_certs: "{{ foreman_rhsm_validate_certs }}"
+    uuid: "{{ foreman_manifest_uuid }}"
+    username: "{{ foreman_rhsm_username }}"
+    password: "{{ foreman_rhsm_password }}"
+    path: "{{ foreman_manifest_path }}"
+  when: foreman_manifest_download
+
+- name: ManifestImport
+  theforeman.foreman.subscription_manifest:
+    username: "{{ foreman_username | default(omit) }}"
+    password: "{{ foreman_password | default(omit) }}"
+    server_url: "{{ foreman_server_url | default(omit) }}"
+    validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+    organization: "{{ foreman_organization }}"
+    manifest_path: "{{ foreman_manifest_path }}"
+    # state: present
+  when: foreman_manifest_import
+
+- name: ManifestRefresh
+  theforeman.foreman.subscription_manifest:
+    username: "{{ foreman_username | default(omit) }}"
+    password: "{{ foreman_password | default(omit) }}"
+    server_url: "{{ foreman_server_url | default(omit) }}"
+    validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+    organization: "{{ foreman_organization }}"
+    state: refreshed
+  when: foreman_manifest_refresh
+
+- name: ManifestDelete
+  theforeman.foreman.subscription_manifest:
+    username: "{{ foreman_username | default(omit) }}"
+    password: "{{ foreman_password | default(omit) }}"
+    server_url: "{{ foreman_server_url | default(omit) }}"
+    validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+    organization: "{{ foreman_organization }}"
+    state: absent
+  when: foreman_manifest_delete
+...
