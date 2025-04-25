@@ -680,10 +680,10 @@ function as() {
 }
 
 function s() {
-    log "Sleep for $1 seconds"
     if $run_lib_dryrun; then
         log 'FAKE SLEEP'
     else
+        log "Sleep for $1 seconds"
         sleep $1
     fi
 }
