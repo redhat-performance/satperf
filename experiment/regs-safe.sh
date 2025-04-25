@@ -5,7 +5,7 @@ source experiment/run-library.sh
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 sat_version="${PARAM_sat_version:-stream}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
+manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 
 rels="${PARAM_rels:-rhel8 rhel9 rhel10}"
 
