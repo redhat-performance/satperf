@@ -22,7 +22,7 @@ rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
 rhosp_registry_password="${PARAM_rhosp_registry_password:-password}"
 
-initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-64}"
+initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
 profile="${PARAM_profile:-false}"
 
