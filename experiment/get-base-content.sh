@@ -4,7 +4,7 @@ source experiment/run-library.sh
 
 branch="${PARAM_branch:-satcpt}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
+manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
 
 rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
 filter_cv="${PARAM_filter_cv:-false}"
@@ -16,7 +16,6 @@ lces="${PARAM_lces:-Test QA Pre Prod}"
 basearch=x86_64
 
 sat_client_product='Satellite Client'
-
 repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 
 rhosp_product=RHOSP
