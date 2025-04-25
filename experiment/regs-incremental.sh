@@ -26,7 +26,7 @@ skip_down_setup="${PARAM_skip_down_setup:-false}"
 skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
 capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
 
-initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-64}"
+initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
 profile="${PARAM_profile:-false}"
 
