@@ -22,6 +22,12 @@ rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
 rhosp_registry_password="${PARAM_rhosp_registry_password:-password}"
 
+flatpak_product=Flatpak
+flatpak_remote=rhel
+flatpak_remote_url="https://${PARAM_flatpak_remote:-https://flatpak.example.io}"
+flatpak_remote_username="${PARAM_flatpak_remote_username:-user}"
+flatpak_remote_password="${PARAM_flatpak_remote_password:-password}"
+
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
 profile="${PARAM_profile:-false}"
@@ -415,6 +421,78 @@ skip_measurement=true ap 40-capsules-sync-rhosp.log \
 e CapusuleSync "$logs/40-capsules-sync-rhosp.log"
 
 
+if vercmp_ge "$sat_version" '6.17.0'; then
+    section 'Get Flatpak content'
+    # Flatpak
+    product="$flatpak_product"
+
+    h "45-product-create-${product}.log" \
+      "product create --organization '{{ sat_org }}' --name '$product'"
+
+    h "45-flatpak-remote-create-${flatpak_remote}.log" \
+      "flatpak-remote create --organization '{{ sat_org }}' --name '$flatpak_remote' --url '${flatpak_remote_url}/${flatpak_remote}' --username '$flatpak_remote_username' --token '$flatpak_remote_password'"
+
+    h "45-flatpak-remote-scan-${flatpak_remote}.log" \
+      "flatpak-remote scan --organization '{{ sat_org }}' --name '$flatpak_remote'"
+
+    h "45-flatpak-remote-remote-repository-list-${flatpak_remote}.log" \
+      "flatpak-remote remote-repository list --organization '{{ sat_org }}' --flatpak-remote '$flatpak_remote'"
+
+    for rel in $rels; do
+        ccv="CCV_${rel}"
+
+        case $rel in
+        rhel[89])
+        # rhel[89]|rhel10)
+            repo_name="${rel}/flatpak-runtime"
+            repo_name_suffix="$(echo ${repo_name} | tr '/' '_')"
+
+            h "45-flatpak-remote-remote-repository-mirror-${repo_name_suffix}.log" \
+              "flatpak-remote remote-repository mirror --organization '{{ sat_org }}' --product '$product' --flatpak-remote '$flatpak_remote' --name '$flatpak_repo_name'"
+
+            h "45-repository-sync-${repo_name_suffix}.log" \
+              "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
+
+            # CV
+            cv="CV_${rel}-${product}"
+            rids="$( get_repo_id '{{ sat_org }}' "$product" "$repo_name" )"
+            content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$repo_name\"' --fields 'Content label'" | tail -n1 )"
+
+            h "45-cv-create-${rel}-flatpak.log" \
+              "content-view create --organization '{{ sat_org }}' --name '$cv' --repository-ids '$rids'"
+            h "45-cv-publish-${rel}-flatpak.log" \
+              "content-view publish --organization '{{ sat_org }}' --name '$cv'"
+
+            # CCV with Flatpak
+            h "45-ccv-component-add-${rel}-flatpak.log" \
+              "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv' --latest"
+            h "45-ccv-publish-${rel}-flatpak.log" \
+              "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
+
+            prior=Library
+            for lce in $lces; do
+                ak="AK_${rel}_${lce}"
+
+                # CCV promotion to LCE
+                h "45-ccv-promote-${rel}-${lce}-flatpak.log" \
+                  "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+
+                prior=$lce
+            done
+            ;;
+        esac
+    done
+
+
+    section 'Push Flatpak content to capsules'
+    skip_measurement=true ap 40-capsules-sync-flatpak.log \
+      -e "organization='{{ sat_org }}'" \
+      -e "lces='$lces'" \
+      playbooks/tests/capsules-sync.yaml
+    e CapusuleSync "$logs/45-capsules-sync-flatpak.log"
+fi
+
+
 section 'Sync yum repo'
 skip_measurement=true ap 80-test-sync-repositories.log \
   -e "organization='{{ sat_org }}'" \
@@ -704,6 +782,11 @@ h 104-product-delete-sat-client.log \
 # RHOSP
 h 104-product-delete-rhosp.log \
   "product delete --organization '{{ sat_org }}' --name '$rhosp_product'"
+if vercmp_ge "$sat_version" '6.17.0'; then
+    # Flatpak
+    h 104-product-delete-flatpak.log \
+      "product delete --organization '{{ sat_org }}' --name '$flatpak_product'"
+fi
 
 
 section 'Sosreport'
