@@ -1,0 +1,29 @@
+---
+- hosts: satellite6
+  gather_facts: False
+  vars:
+   organization_id: "{{ org_id | default(1) }}"
+   search: "{{ search_query | default('container') }}"
+
+  tasks:
+    - name: List all products in the organization
+      command: >
+        hammer --csv --no-headers  product list --organization "{{ organization_name }}" --fields "id"
+      register: product_list
+      changed_when: false
+
+    - name: Loop through each product and get repositories
+      command: hammer --csv --no-headers repository list --product-id "{{ item }}" --organization-id "{{ organization_id }}"
+      with_items: "{{ product_list.stdout_lines }}"
+      register: repositories_list
+
+    - name: Debug the repositories list for each product (for inspection)
+      debug:
+        msg: "Repositories for {{ item }}: {{ repositories_list.stdout_lines }}"
+      loop: "{{ product_list.stdout_lines }}"
+      loop_control:
+        label: "{{ item }}"
+
+# task for activation key
+# task for content view 
+...
