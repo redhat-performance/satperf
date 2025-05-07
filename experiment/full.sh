@@ -485,11 +485,12 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
 
     section 'Push Flatpak content to capsules'
-    skip_measurement=true ap 40-capsules-sync-flatpak.log \
+    test=45-capsules-sync-flatpak
+    skip_measurement=true ap $test.log \
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
       playbooks/tests/capsules-sync.yaml
-    e CapusuleSync "$logs/45-capsules-sync-flatpak.log"
+    e CapusuleSync "$logs/$test.log"
 fi
 
 
