@@ -451,7 +451,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
             repo_name_suffix="$(echo ${repo_name} | tr '/' '_')"
 
             h "45-flatpak-remote-remote-repository-mirror-${repo_name_suffix}.log" \
-              "flatpak-remote remote-repository mirror --organization '{{ sat_org }}' --product '$product' --flatpak-remote '$flatpak_remote' --name '$flatpak_repo_name'"
+              "flatpak-remote remote-repository mirror --organization '{{ sat_org }}' --product '$product' --flatpak-remote '$flatpak_remote' --name '$repo_name'"
 
             h "45-repository-sync-${repo_name_suffix}.log" \
               "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
