@@ -245,11 +245,12 @@ done
 
 
 section 'Push OS content to capsules'
-skip_measurement=true ap 13-capsules-sync-os.log \
+test=13-capsules-sync-os
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/13-capsules-sync-os.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 section 'Publish and promote big CV'
@@ -354,11 +355,12 @@ unset skip_measurement
 
 
 section 'Push Satellite Client content to capsules'
-skip_measurement=true ap 38-capsules-sync-sat-client.log \
+test=38-capsules-sync-sat-client
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/38-capsules-sync-sat-client.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 export skip_measurement=true
@@ -414,11 +416,12 @@ unset skip_measurement
 
 
 section 'Push RHOSP content to capsules'
-skip_measurement=true ap 40-capsules-sync-rhosp.log \
+test=40-capsules-sync-rhosp
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/40-capsules-sync-rhosp.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 if vercmp_ge "$sat_version" '6.17.0'; then
@@ -486,101 +489,108 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
     section 'Push Flatpak content to capsules'
     test=45-capsules-sync-flatpak
-    skip_measurement=true ap $test.log \
+    skip_measurement=true ap ${test}.log \
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
       playbooks/tests/capsules-sync.yaml
-    e CapusuleSync "$logs/$test.log"
+    e CapusuleSync "${logs}/${test}.log"
 fi
 
 
 section 'Sync yum repo'
-skip_measurement=true ap 80-test-sync-repositories.log \
+test=80-test-sync-repositories
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_repositories_count='$test_sync_repositories_count'" \
   -e "test_sync_repositories_url_template='$test_sync_repositories_url_template'" \
   -e "test_sync_repositories_max_sync_secs='$test_sync_repositories_max_sync_secs'" \
   playbooks/tests/sync-repositories.yaml
-e SyncRepositories "$logs/80-test-sync-repositories.log"
-e PublishContentViews "$logs/80-test-sync-repositories.log"
-e PromoteContentViews "$logs/80-test-sync-repositories.log"
+e SyncRepositories "${logs}/${test}.log"
+e PublishContentViews "${logs}/${test}.log"
+e PromoteContentViews "${logs}/${test}.log"
 
 lces+=' test_sync_repositories_le'
 
 
 section 'Push yum content to capsules'
-skip_measurement=true ap 80-capsules-sync-repositories.log \
+test=80-capsules-sync-repositories
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/80-capsules-sync-repositories.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 section 'Sync iso'
-skip_measurement=true ap 81-test-sync-iso.log \
+test=81-test-sync-iso
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_iso_count='$test_sync_iso_count'" \
   -e "test_sync_iso_url_template='$test_sync_iso_url_template'" \
   -e "test_sync_iso_max_sync_secs='$test_sync_iso_max_sync_secs'" \
   playbooks/tests/sync-iso.yaml
-e SyncRepositories "$logs/81-test-sync-iso.log"
-e PublishContentViews "$logs/81-test-sync-iso.log"
-e PromoteContentViews "$logs/81-test-sync-iso.log"
+e SyncRepositories "${logs}/${test}.log"
+e PublishContentViews "${logs}/${test}.log"
+e PromoteContentViews "${logs}/${test}.log"
 
 lces+=' test_sync_iso_le'
 
 
 section 'Push iso content to capsules'
-skip_measurement=true ap 81-capsules-sync-iso.log \
+test=81-capsules-sync-iso
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/81-capsules-sync-iso.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 section 'Sync docker repo'
-skip_measurement=true ap 82-test-sync-docker.log \
+test=82-test-sync-docker
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_docker_count='$test_sync_docker_count'" \
   -e "test_sync_docker_url_template='$test_sync_docker_url_template'" \
   -e "test_sync_docker_max_sync_secs='$test_sync_docker_max_sync_secs'" \
   playbooks/tests/sync-docker.yaml
-e SyncRepositories "$logs/82-test-sync-docker.log"
-e PublishContentViews "$logs/82-test-sync-docker.log"
-e PromoteContentViews "$logs/82-test-sync-docker.log"
+e SyncRepositories "${logs}/${test}.log"
+e PublishContentViews "${logs}/${test}.log"
+e PromoteContentViews "${logs}/${test}.log"
 
 lces+=' test_sync_docker_le'
 
 
 section 'Push docker content to capsules'
-skip_measurement=true ap 82-capsules-sync-docker.log \
+test=82-capsules-sync-docker
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/82-capsules-sync-docker.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 section 'Sync ansible collections'
-skip_measurement=true ap 83-test-sync-ansible-collections.log \
+test=83-test-sync-ansible-collections
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
   -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
   -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
   playbooks/tests/sync-ansible-collections.yaml
-
-e SyncRepositories "$logs/83-test-sync-ansible-collections.log"
-e PublishContentViews "$logs/83-test-sync-ansible-collections.log"
-e PromoteContentViews "$logs/83-test-sync-ansible-collections.log"
+e SyncRepositories "${logs}/${test}.log"
+e PublishContentViews "${logs}/${test}.log"
+e PromoteContentViews "${logs}/${test}.log"
 
 lces+=' test_sync_ansible_collections_le'
 
 
 section 'Push ansible collections content to capsules'
-skip_measurement=true ap 83-capsules-sync-ansible-collections.log \
+test=83-capsules-sync-ansible-collections
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "$logs/83-capsules-sync-ansible-collections.log"
+e CapusuleSync "${logs}/${test}.log"
 
 
 export skip_measurement=true
@@ -630,14 +640,11 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
     concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
     (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
     (( total_registered += concurrent_registrations ))
-
-    registration_log="$prefix-${concurrent_registrations}.log"
-    registration_profile_img="$prefix-${concurrent_registrations}.svg"
-
+    test="$prefix-${concurrent_registrations}"
 
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    skip_measurement=true ap $registration_log \
+    skip_measurement=true ap ${test}.log \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "concurrent_registrations='$concurrent_registrations'" \
       -e "num_retry_forks='$num_retry_forks'" \
@@ -645,49 +652,54 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
       -e "profile='$profile'" \
-      -e "registration_profile_img='$registration_profile_img'" \
+      -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml
-      e Register "$logs/$registration_log"
+      e Register "${logs}/${test}.log"
 done
 grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"
 
 
 section 'Misc simple tests'
-skip_measurement=true ap 50-hammer-list.log \
+test=50-hammer-list
+skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   playbooks/tests/hammer-list.yaml
-e HammerHostList "$logs/50-hammer-list.log"
+e HammerHostList "${logs}/${test}.log"
 
 rm -f /tmp/status-data-webui-pages.json
-skip_measurement=true ap 51-webui-pages.log \
+test=51-webui-pages
+skip_measurement=true ap ${test}.log \
   -e "sat_version='$sat_version'" \
   -e "ui_concurrency='$ui_concurrency'" \
   -e "ui_duration='$ui_duration'" \
   playbooks/tests/webui-pages.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "$logs/51-webui-pages.log"
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
 
 rm -f /tmp/status-data-webui-static-distributed.json
-skip_measurement=true ap 52-webui-static-distributed.log \
+test=52-webui-static-distributed
+skip_measurement=true ap ${test}.log \
   -e "sat_version='$sat_version'" \
   -e "ui_concurrency='$ui_concurrency'" \
   -e "ui_duration='$ui_duration'" \
   -e "ui_max_static_size='$ui_max_static_size'" \
   playbooks/tests/webui-static-distributed.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "$logs/52-webui-static-distributed.log"
+STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
 
-a 53-foreman_inventory_upload-report-generate.log satellite6 \
+a 53-foreman_inventory_upload-report-generate.log \
   -m ansible.builtin.shell \
-  -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate"
+  -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate" \
+  satellite6
 
 
 section 'BackupTest'
-skip_measurement=true ap 55-backup.log \
+test=55-backup
+skip_measurement=true ap ${test}.log \
   playbooks/tests/sat-backup.yaml
-e BackupOffline "$logs/55-backup.log"
-e RestoreOffline "$logs/55-backup.log"
-e BackupOnline "$logs/55-backup.log"
-e RestoreOnline "$logs/55-backup.log"
+e BackupOffline "${logs}/${test}.log"
+e RestoreOffline "${logs}/${test}.log"
+e BackupOnline "${logs}/${test}.log"
+e RestoreOnline "${logs}/${test}.log"
 
 
 section 'Remote execution (ReX)'
@@ -705,30 +717,35 @@ for rex_search_query in $rex_search_queries; do
     num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search 'name ~ $rex_search_query'" | grep -c "$rex_search_query")"
 
     if (( num_matching_rex_hosts > 0 )); then
-      skip_measurement=true h 60-rex-date-${num_matching_rex_hosts}.log \
+      test=60-rex-date-${num_matching_rex_hosts}
+      skip_measurement=true h ${test}.log \
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
-      jsr "$logs/60-rex-date-${num_matching_rex_hosts}.log"
-      j "$logs/60-rex-date-${num_matching_rex_hosts}.log"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
 
-      skip_measurement=true h 61-rex-date-ansible-${num_matching_rex_hosts}.log \
+      test=61-rex-date-ansible-${num_matching_rex_hosts}
+      skip_measurement=true h ${test}.log \
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ $rex_search_query'"
-      jsr "$logs/61-rex-date-ansible-${num_matching_rex_hosts}.log"
-      j "$logs/61-rex-date-ansible-${num_matching_rex_hosts}.log"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
 
-      skip_measurement=true h 62-rex-katello_package_install-podman-${num_matching_rex_hosts}.log \
+      test=62-rex-katello_package_install-podman-${num_matching_rex_hosts}
+      skip_measurement=true h ${test}.log \
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ $rex_search_query'"
-      jsr "$logs/62-rex-katello_package_install-podman-${num_matching_rex_hosts}.log"
-      j "$logs/62-rex-katello_package_install-podman-${num_matching_rex_hosts}.log"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
 
-      skip_measurement=true h 62-rex-podman_pull-${num_matching_rex_hosts}.log \
+      test=62-rex-podman_pull-${num_matching_rex_hosts}
+      skip_measurement=true h ${test}.log \
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
-      jsr "$logs/62-rex-podman_pull-${num_matching_rex_hosts}.log"
-      j "$logs/62-rex-podman_pull-${num_matching_rex_hosts}.log"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
 
-      skip_measurement=true h 65-rex-katello_package_update-${num_matching_rex_hosts}.log \
+      test=65-rex-katello_package_update-${num_matching_rex_hosts}
+      skip_measurement=true h ${test}.log \
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ $rex_search_query'"
-      jsr "$logs/65-rex-katello_package_update-${num_matching_rex_hosts}.log"
-      j "$logs/65-rex-katello_package_update-${num_matching_rex_hosts}.log"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
     fi
 done
 
