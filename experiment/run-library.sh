@@ -21,7 +21,6 @@ opts="${opts:-"--forks 100 -i $inventory"}"
 opts_adhoc="${opts_adhoc:-$opts}"
 logs=$marker
 run_lib_dryrun=false
-hammer_opts='-u admin -p changeme'
 
 # Requirements check
 #if ! type bc >/dev/null; then
@@ -96,6 +95,23 @@ function vercmp_ge() {
     local rc=$?
     (( rc == 11 || rc == 0 )) && return 0 || return 1
 }
+
+function get_inventory_var() {
+    local inventory_var=$1
+
+    ansible $opts_adhoc \
+      -m ansible.builtin.debug \
+      -a "var=$inventory_var" \
+      satellite6 |
+      sed -E 's/.*[[:space:]]*=>[[:space:]]*\{/\{/' |
+      jq -r --arg INVENTORY_VAR "$inventory_var" '.[$INVENTORY_VAR]'
+}
+
+
+foreman_username="$( get_inventory_var foreman_username )"
+foreman_password="$( get_inventory_var foreman_password )"
+hammer_opts="-u $foreman_username -p $foreman_password"
+
 
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
