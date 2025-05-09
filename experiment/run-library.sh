@@ -144,7 +144,7 @@ function generic_environment_check() {
 
     a 00-check-ping-registration-target.log \
       -m ansible.builtin.shell \
-      -a "ping -c 10 {{ tests_registration_target }}" \
+      -a 'ping -c 10 {{ tests_registration_target }}' \
       container_hosts
 
     if $extended; then
@@ -161,7 +161,7 @@ function generic_environment_check() {
 
             a 00-delete-private-connection.log \
               -m ansible.builtin.shell \
-              -a "nmcli con delete {{ private_nic }} 2>/dev/null; echo" \
+              -a 'nmcli con delete {{ private_nic }} 2>/dev/null; echo' \
               container_hosts
 
             ap 00-tierup-containers.log \
