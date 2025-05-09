@@ -58,6 +58,8 @@ ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
 opts="--forks 100 -i $inventory"
 opts_adhoc="$opts"
 
+iop_enabled="$( get_inventory_var enable_iop )"
+
 
 section 'Checking environment'
 generic_environment_check
@@ -740,6 +742,16 @@ for rex_search_query in $rex_search_queries; do
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
       jsr "${logs}/${test}.log"
       j "${logs}/${test}.log"
+
+      if vercmp_ge "$sat_version" '6.17.0'; then
+          if $iop_enabled; then
+              test=63-rex-insigths-client-${num_matching_rex_hosts}
+              skip_measurement=true h ${test}.log \
+                "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='insights-client' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
+              jsr "${logs}/${test}.log"
+              j "${logs}/${test}.log"
+          fi
+      fi
 
       test=65-rex-katello_package_update-${num_matching_rex_hosts}
       skip_measurement=true h ${test}.log \
