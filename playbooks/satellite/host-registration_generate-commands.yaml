@@ -31,11 +31,15 @@
       when:
         - "'capsules' in group_names"
 
-    - name: "Check if Insights client should be installed and configured (it won't be by default)"
+    - name: Check if Insights client should be installed and configured (it won't be by default)
+      # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
       ansible.builtin.set_fact:
-        hgrg: "{{ hgrg }} --setup-insights false"
+        hgrg: "{{ hgrg }} --setup-insights true"
       when:
-        - setup_insights is not defined or not setup_insights
+        - setup_insights is defined and setup_insights
+        # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
+        - enable_iop is defined and enable_iop
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:

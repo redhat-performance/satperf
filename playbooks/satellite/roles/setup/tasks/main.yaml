@@ -80,11 +80,11 @@
   ansible.builtin.set_fact:
     installer_cmd_line: "{{ installer_name }} --scenario {{ scenario }} {{ installer_opts }}"
 
-- name: "Add Insights connection parameter"
+- name: Add Insights connection parameter
   ansible.builtin.set_fact:
     installer_cmd_line: "{{ installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
   when:
-    - setup_insights is not defined or not setup_insights
+    - setup_insights is defined and setup_insights
 
 - name: "Add MQTT transport for remote execution parameter"
   ansible.builtin.set_fact:
@@ -155,14 +155,16 @@
     username: "{{ iop_registry_username }}"
     password: "{{ iop_registry_password }}"
   when:
-    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - setup_insights is defined and setup_insights
+    - enable_iop is defined and enable_iop
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
 
 - name: Pull IoP advisor engine container image
   containers.podman.podman_image:
     name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}"
   when:
-    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - setup_insights is defined and setup_insights
+    - enable_iop is defined and enable_iop
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
 
 - name: Set IoP advisor engine image in `custom-hiera.yaml`
@@ -170,7 +172,8 @@
     path: /etc/foreman-installer/custom-hiera.yaml
     line: "iop_advisor_engine::image: '{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}'"
   when:
-    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - setup_insights is defined and setup_insights
+    - enable_iop is defined and enable_iop
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
 
 - name: Enable IoP advisor engine
@@ -178,7 +181,8 @@
     cmd: |
       {{ installer_name }} --foreman-plugin-rh-cloud-enable-iop-advisor-engine true
   when:
-    - disable_iop is not defined or (disable_iop is defined and not disable_iop)
+    - setup_insights is defined and setup_insights
+    - enable_iop is defined and enable_iop
     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
 
 - name: "Run desired shell commands after installation"
