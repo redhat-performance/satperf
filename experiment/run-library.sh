@@ -131,15 +131,11 @@ function generic_environment_check() {
 
     export skip_measurement=true
 
-    a 00-info-rpm-qa.log \
-      -m ansible.builtin.shell \
-      -a 'rpm -qa | sort' \
-      satellite6
+    as 00-info-rpm-qa.log \
+      'rpm -qa | sort'
 
-    a 00-info-hostname.log \
-      -m ansible.builtin.shell \
-      -a 'hostname' \
-      satellite6
+    as 00-info-hostname.log \
+      'hostname'
 
     a 00-info-ip-a.log \
       -m ansible.builtin.shell \
@@ -175,23 +171,17 @@ function generic_environment_check() {
     fi
 
     if $restarted; then
-        a 00-satellite-drop-caches.log \
-          -m ansible.builtin.shell \
-          -a 'foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start' \
-          satellite6
+        as 00-satellite-drop-caches.log \
+          'foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start'
     fi
 
-    a 00-info-rpm-q-katello.log \
-      -m ansible.builtin.shell \
-      -a 'rpm -q katello' \
-      satellite6
+    as 00-info-rpm-q-katello.log \
+      'rpm -q katello'
     katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"
     echo "$katello_rpm" | grep '^katello-[0-9]\.' # make sure it's been detected correctly
 
-    a 00-info-rpm-q-satellite.log \
-      -m ansible.builtin.shell \
-      -a 'rpm -q satellite || true' \
-      satellite6
+    as 00-info-rpm-q-satellite.log \
+      'rpm -q satellite || true'
     satellite_rpm="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
 
     log "katello_version = $katello_rpm"
