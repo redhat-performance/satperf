@@ -188,18 +188,15 @@ function generic_environment_check() {
     log "satellite_version = $satellite_rpm"
 
     if ! $wait_for_ping; then
-        a 00-check-hammer-ping.log \
-          -m ansible.builtin.shell \
-          -a "hammer $hammer_opts ping" \
-          satellite6
+        h 00-check-hammer-ping.log \
+          'ping'
     else
         while true; do
             set +e
 
-            a 00-check-hammer-ping.log \
-              -m ansible.builtin.shell \
-              -a "hammer $hammer_opts ping" \
-              satellite6 && break
+            h 00-check-hammer-ping.log \
+              'ping' &&
+              break
 
             set -e
         done
