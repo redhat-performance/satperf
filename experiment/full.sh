@@ -8,7 +8,7 @@ sat_version="${PARAM_sat_version:-stream}"
 
 manifest_exercise_runs="${PARAM_manifest_exercise_runs:-5}"
 
-rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9 rhel10}"
+rels="${PARAM_rels:-rhel7 rhel8 rhel9 rhel10}"
 
 lces="${PARAM_lces:-Test QA Pre Prod}"
 
@@ -136,15 +136,13 @@ for rel in $rels; do
     os_rel="${rel##rhel}"
 
     case $rel in
-    rhel[67])
+    rhel7)
         os_releasever="${os_rel}Server"
         os_product='Red Hat Enterprise Linux Server'
         os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
         os_reposet_name="Red Hat Enterprise Linux $os_rel Server (RPMs)"
-        if [[ "$rel" == 'rhel7' ]]; then
-            os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
-            os_extras_reposet_name="Red Hat Enterprise Linux $os_rel Server - Extras (RPMs)"
-        fi
+        os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
+        os_extras_reposet_name="Red Hat Enterprise Linux $os_rel Server - Extras (RPMs)"
         ;;
     rhel[89]|rhel10)
         os_releasever=$os_rel
@@ -165,18 +163,16 @@ for rel in $rels; do
     esac
 
     case $rel in
-    rhel[67])
+    rhel7)
         skip_measurement=true h "10-reposet-enable-${rel}.log" \
           "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
         h "12-repo-sync-${rel}.log" \
           "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_repo_name'"
 
-        if [[ "$rel" == 'rhel7' ]]; then
-            skip_measurement=true h "10-reposet-enable-${rel}extras.log" \
-              "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
-            h "12-repo-sync-${rel}extras.log" \
-              "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
-        fi
+        skip_measurement=true h "10-reposet-enable-${rel}extras.log" \
+          "repository-set enable --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_reposet_name' --releasever '$os_releasever' --basearch '$basearch'"
+        h "12-repo-sync-${rel}extras.log" \
+          "repository synchronize --organization '{{ sat_org }}' --product '$os_product' --name '$os_extras_repo_name'"
         ;;
     rhel[89]|rhel10)
         skip_measurement=true h "10-reposet-enable-${rel}baseos.log" \
@@ -260,10 +256,9 @@ e CapusuleSync "${logs}/${test}.log"
 
 
 section 'Publish and promote big CV'
+rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server RPMs $basearch 7Server" )"
+rids+=",$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch" )"
 cv=BenchContentView
-rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 6 Server RPMs $basearch 6Server" )"
-rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server RPMs $basearch 7Server" )"
-rids="$rids,$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch" )"
 
 skip_measurement=true h 20-cv-create-big.log \
   "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name '$cv'"
