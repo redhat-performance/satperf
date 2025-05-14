@@ -374,8 +374,10 @@ e CapusuleSync "${logs}/${test}.log"
 export skip_measurement=true
 section 'Get RHOSP content'
 # RHOSP
-h 40-product-create-rhosp.log \
-  "product create --organization '{{ sat_org }}' --name '$rhosp_product'"
+product="$rhosp_product"
+
+h "40-product-create-${product}.log" \
+  "product create --organization '{{ sat_org }}' --name '$product'"
 
 for rel in $rels; do
     ccv="CCV_${rel}"
@@ -383,28 +385,28 @@ for rel in $rels; do
     case $rel in
     rhel[89])
     # rhel[89]|rhel10)
-        rhsop_repo_name="rhosp-${rel}/openstack-base"
+        repo_name="${rel}-rhosp/openstack-base"
+        repo_name_suffix="$(echo ${repo_name} | tr '/' '_')"
 
-        h "40-repository-create-rhosp-${rel}_openstack-base.log" \
-          "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
-        h "40-repository-sync-rhosp-${rel}_openstack-base.log" \
-          "repository synchronize --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name'"
+        h "40-repository-create-${repo_name_suffix}.log" \
+          "repository create --organization '{{ sat_org }}' --product '$product' --name '$repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
+        h "40-repository-sync-${repo_name_suffix}.log" \
+          "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
 
-        rhosp_rids="$( get_repo_id '{{ sat_org }}' "$rhosp_product" "$rhsop_repo_name" )"
-        content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$rhosp_rids\"' --fields 'Content label'" | tail -n1 )"
+        # CV
+        cv="CV_${rel}-${product}"
+        rids="$( get_repo_id '{{ sat_org }}' "$product" "$repo_name" )"
+        content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$repo_name\"' --fields 'Content label'" | tail -n1 )"
 
-        # RHOSP CV
-        cv_osp="CV_${rel}-osp"
-
-        h "40-cv-create-rhosp-${rel}.log" \
-          "content-view create --organization '{{ sat_org }}' --name '$cv_osp' --repository-ids '$rhosp_rids'"
-        h "40-cv-publish-rhosp-${rel}.log" \
-          "content-view publish --organization '{{ sat_org }}' --name '$cv_osp'"
+        h "40-cv-create-${rel}-${product}.log" \
+          "content-view create --organization '{{ sat_org }}' --name '$cv' --repository-ids '$rids'"
+        h "40-cv-publish-${rel}-${product}.log" \
+          "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
         # CCV with RHOSP
-        h "40-ccv-component-add-rhosp-${rel}.log" \
-          "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_osp' --latest"
-        h "40-ccv-publish-rhosp-${rel}.log" \
+        h "40-ccv-component-add-${rel}-${product}.log" \
+          "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv' --latest"
+        h "40-ccv-publish-${rel}-${product}.log" \
           "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
         prior=Library
@@ -412,7 +414,7 @@ for rel in $rels; do
             ak="AK_${rel}_${lce}"
 
             # CCV promotion to LCE
-            h "40-ccv-promote-rhosp-${rel}-${lce}.log" \
+            h "40-ccv-promote-${rel}-${lce}-${product}.log" \
               "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
             prior=$lce
@@ -424,7 +426,7 @@ unset skip_measurement
 
 
 section 'Push RHOSP content to capsules'
-test=40-capsules-sync-rhosp
+test="40-capsules-sync-${product}"
 skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
@@ -469,15 +471,15 @@ if vercmp_ge "$sat_version" '6.17.0'; then
             rids="$( get_repo_id '{{ sat_org }}' "$product" "$repo_name" )"
             content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$repo_name\"' --fields 'Content label'" | tail -n1 )"
 
-            h "45-cv-create-${rel}-flatpak.log" \
+            h "45-cv-create-${rel}-${product}.log" \
               "content-view create --organization '{{ sat_org }}' --name '$cv' --repository-ids '$rids'"
-            h "45-cv-publish-${rel}-flatpak.log" \
+            h "45-cv-publish-${rel}-${product}.log" \
               "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
             # CCV with Flatpak
-            h "45-ccv-component-add-${rel}-flatpak.log" \
+            h "45-ccv-component-add-${rel}-${product}.log" \
               "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv' --latest"
-            h "45-ccv-publish-${rel}-flatpak.log" \
+            h "45-ccv-publish-${rel}-${product}.log" \
               "content-view publish --organization '{{ sat_org }}' --name '$ccv'"
 
             prior=Library
@@ -485,7 +487,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
                 ak="AK_${rel}_${lce}"
 
                 # CCV promotion to LCE
-                h "45-ccv-promote-${rel}-${lce}-flatpak.log" \
+                h "45-ccv-promote-${rel}-${lce}-${product}.log" \
                   "content-view version promote --organization '{{ sat_org }}' --content-view '$ccv' --from-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
                 prior=$lce
@@ -496,7 +498,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
 
     section 'Push Flatpak content to capsules'
-    test=45-capsules-sync-flatpak
+    test="45-capsules-sync-${product}"
     skip_measurement=true ap ${test}.log \
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
@@ -812,11 +814,11 @@ done
 h 104-product-delete-sat-client.log \
   "product delete --organization '{{ sat_org }}' --name '$sat_client_product'"
 # RHOSP
-h 104-product-delete-rhosp.log \
+h "104-product-delete-${rhosp_product}.log" \
   "product delete --organization '{{ sat_org }}' --name '$rhosp_product'"
 if vercmp_ge "$sat_version" '6.17.0'; then
     # Flatpak
-    h 104-product-delete-flatpak.log \
+    h "104-product-delete-${flatpak_product}.log" \
       "product delete --organization '{{ sat_org }}' --name '$flatpak_product'"
 fi
 
