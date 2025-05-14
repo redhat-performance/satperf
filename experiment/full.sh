@@ -256,21 +256,42 @@ e CapusuleSync "${logs}/${test}.log"
 
 
 section 'Publish and promote big CV'
-rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server RPMs $basearch 7Server" )"
-rids+=",$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 7 Server - Extras RPMs $basearch" )"
-cv=BenchContentView
+unset os_rids
+for rel in $rels; do
+    os_rel="${rel##rhel}"
 
-skip_measurement=true h 20-cv-create-big.log \
+    case $rel in
+    rhel7)
+        os_releasever="${os_rel}Server"
+        os_product='Red Hat Enterprise Linux Server'
+        os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
+        os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
+        os_rids+="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
+        os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
+        ;;
+    rhel[89]|rhel10)
+        os_releasever=$os_rel
+        os_product="Red Hat Enterprise Linux for $basearch"
+        os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
+        os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
+        os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
+        os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
+        ;;
+    esac
+done
+
+cv=BenchContentView
+skip_measurement=true h 20b-cv-create-big.log \
   "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name '$cv'"
-h 21-cv-publish-big.log \
+h 21b-cv-publish-big.log \
   "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
 prior=Library
 counter=1
 for lce in BenchLifeEnvAAA BenchLifeEnvBBB BenchLifeEnvCCC; do
-    skip_measurement=true h "22-le-create-${prior}-${lce}.log" \
+    skip_measurement=true h "22b-le-create-big-${prior}-${lce}.log" \
       "lifecycle-environment create --organization '{{ sat_org }}' --prior '$prior' --name '$lce'"
-    h "23-cv-promote-big-${prior}-${lce}.log" \
+    h "23b-cv-promote-big-${prior}-${lce}.log" \
       "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
     prior=$lce
