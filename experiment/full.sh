@@ -284,26 +284,28 @@ done
 
 
 section 'Publish and promote filtered CV'
-export skip_measurement=true
 cv=BenchFilteredContentView
-rids="$( get_repo_id '{{ sat_org }}' 'Red Hat Enterprise Linux Server' "Red Hat Enterprise Linux 6 Server RPMs $basearch 6Server" )"
+rids="$( get_repo_id '{{ sat_org }}' "Red Hat Enterprise Linux for $basearch" "Red Hat Enterprise Linux 9 for $basearch - BaseOS RPMs 9" )"
 
-h 30-cv-create-filtered.log \
+skip_measurement=true h 25b-cv-create-filtered.log \
   "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name '$cv'"
-
-h 31-filter-create-1.log \
-  "content-view filter create --organization '{{ sat_org }}' --type erratum --inclusion true --content-view '$cv' --name BenchFilterAAA"
-h 31-filter-create-2.log \
-  "content-view filter create --organization '{{ sat_org }}' --type erratum --inclusion true --content-view '$cv' --name BenchFilterBBB"
-
-h 32-rule-create-1.log \
-  "content-view filter rule create --content-view '$cv' --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2016-01-01 --end-date 2017-10-01 --organization '{{ sat_org }}' --types enhancement,bugfix,security"
-h 32-rule-create-2.log \
-  "content-view filter rule create --content-view '$cv' --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2016-01-01 --end-date 2018-01-01 --organization '{{ sat_org }}' --types security"
-unset skip_measurement
-
-h 33-cv-filtered-publish.log \
+h 25b-cv-filter-create-1.log \
+  "content-view filter create --organization '{{ sat_org }}' --content-view '$cv' --type erratum --inclusion true --name BenchFilterAAA"
+h 25b-cv-filter-create-2.log \
+  "content-view filter create --organization '{{ sat_org }}' --content-view '$cv' --type erratum --inclusion true --name BenchFilterBBB"
+h 25b-cv-filter-rule-create-1.log \
+  "content-view filter rule create --organization '{{ sat_org }}' --content-view '$cv' --content-view-filter BenchFilterAAA --date-type 'issued' --start-date 2024-01-01 --end-date 2025-01-01 --types enhancement,bugfix,security"
+h 25b-cv-filter-rule-create-2.log \
+  "content-view filter rule create --organization '{{ sat_org }}' --content-view '$cv' --content-view-filter BenchFilterBBB --date-type 'updated' --start-date 2024-01-01 --end-date 2025-01-01 --types security"
+h 25b-cv-publish-filtered.log \
   "content-view publish --organization '{{ sat_org }}' --name '$cv'"
+
+prior=Library
+lce=BenchFilteredLifeEnv
+skip_measurement=true h "26b-le-create-big-${prior}-${lce}.log" \
+  "lifecycle-environment create --organization '{{ sat_org }}' --prior '$prior' --name '$lce'"
+h "26b-cv-promote-big-${prior}-${lce}.log" \
+  "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
 
 
 export skip_measurement=true
