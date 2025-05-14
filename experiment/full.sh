@@ -266,7 +266,7 @@ done
 
 cv=BenchContentView
 skip_measurement=true h 20b-cv-create-big.log \
-  "content-view create --organization '{{ sat_org }}' --repository-ids '$rids' --name '$cv'"
+  "content-view create --organization '{{ sat_org }}' --repository-ids '$os_rids' --name '$cv'"
 h 21b-cv-publish-big.log \
   "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
