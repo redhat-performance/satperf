@@ -146,19 +146,11 @@ for rel in $rels; do
         ;;
     rhel[89]|rhel10)
         os_releasever=$os_rel
-        if [[ "$rel" != 'rhel10' ]]; then
-            os_product="Red Hat Enterprise Linux for $basearch"
-            os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
-            os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS (RPMs)"
-            os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
-            os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream (RPMs)"
-        else
-            os_product="Red Hat Enterprise Linux for $basearch Beta"
-            os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS Beta RPMs"
-            os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS Beta (RPMs)"
-            os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta RPMs"
-            os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta (RPMs)"
-        fi
+        os_product="Red Hat Enterprise Linux for $basearch"
+        os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
+        os_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS (RPMs)"
+        os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
+        os_appstream_reposet_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream (RPMs)"
         ;;
     esac
 
@@ -195,29 +187,21 @@ for rel in $rels; do
     os_rel="${rel##rhel}"
 
     case $rel in
-    rhel[67])
+    rhel7)
         os_releasever="${os_rel}Server"
         os_product='Red Hat Enterprise Linux Server'
         os_repo_name="Red Hat Enterprise Linux $os_rel Server RPMs $basearch $os_releasever"
+        os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
         os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-        if [[ "$rel" == 'rhel7' ]]; then
-            os_extras_repo_name="Red Hat Enterprise Linux $os_rel Server - Extras RPMs $basearch"
-            os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
-        fi
+        os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_extras_repo_name" )"
         ;;
     rhel[89]|rhel10)
         os_releasever=$os_rel
-        if [[ "$rel" != 'rhel10' ]]; then
-            os_product="Red Hat Enterprise Linux for $basearch"
-            os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
-            os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
-        else
-            os_product="Red Hat Enterprise Linux for $basearch Beta"
-            os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS Beta RPMs"
-            os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream Beta RPMs"
-        fi
+        os_product="Red Hat Enterprise Linux for $basearch"
+        os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
+        os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
         os_rids="$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
-        os_rids="$os_rids,$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
+        os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
         ;;
     esac
 
