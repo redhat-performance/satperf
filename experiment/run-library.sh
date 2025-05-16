@@ -656,7 +656,7 @@ function apj() {
     local play_end_z="$( jq '.plays[0].play.duration.end' $play_out_json )"
     local play_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
     local play_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-    local play_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
+    local play_duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
     log "Finish after $play_duration seconds with JSON log in $play_out_json and exit code $rc"
 
     measurement_add \
