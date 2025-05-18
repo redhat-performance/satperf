@@ -33,7 +33,7 @@ opts_adhoc="$opts"
 
 
 section 'Checking environment'
-generic_environment_check
+generic_environment_check false false
 # set +e
 
 
