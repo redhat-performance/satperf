@@ -6,7 +6,7 @@
     - role: ../common/roles/common
     - role: ../common/roles/enlarge-arp-table
     - role: linux-system-roles.timesync
-    - role: rhsm_helper
+    - role: linux-system-roles.rhc
     - role: upgrade-restart
     - role: linux-system-roles.firewall
     - role: haproxy

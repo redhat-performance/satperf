@@ -8,7 +8,7 @@
     - role: ../common/roles/epel-not-present
     - role: ../common/roles/common
     - role: ../common/roles/enlarge-arp-table
-    - role: rhsm_helper
+    - role: linux-system-roles.rhc
     - role: upgrade-restart
     - role: linux-system-roles.storage
 ...
