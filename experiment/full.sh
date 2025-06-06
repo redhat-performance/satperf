@@ -205,7 +205,7 @@ for rel in $rels; do
         ;;
     esac
 
-    # OS CV
+    # CV
     cv_os="CV_$rel"
 
     h "13b-cv-create-${rel}-os.log" \
@@ -213,7 +213,7 @@ for rel in $rels; do
     h "13b-cv-publish-${rel}-os.log" \
       "content-view publish --organization '{{ sat_org }}' --name '$cv_os'"
 
-    # CCV with OS
+    # CCV
     h "13c-ccv-component-add-${rel}-os.log" \
       "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_os' --latest"
     h "13c-ccv-publish-${rel}-os.log" \
@@ -311,11 +311,11 @@ h "26b-cv-promote-big-${prior}-${lce}.log" \
 export skip_measurement=true
 section 'Get Satellite Client content'
 # Satellite Client
+
 h 30-product-create-sat-client.log \
   "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
 
 for rel in $rels; do
-    ccv="CCV_${rel}"
     os_rel="${rel##rhel}"
     sat_client_repo_name="Satellite Client for RHEL $os_rel"
     sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}/"
@@ -324,11 +324,19 @@ for rel in $rels; do
       "repository create --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name' --content-type yum --url '$sat_client_repo_url'"
     h "30-repository-sync-sat-client_${rel}.log" \
       "repository synchronize --organization '{{ sat_org }}' --product '$sat_client_product' --name '$sat_client_repo_name'"
+done
 
+
+section "Create, publish and promote $sat_client_product CVs / CCVs to LCE(s)s"
+for rel in $rels; do
+    ccv="CCV_${rel}"
+    os_rel="${rel##rhel}"
+    sat_client_repo_name="Satellite Client for RHEL $os_rel"
+    sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}/"
     sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
     content_label="$( h_out "--no-headers --csv repository list --organization '{{ sat_org }}' --search 'name = \"$sat_client_repo_name\"' --fields 'Content label'" | tail -n1 )"
 
-    # Satellite Client CV
+    # CV
     cv_sat_client="CV_${rel}-sat-client"
 
     h "34-cv-create-${rel}-sat-client.log" \
@@ -337,7 +345,7 @@ for rel in $rels; do
     h "35-cv-publish-${rel}-sat-client.log" \
       "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
-    # CCV with Satellite Client
+    # CCV
     h "36-ccv-component-add-${rel}-sat-client.log" \
       "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv_sat_client' --latest"
     h "37-ccv-publish-${rel}-sat-client.log" \
@@ -362,7 +370,7 @@ done
 unset skip_measurement
 
 
-section 'Push Satellite Client content to capsules'
+section "Push $sat_client_product content to capsules"
 test=38-capsules-sync-sat-client
 skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
@@ -392,6 +400,19 @@ for rel in $rels; do
           "repository create --organization '{{ sat_org }}' --product '$product' --name '$repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
         h "40-repository-sync-${repo_name_suffix}.log" \
           "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
+done
+unset skip_measurement
+
+
+section "Create, publish and promote $product CVs / CCVs to LCE(s)s"
+for rel in $rels; do
+    ccv="CCV_${rel}"
+
+    case $rel in
+    rhel[89])
+    # rhel[89]|rhel10)
+        repo_name="${rel}-rhosp/openstack-base"
+        repo_name_suffix="$(echo ${repo_name} | tr '/' '_')"
 
         # CV
         cv="CV_${rel}-${product}"
@@ -403,7 +424,7 @@ for rel in $rels; do
         h "40-cv-publish-${rel}-${product}.log" \
           "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
-        # CCV with RHOSP
+        # CCV
         h "40-ccv-component-add-${rel}-${product}.log" \
           "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv' --latest"
         h "40-ccv-publish-${rel}-${product}.log" \
@@ -422,10 +443,9 @@ for rel in $rels; do
         ;;
     esac
 done
-unset skip_measurement
 
 
-section 'Push RHOSP content to capsules'
+section section "Push $product content to capsules"
 test="40-capsules-sync-${product}"
 skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
@@ -435,7 +455,9 @@ e CapusuleSync "${logs}/${test}.log"
 
 
 if vercmp_ge "$sat_version" '6.17.0'; then
+    export skip_measurement=true
     section 'Get Flatpak content'
+
     # Flatpak
     product="$flatpak_product"
 
@@ -452,8 +474,6 @@ if vercmp_ge "$sat_version" '6.17.0'; then
       "flatpak-remote remote-repository list --organization '{{ sat_org }}' --flatpak-remote '$flatpak_remote'"
 
     for rel in $rels; do
-        ccv="CCV_${rel}"
-
         case $rel in
         rhel[89])
         # rhel[89]|rhel10)
@@ -465,6 +485,19 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
             h "45-repository-sync-${repo_name_suffix}.log" \
               "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
+    done
+    unset skip_measurement
+
+
+    section "Create, publish and promote $product CVs / CCVs to LCE(s)s"
+    for rel in $rels; do
+        ccv="CCV_${rel}"
+
+        case $rel in
+        rhel[89])
+        # rhel[89]|rhel10)
+            repo_name="${rel}/flatpak-runtime"
+            repo_name_suffix="$(echo ${repo_name} | tr '/' '_')"
 
             # CV
             cv="CV_${rel}-${product}"
@@ -476,7 +509,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
             h "45-cv-publish-${rel}-${product}.log" \
               "content-view publish --organization '{{ sat_org }}' --name '$cv'"
 
-            # CCV with Flatpak
+            # CCV
             h "45-ccv-component-add-${rel}-${product}.log" \
               "content-view component add --organization '{{ sat_org }}' --composite-content-view '$ccv' --component-content-view '$cv' --latest"
             h "45-ccv-publish-${rel}-${product}.log" \
@@ -497,7 +530,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
     done
 
 
-    section 'Push Flatpak content to capsules'
+    section "Push $product content to capsules"
     test="45-capsules-sync-${product}"
     skip_measurement=true ap ${test}.log \
       -e "organization='{{ sat_org }}'" \
