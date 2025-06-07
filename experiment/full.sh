@@ -400,6 +400,8 @@ for rel in $rels; do
           "repository create --organization '{{ sat_org }}' --product '$product' --name '$repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
         h "40-repository-sync-${repo_name_suffix}.log" \
           "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
+        ;;
+    esac
 done
 unset skip_measurement
 
@@ -445,7 +447,7 @@ for rel in $rels; do
 done
 
 
-section section "Push $product content to capsules"
+section "Push $product content to capsules"
 test="40-capsules-sync-${product}"
 skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
@@ -485,6 +487,8 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
             h "45-repository-sync-${repo_name_suffix}.log" \
               "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
+            ;;
+        esac
     done
     unset skip_measurement
 
