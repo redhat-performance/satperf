@@ -191,7 +191,10 @@
         status_code:
           - 201
           - 422   # "Name has already been taken"
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      when:
+        - subnet is defined
+        - network is defined
+        - netmask is defined
 
     - name: "Get subnets information"
       ansible.builtin.uri:
@@ -210,6 +213,8 @@
         subnet_id: "{{ subnets_json.json | community.general.json_query(query) }}"
       vars:
         query: "results[?name=='{{ subnet }}'].id | [0]"
+      when:
+        - subnet is defined
 
     - name: "Set subnet location"
       # XXX: Submit PR
@@ -223,5 +228,7 @@
         password: "{{ password }}"
         body_format: json
         body: "{{ {'organization_id': organization_id, 'subnet': {'location_ids': [location_id]}} }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      when:
+        - subnet is defined
+        - subnet_id is defined
 ...
