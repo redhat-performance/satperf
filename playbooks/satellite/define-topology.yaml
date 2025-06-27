@@ -20,7 +20,6 @@
         force_basic_auth: true
         user: "{{ user }}"
         password: "{{ password }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
       register: get_host_json
       failed_when:
         - get_host_json.json.results | length != 1
@@ -41,8 +40,6 @@
 
     ### Organizations
     - name: "Create organization(s)"
-      # XXX: Submit PR
-      throttle: 1
       ansible.builtin.uri:
         url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
         method: POST
@@ -55,7 +52,7 @@
         status_code:
           - 201
           - 422   # "Name has already been taken"
-      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
 
     - name: "Get organizations information"
       ansible.builtin.uri:
@@ -65,7 +62,6 @@
         force_basic_auth: true
         user: "{{ user }}"
         password: "{{ password }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
       register: organizations_json
       failed_when: organizations_json.json.results | length == 0
 
@@ -92,7 +88,6 @@
         status_code:
           - 201
           - 422   # "Name has already been taken"
-      delegate_to: "{{ groups['satellite6'] | first }}"
 
     - name: "Get locations information"
       ansible.builtin.uri:
@@ -102,7 +97,6 @@
         force_basic_auth: true
         user: "{{ user }}"
         password: "{{ password }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
       register: locations_json
       failed_when: locations_json.json.results | length == 0
 
@@ -136,7 +130,6 @@
         password: "{{ password }}"
         body_format: json
         body: "{{ {'organization_id': organization_id, 'host': {'location_id': location_id}} }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
 
     - name: "Set smart-proxy location"
       ansible.builtin.uri:
@@ -148,7 +141,6 @@
         password: "{{ password }}"
         body_format: json
         body: "{{ {'organization_id': organization_id, 'smart_proxy': {'location_ids': [location_id]}} }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
 
 
     ### Subnets
@@ -204,7 +196,6 @@
         force_basic_auth: true
         user: "{{ user }}"
         password: "{{ password }}"
-      delegate_to: "{{ groups['satellite6'] | first }}"
       register: subnets_json
       failed_when: subnets_json.json.results | length == 0
 
