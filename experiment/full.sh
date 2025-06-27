@@ -393,7 +393,7 @@ for rel in $rels; do
     case $rel in
     rhel[89])
     # rhel[89]|rhel10)
-        repo_name="${rel}-rhosp/openstack-base"
+        repo_name="rhosp-${rel}/openstack-base"
         repo_name_suffix="$(echo ${repo_name} | tr '/' '_')"
 
         h "40-repository-create-${repo_name_suffix}.log" \
