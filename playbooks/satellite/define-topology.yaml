@@ -106,20 +106,6 @@
       vars:
         query: "results[?name=='{{ location }}'].id | [0]"
 
-    # - name: "Set location organization"
-    #   # XXX: Submit PR
-    #   throttle: 1
-    #   ansible.builtin.uri:
-    #     url: "https://{{ groups['satellite6'] | first }}/api/locations/{{ location_id }}"
-    #     method: PUT
-    #     validate_certs: false
-    #     force_basic_auth: true
-    #     user: "{{ user }}"
-    #     password: "{{ password }}"
-    #     body_format: json
-    #     body: "{{ {'organization_id': organization_id, 'location': {'name': location, 'organization_ids': [organization_id]}} }}"
-    #   delegate_to: "{{ groups['satellite6'] | first }}"
-
     - name: "Set host location"
       ansible.builtin.uri:
         url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ host_id }}"
@@ -163,10 +149,6 @@
         - private_netmask is not defined
         - public_ip is defined
         - public_netmask is defined
-
-    - name: "Get group name of the location(s)"
-      ansible.builtin.set_fact:
-        location_groupname: "location_{{ location | lower }}"
 
     - name: "Create subnets(s)"
       # XXX: Submit PR
