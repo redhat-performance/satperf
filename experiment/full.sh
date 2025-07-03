@@ -70,8 +70,12 @@ section 'Create base LCE(s), CCV(s) and AK(s)'
 # LCE creation
 prior=Library
 for lce in $lces; do
-    h "05-lce-create-${lce}.log" \
-      "lifecycle-environment create --organization '{{ sat_org }}' --name '$lce' --prior '$prior'"
+    test="05-lce-create-${lce}"
+    skip_measurement=true apj $test \
+      -e lce=$lce \
+      -e prior=$prior \
+      playbooks/tests/lce_create_test.yaml
+    ej CreateLifecyleEnvironment_${lce} $test
 
     prior=$lce
 done
