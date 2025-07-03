@@ -55,6 +55,13 @@
   when:
     - product is defined and product == 'foreman'
 
+- name: Install rhel-system-roles package in order to run Ansible roles on content hosts
+  ansible.builtin.dnf:
+    name: rhel-system-roles
+    state: present
+  when:
+    - product is not defined or product == 'satellite'
+
 # Prepare for capsule installation
 - name: "Set certs-generate base options"
   ansible.builtin.set_fact:
