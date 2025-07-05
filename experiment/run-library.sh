@@ -759,7 +759,7 @@ function ej() {
     local tasks_out_json="$play_out_json_prefix-$task_name.json"
 
     jq --arg TASK_NAME "$task_name" \
-      '.plays[0].tasks[] | select(.task.name==$TASK_NAME and .hosts.localhost.skipped != null) | .task' \
+      '.plays[0].tasks[] | select(.task.name==$TASK_NAME) | .task' \
       $play_out_json >$tasks_out_json
 
     task_ids="$( jq -r '.id' $tasks_out_json )"
