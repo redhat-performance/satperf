@@ -51,9 +51,12 @@
     dest: /root/host-registration.yaml
     force: true
 
-- name: "Distribute podman pull script"
+- name: Distribute podman related scripts
   ansible.builtin.template:
-    src: podman-pull.sh.j2
-    dest: /root/podman-pull.sh
+    src: "podman-{{ item }}.sh.j2"
+    dest: "/root/podman-{{ item }}.sh"
     force: true
+  loop:
+    - login
+    - pull-rhosp
 ...

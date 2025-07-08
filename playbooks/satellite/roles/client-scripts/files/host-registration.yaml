@@ -68,9 +68,17 @@
         state: started
         enabled: true
 
-    - name: Upload podman pull script to content host
+    - name: Upload podman related scripts to content host
       ansible.builtin.copy:
-        src: /root/podman-pull.sh
-        dest: /root/podman-pull.sh
+        src: /root/podman-{{ item }}.sh
+        dest: /root/podman-{{ item }}.sh
         mode: '0500'
+      loop:
+        - login
+        - pull-rhosp
+
+    - name: Introduce issue to be fixed by 'Remediations' service
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config
+        mode: '0777'
 ...
