@@ -782,9 +782,9 @@ for rex_search_query in $rex_search_queries; do
       jsr "${logs}/${test}.log"
       j "${logs}/${test}.log"
 
-      test=62-rex-podman_pull-${num_matching_rex_hosts}
+      test=63-rex-podman_login_pull_rhosp-${num_matching_rex_hosts}
       skip_measurement=true h ${test}.log \
-        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-pull.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
+        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
       jsr "${logs}/${test}.log"
       j "${logs}/${test}.log"
 
