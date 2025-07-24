@@ -16,6 +16,30 @@
     - product is not defined or product == 'satellite'
     - sat_version is defined
 
+- name: Discover the current version number from the 'name' line
+  ansible.builtin.shell:
+    cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/satellite.repo | cut -d'.' -f1 | uniq"
+  register: discovered_version
+  changed_when: false
+  check_mode: no # This task must run, even in --check mode, to get the variable.
+  when:
+    - product is not defined or product == 'satellite'
+    - sat_version == 'stream'
+    - use_repo_version is defined
+
+- name: Fix stream repo version
+  ansible.builtin.replace:
+    path: "/etc/yum.repos.d/satellite.repo"
+    # The 'regexp' is the version we just discovered in the previous task.
+    regexp: '{{ discovered_version.stdout }}'
+    replace: '{{ use_repo_version }}'
+    backup: yes # Recommended: creates a backup of the original file
+  when:
+    - product is not defined or product == 'satellite'
+    - sat_version == 'stream'
+    - use_repo_version is defined
+    - discovered_version.stdout | length > 0
+
 - name: "Detect RHEL release"
   ansible.builtin.setup:
     filter: ansible_distribution_major_version
