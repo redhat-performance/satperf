@@ -138,12 +138,12 @@ function generic_environment_check() {
       'hostname'
 
     a 00-info-ip-a.log \
-      -m ansible.builtin.shell \
+      -m ansible.builtin.command \
       -a 'ip a' \
       satellite6,capsules,container_hosts
 
     a 00-check-ping-registration-target.log \
-      -m ansible.builtin.shell \
+      -m ansible.builtin.command \
       -a 'ping -c 10 {{ tests_registration_target }}' \
       container_hosts
 
