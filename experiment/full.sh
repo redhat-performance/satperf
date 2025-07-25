@@ -103,11 +103,10 @@ section 'Create base LCE(s), CCV(s) and AK(s)'
 prior=Library
 for lce in $lces; do
     test="05-lce-create-${lce}"
-    skip_measurement=true apj $test \
+    apj $test \
       -e lce=$lce \
       -e prior=$prior \
-      playbooks/tests/lce_create_test.yaml
-    ej CreateLifecyleEnvironment_${lce} $test
+      playbooks/tests/FAM/lce_create.yaml
 
     prior=$lce
 done
