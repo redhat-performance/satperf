@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  gather_facts: false
+  roles:
+    - role: theforeman.foreman.lifecycle_environments
+      vars:
+        foreman_lifecycle_environments: "{{ lifecycle_environments }}"
+...
