@@ -1,0 +1,13 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: FlatpakRemoteScan
+      theforeman.foreman.flatpak_remote_scan:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        flatpak_remote: "{{ flatpak_remote }}"
+...
