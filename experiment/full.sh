@@ -61,6 +61,19 @@ opts_adhoc="$opts"
 iop_enabled="$( get_inventory_var enable_iop )"
 
 
+# Initial version sanity check
+for rel in $rels; do
+    case "$rel" in
+    rhel[7-9]|rhel10)
+        continue
+        ;;
+    *)
+        echo "Wrong release: $rel!!!" && exit
+        ;;
+    esac
+done
+
+
 section 'Checking environment'
 generic_environment_check
 # set +e
