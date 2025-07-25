@@ -76,6 +76,7 @@ done
 
 section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
 # set +e
 
 
