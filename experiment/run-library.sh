@@ -115,7 +115,7 @@ hammer_opts="-u $foreman_username -p $foreman_password"
 
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
-    if [[ "$skip_measurement" != 'true' ]]; then
+    if [[ -z "$skip_measurement" ]] || ! $skip_measurement; then
         status_data_create "$@"
     fi
 }
