@@ -668,7 +668,7 @@ function apj() {
       "$play_duration" \
       "$katello_rpm" \
       "$satellite_rpm" \
-      "$marker"
+      "$marker" &
 
     return $rc
 }
