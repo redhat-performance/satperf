@@ -1,0 +1,19 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: RepoCreate
+      theforeman.foreman.repository:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        product: "{{ product }}"
+        name: "{{ repo_name }}"
+        content_type: "{{ content_type }}"
+        url: "{{ repo_url | default(omit) }}"
+        docker_upstream_name: "{{ docker_upstream_name | default(omit) }}"
+        upstream_username: "{{ upstream_username | default(omit) }}"
+        upstream_password: "{{ upstream_password | default(omit) }}"
+...

@@ -1,0 +1,33 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: RepoSetEnable
+      theforeman.foreman.repository_set:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        name: "{{ reposet_name }}"
+        product: "{{ product }}"
+        repositories:
+          - basearch: "{{ basearch | default(omit) }}"
+            releasever: "{{ releasever | default(omit) }}"
+      when:
+        - releasever is defined or basearch is defined
+
+    - name: RepoSetEnable
+      theforeman.foreman.repository_set:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        name: "{{ reposet_name }}"
+        product: "{{ product }}"
+        all_repositories: true
+      when:
+        - basearch is not defined
+        - releasever is not defined
+...
