@@ -548,96 +548,83 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 fi
 
 
-section 'Sync yum repo'
-test=80-test-sync-repositories
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_repositories_count='$test_sync_repositories_count'" \
-  -e "test_sync_repositories_url_template='$test_sync_repositories_url_template'" \
-  -e "test_sync_repositories_max_sync_secs='$test_sync_repositories_max_sync_secs'" \
-  -e "test_sync_repositories_le='$test_sync_repositories_le'" \
-  playbooks/tests/sync-repositories.yaml
-e SyncRepositories "${logs}/${test}.log"
-e PublishContentViews "${logs}/${test}.log"
-e PromoteContentViews "${logs}/${test}.log"
+# Sync several types of content
+contents='yum iso docker ansible-collections'
+
+for content in $contents; do
+    case "$content" in
+    yum)
+        index=80
+        content_alias=repositories
+        test_count_var="test_sync_${content_alias}_count"
+        test_url_template_var="test_sync_${content_alias}_url_template"
+        test_max_sync_secs_var="test_sync_${content_alias}_max_sync_secs"
+        test_le_var="test_sync_${content_alias}_le"
+        test_count_value="$test_sync_repositories_count"
+        test_url_template_value="$test_sync_repositories_url_template"
+        test_max_sync_secs_value="$test_sync_repositories_max_sync_secs"
+        test_le_value="$test_sync_repositories_le"
+        ;;
+    iso)
+        index=81
+        content_alias="$content"
+        test_count_var="test_sync_${content_alias}_count"
+        test_url_template_var="test_sync_${content_alias}_url_template"
+        test_max_sync_secs_var="test_sync_${content_alias}_max_sync_secs"
+        test_le_var="test_sync_${content_alias}_le"
+        test_count_value="$test_sync_iso_count"
+        test_url_template_value="$test_sync_iso_url_template"
+        test_max_sync_secs_value="$test_sync_iso_max_sync_secs"
+        test_le_value="$test_sync_iso_le"
+        ;;
+    docker)
+        index=82
+        content_alias="$content"
+        test_count_var="test_sync_${content_alias}_count"
+        test_url_template_var="test_sync_${content_alias}_url_template"
+        test_max_sync_secs_var="test_sync_${content_alias}_max_sync_secs"
+        test_le_var="test_sync_${content_alias}_le"
+        test_count_value="$test_sync_docker_count"
+        test_url_template_value="$test_sync_docker_url_template"
+        test_max_sync_secs_value="$test_sync_docker_max_sync_secs"
+        test_le_value="$test_sync_docker_le"
+        ;;
+    ansible-collections)
+        index=82
+        content_alias=ansible_collections
+        test_count_var="test_sync_${content_alias}_count"
+        test_url_template_var="test_sync_${content_alias}_url_template"
+        test_max_sync_secs_var="test_sync_${content_alias}_max_sync_secs"
+        test_le_var="test_sync_${content_alias}_le"
+        test_count_value="$test_sync_ansible_collections_count"
+        test_url_template_value="$test_sync_ansible_collections_url_template"
+        test_max_sync_secs_value="$test_sync_ansible_collections_max_sync_secs"
+        test_le_value="$test_sync_ansible_collections_le"
+        ;;
+    esac  # case "$content"
+
+    section "Sync $content content"
+    test="${index}-test-sync-${content_alias}"
+    ap "${test}.log" \
+      -e "organization='{{ sat_org }}'" \
+      -e "$test_count_var='$test_count_value'" \
+      -e "$test_url_template_var='$test_url_template_value'" \
+      -e "$test_max_sync_secs_var='$test_max_sync_secs_value'" \
+      -e "$test_le_var='$test_le_value'" \
+      playbooks/tests/sync-${content_alias}.yaml
+    e SyncRepositories "${logs}/${test}.log"
+    e PublishContentViews "${logs}/${test}.log"
+    e PromoteContentViews "${logs}/${test}.log"
 
 
-section 'Push yum content to capsules'
-test=80-capsules-sync-repositories
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "lces='$test_sync_repositories_le'" \
-  playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
-
-
-section 'Sync iso'
-test=81-test-sync-iso
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_iso_count='$test_sync_iso_count'" \
-  -e "test_sync_iso_url_template='$test_sync_iso_url_template'" \
-  -e "test_sync_iso_max_sync_secs='$test_sync_iso_max_sync_secs'" \
-  -e "test_sync_iso_le='$test_sync_iso_le'" \
-  playbooks/tests/sync-iso.yaml
-e SyncRepositories "${logs}/${test}.log"
-e PublishContentViews "${logs}/${test}.log"
-e PromoteContentViews "${logs}/${test}.log"
-
-
-section 'Push iso content to capsules'
-test=81-capsules-sync-iso
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "lces='$test_sync_iso_le'" \
-  playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
-
-
-section 'Sync docker repo'
-test=82-test-sync-docker
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_docker_count='$test_sync_docker_count'" \
-  -e "test_sync_docker_url_template='$test_sync_docker_url_template'" \
-  -e "test_sync_docker_max_sync_secs='$test_sync_docker_max_sync_secs'" \
-  -e "test_sync_docker_le='$test_sync_docker_le'" \
-  playbooks/tests/sync-docker.yaml
-e SyncRepositories "${logs}/${test}.log"
-e PublishContentViews "${logs}/${test}.log"
-e PromoteContentViews "${logs}/${test}.log"
-
-
-section 'Push docker content to capsules'
-test=82-capsules-sync-docker
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "lces='$test_sync_docker_le'" \
-  playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
-
-
-section 'Sync ansible collections'
-test=83-test-sync-ansible-collections
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "test_sync_ansible_collections_count='$test_sync_ansible_collections_count'" \
-  -e "test_sync_ansible_collections_upstream_url_template='$test_sync_ansible_collections_upstream_url_template'" \
-  -e "test_sync_ansible_collections_max_sync_secs='$test_sync_ansible_collections_max_sync_secs'" \
-  -e "test_sync_ansible_collections_le='$test_sync_ansible_collections_le'" \
-  playbooks/tests/sync-ansible-collections.yaml
-e SyncRepositories "${logs}/${test}.log"
-e PublishContentViews "${logs}/${test}.log"
-e PromoteContentViews "${logs}/${test}.log"
-
-
-section 'Push ansible collections content to capsules'
-test=83-capsules-sync-ansible-collections
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  -e "lces='$test_sync_ansible_collections_le'" \
-  playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
+    section "Push $content content to capsules"
+    test="${index}-capsules-sync-${content}"
+    ap "${test}.log" \
+      -e "organization='{{ sat_org }}'" \
+      -e "lces='$test_le_value'" \
+      playbooks/tests/capsules-sync.yaml
+    e CapusuleSync "${logs}/${test}.log"
+done  # for content in $contents
 
 
 export skip_measurement=true
