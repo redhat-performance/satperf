@@ -1,0 +1,15 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: ActivationKeyCreate
+      theforeman.foreman.activation_key:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        name: "{{ ak }}"
+        content_view: "{{ content_view }}"
+        lifecycle_environment: "{{ lifecycle_environment }}"
+...
