@@ -651,21 +651,39 @@ function apj() {
     log "Start 'ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $*' with JSON log in $play_out_json"
     ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json && local rc=$? || local rc=$?
 
-    # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
-    local play_start_z="$( jq '.plays[0].play.duration.start' $play_out_json )"
-    local play_end_z="$( jq '.plays[0].play.duration.end' $play_out_json )"
-    local play_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-    local play_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-    local play_duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
-    log "Finish after $play_duration seconds with JSON log in $play_out_json and exit code $rc"
+    local play_num_tasks="$( jq '.plays[0].tasks | length' $play_out_json )"
+    if (( play_num_tasks == 1 )); then
+        local task_name="$( jq '.plays[0].tasks[0].task.name' $play_out_json )"
+        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
+        local task_start_z="$( jq '.plays[0].tasks[0].task.duration.start' $play_out_json )"
+        local task_end_z="$( jq '.plays[0].tasks[0].task.duration.end' $play_out_json )"
+        local task_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local task_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local task_duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
+        local start=$task_start
+        local end=$task_end
+        local duration=$task_duration
+    else
+        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
+        local play_start_z="$( jq '.plays[0].play.duration.start' $play_out_json )"
+        local play_end_z="$( jq '.plays[0].play.duration.end' $play_out_json )"
+        local play_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local play_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local play_duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
+        local start=$play_start
+        local end=$play_end
+        local duration=$play_duration
+    fi
+    # local rc="$( jq '.stats.localhost.failures' $play_out_json )"
+    log "Finish after $duration seconds with JSON log in $play_out_json and exit code $rc"
 
     measurement_add \
       "ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
       "$play_out_json" \
       "$rc" \
-      "$play_start" \
-      "$play_end" \
-      "$play_duration" \
+      "$start" \
+      "$end" \
+      "$duration" \
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker" &
