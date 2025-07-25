@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  gather_facts: false
+  # roles:
+  #   - role: theforeman.foreman.content_view_publish
+  tasks:
+    - name: ContentViewVersionPromote
+      theforeman.foreman.content_view_version:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        content_view: "{{ cv }}"
+        version: "{{ version | default(omit) }}"
+        lifecycle_environments: "{{ lifecycle_environments | default(omit) }}"
+        current_lifecycle_environment: "{{ current_lifecycle_environment | default(omit) }}"
+...

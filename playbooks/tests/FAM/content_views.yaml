@@ -1,0 +1,8 @@
+---
+- hosts: localhost
+  gather_facts: false
+  roles:
+    - role: theforeman.foreman.content_views
+      vars:
+        foreman_content_views: "{{ content_views }}"
+...

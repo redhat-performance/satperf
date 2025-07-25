@@ -1,0 +1,16 @@
+---
+- hosts: localhost
+  gather_facts: false
+  tasks:
+    - name: ContentViewFilterCreate
+      theforeman.foreman.content_view_filter:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        name: "{{ cv_filter }}"
+        content_view: "{{ cv }}"
+        filter_type: "{{ cv_filter_type  }}"
+        inclusion: "{{ inclusion | default(false) | ternary(true, false) }}"
+...

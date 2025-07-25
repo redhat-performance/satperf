@@ -1,0 +1,19 @@
+---
+- hosts: localhost
+  gather_facts: false
+  # roles:
+  #   - role: theforeman.foreman.content_views
+  tasks:
+    - name: ContentViewCreate
+      theforeman.foreman.content_view:
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        name: "{{ cv }}"
+        repositories: "{{ repositories | default(omit) }}"
+        composite: "{{ components | default(composite) | default(false) | ternary(true, false) }}"
+        components: "{{ components | default(omit) }}"
+        auto_publish: "{{ auto_publish | default(omit) }}"
+...
