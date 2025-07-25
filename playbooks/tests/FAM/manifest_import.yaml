@@ -4,7 +4,7 @@
   vars:
     foreman_manifest_path: "{{ manifest_path | default('~/.ansible/tmp/manifest.zip') }}"
   tasks:
-    - name: Import the manifest again
+    - name: Import the manifest
       theforeman.foreman.subscription_manifest:
         username: "{{ foreman_username | default(omit) }}"
         password: "{{ foreman_password | default(omit) }}"
@@ -14,7 +14,7 @@
         manifest_path: "{{ foreman_manifest_path }}"
         # state: 'present'
 
-    - name: Refresh the manifest again
+    - name: Refresh the manifest
       theforeman.foreman.subscription_manifest:
         username: "{{ foreman_username | default(omit) }}"
         password: "{{ foreman_password | default(omit) }}"

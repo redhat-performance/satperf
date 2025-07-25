@@ -80,6 +80,24 @@ generic_environment_check
 # set +e
 
 
+section 'Prepare for Red Hat content'
+test=00f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=00f-manifest-excercise
+apj $test \
+  -e "runs='$manifest_exercise_runs'" \
+  playbooks/tests/FAM/manifest_test.yaml
+ej ManifestImport $test
+ej ManifestRefresh $test
+ej ManifestDelete $test
+
+test=00f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
+
+
 section 'Create base LCE(s), CCV(s) and AK(s)'
 # LCE creation
 prior=Library
@@ -129,24 +147,6 @@ for rel in $rels; do
         prior=$lce
     done
 done
-
-
-section 'Prepare for Red Hat content'
-test=00-manifest-test-download
-skip_measurement=true apj $test \
-  playbooks/tests/manifest_test_download.yaml
-
-test=01-manifest-excercise
-skip_measurement=true apj $test \
-  -e runs=$manifest_exercise_runs \
-  playbooks/tests/manifest_test.yaml
-ej ManifestImport $test
-ej ManifestRefresh $test
-ej ManifestDelete $test
-
-test=02-manifest-test-reimport
-skip_measurement=true apj $test \
-  playbooks/tests/manifest_test_reimport.yaml
 
 
 section 'Sync OS from CDN'

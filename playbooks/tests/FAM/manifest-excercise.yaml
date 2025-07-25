@@ -1,5 +1,5 @@
 ---
-- hosts: satellite6
+- hosts: localhost
   gather_facts: False
   vars:
     source_manifest: "{{ manifest | default('../../conf/contperf/manifest_SCA.zip') }}"
