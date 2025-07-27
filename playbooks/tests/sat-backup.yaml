@@ -22,12 +22,25 @@
 
     - name: Execute the Satellite online backup
       ansible.builtin.command:
+        cmd: satellite-maintain backup online -y --wait-for-tasks {{ backup_online_dir }}
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: backup_online_cmd
+      ignore_errors: true
+      when:
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
+
+    - name: Execute the Satellite online backup
+      ansible.builtin.command:
         cmd: satellite-maintain backup online -y {{ backup_online_dir }}
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: backup_online_cmd
       ignore_errors: true
+      when:
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
 
     - name: Show Satellite online backup output if it has failed
       ansible.builtin.debug:
@@ -50,12 +63,25 @@
 
     - name: Run the online backup restoration script
       ansible.builtin.shell:
+        cmd: satellite-maintain restore -y --wait-for-tasks {{ backup_online_dir }}/$( ls {{ backup_online_dir }} | sort -r | head -n 1 )
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: restore_online_cmd
+      ignore_errors: true
+      when:
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
+
+    - name: Run the online backup restoration script
+      ansible.builtin.shell:
         cmd: satellite-maintain restore -y {{ backup_online_dir }}/$( ls {{ backup_online_dir }} | sort -r | head -n 1 )
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: restore_online_cmd
       ignore_errors: true
+      when:
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
 
     - name: Show Satellite online restore output if it has failed
       ansible.builtin.debug:
@@ -83,12 +109,25 @@
 
     - name: Execute the Satellite offline backup
       ansible.builtin.command:
+        cmd: satellite-maintain backup offline -y --wait-for-tasks {{ backup_offline_dir }}
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: backup_offline_cmd
+      ignore_errors: true
+      when:
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
+
+    - name: Execute the Satellite offline backup
+      ansible.builtin.command:
         cmd: satellite-maintain backup offline -y {{ backup_offline_dir }}
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: backup_offline_cmd
       ignore_errors: true
+      when:
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
 
     - name: Show Satellite offline backup output if it has failed
       ansible.builtin.debug:
@@ -111,12 +150,25 @@
 
     - name: Run the offline backup restoration script
       ansible.builtin.shell:
+        cmd: satellite-maintain restore -y --wait-for-tasks {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: restore_offline_cmd
+      ignore_errors: true
+      when:
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
+
+    - name: Run the offline backup restoration script
+      ansible.builtin.shell:
         cmd: satellite-maintain restore -y {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: restore_offline_cmd
       ignore_errors: true
+      when:
+        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
 
     - name: Show Satellite offline restore output if it has failed
       ansible.builtin.debug:
