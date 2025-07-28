@@ -86,7 +86,7 @@ skip_measurement=true apj $test \
   playbooks/tests/FAM/manifest_download.yaml
 
 test=00f-manifest-excercise
-apj $test \
+skip_measurement=true apj $test \
   -e "runs='$manifest_exercise_runs'" \
   playbooks/tests/FAM/manifest_test.yaml
 ej ManifestImport $test
