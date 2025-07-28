@@ -102,7 +102,7 @@ section 'Create base LCE(s), CCV(s) and AK(s)'
 # LCE creation
 prior=Library
 for lce in $lces; do
-    test="05-lce-create-${lce}"
+    test="05f-lce-create-${lce}"
     apj $test \
       -e lce=$lce \
       -e prior=$prior \
