@@ -742,6 +742,7 @@ a 53-foreman_inventory_upload-report-generate.log \
 section 'BackupTest'
 test=55-backup
 skip_measurement=true ap ${test}.log \
+  -e "sat_version='$sat_version'" \
   playbooks/tests/sat-backup.yaml
 e BackupOffline "${logs}/${test}.log"
 e RestoreOffline "${logs}/${test}.log"
