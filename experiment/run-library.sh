@@ -96,6 +96,20 @@ function vercmp_ge() {
     (( rc == 11 || rc == 0 )) && return 0 || return 1
 }
 
+function vercmp_lt() {
+    # Check if first parameter is lesser than second using version string comparision
+    _vercmp "$1" "$2"
+    local rc=$?
+    (( rc == 12 )) && return 0 || return 1
+}
+
+function vercmp_le() {
+    # Check if first parameter is lesser or equal than second using version string comparision
+    _vercmp "$1" "$2"
+    local rc=$?
+    (( rc == 12 || rc == 0 )) && return 0 || return 1
+}
+
 function get_inventory_var() {
     local inventory_var=$1
 
