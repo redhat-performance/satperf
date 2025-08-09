@@ -188,7 +188,7 @@
   when:
     - setup_insights is defined and setup_insights
     - enable_iop is defined and enable_iop
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
 
 - name: Pull IoP advisor engine container image
   containers.podman.podman_image:
@@ -196,7 +196,7 @@
   when:
     - setup_insights is defined and setup_insights
     - enable_iop is defined and enable_iop
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
 
 - name: Set IoP advisor engine image in `custom-hiera.yaml`
   ansible.builtin.lineinfile:
@@ -205,7 +205,7 @@
   when:
     - setup_insights is defined and setup_insights
     - enable_iop is defined and enable_iop
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
 
 - name: Enable IoP advisor engine
   ansible.builtin.shell:
@@ -214,7 +214,21 @@
   when:
     - setup_insights is defined and setup_insights
     - enable_iop is defined and enable_iop
-    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
+    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
+
+- name: Enable IoP
+  ansible.builtin.shell:
+    cmd: |
+      {{ installer_name }} --enable-iop
+  when:
+    - setup_insights is defined and setup_insights
+    - enable_iop is defined and enable_iop
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
+  # XXX!!!
+  register: cmd_enable_iop
+  retries: 5
+  delay: 3
+  until: cmd_enable_iop is succeeded
 
 - name: "Run desired shell commands after installation"
   ansible.builtin.shell:
