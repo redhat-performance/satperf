@@ -1,14 +1,30 @@
 ---
 - hosts: satellite6
+  gather_facts: false
   tasks:
-    - name: Define base directory for backup
+    - name: Set base backup commands
+      ansible.builtin.set_fact:
+        backup_cmd_name: "satellite-maintain backup"
+        restore_cmd_name: "satellite-maintain restore"
+
+    - name: Define base directory for backups
       ansible.builtin.set_fact:
         base_backup_dir: "{{ base_backup_dir | default('/export') }}"
 
     - name: Define backup directories
       ansible.builtin.set_fact:
-        backup_offline_dir: "{{ base_backup_dir }}/backup-offline"
         backup_online_dir: "{{ base_backup_dir }}/backup-online"
+        backup_offline_dir: "{{ base_backup_dir }}/backup-offline"
+
+    - name: Set backup commands
+      ansible.builtin.set_fact:
+        backup_online_cmd_line: "{{ backup_cmd_name }} online -y {{ backup_online_dir }}"
+        backup_offline_cmd_line: "{{ backup_cmd_name }} offline -y {{ backup_offline_dir }}"
+
+    - name: Set backup commands (for Satellite >= 6.16.0)
+      ansible.builtin.set_fact:
+        backup_online_cmd_line: "{{ backup_online_cmd_line }} --wait-for-tasks"
+        backup_offline_cmd_line: "{{ backup_offline_cmd_line }} --wait-for-tasks"
 
     - name: Create a dir for each kind of backup & give full permissions to postgres user
       ansible.builtin.file:
@@ -20,38 +36,23 @@
         - "{{ backup_offline_dir }}"
         - "{{ backup_online_dir }}"
 
-    - name: Execute the Satellite online backup
+    - name: Run the Satellite online backup
       ansible.builtin.command:
-        cmd: satellite-maintain backup online -y --wait-for-tasks {{ backup_online_dir }}
+        cmd: "{{ backup_online_cmd_line }}"
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: backup_online_cmd
       ignore_errors: true
-      when:
-        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
 
-    - name: Execute the Satellite online backup
-      ansible.builtin.command:
-        cmd: satellite-maintain backup online -y {{ backup_online_dir }}
-      environment:
-        TZ: UTC
-        LANG: en_US.utf-8
-      register: backup_online_cmd
-      ignore_errors: true
-      when:
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
-
-    - name: Show Satellite online backup output if it has failed
+    - name: Show Satellite online backup output
       ansible.builtin.debug:
         var: backup_online_cmd.stdout_lines
-      when:
-        backup_online_cmd is failed
 
     - name: End play when Satellite online backup has failed
       ansible.builtin.meta: end_play
       when:
-        backup_online_cmd is failed
+        - backup_online_cmd is failed
 
     - name: Calculate online backup duration
       ansible.builtin.set_fact:
@@ -61,40 +62,29 @@
       ansible.builtin.debug:
         msg: "BackupOnline {{ backup_online_cmd.start }} to {{ backup_online_cmd.end }} taking {{ backup_online_cmd_duration }} seconds"
 
+    - name: Set online restore command
+      ansible.builtin.set_fact:
+        restore_online_cmd_line: "{{ restore_cmd_name }} -y {{ backup_online_dir }}/$( ls {{ backup_online_dir }} | sort -r | head -n 1 )"
+
     - name: Run the online backup restoration script
       ansible.builtin.shell:
-        cmd: satellite-maintain restore -y --wait-for-tasks {{ backup_online_dir }}/$( ls {{ backup_online_dir }} | sort -r | head -n 1 )
+        cmd: "{{ restore_online_cmd_line }}"
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: restore_online_cmd
       ignore_errors: true
-      when:
-        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
 
-    - name: Run the online backup restoration script
-      ansible.builtin.shell:
-        cmd: satellite-maintain restore -y {{ backup_online_dir }}/$( ls {{ backup_online_dir }} | sort -r | head -n 1 )
-      environment:
-        TZ: UTC
-        LANG: en_US.utf-8
-      register: restore_online_cmd
-      ignore_errors: true
-      when:
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
-
-    - name: Show Satellite online restore output if it has failed
+    - name: Show Satellite online restore output
       ansible.builtin.debug:
         var: restore_online_cmd.stdout_lines
-      when:
-        restore_online_cmd is failed
 
     - name: End play when Satellite online restore has failed
       ansible.builtin.meta: end_play
       when:
-        restore_online_cmd is failed
+        - restore_online_cmd is failed
 
-    - name: Calculate online backup restore duration
+    - name: Calculate online restore duration
       ansible.builtin.set_fact:
         restore_online_cmd_duration: "{{ (restore_online_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (restore_online_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
@@ -107,38 +97,23 @@
         path: "{{ backup_online_dir }}"
         state: absent
 
-    - name: Execute the Satellite offline backup
+    - name: Run the Satellite offline backup
       ansible.builtin.command:
-        cmd: satellite-maintain backup offline -y --wait-for-tasks {{ backup_offline_dir }}
+        cmd: "{{ backup_offline_cmd_line }}"
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: backup_offline_cmd
       ignore_errors: true
-      when:
-        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
 
-    - name: Execute the Satellite offline backup
-      ansible.builtin.command:
-        cmd: satellite-maintain backup offline -y {{ backup_offline_dir }}
-      environment:
-        TZ: UTC
-        LANG: en_US.utf-8
-      register: backup_offline_cmd
-      ignore_errors: true
-      when:
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
-
-    - name: Show Satellite offline backup output if it has failed
+    - name: Show Satellite offline backup output
       ansible.builtin.debug:
         var: backup_offline_cmd.stdout_lines
-      when:
-        backup_offline_cmd is failed
 
     - name: End play when Satellite offline backup has failed
       ansible.builtin.meta: end_play
       when:
-        backup_offline_cmd is failed
+        - backup_offline_cmd is failed
 
     - name: Calculate offline backup duration
       ansible.builtin.set_fact:
@@ -148,38 +123,27 @@
       ansible.builtin.debug:
         msg: "BackupOffline {{ backup_offline_cmd.start }} to {{ backup_offline_cmd.end }} taking {{ backup_offline_cmd_duration }} seconds"
 
+    - name: Set online restore command
+      ansible.builtin.set_fact:
+        restore_offline_cmd_line: "{{ restore_cmd_name }} -y {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )"
+
     - name: Run the offline backup restoration script
       ansible.builtin.shell:
-        cmd: satellite-maintain restore -y --wait-for-tasks {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )
+        cmd: "{{ restore_offline_cmd_line }}"
       environment:
         TZ: UTC
         LANG: en_US.utf-8
       register: restore_offline_cmd
       ignore_errors: true
-      when:
-        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
 
-    - name: Run the offline backup restoration script
-      ansible.builtin.shell:
-        cmd: satellite-maintain restore -y {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )
-      environment:
-        TZ: UTC
-        LANG: en_US.utf-8
-      register: restore_offline_cmd
-      ignore_errors: true
-      when:
-        - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
-
-    - name: Show Satellite offline restore output if it has failed
+    - name: Show Satellite offline restore output
       ansible.builtin.debug:
         var: restore_offline_cmd.stdout_lines
-      when:
-        restore_offline_cmd is failed
 
     - name: End play when Satellite offline restore has failed
       ansible.builtin.meta: end_play
       when:
-        restore_offline_cmd is failed
+        - restore_offline_cmd is failed
 
     - name: Calculate offline backup restore duration
       ansible.builtin.set_fact:
