@@ -188,7 +188,7 @@
   when:
     - setup_insights is defined and setup_insights
     - enable_iop is defined and enable_iop
-    - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
+    - sat_version is ansible.builtin.version('6.17.0', '>=')
 
 - name: Pull IoP advisor engine container image
   containers.podman.podman_image:
