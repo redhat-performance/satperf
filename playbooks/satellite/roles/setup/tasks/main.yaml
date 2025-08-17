@@ -147,10 +147,16 @@
     LC_ALL: "en_US.UTF-8"
     TZ: "UTC"
   register: installer_cmd
+  # XXX: Ignore errors in order to be able to show `cmd_enable_iop.stdout_lines`
+  ignore_errors: true
 
 - name: "Show Satellite configuration output"
   ansible.builtin.debug:
     var: installer_cmd.stdout_lines
+
+- ansible.builtin.meta: end_play
+  when:
+    - installer_cmd is failed
 
 - name: "Calculate run duration"
   ansible.builtin.set_fact:
