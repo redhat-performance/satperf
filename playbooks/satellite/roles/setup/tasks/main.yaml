@@ -150,12 +150,10 @@
   # XXX: Ignore errors in order to be able to show `cmd_enable_iop.stdout_lines`
   ignore_errors: true
 
-- name: "Show Satellite configuration output"
+- name: Show Satellite installer output
   ansible.builtin.debug:
     var: installer_cmd.stdout_lines
-
-- ansible.builtin.meta: end_play
-  when:
+  failed_when:
     - installer_cmd is failed
 
 - name: "Calculate run duration"
@@ -231,12 +229,10 @@
       # XXX: Ignore errors in order to be able to show `cmd_enable_iop.stdout_lines`
       ignore_errors: true
 
-    - name: Show IoP installer errors
+    - name: Show IoP installer output
       ansible.builtin.debug:
         var: cmd_enable_iop.stdout_lines
-
-    - ansible.builtin.meta: end_play
-      when:
+      failed_when:
         - cmd_enable_iop is failed
 
 - name: "Run desired shell commands after installation"
