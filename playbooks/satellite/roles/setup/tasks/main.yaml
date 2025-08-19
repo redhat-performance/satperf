@@ -129,7 +129,7 @@
   block:
     - name: Show set of shell commands to run before installation
       ansible.builtin.debug:
-        var: "{{ run_before_installer }}"
+        msg: "{{ run_before_installer }}"
 
     - name: Run set of shell commands to run before installation
       ansible.builtin.shell:
@@ -247,7 +247,7 @@
   block:
     - name: Show set of shell commands to run after installation
       ansible.builtin.debug:
-        var: "{{ run_after_installer }}"
+        msg: "{{ run_after_installer }}"
 
     - name: Run set of shell commands to run after installation
       ansible.builtin.shell:
