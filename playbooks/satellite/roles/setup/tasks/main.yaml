@@ -123,11 +123,17 @@
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
 
-- name: "Run desired shell commands before installation"
-  ansible.builtin.shell:
-    cmd: "{{ run_before_installer }}"
+- name: run_before_installer
   when:
     - run_before_installer is defined and run_before_installer | length > 0
+  block:
+    - name: Show set of shell commands to run before installation
+      ansible.builtin.debug:
+        var: "{{ run_before_installer }}"
+
+    - name: Run set of shell commands to run before installation
+      ansible.builtin.shell:
+        cmd: "{{ run_before_installer }}"
 
 - name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
   include_role:
@@ -235,27 +241,33 @@
       failed_when:
         - cmd_enable_iop is failed
 
-- name: "Run desired shell commands after installation"
-  ansible.builtin.shell:
-    cmd: "{{ run_after_installer }}"
+- name: run_after_installer
   when:
     - run_after_installer is defined and run_after_installer | length > 0
+  block:
+    - name: Show set of shell commands to run after installation
+      ansible.builtin.debug:
+        var: "{{ run_after_installer }}"
 
-- name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
-  ansible.builtin.copy:
-    content: |
-      [Service]
-      LimitNOFILE=infinity
-    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
-    mode: '0444'
+    - name: Run set of shell commands to run after installation
+      ansible.builtin.shell:
+        cmd: "{{ run_after_installer }}"
+
+- name: MQTT
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
+  block:
+    - name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
+      ansible.builtin.copy:
+        content: |
+          [Service]
+          LimitNOFILE=infinity
+        dest: /etc/systemd/system/mosquitto.service.d/limits.conf
+        mode: '0444'
 
-- name: Restart mosquitto service unit
-  ansible.builtin.systemd_service:
-    name: mosquitto
-    daemon_reload: true
-    state: restarted
-  when:
-    - rex_mode is defined and rex_mode == 'mqtt'
+    - name: Restart mosquitto service unit
+      ansible.builtin.systemd_service:
+        name: mosquitto
+        daemon_reload: true
+        state: restarted
 ...
