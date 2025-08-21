@@ -45,7 +45,7 @@ test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://re
 test_sync_docker_max_sync_secs="${PARAM_test_sync_docker_max_sync_secs:-600}"
 test_sync_docker_le="${PARAM_test_sync_docker_le:-test_sync_docker_le}"
 test_sync_ansible_collections_count="${PARAM_test_sync_ansible_collections_count:-8}"
-test_sync_ansible_collections_upstream_url_template="${PARAM_test_sync_ansible_collections_upstream_url_template:-https://galaxy.example.com/}"
+test_sync_ansible_collections_url_template="${PARAM_test_sync_ansible_collections_url_template:-https://galaxy.example.com/}"
 test_sync_ansible_collections_max_sync_secs="${PARAM_test_sync_ansible_collections_max_sync_secs:-600}"
 test_sync_ansible_collections_le="${PARAM_test_sync_ansible_collections_le:-test_sync_ansible_collections_le}"
 
