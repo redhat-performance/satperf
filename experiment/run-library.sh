@@ -185,8 +185,14 @@ function generic_environment_check() {
     fi
 
     if $restarted; then
+        as 00-satellite-stop.log \
+          'foreman-maintain service stop'
+
         as 00-satellite-drop-caches.log \
-          'foreman-maintain service stop; sync; echo 3 > /proc/sys/vm/drop_caches; foreman-maintain service start'
+          'sync; echo 3 >/proc/sys/vm/drop_caches'
+
+        as 00-satellite-start.log \
+          'foreman-maintain service start'
     fi
 
     as 00-info-rpm-q-katello.log \
