@@ -40,18 +40,19 @@
         TZ: UTC   # make sure returned times are in UTC
       register: reg
 
-    - name: "Register - output"
+    - name: Register - output
       ansible.builtin.debug:
         var: reg.stdout_lines
 
-    - name: "Calculate registration duration"
+    - name: Calculate registration duration
       ansible.builtin.set_fact:
         reg_duration: "{{ (reg.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (reg.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
-    - name: "Register - timings"
+    - name: Register - timings
       ansible.builtin.debug:
         msg: "Register {{ reg.start }} to {{ reg.end }} taking {{ reg_duration }} seconds"
-      when: "reg.rc == 0"
+      when:
+        - reg is success
 
     # - name: "Disable insights-client automatic scheduling"
     #   ansible.builtin.shell:
@@ -62,7 +63,8 @@
     #           insights-client --disable-schedule
     #       fi
 
-    - name: "Enable and start rhsmcertd systemd service unit"
+    # XXX: Evaluate the removal of this
+    - name: Enable and start rhsmcertd systemd service unit
       ansible.builtin.systemd_service:
         name: rhsmcertd
         state: started
@@ -81,4 +83,13 @@
       ansible.builtin.file:
         path: /etc/ssh/sshd_config
         mode: '0777'
+
+    - name: Run insights-client
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          if [[ -x /usr/bin/insights-client ]]; then
+              insights-client
+          fi
 ...
