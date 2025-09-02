@@ -1,335 +1,336 @@
 ---
-- name: "Set default variable(s) values"
+- name: Set default variable(s) values
   ansible.builtin.set_fact:
     user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
     password: "{{ password | default('{{ sat_pass }}') }}"
     organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
     location_groupname: "location_{{ location | lower }}"
 
-- name: "Ensure sat_version is string to avoid hard to detect issues"
-  ansible.builtin.assert:
-    that: sat_version is string
-    fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
-  when:
-    - product is not defined or product == 'satellite'
-    - sat_version is defined
-
-- name: Discover the current version number from the 'name' line
-  ansible.builtin.shell:
-    cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/capsule.repo | cut -d'.' -f1 | uniq"
-  register: discovered_version
-  changed_when: false
-  check_mode: no # This task must run, even in --check mode, to get the variable.
-  when:
-    - product is not defined or product == 'satellite'
-    - sat_version == 'stream'
-    - use_repo_version is defined
-
-- name: Fix stream repo version
-  ansible.builtin.replace:
-    path: "/etc/yum.repos.d/capsule.repo"
-    # The 'regexp' is the version we just discovered in the previous task.
-    regexp: '{{ discovered_version.stdout }}'
-    replace: '{{ use_repo_version }}'
-    backup: yes # Recommended: creates a backup of the original file
-  when:
-    - product is not defined or product == 'satellite'
-    - sat_version == 'stream'
-    - use_repo_version is defined
-    - discovered_version.stdout | length > 0
-
-- name: "Detect RHEL release"
+- name: Detect RHEL release
   ansible.builtin.setup:
     filter: ansible_distribution_major_version
   when: ansible_distribution_major_version is not defined
 
-# RHEL8 requirements
-- name: "Enable satellite-capsule:el8 module"
-  ansible.builtin.command:
-    cmd: |
-      dnf -y module enable satellite-capsule:el8
-  when:
-    - product is not defined or product == 'satellite'
-    - ansible_distribution_major_version | int == 8
-
-# Install packages required for Satellite capsule
-- name: "Install satellite-capsule package"
-  ansible.builtin.dnf:
-    name: satellite-capsule
-    state: present
-  when:
-    - product is not defined or product == 'satellite'
-
-# Install packages required for Foreman smart proxy
-- name: Install Foreman required packages
-  ansible.builtin.dnf:
-    name:
-      - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/x86_64/foreman-release.rpm"
-      - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/x86_64/katello-repos-latest.rpm"
-      - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
-    state: latest
-    disable_gpg_check: true
+- name: Foreman
   when:
     - product is defined and product == 'foreman'
+  block:
+    - name: Set Foreman facts
+      ansible.builtin.set_fact:
+        certs_generate_command: 'foreman-proxy-certs-generate'
 
-- name: "Install foreman-proxy-content package"
-  ansible.builtin.dnf:
-    name: foreman-proxy-content
-    state: present
-  when:
-    - product is defined and product == 'foreman'
+    - name: Install Foreman required packages
+      ansible.builtin.dnf:
+        name:
+          - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/x86_64/foreman-release.rpm"
+          - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/x86_64/katello-repos-latest.rpm"
+          - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
+        state: latest
+        disable_gpg_check: true
 
-- name: Install rhel-system-roles package in order to run Ansible roles on content hosts
-  ansible.builtin.dnf:
-    name: rhel-system-roles
-    state: present
-  when:
-    - product is not defined or product == 'satellite'
+    - name: Install foreman-proxy-content package
+      ansible.builtin.dnf:
+        name: foreman-proxy-content
+        state: present
 
-# Prepare for capsule installation
-- name: "Set certs-generate base options"
-  ansible.builtin.set_fact:
-    certs_generate_options: "--certs-tar /var/www/html/pub/{{ inventory_hostname }}-certs.tar --foreman-proxy-fqdn {{ inventory_hostname }}"
-
-- name: "Get load balancer name"
-  ansible.builtin.set_fact:
-    capsule_lb: "{{ groups['capsule_lbs'] | intersect(groups[location_groupname]) | first }}"
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
-
-- name: "Add load balanced capsule parameters"
-  ansible.builtin.set_fact:
-    certs_generate_options: "{{ certs_generate_options }} --foreman-proxy-cname {{ capsule_lb }}"
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
-
-- name: "Determine certs-generate command (Satellite)"
-  ansible.builtin.set_fact:
-    certs_generate_cmd: "capsule-certs-generate"
+- name: Satellite
   when:
     - product is not defined or product == 'satellite'
+  block:
+    - name: Set Foreman facts
+      ansible.builtin.set_fact:
+        certs_generate_command: 'capsule-certs-generate'
 
-- name: "Determine certs-generate command (Foreman)"
-  ansible.builtin.set_fact:
-    certs_generate_cmd: "foreman-proxy-certs-generate"
-  when:
-    - product is defined and product == 'foreman'
+    # RHEL8 requirements
+    - name: "Enable satellite-capsule:el8 module"
+      ansible.builtin.dnf:
+        name: '@satellite-capsule:el8'
+      when:
+        - ansible_distribution_major_version | int == 8
 
-# - name: "Run capsule-certs-generate (concurrently)"
-#   ansible.builtin.shell:
-#     cmd: |
-#       set -o pipefail
-# 
-#       {{ certs_generate_cmd }} {{ certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
-#   delegate_to: "{{ groups['satellite6'] | first }}"
-#   when:
-#     - sat_version == 'stream' or sat_version is ansible.builtin.version('6.16.0', '>=')
+    - name: Install satellite-capsule package
+      ansible.builtin.dnf:
+        name: satellite-capsule
+        state: present
 
-- name: "Run capsule-certs-generate (sequentially)"
-  # XXX: Bug 2265385 - `capsule-certs-generate` cannot be run concurrently for different capsules
-  throttle: 1
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
+    - name: Ensure sat_version is string to avoid hard to detect issues
+      ansible.builtin.assert:
+        that: sat_version is string
+        fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
+      when:
+        - sat_version is defined
 
-       {{ certs_generate_cmd }} {{ certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
-  delegate_to: "{{ groups['satellite6'] | first }}"
-  # when:
-  #   - sat_version != 'stream' and sat_version is ansible.builtin.version('6.16.0', '<')
+    - name: use_repo_version
+      when:
+        - sat_version is defined and sat_version == 'stream'
+        - use_repo_version is defined and use_repo_version | length > 0
+      block:
+        - name: Get the current version number from the 'name' line
+          ansible.builtin.shell:
+            cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/capsule.repo | cut -d'.' -f1 | uniq"
+          register: snap_version
+          changed_when: false
+          check_mode: no # This task must run, even in --check mode, to get the variable.
 
-  # Output of this command looks like this:
-  # # capsule-certs-generate --certs-tar aaa.tar --capsule-fqdn capsule.example.com
-  # Installing             Done                                               [100%] [..........]
-  #   Success!
-  # 
-  #   To finish the installation, follow these steps:
-  # 
-  #   1. Ensure that the foreman-installer-katello package is installed on the system.
-  #   2. Copy aaa.tar to the system capsule.example.com
-  #   3. Run the following commands on the capsule (possibly with the customized
-  #      parameters, see foreman-installer --scenario capsule --help and
-  #      documentation for more info on setting up additional services):
-  # 
-  #   yum -y localinstall http://sat.example.com/pub/katello-ca-consumer-latest.noarch.rpm
-  #   subscription-manager register --org "Default_Organization"
-  #   satellite-installer --scenario capsule\
-  #                       --parent-fqdn                         "sat.example.com"\
-  #                       --register-in-foreman                 "true"\
-  #                       --foreman-base-url                    "https://sat.example.com"\
-  #                       --trusted-hosts                       "sat.example.com"\
-  #                       --trusted-hosts                       "capsule.example.com"\
-  #                       --oauth-consumer-key                  "ZpFxdhmWhArPmdV5dXn98uuZZzqEMJxc"\
-  #                       --oauth-consumer-secret               "4xaW6ZvyP8sJeHyhehEhzt7nspDq6k3W"\
-  #                       --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
-  #                       --certs-tar                           "aaa.tar"
-  #   The full log is at /var/log/capsule-certs-generate.log
+        - name: Fix stream repo version
+          ansible.builtin.replace:
+            path: "/etc/yum.repos.d/capsule.repo"
+            # The 'regexp' is the version we just discovered in the previous task.
+            regexp: '{{ snap_version.stdout }}'
+            replace: '{{ use_repo_version }}'
+            backup: yes # Recommended: creates a backup of the original file
+          when:
+            - snap_version is defined and snap_version.stdout | length > 0
 
-- name: "Download tarball created by capsule-certs-generate"
-  ansible.builtin.get_url:
-    url: "http://{{ groups['satellite6'] | first }}/pub/{{ inventory_hostname }}-certs.tar"
-    dest: "/root/{{ inventory_hostname }}-certs.tar"
-    mode: '0600'
-    force: true
+    - name: Install rhel-system-roles package in order to run Ansible roles on content hosts
+      ansible.builtin.dnf:
+        name: rhel-system-roles
+        state: present
 
-- name: "Download output produced by capsule-certs-generate"
-  ansible.builtin.get_url:
-    url: "http://{{ groups['satellite6'] | first }}/pub/{{ inventory_hostname }}-out.raw"
-    dest: "/root/{{ inventory_hostname }}-out.raw"
-    mode: '0600'
-    force: true
-
-- name: "Get only commands we need to run"
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-
-      sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" |
-        grep \
-          -e '^\s\+satellite-installer\s*' \
-          -e '^\s\+foreman-installer\s*' \
-          -e '^\s\+capsule-installer\s*' \
-          -e '^\s\+--' |
-        sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
-        > "/root/{{ inventory_hostname }}-script.sh"
-
-- name: "Add load balanced capsule parameter"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --certs-cname                                 "{{ capsule_lb }}"\'
-    insertafter: '.*--certs-tar-file.*'
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
-
-- name: "Add load balanced capsule host registration URL parameter"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:9090"\'
-    insertafter: '.*--certs-cname.*'
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
-
-- name: "Add load balanced capsule proxy template URL parameter"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
-    insertafter: '.*--foreman-proxy-registration-url.*'
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
-
-- name: "Make sure remote execution plugin is enabled"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
-    insertafter: '.*--certs-tar-file.*'
-
-- name: "Add MQTT transport for remote execution parameter"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
-    insertbefore: '.*--enable-foreman-proxy-plugin-remote-execution-script.*'
-  when:
-    - rex_mode is defined and rex_mode == 'mqtt'
-
-- name: "Make sure Ansible plugin is enabled"
-  ansible.builtin.lineinfile:
-    dest: "/root/{{ inventory_hostname }}-script.sh"
-    line: '                    --enable-foreman-proxy-plugin-ansible\'
-    insertafter: '.*--certs-tar-file.*'
-  # XXX: Submit Bug???
-  when:
-    - product is not defined or product == 'satellite'
-
-- name: "Run desired shell commands before installation"
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
-
-      {{ run_before_installer }}
+- name: run_before_installer
   when:
     - run_before_installer is defined and run_before_installer | length > 0
+  block:
+    - name: Show set of shell commands to run before installation
+      ansible.builtin.debug:
+        msg: "{{ run_before_installer }}"
 
-# Finally install capsule
-- name: "Run Capsule configuration"
-  # XXX: Submit PR
-  throttle: 1
-  ansible.builtin.command:
-    cmd: |
-      bash /root/{{ inventory_hostname }}-script.sh
-  environment:
-    LANG: "en_US.UTF-8"
-    LC_ALL: "en_US.UTF-8"
-    TZ: "UTC"
-  register: configuration
+    - name: Run set of shell commands to run before installation
+      ansible.builtin.shell:
+        cmd: "{{ run_before_installer }}"
 
-- name: "Show Capsule configuration output"
-  ansible.builtin.debug:
-    var: configuration.stdout_lines
+- name: certs-generate parameters
+  block:
+    - name: "Set certs-generate base options"
+      ansible.builtin.set_fact:
+        certs_generate_options: "--certs-tar /var/www/html/pub/{{ inventory_hostname }}-certs.tar --foreman-proxy-fqdn {{ inventory_hostname }}"
 
-- name: "Calculate run duration"
-  ansible.builtin.set_fact:
-    duration: "{{ (configuration.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (configuration.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+    - name: Load balanced capsule
+      when:
+        - "'capsule_lbs' in groups"
+        - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+      block:
+        - name: Get load balancer name
+          ansible.builtin.set_fact:
+            capsule_lb: "{{ groups['capsule_lbs'] | intersect(groups[location_groupname]) | first }}"
 
-- name: "Print capsule installer run duration"
-  ansible.builtin.debug:
-    msg: "SatelliteInstallerScenarioCapsule {{ configuration.start }} to {{ configuration.end }} taking {{ duration }} seconds"
+        - name: Set load balanced capsule parameters
+          ansible.builtin.set_fact:
+            certs_generate_options: "{{ certs_generate_options }} --foreman-proxy-cname {{ capsule_lb }}"
 
-- name: "Get capsule ID"
-  ansible.builtin.command:
-    cmd: |
-      hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id
-  register: capsule_id_cmd
-  delegate_to: "{{ groups['satellite6'] | first }}"
+- name: certs-generate
+  block:
+    # - name: "Run certs-generate (concurrently)"
+    #   ansible.builtin.shell:
+    #     cmd: |
+    #       set -o pipefail
+
+    #       {{ certs_generate_command }} {{ certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
+    #   register: certs_generate_cmd
+    #   delegate_to: "{{ groups['satellite6'] | first }}"
+    #   # XXX: Ignore errors in order to be able to show `certs_generate_cmd.stdout_lines`
+    #   ignore_errors: true
+
+    - name: "Run certs-generate (sequentially)"
+      # XXX: Bug 2265385 - `capsule-certs-generate` cannot be run concurrently for different capsules
+      throttle: 1
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          {{ certs_generate_command }} {{ certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
+      register: certs_generate_cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      # XXX: Ignore errors in order to be able to show `certs_generate_cmd.stdout_lines`
+      ignore_errors: true
+
+    - name: Show certs-generate output
+      ansible.builtin.debug:
+        msg: "{{ certs_generate_cmd.stdout_lines }}"
+      # Output of this command looks like this:
+      # # capsule-certs-generate --certs-tar aaa.tar --capsule-fqdn capsule.example.com
+      # Installing             Done                                               [100%] [..........]
+      #   Success!
+      # 
+      #   To finish the installation, follow these steps:
+      # 
+      #   1. Ensure that the foreman-installer-katello package is installed on the system.
+      #   2. Copy aaa.tar to the system capsule.example.com
+      #   3. Run the following commands on the capsule (possibly with the customized
+      #      parameters, see foreman-installer --scenario capsule --help and
+      #      documentation for more info on setting up additional services):
+      # 
+      #   yum -y localinstall http://sat.example.com/pub/katello-ca-consumer-latest.noarch.rpm
+      #   subscription-manager register --org "Default_Organization"
+      #   satellite-installer --scenario capsule\
+      #                       --parent-fqdn                         "sat.example.com"\
+      #                       --register-in-foreman                 "true"\
+      #                       --foreman-base-url                    "https://sat.example.com"\
+      #                       --trusted-hosts                       "sat.example.com"\
+      #                       --trusted-hosts                       "capsule.example.com"\
+      #                       --oauth-consumer-key                  "ZpFxdhmWhArPmdV5dXn98uuZZzqEMJxc"\
+      #                       --oauth-consumer-secret               "4xaW6ZvyP8sJeHyhehEhzt7nspDq6k3W"\
+      #                       --pulp-oauth-secret                   "waQ9uU4HGrtfbAgcTFzqHASCqwJMx9qi"\
+      #                       --certs-tar                           "aaa.tar"
+      #   The full log is at /var/log/capsule-certs-generate.log
+      when:
+        - certs_generate_cmd is failed
+      failed_when:
+        - certs_generate_cmd is failed
+
+    - name: Download tarball created by certs-generate
+      ansible.builtin.get_url:
+        url: "http://{{ groups['satellite6'] | first }}/pub/{{ inventory_hostname }}-certs.tar"
+        dest: "/root/{{ inventory_hostname }}-certs.tar"
+        mode: '0600'
+        force: true
+
+    - name: Download output produced by certs-generate
+      ansible.builtin.get_url:
+        url: "http://{{ groups['satellite6'] | first }}/pub/{{ inventory_hostname }}-out.raw"
+        dest: "/root/{{ inventory_hostname }}-out.raw"
+        mode: '0600'
+        force: true
+
+- name: Installer parameters
+  block:
+    - name: Get only commands we need to run
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          sed 's/\x1B\[[0-9;]*[JKmsu]//g' "/root/{{ inventory_hostname }}-out.raw" |
+            grep \
+              -e '^\s\+satellite-installer\s*' \
+              -e '^\s\+foreman-installer\s*' \
+              -e '^\s\+capsule-installer\s*' \
+              -e '^\s\+--' |
+            sed 's|\(^\s\+--certs-tar\s\+"\).*$|\1/root/{{ inventory_hostname }}-certs.tar"\\|' \
+            > "/root/{{ inventory_hostname }}-script.sh"
+
+    - name: Load balanced capsule
+      when:
+        - "'capsule_lbs' in groups"
+        - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+      block:
+        - name: Add load balanced capsule parameter
+          ansible.builtin.lineinfile:
+            dest: "/root/{{ inventory_hostname }}-script.sh"
+            line: '                    --certs-cname                                 "{{ capsule_lb }}"\'
+            insertafter: '.*--certs-tar-file.*'
+
+        - name: Add load balanced capsule host registration URL parameter
+          ansible.builtin.lineinfile:
+            dest: "/root/{{ inventory_hostname }}-script.sh"
+            line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:9090"\'
+            insertafter: '.*--certs-cname.*'
+
+        - name: Add load balanced capsule proxy template URL parameter
+          ansible.builtin.lineinfile:
+            dest: "/root/{{ inventory_hostname }}-script.sh"
+            line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
+            insertafter: '.*--foreman-proxy-registration-url.*'
+
+    - name: Make sure remote execution plugin is enabled
+      ansible.builtin.lineinfile:
+        dest: "/root/{{ inventory_hostname }}-script.sh"
+        line: '                    --enable-foreman-proxy-plugin-remote-execution-script\'
+        insertafter: '.*--certs-tar-file.*'
+
+    - name: Make sure Ansible plugin is enabled
+      ansible.builtin.lineinfile:
+        dest: "/root/{{ inventory_hostname }}-script.sh"
+        line: '                    --enable-foreman-proxy-plugin-ansible\'
+        insertafter: '.*--certs-tar-file.*'
+      # XXX: Submit Bug???
+      when:
+        - product is not defined or product == 'satellite'
+
+    - name: MQTT
+      when:
+        - rex_mode is defined and rex_mode == 'mqtt'
+      block:
+        - name: "Add MQTT transport for remote execution parameter"
+          ansible.builtin.lineinfile:
+            dest: "/root/{{ inventory_hostname }}-script.sh"
+            line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
+            insertbefore: '.*--enable-foreman-proxy-plugin-remote-execution-script.*'
+
+- name: custom_hiera_content
   when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+    - custom_hiera_content is defined and custom_hiera_content | length > 0
+  block:
+    - name: Populate /etc/foreman-installer/custom-hiera.yaml
+      include_role:
+        name: apply_custom-hiera
 
-- name: "Set capsule ID"
-  ansible.builtin.set_fact:
-    id: "{{ capsule_id_cmd.stdout }}"
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+- name: Installer
+  block:
+    - name: Show installer command line
+      ansible.builtin.debug:
+        msg: "bash /root/{{ inventory_hostname }}-script.sh"
 
-- name: "Refresh capsule features"
-  # XXX: Submit PR
-  throttle: 1
-  ansible.builtin.command:
-    cmd: |
-      hammer -u {{ user }} -p {{ password }} capsule refresh-features --organization '{{ organization }}' --id {{ id }}
-  delegate_to: "{{ groups['satellite6'] | first }}"
-  when:
-    - "'capsule_lbs' in groups"
-    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+    - name: Run installer script
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: |
+          bash /root/{{ inventory_hostname }}-script.sh
+      environment:
+        LANG: 'en_US.UTF-8'
+        LC_ALL: 'en_US.UTF-8'
+        TZ: 'UTC'
+      register: installer_script_cmd
+      # XXX: Ignore errors in order to be able to show `installer_script_cmd.stdout_lines`
+      ignore_errors: true
 
-- name: "Run desired shell commands after installation"
-  ansible.builtin.shell:
-    cmd: |
-      set -o pipefail
+    - name: Show installer script output
+      ansible.builtin.debug:
+        msg: "{{ installer_script_cmd.stdout_lines }}"
+      failed_when:
+        - installer_script_cmd is failed
 
-      {{ run_after_installer }}
+    - name: Calculate installer script duration
+      ansible.builtin.set_fact:
+        duration: "{{ (installer_script_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (installer_script_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
+    - name: "Print capsule installer run duration"
+      ansible.builtin.debug:
+        msg: "SatelliteInstallerScenarioCapsule {{ installer_script_cmd.start }} to {{ installer_script_cmd.end }} taking {{ duration }} seconds"
+
+- name: run_after_installer
   when:
     - run_after_installer is defined and run_after_installer | length > 0
+  block:
+    - name: Show set of shell commands to run after installation
+      ansible.builtin.debug:
+        msg: "{{ run_after_installer }}"
 
-- name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
-  ansible.builtin.copy:
-    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
-    content: |
-      [Service]
-      LimitNOFILE=infinity
-    mode: '0444'
-  when:
-    - rex_mode is defined and rex_mode == 'mqtt'
+    - name: Run set of shell commands to run after installation
+      ansible.builtin.shell:
+        cmd: "{{ run_after_installer }}"
 
-- name: Restart mosquitto service unit
-  ansible.builtin.systemd:
-    name: mosquitto
-    state: restarted
-    daemon_reload: true
+- name: Load-balanced capsule IDs
   when:
-    - rex_mode is defined and rex_mode == 'mqtt'
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+  block:
+    - name: Get capsule ID
+      ansible.builtin.command:
+        cmd: |
+          hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id
+      register: capsule_id_cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    - name: Set capsule ID
+      ansible.builtin.set_fact:
+        id: "{{ capsule_id_cmd.stdout }}"
+
+    - name: Refresh capsule features
+      # XXX: Submit PR
+      throttle: 1
+      ansible.builtin.command:
+        cmd: |
+          hammer -u {{ user }} -p {{ password }} capsule refresh-features --organization '{{ organization }}' --id {{ id }}
+      delegate_to: "{{ groups['satellite6'] | first }}"
 ...
