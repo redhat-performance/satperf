@@ -1,6 +1,11 @@
 ---
 - hosts: satellite6
   gather_facts: false
+  pre_tasks:
+    - name: End play when there are no capsules to sync to
+      ansible.builtin.meta: end_play
+      when:
+        - groups['capsules'] | length == 0
   roles:
     - wait-for-task-script
 
