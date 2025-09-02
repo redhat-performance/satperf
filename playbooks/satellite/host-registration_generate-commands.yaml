@@ -1,5 +1,5 @@
 ---
-- name: "Generate the host registration command"
+- name: Generate the host registration command
   hosts: satellite6:capsules
   gather_facts: false
   vars:
@@ -7,29 +7,27 @@
     hgrg: "host-registration generate-command --organization '{{ organization }}' --location {{ location }} --insecure true --force true"
     location_groupname: "location_{{ location | lower }}"
   tasks:
-    - name: "Get capsule ID"
-      # XXX: Submit PR
-      throttle: 1
-      ansible.builtin.command:
-        cmd: |
-          hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --organization '{{ organization }}' --search 'name = {{ inventory_hostname }}' --fields id
-      register: capsule_id_cmd
-      changed_when: capsule_id_cmd.rc != 0
-      delegate_to: "{{ groups['satellite6'] | first }}"
+    - name: Capsule IDs
       when:
         - "'capsules' in group_names"
+      block:
+        - name: Get capsule ID
+          # XXX: Submit PR
+          throttle: 1
+          ansible.builtin.command:
+            cmd: |
+              hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --organization '{{ organization }}' --search 'name = {{ inventory_hostname }}' --fields id
+          register: capsule_id_cmd
+          changed_when: capsule_id_cmd.rc != 0
+          delegate_to: "{{ groups['satellite6'] | first }}"
 
-    - name: "Set capsule ID"
-      ansible.builtin.set_fact:
-        capsule_id: "{{ capsule_id_cmd.stdout }}"
-      when:
-        - "'capsules' in group_names"
+        - name: Set capsule ID
+          ansible.builtin.set_fact:
+            capsule_id: "{{ capsule_id_cmd.stdout }}"
 
-    - name: "Add --smart-proxy-id parameter"
-      ansible.builtin.set_fact:
-        hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
-      when:
-        - "'capsules' in group_names"
+        - name: Add --smart-proxy-id parameter
+          ansible.builtin.set_fact:
+            hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
 
     - name: Check if Insights client should be installed and configured (it won't be by default)
       # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
@@ -88,23 +86,21 @@
       when:
         - item.rc == 0
 
-    - name: "Set name of first capsule"
-      ansible.builtin.set_fact:
-        first_capsule: "{{ groups[location_groupname] | intersect(groups['capsules']) | sort | first }}"
+    - name: Load balanced capsule
       when:
         - "'capsule_lbs' in groups"
         - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
         - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+      block:
+        - name: Set name of first capsule
+          ansible.builtin.set_fact:
+            first_capsule: "{{ groups[location_groupname] | intersect(groups['capsules']) | sort | first }}"
 
-    - name: "Download host registration script from the first capsule"
-      ansible.builtin.get_url:
-        url: http://{{ first_capsule }}/pub/host-registration.{{ item }}.sh
-        dest: /var/www/html/pub/host-registration.{{ item }}.sh
-        mode: '0644'
-        force: true
-      loop: "{{ aks | split }}"
-      when:
-        - "'capsule_lbs' in groups"
-        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
-        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+        - name: Download host registration script from the first capsule
+          ansible.builtin.get_url:
+            url: http://{{ first_capsule }}/pub/host-registration.{{ item }}.sh
+            dest: /var/www/html/pub/host-registration.{{ item }}.sh
+            mode: '0644'
+            force: true
+          loop: "{{ aks | split }}"
 ...
