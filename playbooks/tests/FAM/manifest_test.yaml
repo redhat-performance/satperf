@@ -4,10 +4,8 @@
   vars:
     foreman_manifest_path: "{{ manifest_path | default('~/.ansible/tmp/manifest.zip') }}"
     test_runs: "{{ runs | default(1) }}"
-  tasks:
-    - debug:
-        var: playbook_dir
 
+  tasks:
     - name: Run test cyle of import + refresh + delete the manifest
       include_tasks: includes/manifest_test.yaml
       vars:
