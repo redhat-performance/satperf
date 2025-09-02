@@ -17,133 +17,144 @@
     filter: ansible_memtotal_mb
   when: ansible_memtotal_mb is not defined
 
-- name: "Determine if a 'default' tuning profile should be applied"
-  ansible.builtin.set_fact:
-    tuning_profile: "default"
-  when:
-    - ansible_processor_nproc | int >= 4
-    - ansible_memtotal_mb | int >= 19000
+- when:
+    - ansible_processor_nproc is defined and ansible_processor_nproc | int > 0
+    - ansible_memtotal_mb is defined and ansible_memtotal_mb | int > 0
+  block:
+    - name: "Determine if a 'default' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'default'
+      when:
+        - ansible_processor_nproc | int >= 4
+        - ansible_memtotal_mb | int >= 19000
 
-- name: "Determine if a 'medium' tuning profile should be applied"
-  ansible.builtin.set_fact:
-    tuning_profile: "medium"
-  when:
-    - ansible_processor_nproc | int >= 8
-    - ansible_memtotal_mb | int >= 31000
+    - name: "Determine if a 'medium' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'medium'
+      when:
+        - ansible_processor_nproc | int >= 8
+        - ansible_memtotal_mb | int >= 31000
 
-- name: "Determine if a 'large' tuning profile should be applied"
-  ansible.builtin.set_fact:
-    tuning_profile: "large"
-  when:
-    - ansible_processor_nproc | int >= 16
-    - ansible_memtotal_mb | int >= 63000
+    - name: "Determine if a 'large' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'large'
+      when:
+        - ansible_processor_nproc | int >= 16
+        - ansible_memtotal_mb | int >= 63000
 
-- name: "Determine if an 'extra-large' tuning profile should be applied"
-  ansible.builtin.set_fact:
-    tuning_profile: "extra-large"
-  when:
-    - ansible_processor_nproc | int >= 32
-    - ansible_memtotal_mb | int >= 127000
+    - name: "Determine if an 'extra-large' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'extra-large'
+      when:
+        - ansible_processor_nproc | int >= 32
+        - ansible_memtotal_mb | int >= 127000
 
-- name: "Determine if an 'extra-extra-large' tuning profile should be applied"
-  ansible.builtin.set_fact:
-    tuning_profile: "extra-extra-large"
-  when:
-    - ansible_processor_nproc | int > 48
-    - ansible_memtotal_mb | int > 255000
+    - name: "Determine if an 'extra-extra-large' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'extra-extra-large'
+      when:
+        - ansible_processor_nproc | int > 48
+        - ansible_memtotal_mb | int > 255000
 
-- name: "End play if no tuning is required"
-  ansible.builtin.meta:
-    end_host
+- name: End play if no tuning is required
+  ansible.builtin.meta: end_host
   when:
     - custom_hiera_content is not defined or custom_hiera_content | length == 0
     - installer_additional_opts is not defined or installer_additional_opts | length == 0
     - tuning_profile is not defined or tuning_profile | length == 0
+    - rex_mode is not defined or rex_mode != 'mqtt'
 
-- name: "Populate /etc/foreman-installer/custom-hiera.yaml (if needed)"
-  include_role:
-    name: apply_custom-hiera
-  when:
-    - custom_hiera_content is defined and custom_hiera_content | length > 0
-
-- name: "Determine Installer command line (Satellite)"
-  ansible.builtin.set_fact:
-    installer_cmd_line: 'satellite-installer'
-  when:
-    - product is not defined or product == 'satellite'
-
-- name: "Determine Installer command line (Foreman)"
-  ansible.builtin.set_fact:
-    installer_cmd_line: 'foreman-installer'
+- name: Foreman
   when:
     - product is defined and product == 'foreman'
+  block:
+    - name: Set Foreman facts
+      ansible.builtin.set_fact:
+        installer_cmd_line: 'foreman-installer'
 
-- name: "Set tuning profile"
-  ansible.builtin.set_fact:
-    installer_cmd_line: "{{ installer_cmd_line }} --tuning {{ tuning_profile }}"
+- name: Satellite
   when:
-    - inventory_hostname in groups['satellite6']
-    - tuning_profile is defined and tuning_profile | length > 0
+    - product is not defined or product == 'satellite'
+  block:
+    - name: Set Satellite facts
+      ansible.builtin.set_fact:
+        installer_cmd_line: 'satellite-installer'
 
-- name: "Provide additional installer options"
-  ansible.builtin.set_fact:
-    installer_cmd_line: "{{ installer_cmd_line }} {{ installer_additional_opts }}"
+- name: Parameters
+  block:
+    - name: Set tuning profile
+      ansible.builtin.set_fact:
+        installer_cmd_line: "{{ installer_cmd_line }} --tuning {{ tuning_profile }}"
+      when:
+        - inventory_hostname in groups['satellite6']
+        - tuning_profile is defined and tuning_profile | length > 0
+
+    - name: Set additional installer options
+      ansible.builtin.set_fact:
+        installer_cmd_line: "{{ installer_cmd_line }} {{ installer_additional_opts }}"
+      when:
+        - installer_additional_opts is defined and installer_additional_opts | length > 0
+
+- name: MQTT
   when:
-    - installer_additional_opts is defined and installer_additional_opts | length > 0
+    - rex_mode is defined and rex_mode == 'mqtt'
+  block:
+    - name: "Workaround for: SAT-18217 - On its default configuration mosquitto cannot accept more than 1014 clients"
+      ansible.builtin.blockinfile:
+        block: |
+          systemd::dropin_files:
+            limits.conf:
+              unit: mosquitto.service
+              content: "[Service]\nLimitNOFILE=infinity\n"
+        path: /etc/foreman-installer/custom-hiera.yaml
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - MQTT "
+        prepend_newline: true
+        append_newline: true
+        backup: yes
 
-- name: "Show Installer tuning command line"
-  ansible.builtin.debug:
-    msg: "{{ installer_cmd_line }}"
-
-# Run the installer
-- name: "Run Satellite tuning"
-  ansible.builtin.shell: "{{ installer_cmd_line }}"
-  environment:
-    LANG: "en_US.UTF-8"
-    LC_ALL: "en_US.UTF-8"
-    TZ: "UTC"
-  register:  installer_tune_cmd
-
-- name: "Show Satellite tuning output"
-  ansible.builtin.debug:
-    var:  installer_tune_cmd.stdout_lines
-
-- name: "Calculate installer tuning run duration"
-  ansible.builtin.set_fact:
-    installer_tune_cmd_duration: "{{ (installer_tune_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (installer_tune_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
-
-- name: "Print installer tuning run duration"
-  ansible.builtin.debug:
-    msg: "SatelliteInstallerTuneScenarioSatellite {{ installer_tune_cmd.start }} to {{ installer_tune_cmd.end }} taking {{ installer_tune_cmd_duration }} seconds"
-
-- name: "Check whether pull-mqtt mode is enabled"
-  ansible.builtin.lineinfile:
-    path: /etc/foreman-proxy/settings.d/remote_execution_ssh.yml
-    regexp: '^:mode: pull-mqtt$'
-    state: absent
-  check_mode: true
-  register: result
-  failed_when: result is failed
-
-- name: "Set is_pull_mqtt var"
-  ansible.builtin.set_fact:
-    is_pull_mqtt: "{{ result.changed }}"
-
-- name: "Workaround for: Bug 2132774 - On its default configuration mosquitto cannot accept more than 1014 clients"
-  ansible.builtin.copy:
-    content: |
-      [Service]
-      LimitNOFILE=infinity
-    dest: /etc/systemd/system/mosquitto.service.d/limits.conf
-    mode: '0444'
+- name: custom_hiera_content
   when:
-    - is_pull_mqtt
+    - custom_hiera_content is defined and custom_hiera_content | length > 0
+  block:
+    - name: Populate /etc/foreman-installer/custom-hiera.yaml
+      include_role:
+        name: apply_custom-hiera
 
-- name: Restart mosquitto service unit
-  ansible.builtin.systemd_service:
-    name: mosquitto
-    daemon_reload: true
-    state: restarted
+- name: Installer tuning
+  block:
+    - name: Show installer tuning command line
+      ansible.builtin.debug:
+        msg: "{{ installer_cmd_line }}"
+
+    - name: Run installer tuning
+      ansible.builtin.shell: "{{ installer_cmd_line }}"
+      environment:
+        LANG: 'en_US.UTF-8'
+        LC_ALL: 'en_US.UTF-8'
+        TZ: 'UTC'
+      register: installer_tune_cmd
+
+    - name: Show installer tuning output
+      ansible.builtin.debug:
+        msg: "{{ installer_tune_cmd.stdout_lines }}"
+      failed_when:
+        - installer_tune_cmd is failed
+
+    - name: Calculate installer tuning run duration
+      ansible.builtin.set_fact:
+        installer_tune_cmd_duration: "{{ (installer_tune_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (installer_tune_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
+    - name: Show installer tuning duration
+      ansible.builtin.debug:
+        msg: "SatelliteInstallerTuneScenarioSatellite {{ installer_tune_cmd.start }} to {{ installer_tune_cmd.end }} taking {{ installer_tune_cmd_duration }} seconds"
+
+- name: MQTT
   when:
-    - is_pull_mqtt
+    - rex_mode is defined and rex_mode == 'mqtt'
+  block:
+    - name: Restart mosquitto service unit
+      ansible.builtin.systemd_service:
+        name: mosquitto
+        daemon_reload: true
+        state: restarted
 ...
