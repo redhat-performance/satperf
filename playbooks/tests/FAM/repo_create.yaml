@@ -1,14 +1,18 @@
 ---
 - hosts: localhost
   gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      organization: "{{ foreman_organization }}"
+
   tasks:
     - name: RepoCreate
       theforeman.foreman.repository:
-        username: "{{ foreman_username | default(omit) }}"
-        password: "{{ foreman_password | default(omit) }}"
-        server_url: "{{ foreman_server_url | default(omit) }}"
-        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-        organization: "{{ foreman_organization }}"
         product: "{{ product }}"
         name: "{{ repo_name }}"
         content_type: "{{ content_type }}"

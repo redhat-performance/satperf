@@ -1,6 +1,7 @@
 ---
 - hosts: localhost
   gather_facts: false
+
   roles:
     - role: theforeman.foreman.content_view_publish
       vars:

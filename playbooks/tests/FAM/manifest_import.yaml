@@ -3,24 +3,23 @@
   gather_facts: false
   vars:
     foreman_manifest_path: "{{ manifest_path | default('~/.ansible/tmp/manifest.zip') }}"
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      organization: "{{ foreman_organization }}"
+
   tasks:
     - name: Import the manifest
       theforeman.foreman.subscription_manifest:
-        username: "{{ foreman_username | default(omit) }}"
-        password: "{{ foreman_password | default(omit) }}"
-        server_url: "{{ foreman_server_url | default(omit) }}"
-        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-        organization: "{{ foreman_organization }}"
         manifest_path: "{{ foreman_manifest_path }}"
         # state: 'present'
 
     - name: Refresh the manifest
       theforeman.foreman.subscription_manifest:
-        username: "{{ foreman_username | default(omit) }}"
-        password: "{{ foreman_password | default(omit) }}"
-        server_url: "{{ foreman_server_url | default(omit) }}"
-        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-        organization: "{{ foreman_organization }}"
         manifest_path: "{{ foreman_manifest_path }}"
         state: refreshed
 ...

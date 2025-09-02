@@ -1,6 +1,7 @@
 ---
 - hosts: localhost
   gather_facts: false
+
   roles:
     - role: theforeman.foreman.lifecycle_environments
       vars:

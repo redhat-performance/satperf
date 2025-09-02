@@ -1,16 +1,18 @@
 ---
 - hosts: localhost
   gather_facts: false
-  # roles:
-  #   - role: theforeman.foreman.lifecycle_environments
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      organization: "{{ foreman_organization }}"
+
   tasks:
     - name: CreateLifecyleEnvironment
       theforeman.foreman.lifecycle_environment:
-        username: "{{ foreman_username | default(omit) }}"
-        password: "{{ foreman_password | default(omit) }}"
-        server_url: "{{ foreman_server_url | default(omit) }}"
-        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-        organization: "{{ foreman_organization }}"
         name: "{{ lce }}"
         prior: "{{ prior }}"
         # state: 'present'

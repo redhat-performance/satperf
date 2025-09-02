@@ -3,6 +3,7 @@
   gather_facts: false
   vars:
     foreman_manifest_path: "{{ manifest_path | default('~/.ansible/tmp/manifest.zip') }}"
+
   tasks:
     - name: Download the manifest
       theforeman.foreman.redhat_manifest:
