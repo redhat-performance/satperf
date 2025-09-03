@@ -193,16 +193,17 @@
     - enable_iop is defined and enable_iop
     - sat_version is defined and (sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>='))
   block:
-    - name: Log in to the registry to pull IoP advisor engine container image
-      containers.podman.podman_login:
-        registry: "{{ iop_registry }}"
-        username: "{{ iop_registry_username }}"
-        password: "{{ iop_registry_password }}"
-
     - name: IoP
       when:
         - sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
       block:
+        - name: Log in to the registry to pull IoP container images
+          containers.podman.podman_login:
+            registry: "{{ iop_registry }}"
+            username: "{{ iop_registry_username }}"
+            password: "{{ iop_registry_password }}"
+            authfile: /etc/foreman/registry-auth.json
+
         - name: Set IoP parameters
           ansible.builtin.set_fact:
             iop_params: '--enable-iop'
@@ -211,6 +212,12 @@
       when:
         - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
       block:
+        - name: Log in to the registry to pull IoP advisor engine container image
+          containers.podman.podman_login:
+            registry: "{{ iop_registry }}"
+            username: "{{ iop_registry_username }}"
+            password: "{{ iop_registry_password }}"
+
         - name: Pull IoP advisor engine container image
           containers.podman.podman_image:
             name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}"
