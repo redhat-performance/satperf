@@ -574,6 +574,7 @@ function c() {
 
     local end="$( date -u +%s )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+    (( rc == 0 )) || eval "$@" &>$out.retry
 
     measurement_add \
       "$@" \
@@ -604,6 +605,7 @@ function a() {
 
     local end="$( date -u +%s )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+    (( rc == 0 )) || ansible $opts_adhoc "$@" &>$out.retry
 
     measurement_add \
       "ansible $opts_adhoc $( _format_opts "$@" )" \
@@ -643,6 +645,7 @@ function ap() {
 
     local end="$( date -u +%s )"
     log "Finish after $(( end - start )) seconds with log in $out and exit code $rc"
+    (( rc == 0 )) || ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc "$@" &>$out.retry
 
     measurement_add \
       "ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
@@ -696,6 +699,7 @@ function apj() {
     fi
     # local rc="$( jq '.stats.localhost.failures' $play_out_json )"
     log "Finish after $duration seconds with JSON log in $play_out_json and exit code $rc"
+    (( rc == 0 )) || ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json.retry
 
     measurement_add \
       "ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
