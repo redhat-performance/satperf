@@ -123,7 +123,7 @@
       ansible.builtin.debug:
         msg: "BackupOffline {{ backup_offline_cmd.start }} to {{ backup_offline_cmd.end }} taking {{ backup_offline_cmd_duration }} seconds"
 
-    - name: Set online restore command
+    - name: Set offline restore command
       ansible.builtin.set_fact:
         restore_offline_cmd_line: "{{ restore_cmd_name }} -y {{ backup_offline_dir }}/$( ls {{ backup_offline_dir }} | sort -r | head -n 1 )"
 
