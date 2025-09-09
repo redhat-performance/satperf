@@ -1,91 +1,106 @@
 ---
 - name: Set default variable(s) values
   ansible.builtin.set_fact:
-    user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-    password: "{{ password | default('{{ sat_pass }}') }}"
-    organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+    # user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+    # password: "{{ password | default('{{ sat_pass }}') }}"
+    # organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
     location_groupname: "location_{{ location | lower }}"
 
-- name: Detect RHEL release
+- name: Detect EL release
   ansible.builtin.setup:
     filter: ansible_distribution_major_version
-  when: ansible_distribution_major_version is not defined
-
-- name: Foreman
   when:
-    - product is defined and product == 'foreman'
+    - ansible_distribution_major_version is not defined
+
+- name: Requirements
   block:
-    - name: Set Foreman facts
-      ansible.builtin.set_fact:
-        certs_generate_command: 'foreman-proxy-certs-generate'
-
-    - name: Install Foreman required packages
-      ansible.builtin.dnf:
-        name:
-          - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/x86_64/foreman-release.rpm"
-          - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/x86_64/katello-repos-latest.rpm"
-          - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
-        state: latest
-        disable_gpg_check: true
-
-    - name: Install foreman-proxy-content package
-      ansible.builtin.dnf:
-        name: foreman-proxy-content
-        state: present
-
-- name: Satellite
-  when:
-    - product is not defined or product == 'satellite'
-  block:
-    - name: Set Foreman facts
-      ansible.builtin.set_fact:
-        certs_generate_command: 'capsule-certs-generate'
-
-    # RHEL8 requirements
-    - name: "Enable satellite-capsule:el8 module"
-      ansible.builtin.dnf:
-        name: '@satellite-capsule:el8'
+    - name: Foreman
       when:
-        - ansible_distribution_major_version | int == 8
-
-    - name: Install satellite-capsule package
-      ansible.builtin.dnf:
-        name: satellite-capsule
-        state: present
-
-    - name: Ensure sat_version is string to avoid hard to detect issues
-      ansible.builtin.assert:
-        that: sat_version is string
-        fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
-      when:
-        - sat_version is defined
-
-    - name: use_repo_version
-      when:
-        - sat_version is defined and sat_version == 'stream'
-        - use_repo_version is defined and use_repo_version | length > 0
+        - product is defined and product == 'foreman'
       block:
-        - name: Get the current version number from the 'name' line
-          ansible.builtin.shell:
-            cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/capsule.repo | cut -d'.' -f1 | uniq"
-          register: snap_version
-          changed_when: false
-          check_mode: no # This task must run, even in --check mode, to get the variable.
-
-        - name: Fix stream repo version
-          ansible.builtin.replace:
-            path: "/etc/yum.repos.d/capsule.repo"
-            # The 'regexp' is the version we just discovered in the previous task.
-            regexp: '{{ snap_version.stdout }}'
-            replace: '{{ use_repo_version }}'
-            backup: yes # Recommended: creates a backup of the original file
+        - name: Detect EL release
+          ansible.builtin.setup:
+            filter:
+              - ansible_architecture
           when:
-            - snap_version is defined and snap_version.stdout | length > 0
+            - ansible_architecture is not defined
 
-    - name: Install rhel-system-roles package in order to run Ansible roles on content hosts
-      ansible.builtin.dnf:
-        name: rhel-system-roles
-        state: present
+        - name: Set Foreman facts
+          ansible.builtin.set_fact:
+            certs_generate_command: 'foreman-proxy-certs-generate'
+
+        - name: Install Foreman required packages
+          ansible.builtin.dnf:
+            name:
+              - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/foreman-release.rpm"
+              - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/katello-repos-latest.rpm"
+              - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
+            state: latest
+            disable_gpg_check: true
+
+        - name: Install foreman-proxy-content package
+          ansible.builtin.dnf:
+            name: foreman-proxy-content
+            state: present
+
+        - name: Install linux-system-roles package in order to run Ansible roles on content hosts
+          ansible.builtin.dnf:
+            name: linux-system-roles
+            state: present
+
+    - name: Satellite
+      when:
+        - product is not defined or product == 'satellite'
+      block:
+        - name: Set Satellite facts
+          ansible.builtin.set_fact:
+            certs_generate_command: 'capsule-certs-generate'
+
+        # RHEL8 requirements
+        - name: Enable satellite-capsule:el8 module
+          ansible.builtin.dnf:
+            name: '@satellite-capsule:el8'
+          when:
+            - ansible_distribution_major_version | int == 8
+
+        - name: Ensure sat_version is string to avoid hard to detect issues
+          ansible.builtin.assert:
+            that:
+              - sat_version is defined
+              - sat_version is string
+            fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
+
+        - name: use_repo_version
+          when:
+            - sat_version is defined and sat_version == 'stream'
+            - use_repo_version is defined and use_repo_version | length > 0
+          block:
+            - name: Get the current version number from the 'name' line
+              ansible.builtin.shell:
+                cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/capsule.repo | cut -d'.' -f1 | uniq"
+              register: snap_version
+              changed_when: false
+              check_mode: false # This task must run, even in --check mode, to get the variable.
+
+            - name: Fix stream repo version
+              ansible.builtin.replace:
+                path: "/etc/yum.repos.d/capsule.repo"
+                # The 'regexp' is the version we just discovered in the previous task.
+                regexp: '{{ snap_version.stdout }}'
+                replace: '{{ use_repo_version }}'
+                backup: true # Recommended: creates a backup of the original file
+              when:
+                - snap_version is defined and snap_version.stdout | length > 0
+
+        - name: Install satellite-capsule package
+          ansible.builtin.dnf:
+            name: satellite-capsule
+            state: present
+
+        - name: Install rhel-system-roles package in order to run Ansible roles on content hosts
+          ansible.builtin.dnf:
+            name: rhel-system-roles
+            state: present
 
 - name: run_before_installer
   when:
@@ -101,7 +116,7 @@
 
 - name: certs-generate parameters
   block:
-    - name: "Set certs-generate base options"
+    - name: Set certs-generate base options
       ansible.builtin.set_fact:
         certs_generate_options: "--certs-tar /var/www/html/pub/{{ inventory_hostname }}-certs.tar --foreman-proxy-fqdn {{ inventory_hostname }}"
 
@@ -256,13 +271,15 @@
             line: '                    --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt\'
             insertbefore: '.*--enable-foreman-proxy-plugin-remote-execution-script.*'
 
-- name: custom_hiera_content
+- name: custom_hiera
   when:
-    - custom_hiera_content is defined and custom_hiera_content | length > 0
+    - custom_hiera_content_file is defined and custom_hiera_content_file | length > 0
   block:
     - name: Populate /etc/foreman-installer/custom-hiera.yaml
       include_role:
         name: apply_custom-hiera
+      vars:
+        content_file: "{{ custom_hiera_content_file }}"
 
 - name: Installer
   block:
@@ -315,6 +332,12 @@
     - "'capsule_lbs' in groups"
     - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
   block:
+    - name: Set default variable(s) values
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+
     - name: Get capsule ID
       ansible.builtin.command:
         cmd: |
