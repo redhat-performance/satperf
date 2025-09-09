@@ -7,12 +7,12 @@
     dest: /etc/security/limits.d/25-root-limits.conf
     mode: '0644'
 
-- name: "Detect number of available processors"
+- name: Detect number of available processors
   ansible.builtin.setup:
     filter: ansible_processor_nproc
   when: ansible_processor_nproc is not defined
 
-- name: "Detect size of available memory"
+- name: Detect size of available memory
   ansible.builtin.setup:
     filter: ansible_memtotal_mb
   when: ansible_memtotal_mb is not defined
@@ -59,7 +59,7 @@
 - name: End play if no tuning is required
   ansible.builtin.meta: end_host
   when:
-    - custom_hiera_content is not defined or custom_hiera_content | length == 0
+    - custom_hiera_content_file is not defined or custom_hiera_content_file | length == 0
     - installer_additional_opts is not defined or installer_additional_opts | length == 0
     - tuning_profile is not defined or tuning_profile | length == 0
     - rex_mode is not defined or rex_mode != 'mqtt'
@@ -99,7 +99,7 @@
   when:
     - rex_mode is defined and rex_mode == 'mqtt'
   block:
-    - name: "Workaround for: SAT-18217 - On its default configuration mosquitto cannot accept more than 1014 clients"
+    - name: 'Workaround for: SAT-18217 - On its default configuration mosquitto cannot accept more than 1014 clients'
       ansible.builtin.blockinfile:
         block: |
           systemd::dropin_files:
@@ -107,18 +107,20 @@
               unit: mosquitto.service
               content: "[Service]\nLimitNOFILE=infinity\n"
         path: /etc/foreman-installer/custom-hiera.yaml
-        marker: "# {mark} ANSIBLE MANAGED BLOCK - MQTT "
+        marker: "# {mark} ANSIBLE MANAGED BLOCK - MQTT"
         prepend_newline: true
         append_newline: true
         backup: yes
 
-- name: custom_hiera_content
+- name: custom_hiera
   when:
-    - custom_hiera_content is defined and custom_hiera_content | length > 0
+    - custom_hiera_content_file is defined and custom_hiera_content_file | length > 0
   block:
     - name: Populate /etc/foreman-installer/custom-hiera.yaml
       include_role:
         name: apply_custom-hiera
+      vars:
+        content_file: "{{ custom_hiera_content_file }}"
 
 - name: Installer tuning
   block:
