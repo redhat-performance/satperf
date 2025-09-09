@@ -707,6 +707,13 @@ grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"
 
 
+if vercmp_ge "$sat_version" '6.17.0'; then
+    section 'Generate satellite-maintain report'
+    as 95-satellite-maintain_report_generate.log \
+      'satellite-maintain report generate'
+fi
+
+
 section 'Misc simple tests'
 test=50-hammer-list
 skip_measurement=true ap ${test}.log \
@@ -737,17 +744,6 @@ a 53-foreman_inventory_upload-report-generate.log \
   -m ansible.builtin.shell \
   -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate" \
   satellite6
-
-
-section 'BackupTest'
-test=55-backup
-skip_measurement=true ap ${test}.log \
-  -e "sat_version='$sat_version'" \
-  playbooks/tests/sat-backup.yaml
-e BackupOffline "${logs}/${test}.log"
-e RestoreOffline "${logs}/${test}.log"
-e BackupOnline "${logs}/${test}.log"
-e RestoreOnline "${logs}/${test}.log"
 
 
 section 'Remote execution (ReX)'
@@ -808,11 +804,15 @@ for rex_search_query in $rex_search_queries; do
 done
 
 
-if vercmp_ge "$sat_version" '6.17.0'; then
-    section 'Generate satellite-maintain report'
-    as 95-satellite-maintain_report_generate.log \
-      'satellite-maintain report generate'
-fi
+section 'BackupTest'
+test=55-backup
+skip_measurement=true ap ${test}.log \
+  -e "sat_version='$sat_version'" \
+  playbooks/tests/sat-backup.yaml
+e BackupOffline "${logs}/${test}.log"
+e RestoreOffline "${logs}/${test}.log"
+e BackupOnline "${logs}/${test}.log"
+e RestoreOnline "${logs}/${test}.log"
 
 
 section 'Delete all content hosts'
