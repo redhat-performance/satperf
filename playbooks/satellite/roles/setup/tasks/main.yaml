@@ -1,96 +1,93 @@
 ---
-- name: Set default variable(s) values
-  ansible.builtin.set_fact:
-    user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-    password: "{{ password | default('{{ sat_pass }}') }}"
-    iop_registry: "{{ iop_registry | default('registry.redhat.io')}}"
-    iop_registry_username: "{{ iop_registry_username | default('user') }}"
-    iop_registry_password: "{{ iop_registry_password | default('password') }}"
-    iop_registry_tag: "{{ iop_registry_tag | default('latest') }}"
-
-- name: Detect RHEL release
+- name: Detect EL release
   ansible.builtin.setup:
-    filter: ansible_distribution_major_version
-  when: ansible_distribution_major_version is not defined
-
-- name: Foreman
+    filter:
+      - ansible_distribution_major_version
   when:
-    - product is defined and product == 'foreman'
+    - ansible_distribution_major_version is not defined
+
+- name: Requirements
   block:
-    - name: Set Foreman facts
-      ansible.builtin.set_fact:
-        installer_command: 'foreman-installer'
-        scenario: 'katello'
-
-    - name: Install Foreman required packages
-      ansible.builtin.dnf:
-        name:
-          - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/x86_64/foreman-release.rpm"
-          - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/x86_64/katello-repos-latest.rpm"
-          - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
-        state: latest
-        disable_gpg_check: true
-
-    - name: Install foreman-installer-katello package
-      ansible.builtin.dnf:
-        name: foreman-installer-katello
-        state: present
-
-- name: Satellite
-  when:
-    - product is not defined or product == 'satellite'
-  block:
-    - name: Set Satellite facts
-      ansible.builtin.set_fact:
-        installer_command: 'satellite-installer'
-        scenario: 'satellite'
-
-    # RHEL8 requirements
-    - name: Enable satellite:el8 module
-      ansible.builtin.dnf:
-        name: '@satellite:el8'
-        state: present
+    - name: Foreman
       when:
-        - ansible_distribution_major_version | int == 8
-
-    - name: Install satellite package
-      ansible.builtin.dnf:
-        name: satellite
-        state: present
-
-    - name: Ensure sat_version is string to avoid hard to detect issues
-      ansible.builtin.assert:
-        that: sat_version is string
-        fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
-      when:
-        - sat_version is defined
-
-    - name: use_repo_version
-      when:
-        - sat_version is defined and sat_version == 'stream'
-        - use_repo_version is defined and use_repo_version | length > 0
+        - product is defined and product == 'foreman'
       block:
-        - name: Get the current version number from the 'name' line
-          ansible.builtin.shell:
-            cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/satellite.repo | cut -d'.' -f1 | uniq"
-          register: snap_version
-          changed_when: false
-          check_mode: no # This task must run, even in --check mode, to get the variable.
-
-        - name: Fix stream repo version
-          ansible.builtin.replace:
-            path: "/etc/yum.repos.d/satellite.repo"
-            # The 'regexp' is the version we just discovered in the previous task.
-            regexp: '{{ snap_version.stdout }}'
-            replace: '{{ use_repo_version }}'
-            backup: yes # Recommended: creates a backup of the original file
+        - name: Detect EL release
+          ansible.builtin.setup:
+            filter:
+              - ansible_architecture
           when:
-            - snap_version is defined and snap_version.stdout | length > 0
+            - ansible_architecture is not defined
 
-    - name: Install rhel-system-roles package in order to run Ansible roles on content hosts
-      ansible.builtin.dnf:
-        name: rhel-system-roles
-        state: present
+        - name: Install Foreman required packages
+          ansible.builtin.dnf:
+            name:
+              - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/foreman-release.rpm"
+              - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/katello-repos-latest.rpm"
+              - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
+            state: present
+            disable_gpg_check: true
+
+        - name: Install foreman-installer-katello package
+          ansible.builtin.dnf:
+            name: foreman-installer-katello
+            state: present
+
+        - name: Install linux-system-roles package in order to run Ansible roles on content hosts
+          ansible.builtin.dnf:
+            name: linux-system-roles
+            state: present
+
+    - name: Satellite
+      when:
+        - product is not defined or product == 'satellite'
+      block:
+        # RHEL8 requirements
+        - name: Enable satellite:el8 module
+          ansible.builtin.dnf:
+            name: '@satellite:el8'
+            state: present
+          when:
+            - ansible_distribution_major_version | int == 8
+
+        - name: Ensure sat_version is string to avoid hard to detect issues
+          ansible.builtin.assert:
+            that:
+              - sat_version is defined
+              - sat_version is string
+            fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
+
+        - name: use_repo_version
+          when:
+            - sat_version is defined and sat_version == 'stream'
+            - use_repo_version is defined and use_repo_version | length > 0
+          block:
+            - name: Get the current version number from the 'name' line
+              ansible.builtin.shell:
+                cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/satellite.repo | cut -d'.' -f1 | uniq"
+              register: snap_version
+              changed_when: false
+              check_mode: false # This task must run, even in --check mode, to get the variable.
+
+            - name: Fix stream repo version
+              ansible.builtin.replace:
+                path: "/etc/yum.repos.d/satellite.repo"
+                # The 'regexp' is the version we just discovered in the previous task.
+                regexp: '{{ snap_version.stdout }}'
+                replace: '{{ use_repo_version }}'
+                backup: true # Recommended: creates a backup of the original file
+              when:
+                - snap_version is defined and snap_version.stdout | length > 0
+
+        - name: Install satellite package
+          ansible.builtin.dnf:
+            name: satellite
+            state: present
+
+        - name: Install rhel-system-roles package in order to run Ansible roles on content hosts
+          ansible.builtin.dnf:
+            name: rhel-system-roles
+            state: present
 
 - name: run_before_installer
   when:
@@ -104,8 +101,41 @@
       ansible.builtin.shell:
         cmd: "{{ run_before_installer }}"
 
-- name: Installer parameters
+- name: custom_hiera
+  when:
+    - custom_hiera_content_file is defined and custom_hiera_content_file | length > 0
   block:
+    - name: Populate /etc/foreman-installer/custom-hiera.yaml
+      ansible.builtin.include_role:
+        name: apply_custom-hiera
+      vars:
+        content_file: "{{ custom_hiera_content_file }}"
+
+- name: Installer
+  block:
+    - name: Set default variable(s) values
+      ansible.builtin.set_fact:
+        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
+        password: "{{ password | default('{{ sat_pass }}') }}"
+
+    - name: Foreman
+      when:
+        - product is defined and product == 'foreman'
+      block:
+        - name: Set Foreman facts
+          ansible.builtin.set_fact:
+            installer_command: 'foreman-installer'
+            scenario: 'katello'
+
+    - name: Satellite
+      when:
+        - product is not defined or product == 'satellite'
+      block:
+        - name: Set Satellite facts
+          ansible.builtin.set_fact:
+            installer_command: 'satellite-installer'
+            scenario: 'satellite'
+
     - name: Set base installer parameters
       ansible.builtin.set_fact:
         installer_opts: "--foreman-initial-admin-username {{ user }} --foreman-initial-admin-password {{ password }}"
@@ -114,31 +144,6 @@
       ansible.builtin.set_fact:
         installer_cmd_line: "{{ installer_command }} --scenario {{ scenario }} {{ installer_opts }}"
 
-    - name: Set Insights connection parameter
-      # Automatically install generated SSH key to root authorized keys which allows managing this host through Remote Execution
-      ansible.builtin.set_fact:
-        installer_cmd_line: "{{ installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-install-key true"
-      when:
-        - setup_insights is defined and setup_insights
-
-    - name: MQTT
-      when:
-        - rex_mode is defined and rex_mode == 'mqtt'
-      block:
-        - name: Add MQTT transport for remote execution parameter
-          ansible.builtin.set_fact:
-            installer_cmd_line: "{{ installer_cmd_line }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
-
-- name: custom_hiera_content
-  when:
-    - custom_hiera_content is defined and custom_hiera_content | length > 0
-  block:
-    - name: Populate /etc/foreman-installer/custom-hiera.yaml
-      include_role:
-        name: apply_custom-hiera
-
-- name: Installer
-  block:
     - name: Show installer command line
       ansible.builtin.debug:
         msg: "{{ installer_cmd_line }}"
@@ -189,17 +194,51 @@
 
 - name: IoP setup
   when:
-    - setup_insights is defined and setup_insights
     - enable_iop is defined and enable_iop
-    - sat_version is defined and (sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>='))
+    - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
   block:
+    - name: Assert required registry login parameters
+      ansible.builtin.assert:
+        that:
+          - iop_registry_username is defined and iop_registry_username | length > 0
+          - iop_registry_password is defined and iop_registry_password | length > 0
+
+    - name: run_before_iop_installer
+      when:
+        - run_before_iop_installer is defined and run_before_iop_installer | length > 0
+      block:
+        - name: Show set of shell commands to run before installation
+          ansible.builtin.debug:
+            msg: "{{ run_before_iop_installer }}"
+
+        - name: Run set of shell commands to run before installation
+          ansible.builtin.shell:
+            cmd: "{{ run_before_iop_installer }}"
+
+    - name: custom_hiera_iop
+      when:
+        - custom_hiera_iop_content_file is defined and custom_hiera_iop_content_file | length > 0
+      block:
+        - name: Populate /etc/foreman-installer/custom-hiera.yaml
+          ansible.builtin.include_role:
+            name: apply_custom-hiera
+          vars:
+            content_file: "{{ custom_hiera_iop_content_file }}"
+            marker_postfix: IoPç
+
+
+
+    - name: Set common variable(s) values
+      ansible.builtin.set_fact:
+        iop_registry: "{{ iop_registry | default('registry.redhat.io')}}"
+
     - name: IoP
       when:
         - sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
       block:
         - name: Log in to the registry to pull IoP container images
           containers.podman.podman_login:
-            registry: "{{ iop_registry }}"
+            registry: "{{ iop_registry | default('registry.redhat.io') }}"
             username: "{{ iop_registry_username }}"
             password: "{{ iop_registry_password }}"
             authfile: /etc/foreman/registry-auth.json
@@ -212,20 +251,19 @@
       when:
         - sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=') and sat_version is ansible.builtin.version('6.18.0', '<')
       block:
+        - name: Set specific variable(s) values
+          ansible.builtin.set_fact:
+            iop_registry_tag: "{{ iop_registry_tag | default('latest') }}"
+
         - name: Log in to the registry to pull IoP advisor engine container image
           containers.podman.podman_login:
-            registry: "{{ iop_registry }}"
+            registry: "{{ iop_registry | default('registry.redhat.io') }}"
             username: "{{ iop_registry_username }}"
             password: "{{ iop_registry_password }}"
 
         - name: Pull IoP advisor engine container image
           containers.podman.podman_image:
             name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}"
-
-        - name: Set IoP advisor engine image in `custom-hiera.yaml`
-          ansible.builtin.lineinfile:
-            path: /etc/foreman-installer/custom-hiera.yaml
-            line: "iop_advisor_engine::image: '{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}'"
 
         - name: Set IoP advisor engine parameters
           ansible.builtin.set_fact:
@@ -244,6 +282,53 @@
         msg: "{{ cmd_enable_iop.stdout_lines }}"
       failed_when:
         - cmd_enable_iop is failed
+
+- name: MQTT
+  when:
+    - rex_mode is defined and rex_mode == 'mqtt'
+  block:
+    - name: Add MQTT transport for remote execution parameter
+      ansible.builtin.set_fact:
+        installer_cmd_line: "{{ installer_command }} --foreman-proxy-plugin-remote-execution-script-mode pull-mqtt"
+
+    - name: Enable MQTT
+      ansible.builtin.command:
+        cmd: |
+          {{ installer_cmd_line }}
+      register: cmd_enable_mqtt
+      # XXX: Ignore errors in order to be able to show `cmd_enable_iop.stdout_lines`
+      ignore_errors: true
+
+    - name: Show MQTT installer output
+      ansible.builtin.debug:
+        msg: "{{ cmd_enable_mqtt.stdout_lines }}"
+      failed_when:
+        - cmd_enable_mqtt is failed
+
+- name: Insights
+  when:
+    - setup_insights is defined and setup_insights
+  block:
+    - name: Set Insights connection parameter
+      # Automatically install generated SSH key to root authorized keys which allows managing this host through Remote Execution
+      ansible.builtin.set_fact:
+        installer_cmd_line: "{{ installer_command }} --foreman-proxy-plugin-remote-execution-script-install-key true"
+      when:
+        - setup_insights is defined and setup_insights
+
+    - name: Enable Insights connection parameter
+      ansible.builtin.command:
+        cmd: |
+          {{ installer_cmd_line }}
+      register: cmd_enable_insights
+      # XXX: Ignore errors in order to be able to show `cmd_enable_iop.stdout_lines`
+      ignore_errors: true
+
+    - name: Show Insights connection parameter installer output
+      ansible.builtin.debug:
+        msg: "{{ cmd_enable_insights.stdout_lines }}"
+      failed_when:
+        - cmd_enable_insights is failed
 
 - name: run_after_installer
   when:
