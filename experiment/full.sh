@@ -358,7 +358,6 @@ for rel in $rels; do
 
     h "34-cv-create-${rel}-sat-client.log" \
       "content-view create --organization '{{ sat_org }}' --name '$cv_sat_client' --repository-ids '$sat_client_rids'"
-
     h "35-cv-publish-${rel}-sat-client.log" \
       "content-view publish --organization '{{ sat_org }}' --name '$cv_sat_client'"
 
@@ -501,7 +500,6 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
             h "45-flatpak-remote-remote-repository-mirror-${repo_name_suffix}.log" \
               "flatpak-remote remote-repository mirror --organization '{{ sat_org }}' --product '$product' --flatpak-remote '$flatpak_remote' --name '$repo_name'"
-
             h "45-repository-sync-${repo_name_suffix}.log" \
               "repository synchronize --organization '{{ sat_org }}' --product '$product' --name '$repo_name'"
             ;;
