@@ -149,14 +149,4 @@
     - name: Show installer tuning duration
       ansible.builtin.debug:
         msg: "SatelliteInstallerTuneScenarioSatellite {{ installer_tune_cmd.start }} to {{ installer_tune_cmd.end }} taking {{ installer_tune_cmd_duration }} seconds"
-
-- name: MQTT
-  when:
-    - rex_mode is defined and rex_mode == 'mqtt'
-  block:
-    - name: Restart mosquitto service unit
-      ansible.builtin.systemd_service:
-        name: mosquitto
-        daemon_reload: true
-        state: restarted
 ...
