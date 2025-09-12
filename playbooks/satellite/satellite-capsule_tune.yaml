@@ -1,0 +1,7 @@
+---
+- name: Tuning configuration steps for Satellite/capsules servers
+  hosts: satellite6,capsules
+  gather_facts: false
+  roles:
+    - role: tune
+...

@@ -1,7 +1,0 @@
----
-- name: "Tuning configuration steps for Satellite servers"
-  hosts: satellite6
-  gather_facts: false
-  roles:
-    - role: tune
-...
