@@ -851,7 +851,7 @@ function task_examine() {
     local task_id=$2
     [[ -n $task_id ]] || return 1
     local command="${3:-N/A}"
-    local timeout="${4:-10}"
+    local timeout="${4:-30}"
     local satellite_host="$( ansible $opts_adhoc \
       --list-hosts \
       satellite6 2>/dev/null |
