@@ -933,7 +933,7 @@ function j() {
 function jsr() {
     # Parse job invocation ID from the log and show its execution success ratio
     local log=$1
-    local timeout="${2:-10}"
+    local timeout="${2:-30}"
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [[ -n $job_invocation_id ]] || return 1
     local satellite_host="$( ansible $opts_adhoc \
