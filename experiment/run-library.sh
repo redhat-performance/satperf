@@ -19,6 +19,9 @@ content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-sate
 
 opts="${opts:-"--forks 100 -i $inventory"}"
 opts_adhoc="${opts_adhoc:-$opts}"
+
+enable_iop="${PARAM_enable_iop:-false}"
+
 logs=$marker
 run_lib_dryrun=false
 

@@ -11,6 +11,7 @@
     concurrent_registrations: 100
     registration_profile_img: registration_profile.svg
     debug_rhsm: false
+    enable_iop: false
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
@@ -107,16 +108,20 @@
       when:
         - profile
 
-    - name: "Run host-registration.yaml (log = {{ clients_yaml_cmd_log }})"
+    - name: Set `host-registration.yaml` log name
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
+
+    - name: Run `host-registration.yaml` (log = {{ clients_yaml_cmd_log }})
       ansible.builtin.shell:
         cmd: |
           ansible-playbook \
             --private-key /root/id_rsa_key \
             --forks {{ size }} \
             --inventory clients.ini \
-            host-registration.yaml \
-            &> {{ clients_yaml_cmd_log }}
-      register: clients_yaml_cmd
+            -e "enable_iop='$enable_iop'" \
+            host-registration.yaml |
+            tee {{ clients_yaml_cmd_log }}
       ignore_errors: true
 
     - name: Kill BPF profile process
@@ -299,6 +304,7 @@
                 --private-key /root/id_rsa_key \
                 --inventory ${CLIENT_IP_LIST} \
                 --forks {{ num_retry_forks }} \
+                -e "enable_iop='$enable_iop'" \
                 host-registration.yaml \
                 &> {{ clients_yaml_cmd_retries_log }}
           done

@@ -92,4 +92,6 @@
           if [[ -x /usr/bin/insights-client ]]; then
               insights-client
           fi
+      when:
+        - enable_iop is defined and enable_iop
 ...
