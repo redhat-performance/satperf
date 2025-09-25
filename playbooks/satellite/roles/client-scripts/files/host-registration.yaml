@@ -2,26 +2,6 @@
 - hosts: all
   gather_facts: false
   tasks:
-    - name: Detect RHEL release
-      ansible.builtin.setup:
-        filter: ansible_distribution_major_version
-      when: ansible_distribution_major_version is not defined
-
-    - name: Set AK name
-      ansible.builtin.set_fact:
-        ak: "AK_rhel{{ ansible_distribution_major_version }}_Test"
-
-    - name: Cleanup
-      ansible.builtin.shell:
-        cmd: |
-          rm -f /etc/yum.repos.d/*.repo
-
-    - name: Upload host registration script to content host
-      ansible.builtin.copy:
-        src: /root/host-registration.{{ ak }}.sh
-        dest: /root/host-registration.sh
-        mode: '0500'
-
     - name: Register
       ansible.builtin.shell:
         cmd: |
@@ -38,21 +18,21 @@
           exit $ret
       environment:
         TZ: UTC   # make sure returned times are in UTC
-      register: reg
+      register: registration
 
     - name: Register - output
       ansible.builtin.debug:
-        var: reg.stdout_lines
+        var: registration.stdout_lines
 
     - name: Calculate registration duration
       ansible.builtin.set_fact:
-        reg_duration: "{{ (reg.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (reg.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+        reg_duration: "{{ (registration.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (registration.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
     - name: Register - timings
       ansible.builtin.debug:
-        msg: "Register {{ reg.start }} to {{ reg.end }} taking {{ reg_duration }} seconds"
+        msg: "Register {{ registration.start }} to {{ registration.end }} taking {{ reg_duration }} seconds"
       when:
-        - reg is success
+        - registration is success
 
     # - name: "Disable insights-client automatic scheduling"
     #   ansible.builtin.shell:
@@ -69,20 +49,6 @@
         name: rhsmcertd
         state: started
         enabled: true
-
-    - name: Upload podman related scripts to content host
-      ansible.builtin.copy:
-        src: /root/podman-{{ item }}.sh
-        dest: /root/podman-{{ item }}.sh
-        mode: '0500'
-      loop:
-        - login
-        - pull-rhosp
-
-    - name: Introduce issue to be fixed by 'Remediations' service
-      ansible.builtin.file:
-        path: /etc/ssh/sshd_config
-        mode: '0777'
 
     - name: Run insights-client
       ansible.builtin.shell:

@@ -1,5 +1,5 @@
 ---
-- name: "Set default variable(s) values"
+- name: Set default variable(s) values
   ansible.builtin.set_fact:
     aks: "{{ aks | default('AK') }}"
 
@@ -36,7 +36,7 @@
 # - debug:
 #     msg: "registration_target: {{ tests_registration_target }}"
 
-- name: "Download host registration script from registration target"
+- name: Download host registration script from registration target
   ansible.builtin.get_url:
     url: "http://{{ tests_registration_target }}/pub/host-registration.{{ item }}.sh"
     dest: "/root/host-registration.{{ item }}.sh"
@@ -44,19 +44,22 @@
     force: true
   loop: "{{ aks | split }}"
 
-- name: "Distribute content host registration playbook"
+- name: Distribute content host registration related playbooks
   throttle: 8
   ansible.builtin.copy:
-    src: host-registration.yaml
-    dest: /root/host-registration.yaml
+    src: "{{ item }}"
+    dest: "/root/{{ item }}"
     force: true
+  loop:
+    - host-registration_prepare.yaml
+    - host-registration.yaml
 
 - name: Distribute podman related scripts
   ansible.builtin.template:
-    src: "podman-{{ item }}.sh.j2"
-    dest: "/root/podman-{{ item }}.sh"
+    src: "{{ item }}.j2"
+    dest: "/root/{{ item }}"
     force: true
   loop:
-    - login
-    - pull-rhosp
+    - podman-login.sh
+    - podman-pull-rhosp.sh
 ...

@@ -1,0 +1,40 @@
+---
+- hosts: all
+  gather_facts: false
+  tasks:
+    - name: Detect RHEL release
+      ansible.builtin.setup:
+        filter: ansible_distribution_major_version
+      when: ansible_distribution_major_version is not defined
+
+    - name: Set AK name
+      ansible.builtin.set_fact:
+        ak: "AK_{{ ansible_distribution_major_version }}_Test"
+
+    - name: Cleanup
+      ansible.builtin.shell:
+        cmd: |
+          rm -f /etc/yum.repos.d/*.repo
+
+    - name: Upload host registration script to content host
+      ansible.builtin.copy:
+        src: /root/host-registration.{{ ak }}.sh
+        dest: /root/host-registration.sh
+        mode: '0500'
+
+    - name: Upload podman related scripts to content host
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ item }}"
+        mode: '0500'
+      loop:
+        - /root/podman-login.sh
+        - /root/podman-pull-rhosp.sh
+
+    - name: Introduce issue to be fixed by 'Remediations' service
+      ansible.builtin.file:
+        path: /etc/ssh/sshd_config
+        mode: '0777'
+      when:
+        - enable_iop is defined and enable_iop
+...

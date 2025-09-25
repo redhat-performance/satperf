@@ -58,17 +58,30 @@
             /root/container-ips.shuffled \
             >clients.ini
 
-    - name: "Set base log name"
+    - name: Set base log name
       ansible.builtin.set_fact:
         clients_yaml_cmd_base: "/root/out-{{ lookup('pipe', 'date -u -Iseconds') | regex_replace('[^A-Za-z0-9-]', '_') }}"
       run_once: true
 
-    - name: "Set log name"
+    - name: Set `host-registration_prepare.yaml` log name
       ansible.builtin.set_fact:
-        clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
+        host_registration_prepare_cmd_log: "{{ clients_yaml_cmd_base }}_prepare.log"
       run_once: true
 
-    - name: "Try to patch `rhsm/connection.py` to add some error logging"
+    - name: Run `host-registration_prepare.yaml`
+      ansible.builtin.shell:
+        cmd: |
+          ansible-playbook \
+            --private-key /root/id_rsa_key \
+            --forks {{ size }} \
+            --inventory clients.ini \
+            -e "enable_iop='$enable_iop'" \
+            host-registration_prepare.yaml |
+            tee {{ host_registration_prepare_cmd_log }}
+      register: host_registration_prepare_cmd
+      ignore_errors: true
+
+    - name: Try to patch `rhsm/connection.py` to add some error logging
       ansible.builtin.shell:
         cmd: |
           ansible \
@@ -77,9 +90,9 @@
             -m ansible.builtin.shell \
             -a 'sed -i.orig -e "/\# This really needs an exception mapper too\.\.\./i \
             \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ log.error(\"Response content: %s\" % response[\"content\"])" \
-            /usr/lib64/python3.6/site-packages/rhsm/connection.py' \
-            all \
-            &> patch_rhsm_{{ size }}.log
+            /usr/lib64/python3.*/site-packages/rhsm/connection.py' \
+            all |
+            tee patch_rhsm_{{ size }}.log
       when:
         - debug_rhsm
 
@@ -134,13 +147,13 @@
       when:
         - profile
 
-    - name: "Fetch client logs"
+    - name: Fetch client logs
       ansible.builtin.fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ registration_logs }}"
       ignore_errors: true
 
-    - name: "Get how long registration took"
+    - name: Get how long registration took
       ansible.builtin.shell:
         cmd: |
           set -o pipefail
@@ -162,7 +175,7 @@
 
     - name: "Show number of successful registration events"
       ansible.builtin.debug:
-        var: grepper_times|length
+        var: grepper_times | length
       run_once: true
 
     - name: "Increment number of already registered containers"
@@ -210,7 +223,6 @@
         src: /root/profile/registration_profile-{{ concurrent_registrations }}.svg
         dest: "{{ registration_logs }}/../{{ registration_profile_img }}"
         flat: true
-      ignore_errors: true
       delegate_to: "{{ groups['satellite6'] | first }}"
       run_once: true
       ignore_errors: true
@@ -229,8 +241,8 @@
                 --inventory ${client_ip}, \
                 -m ansible.builtin.command \
                 -a "cat /var/log/rhsm/rhsm.log" \
-                all \
-                &> rhsm_${client_ip}.log
+                all |
+                tee rhsm_${client_ip}.log
           done
       ignore_errors: true
       when:
@@ -242,7 +254,7 @@
         clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts
+        - re_register_failed_hosts is defined and re_register_failed_hosts
 
     - name: "Try to re-register failed hosts (if needed)"
       ansible.builtin.shell:
@@ -312,5 +324,5 @@
       ignore_errors: true
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts
+        - re_register_failed_hosts is defined and re_register_failed_hosts
 ...
