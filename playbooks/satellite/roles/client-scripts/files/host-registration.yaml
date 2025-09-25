@@ -43,13 +43,6 @@
     #           insights-client --disable-schedule
     #       fi
 
-    # XXX: Evaluate the removal of this
-    - name: Enable and start rhsmcertd systemd service unit
-      ansible.builtin.systemd_service:
-        name: rhsmcertd
-        state: started
-        enabled: true
-
     - name: Run insights-client
       ansible.builtin.shell:
         cmd: |
