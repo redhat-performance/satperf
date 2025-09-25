@@ -561,6 +561,7 @@ fi
 contents='yum iso docker ansible-collections'
 
 for content in $contents; do
+    section "Sync $content content"
     case "$content" in
     yum)
         index=80
@@ -612,7 +613,6 @@ for content in $contents; do
         ;;
     esac  # case "$content"
 
-    section "Sync $content content"
     test="${index}-test-sync-${content_alias}"
     ap "${test}.log" \
       -e "organization='{{ sat_org }}'" \
