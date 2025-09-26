@@ -1,0 +1,28 @@
+---
+- hosts: localhost
+  gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+  vars:
+    label: "{{ task_label }}"
+    timeout: "{{ task_timeout | default(omit) }}"
+
+  tasks:
+    - name: Search4Tasks
+      theforeman.foreman.resource_info:
+        organization: "{{ foreman_organization }}"
+        resource: foreman_tasks
+        search: "label = {{ label }} and state = running and result = pending"
+      register: __tasks
+
+    - name: Wait4Tasks
+      theforeman.foreman.wait_for_task:
+        task: "{{ item }}"
+        timeout: "{{ timeout }}"
+      loop: "{{ __tasks.resources | map(attribute='id') | list }}"
+...
