@@ -75,7 +75,7 @@
             --private-key /root/id_rsa_key \
             --forks {{ size }} \
             --inventory clients.ini \
-            -e "enable_iop='$enable_iop'" \
+            -e "enable_iop='{{ enable_iop }}'" \
             host-registration_prepare.yaml |
             tee {{ host_registration_prepare_cmd_log }}
       register: host_registration_prepare_cmd
@@ -132,7 +132,7 @@
             --private-key /root/id_rsa_key \
             --forks {{ size }} \
             --inventory clients.ini \
-            -e "enable_iop='$enable_iop'" \
+            -e "enable_iop='{{ enable_iop }}'" \
             host-registration.yaml |
             tee {{ clients_yaml_cmd_log }}
       ignore_errors: true
@@ -316,9 +316,9 @@
                 --private-key /root/id_rsa_key \
                 --inventory ${CLIENT_IP_LIST} \
                 --forks {{ num_retry_forks }} \
-                -e "enable_iop='$enable_iop'" \
-                host-registration.yaml \
-                &> {{ clients_yaml_cmd_retries_log }}
+                -e "enable_iop='{{ enable_iop }}'" \
+                host-registration.yaml |
+                tee {{ clients_yaml_cmd_retries_log }}
           done
       register: clients_yaml_cmd_retries
       ignore_errors: true
