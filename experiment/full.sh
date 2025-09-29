@@ -708,44 +708,6 @@ grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"
 
 
-section 'Misc simple tests'
-test=50-hammer-list
-skip_measurement=true ap ${test}.log \
-  -e "organization='{{ sat_org }}'" \
-  playbooks/tests/hammer-list.yaml
-e HammerHostList "${logs}/${test}.log"
-
-rm -f /tmp/status-data-webui-pages.json
-test=51-webui-pages
-skip_measurement=true ap ${test}.log \
-  -e "sat_version='$sat_version'" \
-  -e "ui_concurrency='$ui_concurrency'" \
-  -e "ui_duration='$ui_duration'" \
-  playbooks/tests/webui-pages.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
-
-rm -f /tmp/status-data-webui-static-distributed.json
-test=52-webui-static-distributed
-skip_measurement=true ap ${test}.log \
-  -e "sat_version='$sat_version'" \
-  -e "ui_concurrency='$ui_concurrency'" \
-  -e "ui_duration='$ui_duration'" \
-  -e "ui_max_static_size='$ui_max_static_size'" \
-  playbooks/tests/webui-static-distributed.yaml
-STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
-
-
-section 'BackupTest'
-test=55-backup
-skip_measurement=true ap ${test}.log \
-  -e "sat_version='$sat_version'" \
-  playbooks/tests/sat-backup.yaml
-e BackupOffline "${logs}/${test}.log"
-e RestoreOffline "${logs}/${test}.log"
-e BackupOnline "${logs}/${test}.log"
-e RestoreOnline "${logs}/${test}.log"
-
-
 section 'Remote execution (ReX)'
 job_template_ansible_default='Run Command - Ansible Default'
 job_template_ssh_default='Run Command - Script Default'
@@ -814,6 +776,33 @@ for rex_search_query in $rex_search_queries; do
 done
 
 
+section 'Misc simple tests'
+test=50b-hammer-list
+skip_measurement=true ap ${test}.log \
+  -e "organization='{{ sat_org }}'" \
+  playbooks/tests/hammer-list.yaml
+e HammerHostList "${logs}/${test}.log"
+
+rm -f /tmp/status-data-webui-pages.json
+test=51b-webui-pages
+skip_measurement=true ap ${test}.log \
+  -e "sat_version='$sat_version'" \
+  -e "ui_concurrency='$ui_concurrency'" \
+  -e "ui_duration='$ui_duration'" \
+  playbooks/tests/webui-pages.yaml
+STATUS_DATA_FILE=/tmp/status-data-webui-pages.json e "WebUIPagesTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
+
+rm -f /tmp/status-data-webui-static-distributed.json
+test=52b-webui-static-distributed
+skip_measurement=true ap ${test}.log \
+  -e "sat_version='$sat_version'" \
+  -e "ui_concurrency='$ui_concurrency'" \
+  -e "ui_duration='$ui_duration'" \
+  -e "ui_max_static_size='$ui_max_static_size'" \
+  playbooks/tests/webui-static-distributed.yaml
+STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
+
+
 if vercmp_ge "$sat_version" '6.17.0'; then
     if $enable_iop; then
         section 'Generate rh_cloud_inventory report'
@@ -827,6 +816,17 @@ if vercmp_ge "$sat_version" '6.17.0'; then
     as 95-satellite-maintain_report_generate.log \
       'satellite-maintain report generate'
 fi
+
+
+section 'BackupTest'
+test=55b-backup
+skip_measurement=true ap ${test}.log \
+  -e "sat_version='$sat_version'" \
+  playbooks/tests/sat-backup.yaml
+e BackupOffline "${logs}/${test}.log"
+e RestoreOffline "${logs}/${test}.log"
+e BackupOnline "${logs}/${test}.log"
+e RestoreOnline "${logs}/${test}.log"
 
 
 section 'Delete all content hosts'
