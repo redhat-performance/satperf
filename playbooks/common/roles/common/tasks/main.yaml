@@ -418,4 +418,15 @@
   ansible.builtin.file:
     path: /var/log/journal
     state: directory
+
+- name: Enable sshd root login
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/PermitRootLogin_yes.conf
+    content: |
+      PermitRootLogin yes
+
+- name: Reload sshd
+  ansible.builtin.systemd_service:
+    name: sshd
+    state: reloaded
 ...
