@@ -307,14 +307,12 @@
 
 - name: Insights
   when:
-    - setup_insights is defined and setup_insights
+    - setup_insights | default(false) | bool
   block:
     - name: Set Insights connection parameter
       # Automatically install generated SSH key to root authorized keys which allows managing this host through Remote Execution
       ansible.builtin.set_fact:
         installer_cmd_line: "{{ installer_command }} --foreman-proxy-plugin-remote-execution-script-install-key true"
-      when:
-        - setup_insights is defined and setup_insights
 
     - name: Enable Insights connection parameter
       ansible.builtin.command:
