@@ -8,7 +8,8 @@
         capsule_network: "{{ (hostvars[host_name].private_ip  + '/' + hostvars[host_name].private_netmask) | ansible.utils.ipaddr('network') }}"
         capsule_netmask: "{{ hostvars[host_name].private_netmask }}"
       when:
-        - "hostvars[host_name].private_ip is defined and hostvars[host_name].private_netmask is defined"
+        - "hostvars[host_name].private_ip is defined and hostvars[host_name].private_ip | length > 0"
+        - "hostvars[host_name].private_netmask is defined and hostvars[host_name].private_netmask | length > 0"
     
     - name: "Get subnet from inventory (using public network IPs)"
       ansible.builtin.set_fact:
