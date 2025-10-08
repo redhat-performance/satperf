@@ -36,5 +36,5 @@
         path: /etc/ssh/sshd_config
         mode: '0777'
       when:
-        - enable_iop is defined and enable_iop
+        - enable_iop | default(false) | bool
 ...

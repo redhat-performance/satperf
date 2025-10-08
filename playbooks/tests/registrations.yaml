@@ -254,7 +254,7 @@
         clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts is defined and re_register_failed_hosts
+        - re_register_failed_hosts | default(false) | bool
 
     - name: "Try to re-register failed hosts (if needed)"
       ansible.builtin.shell:
@@ -324,5 +324,5 @@
       ignore_errors: true
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts is defined and re_register_failed_hosts
+        - re_register_failed_hosts | default(false) | bool
 ...

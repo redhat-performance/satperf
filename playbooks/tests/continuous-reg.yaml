@@ -19,7 +19,7 @@
         cp /root/container-ips.shuffled "{{ contreg_file }}.full"
         tail -n "+{{ contreg_size + 1 }}" "{{ contreg_file }}.full" >/root/container-ips.shuffled
         cut -d ' ' -f 2 "{{ contreg_file }}" >"{{ contreg_inv }}"
-      when: "not ( file_stat.stat.isreg is defined and file_stat.stat.isreg )"
+      when: "not ( file_stat.stat.isreg | default(false) | bool )"
     - name: "Run the loop for {{ contreg_inv }} iterations with registratoins"
       shell: |
         ansible -u root -i clients.continuous-reg.ini --private-key id_rsa_key all -m shell -a "
