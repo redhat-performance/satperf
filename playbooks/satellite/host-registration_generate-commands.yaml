@@ -34,8 +34,8 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-insights true"
       when:
-        - setup_insights is defined and setup_insights
         # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
+        # - setup_insights | default(false) | bool
         - enable_iop | default(false) | bool
         - sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=')
 
