@@ -698,11 +698,6 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
       -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml
       e Register "${logs}/${test}.log"
-    # XXX: Remove when fixed
-    skip_measurement=true apj "${test}-wait" \
-      -e "task_label='ForemanInventoryUpload::Async::GenerateReportJob'" \
-      -e "task_timeout='$(( concurrent_registrations * 30 ))'" \
-      playbooks/tests/FAM/wait_for_task.yaml
 done
 grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"
@@ -740,11 +735,6 @@ for rex_search_query in $rex_search_queries; do
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ $rex_search_query'"
       jsr "${logs}/${test}.log"
       j "${logs}/${test}.log"
-      # XXX: Remove when fixed
-      skip_measurement=true apj "${test}-wait" \
-        -e "task_label='ForemanInventoryUpload::Async::GenerateReportJob'" \
-        -e "task_timeout='$(( num_matching_rex_hosts * 30 ))'" \
-        playbooks/tests/FAM/wait_for_task.yaml
 
       test=63-rex-podman_login_pull_rhosp-${num_matching_rex_hosts}
       skip_measurement=true h ${test}.log \
@@ -767,11 +757,6 @@ for rex_search_query in $rex_search_queries; do
         "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ $rex_search_query'"
       jsr "${logs}/${test}.log"
       j "${logs}/${test}.log"
-      # XXX: Remove when fixed
-      skip_measurement=true apj "${test}-wait" \
-        -e "task_label='ForemanInventoryUpload::Async::GenerateReportJob'" \
-        -e "task_timeout='$(( num_matching_rex_hosts * 30 ))'" \
-        playbooks/tests/FAM/wait_for_task.yaml
     fi
 done
 
