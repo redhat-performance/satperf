@@ -31,7 +31,7 @@ collections:
   - name: community.general
 
   - name: theforeman.foreman
-    version: ">=5.5.0"
+    version: ">=5.7.0"
 
   - name: theforeman.operations
 ...
