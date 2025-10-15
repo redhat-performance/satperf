@@ -1,0 +1,42 @@
+---
+- hosts: localhost
+  gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      # organization: "{{ foreman_organization }}"
+
+  tasks:
+    - name: JobInvocationCreate
+      theforeman.foreman.job_invocation:
+        job_template: "{{ job_template | default(omit) }}"
+        search_query: "{{ search_query | default(omit) }}"
+        command: "{{ command | default(omit) }}"
+        description_format: "{{ description_format | default(omit) }}"
+        inputs: "{{ inputs | default(omit) }}"
+        feature: "{{ feature | default(omit) }}"
+      register: __job_invocation
+
+    - name: Get task ID
+      ansible.builtin.set_fact:
+        task_id: "{{ __job_invocation.entity.job_invocations[0].task.id }}"
+
+    - name: Wait for forked task to finish
+      theforeman.foreman.wait_for_task:
+        task: "{{ task_id }}"
+        timeout: "{{ task_timeout | default(900) }}"
+
+    - name: Get task information
+      theforeman.foreman.resource_info:
+        resource: foreman_tasks
+        search: "id = {{ task_id }}"
+      register: __task
+
+    - name: ShowForemanTaskInfo
+      ansible.builtin.debug:
+        var: __task
+...
