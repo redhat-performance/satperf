@@ -1,14 +1,33 @@
 ---
 - hosts: localhost
   gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      organization: "{{ foreman_organization }}"
+
   tasks:
-    - name: RepoSync
-      theforeman.foreman.repository_sync:
-        username: "{{ foreman_username | default(omit) }}"
-        password: "{{ foreman_password | default(omit) }}"
-        server_url: "{{ foreman_server_url | default(omit) }}"
-        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-        organization: "{{ foreman_organization }}"
-        product: "{{ product }}"
-        repository: "{{ repository | default(omit) }}"
+    - name: Product
+      when:
+        - product is defined and product | length > 0
+      block:
+        - name: ProductSync
+          theforeman.foreman.repository_sync:
+            product: "{{ product }}"
+            repository: "{{ repository | default(omit) }}"
+          async: 14400
+          poll: 0
+          register: __product_sync
+
+        - name: Wait4ProductSync
+          ansible.builtin.async_status:
+            jid: "{{ __product_sync.ansible_job_id }}"
+          register: __product_sync_job_result
+          until: __product_sync_job_result is finished
+          retries: 99999
+          delay: 10
 ...
