@@ -7,9 +7,9 @@ set -eu
 RHEL_MAJOR_VERSION=9
 RHOSP_MAJOR_VERSION=17
 {% if sat_version == 'stream' or sat_version.split('.') | map('int') | list >= [6, 17, 0] %}
-RHOSP_IMAGE_LOCATION=default_organization/test/ccv_rhel${RHEL_MAJOR_VERSION}/rhosp/rhosp-rhel${RHEL_MAJOR_VERSION}_openstack-base
+RHOSP_IMAGE_LOCATION=default_organization/test/ccv_${RHEL_MAJOR_VERSION}/rhosp/rhosp-rhel${RHEL_MAJOR_VERSION}_openstack-base
 {% else %}
-RHOSP_IMAGE_LOCATION=default_organization-test-ccv_rhel${RHEL_MAJOR_VERSION}-rhosp-rhosp-rhel${RHEL_MAJOR_VERSION}_openstack-base
+RHOSP_IMAGE_LOCATION=default_organization-test-ccv_${RHEL_MAJOR_VERSION}-rhosp-rhosp-rhel${RHEL_MAJOR_VERSION}_openstack-base
 {% endif %}
 REGISTRY={{ tests_registration_target }}
 RHOSP_TAG="$(podman search --tls-verify=false --list-tags --format="{% raw %}{{.Tag}}{% endraw %}" --limit 250 $REGISTRY/$RHOSP_IMAGE_LOCATION | sort -u | grep ^$RHOSP_MAJOR_VERSION | head -n1)"

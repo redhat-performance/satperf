@@ -111,7 +111,8 @@ done
 
 # CCV creation
 for rel in $rels; do
-    ccv="CCV_$rel"
+    os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
 
     h "05-ccv-create-${rel}.log" \
       "content-view create --organization '{{ sat_org }}' --name '$ccv' --composite --auto-publish yes"
@@ -131,8 +132,8 @@ done
 # AK creation
 unset aks
 for rel in $rels; do
-    ccv="CCV_$rel"
     os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
 
     prior=Library
     for lce in $lces; do
@@ -199,8 +200,8 @@ done
 
 section 'Create, publish and promote OS CVs / CCVs to LCE(s)s'
 for rel in $rels; do
-    ccv="CCV_$rel"
     os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
 
     case $rel in
     rhel7)
@@ -345,8 +346,8 @@ done
 
 section "Create, publish and promote $sat_client_product CVs / CCVs to LCE(s)s"
 for rel in $rels; do
-    ccv="CCV_${rel}"
     os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
     sat_client_repo_name="Satellite Client for RHEL $os_rel"
     sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}/"
     sat_client_rids="$( get_repo_id '{{ sat_org }}' "$sat_client_product" "$sat_client_repo_name" )"
@@ -403,7 +404,8 @@ h "40-product-create-${product}.log" \
   "product create --organization '{{ sat_org }}' --name '$product'"
 
 for rel in $rels; do
-    ccv="CCV_${rel}"
+    os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
 
     case $rel in
     rhel[89])
@@ -423,8 +425,8 @@ unset skip_measurement
 
 section "Create, publish and promote $product CVs / CCVs to LCE(s)s"
 for rel in $rels; do
-    ccv="CCV_${rel}"
     os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
 
     case $rel in
     rhel[89])
@@ -510,8 +512,8 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
     section "Create, publish and promote $product CVs / CCVs to LCE(s)s"
     for rel in $rels; do
-        ccv="CCV_${rel}"
         os_rel="${rel##rhel}"
+        ccv="CCV_$os_rel"
 
         case $rel in
         rhel[89])
@@ -843,7 +845,8 @@ done
 
 # CVV deletion
 for rel in $rels; do
-    ccv="CCV_$rel"
+    os_rel="${rel##rhel}"
+    ccv="CCV_$os_rel"
 
     h "102-ccv-delete-${rel}.log" \
       "content-view delete --organization '{{ sat_org }}' --name '$ccv'"
