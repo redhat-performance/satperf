@@ -132,10 +132,11 @@ done
 unset aks
 for rel in $rels; do
     ccv="CCV_$rel"
+    os_rel="${rel##rhel}"
 
     prior=Library
     for lce in $lces; do
-        ak="AK_${rel}_${lce}"
+        ak="AK_${os_rel}_${lce}"
         aks+="$ak "
 
         h "05-ak-create-${rel}-${lce}.log" \
@@ -367,7 +368,7 @@ for rel in $rels; do
 
     prior=Library
     for lce in $lces; do
-        ak="AK_${rel}_${lce}"
+        ak="AK_${os_rel}_${lce}"
 
         # CCV promotion to LCE
         h "38-ccv-promote-${rel}-${lce}.log" \
@@ -423,6 +424,7 @@ unset skip_measurement
 section "Create, publish and promote $product CVs / CCVs to LCE(s)s"
 for rel in $rels; do
     ccv="CCV_${rel}"
+    os_rel="${rel##rhel}"
 
     case $rel in
     rhel[89])
@@ -448,7 +450,7 @@ for rel in $rels; do
 
         prior=Library
         for lce in $lces; do
-            ak="AK_${rel}_${lce}"
+            ak="AK_${os_rel}_${lce}"
 
             # CCV promotion to LCE
             h "40-ccv-promote-${rel}-${lce}-${product}.log" \
@@ -509,6 +511,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
     section "Create, publish and promote $product CVs / CCVs to LCE(s)s"
     for rel in $rels; do
         ccv="CCV_${rel}"
+        os_rel="${rel##rhel}"
 
         case $rel in
         rhel[89])
@@ -534,7 +537,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 
             prior=Library
             for lce in $lces; do
-                ak="AK_${rel}_${lce}"
+                ak="AK_${os_rel}_${lce}"
 
                 # CCV promotion to LCE
                 h "45-ccv-promote-${rel}-${lce}-${product}.log" \
@@ -822,8 +825,10 @@ ap 99-remove-hosts-if-any.log \
 section 'Delete base LCE(s), CCV(s) and AK(s)'
 # AK deletion
 for rel in $rels; do
+    os_rel="${rel##rhel}"
+
     for lce in $lces; do
-        ak="AK_${rel}_${lce}"
+        ak="AK_${os_rel}_${lce}"
 
         h "100-ak-delete-${rel}-${lce}.log" \
           "activation-key delete --organization '{{ sat_org }}' --name '$ak'"
