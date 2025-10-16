@@ -1,7 +1,7 @@
 ---
 - name: Set default variable(s) values
   ansible.builtin.set_fact:
-    aks: "{{ aks | default('AK') }}"
+    aks_list: "{{ aks | default('AK') | split }}"
 
 # - name: "Get group name of our location"
 #   ansible.builtin.set_fact:
@@ -42,7 +42,7 @@
     dest: "/root/host-registration.{{ item }}.sh"
     mode: '0400'
     force: true
-  loop: "{{ aks | split }}"
+  loop: "{{ aks_list }}"
 
 - name: Distribute content host registration related playbooks
   throttle: 8
