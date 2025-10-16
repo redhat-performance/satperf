@@ -594,7 +594,7 @@ for product in "${tested_products[@]}"; do
 done  # for product
 
 
-# section 'Create, publish and promote big CV'
+section 'Create, publish and promote big CV'
 product_code=Bench
 index_ten=6
 
@@ -716,7 +716,7 @@ apj $test \
   playbooks/tests/FAM/cv_version_promote.yaml
 
 
-# section 'Create, publish and promote filtered CV'
+section 'Create, publish and promote filtered CV'
 product_code=BenchFiltered
 index_ten=7
 
@@ -932,7 +932,7 @@ for rel in $rels; do
     done
 done
 
-# FAM: theforeman.foreman.registration_command
+# XXX: FAM: theforeman.foreman.registration_command
 ap 44-generate-host-registration-commands.log \
   -e "organization='{{ sat_org }}'" \
   -e "aks='$aks'" \
