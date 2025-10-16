@@ -308,7 +308,7 @@
       ansible.builtin.set_fact:
         duration: "{{ (installer_script_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (installer_script_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
-    - name: "Print capsule installer run duration"
+    - name: Print capsule installer run duration
       ansible.builtin.debug:
         msg: "SatelliteInstallerScenarioCapsule {{ installer_script_cmd.start }} to {{ installer_script_cmd.end }} taking {{ duration }} seconds"
 
