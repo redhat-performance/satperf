@@ -582,6 +582,7 @@ function c() {
 
     local end="$( date -u +%s )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+
     (( rc == 0 )) || eval "$@" &>$out.retry
 
     measurement_add \
@@ -613,6 +614,7 @@ function a() {
 
     local end="$( date -u +%s )"
     log "Finish after $(( $end - $start )) seconds with log in $out and exit code $rc"
+
     (( rc == 0 )) || ansible $opts_adhoc "$@" &>$out.retry
 
     measurement_add \
@@ -653,6 +655,7 @@ function ap() {
 
     local end="$( date -u +%s )"
     log "Finish after $(( end - start )) seconds with log in $out and exit code $rc"
+
     (( rc == 0 )) || ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc "$@" &>$out.retry
 
     measurement_add \
@@ -675,6 +678,7 @@ function apj() {
         return 0
     fi
 
+    local playbook="${@: -1}"
     local test=$1; shift
     local play_out_json="$logs/$test.json"
 
@@ -707,7 +711,13 @@ function apj() {
     fi
     # local rc="$( jq '.stats.localhost.failures' $play_out_json )"
     log "Finish after $duration seconds with JSON log in $play_out_json and exit code $rc"
-    (( rc == 0 )) || ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json.retry
+
+    if (( rc != 0 )); then
+        # Don't re-run job invocations
+        if [[ "$playbook" != 'playbooks/tests/FAM/job_invocation_create.yaml' ]]; then
+            ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json.retry
+        fi
+    fi
 
     measurement_add \
       "ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
@@ -875,6 +885,7 @@ function task_examine() {
       --output status-data \
       &>${log_report}
     local rc=$?
+
     if (( rc == 0 )); then
         started="$( awk -F'"' '/^results.tasks.start=/ {printf ("%s", $2)}' $log_report )"
         started_ts="$( date -d $started +%s )"
