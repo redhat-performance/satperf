@@ -134,6 +134,8 @@ num_capsules="$( ansible -i $inventory --list-hosts capsules 2>/dev/null | grep 
 num_capsule_lbs="$( ansible -i $inventory --list-hosts capsule_lbs 2>/dev/null | grep -vc '^  hosts ' )"
 num_container_hosts="$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep -vc '^  hosts ' )"
 
+profiling_enabled="$( get_inventory_var enable_profiling )"
+
 
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
@@ -228,6 +230,14 @@ function generic_environment_check() {
 
             set -e
         done
+    fi
+
+    if $profiling_enabled; then
+        # Create profiling directory
+        a 00-set-up-profiling.log \
+          -m ansible.builtin.file \
+          -a "path=/root/profile state=directory mode=0770" \
+          satellite6,capsules,container_hosts
     fi
 
     unset skip_measurement
@@ -680,11 +690,39 @@ function apj() {
 
     local playbook="${@: -1}"
     local test=$1; shift
-    local play_out_json="$logs/$test.json"
+    local play_out_json="${logs}/${test}.json"
+    if [[ -n "$profiling_enabled" ]] && $profiling_enabled && ( [[ -z "$skip_measurement" ]] || ! $skip_measurement ); then
+        profile=true
+    else
+        profile=false
+    fi
 
-    mkdir -p "$logs"
     log "Start 'ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc $*' with JSON log in $play_out_json"
+
+    if $profile; then
+        [[ -d "${logs}/profile" ]] || mkdir -p "${logs}/profile"
+
+        # Start gathering BPF profile
+        a_out \
+          -m ansible.builtin.shell \
+          -a "/usr/share/bcc/tools/profile \
+            -adf \
+            --stack-storage-size 1638400 \
+            >'/root/profile/out-${test}.profile-folded'" \
+          -B 1800 \
+          -P 0 \
+          satellite6,capsules >"${logs}/profile/${test}-profiling.log"
+    fi
+
     ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json && local rc=$? || local rc=$?
+
+    if $profile; then
+        # Kill BPF profile process
+        a_out \
+          -m ansible.builtin.command \
+          -a 'pkill -SIGINT profile' \
+          satellite6,capsules >"${logs}/profile/${test}-kill-profiling.log"
+    fi
 
     local play_num_tasks="$( jq '.plays[0].tasks | length' $play_out_json )"
     if (( play_num_tasks == 1 )); then
@@ -729,6 +767,26 @@ function apj() {
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker" &
+
+    if $profile; then
+        # Convert BPF profile output to image
+        a_out \
+          -m ansible.builtin.shell \
+          -a "flamegraph.pl \
+            --minwidth 5 \
+            --width 2500 \
+            '/root/profile/out-${test}.profile-folded' \
+            >'/root/profile/${test}.svg'" \
+          satellite6,capsules >"${logs}/profile/${test}-convert2image.log"
+
+        # Fetch BPF profile image
+        a_out \
+          -m ansible.builtin.fetch \
+          -a "src='/root/profile/${test}.svg' \
+              dest='${logs}/profile/{{ inventory_hostname }}/' \
+              flat=true" \
+          satellite6,capsules >"${logs}/profile/${test}-fetch-image.log"
+    fi
 
     return $rc
 }
