@@ -1016,7 +1016,7 @@ for rex_search_query in $rex_search_queries; do
       -e "job_template='$job_template_ansible_default'" \
       -e "search_query='$search_query'" \
       -e "command='date'" \
-      -e "task_timeout=$(( num_matching_rex_hosts < 1800 ? 900 : num_matching_rex_hosts / 2 ))" \
+      -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
       playbooks/tests/FAM/job_invocation_create.yaml
 
     if (( num_matching_rex_ssh_hosts > 0 )); then
@@ -1026,7 +1026,7 @@ for rex_search_query in $rex_search_queries; do
           -e "job_template='$job_template_script_default'" \
           -e "search_query='$search_query_ssh'" \
           -e "command='date'" \
-          -e "task_timeout=$(( num_matching_rex_ssh_hosts < 1800 ? 900 : num_matching_rex_ssh_hosts / 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
 
         # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
@@ -1036,7 +1036,7 @@ for rex_search_query in $rex_search_queries; do
           -e "feature='katello_package_install'" \
           -e "search_query='$search_query_ssh'" \
           -e "inputs='package=podman'" \
-          -e "task_timeout=$(( num_matching_rex_ssh_hosts < 1800 ? 900 : num_matching_rex_ssh_hosts / 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
     fi  # num_matching_rex_hosts > 0
 
@@ -1047,7 +1047,7 @@ for rex_search_query in $rex_search_queries; do
           -e "job_template='$job_template_script_default'" \
           -e "search_query='$search_query_mqtt'" \
           -e "command='date'" \
-          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 1800 ? 900 : num_matching_rex_mqtt_hosts / 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 900 ? 900 : num_matching_rex_mqtt_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
 
         # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
@@ -1057,7 +1057,7 @@ for rex_search_query in $rex_search_queries; do
           -e "feature='katello_package_install'" \
           -e "search_query='$search_query_mqtt'" \
           -e "inputs='package=podman'" \
-          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 1800 ? 900 : num_matching_rex_mqtt_hosts / 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 900 ? 900 : num_matching_rex_mqtt_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
     fi  # num_matching_rex_mqtt_hosts > 0
 
@@ -1067,7 +1067,7 @@ for rex_search_query in $rex_search_queries; do
       -e "job_template='$job_template_ansible_default'" \
       -e "search_query='$search_query'" \
       -e "command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh'" \
-      -e "task_timeout=$(( num_matching_rex_hosts < 1800 ? 900 : num_matching_rex_hosts / 2 ))" \
+      -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
       playbooks/tests/FAM/job_invocation_create.yaml
 
     if vercmp_ge "$sat_version" '6.17.0'; then
@@ -1078,7 +1078,7 @@ for rex_search_query in $rex_search_queries; do
               -e "job_template='$job_template_ansible_default'" \
               -e "search_query='$search_query'" \
               -e "command='insights-client'" \
-              -e "task_timeout=$(( num_matching_rex_hosts < 1800 ? 900 : num_matching_rex_hosts / 2 ))" \
+              -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
               playbooks/tests/FAM/job_invocation_create.yaml
 
             # if vercmp_ge "$sat_version" '6.18.0'; then
@@ -1088,7 +1088,7 @@ for rex_search_query in $rex_search_queries; do
             #       -e "job_template='$job_template_lightspeed_remediation'" \
             #       -e "search_query='$search_query'" \
             #       -e "inputs=hit_remediation_pairs='$lightspeed_remediation_pairs'" \
-            #       -e "task_timeout=$(( num_matching_rex_hosts < 1800 ? 900 : num_matching_rex_hosts / 2 ))" \
+            #       -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
             #       playbooks/tests/FAM/job_invocation_create.yaml
             # fi  # vercmp_ge "$sat_version" '6.18.0'
         fi  # $enable_iop
@@ -1101,7 +1101,7 @@ for rex_search_query in $rex_search_queries; do
           -e "description_format='${num_matching_rex_ssh_hosts} hosts - %{template_name} (ssh)'" \
           -e "feature='katello_package_update'" \
           -e "search_query='$search_query_ssh'" \
-          -e "task_timeout=$(( num_matching_rex_ssh_hosts < 1800 ? 900 : num_matching_rex_ssh_hosts / 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
     fi  # num_matching_rex_ssh_hosts > 0
 
@@ -1112,7 +1112,7 @@ for rex_search_query in $rex_search_queries; do
           -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt)'" \
           -e "feature='katello_package_update'" \
           -e "search_query='$search_query_mqtt'" \
-          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 1800 ? 900 : num_matching_rex_mqtt_hosts / 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 900 ? 900 : num_matching_rex_mqtt_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
     fi  # num_matching_rex_mqtt_hosts > 0
 done
