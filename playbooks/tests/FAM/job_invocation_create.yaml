@@ -29,6 +29,7 @@
       theforeman.foreman.wait_for_task:
         task: "{{ task_id }}"
         timeout: "{{ task_timeout | default(900) }}"
+      ignore_errors: true
 
     - name: Get task information
       theforeman.foreman.resource_info:
