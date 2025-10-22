@@ -1018,6 +1018,7 @@ for rex_search_query in $rex_search_queries; do
       -e "command='date'" \
       -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
       playbooks/tests/FAM/job_invocation_create.yaml
+    ejji $test
 
     if (( num_matching_rex_ssh_hosts > 0 )); then
         test="61f-rex-script_ssh-date-${num_matching_rex_ssh_hosts}"
@@ -1028,6 +1029,7 @@ for rex_search_query in $rex_search_queries; do
           -e "command='date'" \
           -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
 
         # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
         test="62f-rex-katello_package_install_ssh-podman-${num_matching_rex_ssh_hosts}"
@@ -1038,6 +1040,7 @@ for rex_search_query in $rex_search_queries; do
           -e "inputs='package=podman'" \
           -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
     fi  # num_matching_rex_hosts > 0
 
     if (( num_matching_rex_mqtt_hosts > 0 )); then
@@ -1049,6 +1052,7 @@ for rex_search_query in $rex_search_queries; do
           -e "command='date'" \
           -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 900 ? 900 : num_matching_rex_mqtt_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
 
         # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
         test="62f-rex-katello_package_install_mqtt-podman-${num_matching_rex_mqtt_hosts}"
@@ -1059,6 +1063,7 @@ for rex_search_query in $rex_search_queries; do
           -e "inputs='package=podman'" \
           -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 900 ? 900 : num_matching_rex_mqtt_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
     fi  # num_matching_rex_mqtt_hosts > 0
 
     test="63f-rex-ansible-podman_login_pull_rhosp-${num_matching_rex_hosts}"
@@ -1069,6 +1074,7 @@ for rex_search_query in $rex_search_queries; do
       -e "command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh'" \
       -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
       playbooks/tests/FAM/job_invocation_create.yaml
+    ejji $test
 
     if vercmp_ge "$sat_version" '6.17.0'; then
         if $enable_iop; then
@@ -1080,6 +1086,7 @@ for rex_search_query in $rex_search_queries; do
               -e "command='insights-client'" \
               -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
               playbooks/tests/FAM/job_invocation_create.yaml
+            ejji $test
 
             # if vercmp_ge "$sat_version" '6.18.0'; then
             #     test="66f-rex-apply_remediation-${num_matching_rex_hosts}"
@@ -1090,6 +1097,7 @@ for rex_search_query in $rex_search_queries; do
             #       -e "inputs=hit_remediation_pairs='$lightspeed_remediation_pairs'" \
             #       -e "task_timeout=$(( num_matching_rex_hosts < 900 ? 900 : num_matching_rex_hosts ))" \
             #       playbooks/tests/FAM/job_invocation_create.yaml
+            #     ejji $test
             # fi  # vercmp_ge "$sat_version" '6.18.0'
         fi  # $enable_iop
     fi  # vercmp_ge "$sat_version" '6.17.0'
@@ -1103,6 +1111,7 @@ for rex_search_query in $rex_search_queries; do
           -e "search_query='$search_query_ssh'" \
           -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
     fi  # num_matching_rex_ssh_hosts > 0
 
     if (( num_matching_rex_mqtt_hosts > 0 )); then
@@ -1114,6 +1123,7 @@ for rex_search_query in $rex_search_queries; do
           -e "search_query='$search_query_mqtt'" \
           -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 900 ? 900 : num_matching_rex_mqtt_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
     fi  # num_matching_rex_mqtt_hosts > 0
 done
 
