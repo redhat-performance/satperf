@@ -31,13 +31,8 @@
         timeout: "{{ task_timeout | default(900) }}"
       ignore_errors: true
 
-    - name: Get task information
+    - name: GetForemanTaskResourceInfo
       theforeman.foreman.resource_info:
         resource: foreman_tasks
         search: "id = {{ task_id }}"
-      register: __task
-
-    - name: ShowForemanTaskInfo
-      ansible.builtin.debug:
-        var: __task
 ...
