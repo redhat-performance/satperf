@@ -921,6 +921,27 @@ function ej() {
     return $rc
 }
 
+function ejji() {
+    local task_name=GetForemanTaskResourceInfo
+    local test=$1; shift
+    local play_out_json="${logs}/${test}.json"
+    local play_out_json_prefix="$( echo "$play_out_json" | cut -d'.' -f1 )"
+    local task_resources_out_json="${play_out_json_prefix}-${task_name}.json"
+
+    jq --arg TASK_NAME "$task_name" \
+      '.plays[0].tasks[] | select(.task.name==$TASK_NAME) | .hosts.localhost.resources[0]' \
+      "$play_out_json" >"$task_resources_out_json"
+
+    task_id="$( jq -r '.id' "$task_resources_out_json" )"
+    cancelled="$( jq -r '.output.cancelled_count' "$task_resources_out_json" )"
+    failed="$( jq -r '.output.failed_count' "$task_resources_out_json" )"
+    pending="$( jq -r '.output.pending_count' "$task_resources_out_json" )"
+    success="$( jq -r '.output.success_count' "$task_resources_out_json" )"
+    total="$( jq -r '.output.total_count' "$task_resources_out_json" )"
+
+    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending)"
+}
+
 function task_examine() {
     # Show task duration without outliners
     local log=$1
