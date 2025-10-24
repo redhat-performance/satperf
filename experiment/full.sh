@@ -697,7 +697,7 @@ for (( batch=1, remaining_containers_per_container_host=number_containers_per_co
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
-      -e "profile='$profile'" \
+      -e "profile='$profiling_enabled'" \
       -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml
       e Register "${logs}/${test}.log"
