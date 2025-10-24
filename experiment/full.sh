@@ -30,8 +30,6 @@ flatpak_remote_password="${PARAM_flatpak_remote_password:-password}"
 
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
-profile="${PARAM_profile:-false}"
-
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
 test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
 test_sync_repositories_max_sync_secs="${PARAM_test_sync_repositories_max_sync_secs:-600}"
