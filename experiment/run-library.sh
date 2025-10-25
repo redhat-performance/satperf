@@ -130,9 +130,9 @@ foreman_password="$( get_inventory_var foreman_password )"
 hammer_opts="-u $foreman_username -p $foreman_password"
 organization="$( get_inventory_var foreman_organization )"
 
-num_capsules="$( ansible -i $inventory --list-hosts capsules 2>/dev/null | grep -vc '^  hosts ' )"
-num_capsule_lbs="$( ansible -i $inventory --list-hosts capsule_lbs 2>/dev/null | grep -vc '^  hosts ' )"
-num_container_hosts="$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | grep -vc '^  hosts ' )"
+num_capsules="$( ansible -i $inventory --list-hosts capsules 2>/dev/null | { grep -vc '^  hosts ' || test $? = 1; } )"
+num_capsule_lbs="$( ansible -i $inventory --list-hosts capsule_lbs 2>/dev/null | { grep -vc '^  hosts ' || test $? = 1; } )"
+num_container_hosts="$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | { grep -vc '^  hosts ' || test $? = 1; } )"
 
 profiling_enabled="$( get_inventory_var enable_profiling )"
 
