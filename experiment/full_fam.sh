@@ -1169,9 +1169,6 @@ ap "${test}.log" \
   playbooks/tests/webui-static-distributed.yaml
 STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
 
-h "99-task_list-running-before_backup.log" \
-      "--no-headers --csv task list --organization-id 1 --search 'state = running and result = pending'"
-
 
 if vercmp_ge "$sat_version" '6.17.0'; then
     if $enable_iop; then
@@ -1189,6 +1186,10 @@ fi
 
 
 section 'Backup'
+test=99-task_list-running-before_backup
+h "${test}.log" \
+  "--no-headers --csv task list --organization-id 1 --search 'state = running and result = pending'"
+
 test=99-backup
 ap "${test}.log" \
   -e "sat_version='$sat_version'" \
