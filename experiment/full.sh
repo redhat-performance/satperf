@@ -718,50 +718,94 @@ skip_measurement=true a 59-rex-cleanup-know_hosts.log \
   satellite6
 
 for rex_search_query in $rex_search_queries; do
-    num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search 'name ~ $rex_search_query'" | grep -c "$rex_search_query")"
+    search_query="name ~ $rex_search_query"
+    search_query_ssh="$search_query and $rex_search_query_ssh"
+    search_query_mqtt="$search_query and $rex_search_query_mqtt"
 
-    if (( num_matching_rex_hosts > 0 )); then
-      test=60-rex-date-${num_matching_rex_hosts}
-      skip_measurement=true h ${test}.log \
-        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
-      jsr "${logs}/${test}.log"
-      j "${logs}/${test}.log"
+    num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
+    num_matching_rex_ssh_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query_ssh'" | grep -c "$rex_search_query")"
+    num_matching_rex_mqtt_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query_mqtt'" | grep -c "$rex_search_query")"
 
-      test=61-rex-date-ansible-${num_matching_rex_hosts}
-      skip_measurement=true h ${test}.log \
-        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query 'name ~ $rex_search_query'"
-      jsr "${logs}/${test}.log"
-      j "${logs}/${test}.log"
+    test=60-rex-ansible-date-${num_matching_rex_hosts}
+    skip_measurement=true h ${test}.log \
+      "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ansible_default' --search-query '$search_query'"
+    jsr "${logs}/${test}.log"
+    j "${logs}/${test}.log"
 
-      test=62-rex-katello_package_install-podman-${num_matching_rex_hosts}
-      skip_measurement=true h ${test}.log \
-        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query 'name ~ $rex_search_query'"
-      jsr "${logs}/${test}.log"
-      j "${logs}/${test}.log"
+    if (( num_matching_rex_ssh_hosts > 0 )); then
+        test=61-rex-script_ssh-date-${num_matching_rex_ssh_hosts}
+        skip_measurement=true h ${test}.log \
+          "job-invocation create --async --description-format '${num_matching_rex_ssh_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query '$search_query_ssh'"
+        jsr "${logs}/${test}.log"
+        j "${logs}/${test}.log"
 
-      test=63-rex-podman_login_pull_rhosp-${num_matching_rex_hosts}
-      skip_measurement=true h ${test}.log \
-        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
-      jsr "${logs}/${test}.log"
-      j "${logs}/${test}.log"
+        test=62-rex-katello_package_install_ssh-podman-${num_matching_rex_ssh_hosts}
+        skip_measurement=true h ${test}.log \
+          "job-invocation create --async --description-format '${num_matching_rex_ssh_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query '$search_query_ssh'"
+        jsr "${logs}/${test}.log"
+        j "${logs}/${test}.log"
+    fi  # num_matching_rex_ssh_hosts > 0
 
-      if vercmp_ge "$sat_version" '6.17.0'; then
-          if $enable_iop; then
-              test=63-rex-insigths-client-${num_matching_rex_hosts}
-              skip_measurement=true h ${test}.log \
-                "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='insights-client' --job-template '$job_template_ssh_default' --search-query 'name ~ $rex_search_query'"
-              jsr "${logs}/${test}.log"
-              j "${logs}/${test}.log"
-          fi
-      fi
+    if (( num_matching_rex_mqtt_hosts > 0 )); then
+        test=61-rex-script_mqtt-date-${num_matching_rex_mqtt_hosts}
+        skip_measurement=true h ${test}.log \
+          "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query '$search_query_mqtt'"
+        jsr "${logs}/${test}.log"
+        j "${logs}/${test}.log"
 
-      test=65-rex-katello_package_update-${num_matching_rex_hosts}
-      skip_measurement=true h ${test}.log \
-        "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query 'name ~ $rex_search_query'"
-      jsr "${logs}/${test}.log"
-      j "${logs}/${test}.log"
+        test=62-rex-katello_package_install_mqtt-podman-${num_matching_rex_mqtt_hosts}
+        skip_measurement=true h ${test}.log \
+          "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query '$search_query_mqtt'"
+        jsr "${logs}/${test}.log"
+        j "${logs}/${test}.log"
+    fi  # num_matching_rex_mqtt_hosts > 0
+
+    test=63-rex-ansible-podman_login_pull_rhosp-${num_matching_rex_hosts}
+    skip_measurement=true h ${test}.log \
+      "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh' --job-template '$job_template_ansible_default' --search-query '$search_query'"
+    jsr "${logs}/${test}.log"
+    j "${logs}/${test}.log"
+
+    if vercmp_ge "$sat_version" '6.17.0'; then
+        if $enable_iop; then
+            test=65-rex-ansible-insigths-client-${num_matching_rex_hosts}
+            skip_measurement=true h ${test}.log \
+              "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='insights-client' --job-template '$job_template_ansible_default' --search-query '$search_query'"
+            jsr "${logs}/${test}.log"
+            j "${logs}/${test}.log"
+        fi
     fi
+
+    if (( num_matching_rex_ssh_hosts > 0 )); then
+      test=69-rex-katello_package_update_ssh-${num_matching_rex_ssh_hosts}
+      skip_measurement=true h ${test}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_ssh_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query '$search_query_ssh'"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
+    fi  # num_matching_rex_ssh_hosts > 0
+
+    if (( num_matching_rex_mqtt_hosts > 0 )); then
+      test=69-rex-katello_package_update_mqtt-${num_matching_rex_mqtt_hosts}
+      skip_measurement=true h ${test}.log \
+        "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query '$search_query_mqtt'"
+      jsr "${logs}/${test}.log"
+      j "${logs}/${test}.log"
+    fi  # num_matching_rex_mqtt_hosts > 0
 done
+
+rex_search_query=container
+search_query="name ~ $rex_search_query"
+num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
+
+if vercmp_ge "$sat_version" '6.17.0'; then
+    if $enable_iop; then
+        test=65-rex-ansible-insigths-client-${num_matching_rex_hosts}
+        skip_measurement=true h ${test}.log \
+          "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='insights-client' --job-template '$job_template_ansible_default' --search-query '$search_query'"
+        jsr "${logs}/${test}.log"
+        j "${logs}/${test}.log"
+    fi
+fi
 
 
 section 'Misc simple tests'
