@@ -1041,7 +1041,7 @@ for rex_search_query in $rex_search_queries; do
           -e "task_timeout=$(( num_matching_rex_ssh_hosts < 900 ? 900 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
-    fi  # num_matching_rex_hosts > 0
+    fi  # num_matching_rex_ssh_hosts > 0
 
     if (( num_matching_rex_mqtt_hosts > 0 )); then
         test="61f-rex-script_mqtt-date-${num_matching_rex_mqtt_hosts}"
@@ -1131,16 +1131,18 @@ rex_search_query=container
 search_query="name ~ $rex_search_query"
 num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
 
-if $enable_iop; then
-    test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
-    apj $test \
-      -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
-      -e "job_template='$job_template_ansible_default'" \
-      -e "search_query='$search_query'" \
-      -e "command='insights-client'" \
-      -e "task_timeout=$(( num_matching_rex_hosts / 2 ))" \
-      playbooks/tests/FAM/job_invocation_create.yaml
-fi
+if vercmp_ge "$sat_version" '6.17.0'; then
+    if $enable_iop; then
+        test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
+        apj $test \
+          -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
+          -e "job_template='$job_template_ansible_default'" \
+          -e "search_query='$search_query'" \
+          -e "command='insights-client'" \
+          -e "task_timeout=$(( num_matching_rex_hosts / 2 ))" \
+          playbooks/tests/FAM/job_invocation_create.yaml
+    fi
+fi  # vercmp_ge "$sat_version" '6.17.0'
 
 
 section 'Misc simple tests'
