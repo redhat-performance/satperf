@@ -20,10 +20,14 @@
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: registration
+      # XXX: Ignore errors in order to be able to show `registration.stdout_lines`
+      ignore_errors: true
 
     - name: Register - output
       ansible.builtin.debug:
         var: registration.stdout_lines
+      failed_when:
+        - registration is failed
 
     - name: Calculate registration duration
       ansible.builtin.set_fact:
@@ -32,8 +36,6 @@
     - name: Register - timings
       ansible.builtin.debug:
         msg: "Register {{ registration.start }} to {{ registration.end }} taking {{ reg_duration }} seconds"
-      when:
-        - registration is success
 
     # - name: "Disable insights-client automatic scheduling"
     #   ansible.builtin.shell:
