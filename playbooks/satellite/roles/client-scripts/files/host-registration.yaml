@@ -1,6 +1,7 @@
 ---
 - hosts: all
   gather_facts: false
+
   tasks:
     - name: Register
       ansible.builtin.shell:
@@ -42,15 +43,4 @@
     #       if [[ -x /usr/bin/insights-client ]]; then
     #           insights-client --disable-schedule
     #       fi
-
-    - name: Run insights-client
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-
-          if [[ -x /usr/bin/insights-client ]]; then
-              insights-client
-          fi
-      when:
-        - enable_iop | default(false) | bool
 ...
