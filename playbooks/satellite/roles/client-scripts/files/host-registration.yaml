@@ -8,7 +8,11 @@
         cmd: |
           set -o pipefail
 
-          /root/host-registration.sh &>>/root/registration.log
+          if [[ -f /root/registration.log && ! -f /root/registration.log.orig ]]; then
+              cp -p /root/registration.log /root/registration.log.orig
+          fi
+
+          /root/host-registration.sh &>/root/registration.log
           ret=$?
 
           echo '-' >>/root/registration.log
