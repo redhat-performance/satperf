@@ -8,7 +8,6 @@
     registration_logs: registration_logs
     concurrent_registrations: 100
     registration_profile_img: registration_profile.svg
-    debug_rhsm: false
     re_register_failed_hosts: false
     profile: false
 
@@ -21,33 +20,34 @@
       ansible.builtin.set_fact:
         location_groupname: "location_{{ location | lower }}"
 
-    - name: "Check whether we have already registered some containers"
+    - name: Check whether we have already registered some containers
       ansible.builtin.stat:
         path: /root/container-used-count
       register: container_used_count_path
 
-    - name: "Set number of used containers to 0"
-      ansible.builtin.set_fact:
-        containers_used_count: 0
+    - name: No containers yet registered
       when:
         - not container_used_count_path.stat.exists
+      block:
+        - name: Set number of used containers to 0
+          ansible.builtin.set_fact:
+            containers_used_count: 0
 
-    - name: "Load number of already registered containers"
-      ansible.builtin.command:
-        cmd: |
-          cat /root/container-used-count
-      register: containers_used_count_cmd
-      ignore_errors: true
+    - name: Containers already registered
       when:
         - container_used_count_path.stat.exists
+      block:
+        - name: Get number of containers already used
+          ansible.builtin.command:
+            cmd: |
+              cat /root/container-used-count
+          register: containers_used_count_cmd
 
-    - name: "Set number of used containers based on file contents"
-      ansible.builtin.set_fact:
-        containers_used_count: "{{ containers_used_count_cmd.stdout }}"   # Warning: this is still a string: https://github.com/ansible/ansible/issues/15249
-      when:
-        - container_used_count_path.stat.exists
+        - name: Set number of used containers based on file contents
+          ansible.builtin.set_fact:
+            containers_used_count: "{{ containers_used_count_cmd.stdout }}"   # Warning: this is still a string: https://github.com/ansible/ansible/issues/15249
 
-    - name: "Ensure we have enough free containers"
+    - name: Ensure we have enough free containers
       ansible.builtin.assert:
         that: "containers_used_count | int < containers_count | int"
 
