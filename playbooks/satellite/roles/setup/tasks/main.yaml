@@ -155,7 +155,7 @@
         LC_ALL: 'en_US.UTF-8'
         TZ: 'UTC'
       register: installer_cmd
-      # XXX: Ignore errors in order to be able to show `cmd_enable_iop.stdout_lines`
+      # XXX: Ignore errors in order to be able to show `installer_cmd.stdout_lines`
       ignore_errors: true
 
     - name: Show installer output
@@ -225,8 +225,6 @@
           vars:
             content_file: "{{ custom_hiera_iop_content_file }}"
             marker_postfix: IoPç
-
-
 
     - name: Set common variable(s) values
       ansible.builtin.set_fact:
