@@ -2,28 +2,21 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
-
-rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
-
-dl='Default Location'
-
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
 
 
 section "Checking environment"
 generic_environment_check
 
 
-section "Upload manifest"
-a rhel8sync-10-manifest-deploy.log \
-  -m copy \
-  -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h rhel8sync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Sync from CDN mirror"

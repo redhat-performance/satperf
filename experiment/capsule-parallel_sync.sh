@@ -2,13 +2,7 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
-
-rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
 repo_sat_client_7="${PARAM_repo_sat_client_7:-http://mirror.example.com/Satellite_Client_7_x86_64/}"
 repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellite_Client_8_x86_64/}"
@@ -16,21 +10,21 @@ repo_sat_client_9="${PARAM_repo_sat_client_9:-http://mirror.example.com/Satellit
 
 initial_index="${PARAM_initial_index:-0}"
 
-dl='Default Location'
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 
-section "Upload manifest"
-a capsync-10-manifest-deploy.log \
-  -m copy \
-  -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h capsync-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Sync from CDN mirror"

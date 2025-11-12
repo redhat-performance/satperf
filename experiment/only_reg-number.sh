@@ -2,18 +2,13 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
-
 expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-125}
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
 
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 
 section "Register"

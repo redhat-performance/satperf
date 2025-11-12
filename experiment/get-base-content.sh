@@ -2,15 +2,12 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest.zip}"
-
-rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
+rels="${PARAM_rels:-rhel7 rhel8 rhel9 rhel10}"
 filter_cv="${PARAM_filter_cv:-false}"
 filter_cv_rule_end_date="${PARAM_filter_cv_rule_end_date:-2024-09-01}"
 filter_cv_rule_types="${PARAM_filter_cv_rule_types:-bugfix,security}"
 
+# lces="${PARAM_lces:-Dev QA Pre Prod}"
 lces="${PARAM_lces:-Test QA Pre Prod}"
 
 basearch=x86_64
@@ -28,14 +25,21 @@ skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
 capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
 
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
 section 'Checking environment'
 generic_environment_check false false
 # set +e
 
+# Initial version sanity check
+for rel in $rels; do
+    case "$rel" in
+    rhel[7-9]|rhel10)
+        continue
+        ;;
+    *)
+        echo "Wrong release: $rel!!!" && exit
+        ;;
+    esac
+done
 
 export skip_measurement=true
 

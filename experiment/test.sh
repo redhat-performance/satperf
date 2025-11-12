@@ -2,15 +2,11 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check false
+# unset skip_measurement
+# set +e
 
 
 junit_upload

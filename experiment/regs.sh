@@ -2,11 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
 registrations_config_server_server_timeout="${PARAM_registrations_config_server_server_timeout:-}"   # empty means to use default
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
@@ -18,21 +13,23 @@ repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellit
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
-dl="Default Location"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 export skip_measurement='true'
 
-section "Upload manifest"
-a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-h regs-10-simple-content-access-disable.log "simple-content-access disable --organization '{{ sat_org }}'"
+
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Sync from CDN"   # do not measure because of unpredictable network latency

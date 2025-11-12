@@ -2,10 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
@@ -13,26 +9,21 @@ PARAM_docker_registry=${PARAM_docker_registry:-https://registry-1.docker.io/}
 
 PARAM_iso_repos=${PARAM_iso_repos:-http://storage.example.com/iso-repos/}
 
-dl="Default Location"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 
-section "Prepare for Red Hat content"
-a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-count=5
-for i in $( seq $count ); do
-    h 01-manifest-upload-$i.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-    if [ $i -lt $count ]; then
-        h 02-manifest-delete-$i.log "subscription delete-manifest --organization '{{ sat_org }}'"
-    fi
-done
-h 03-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Sync from mirror"

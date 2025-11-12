@@ -2,12 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
 
 section "Backup"
 a 00-backup.log satellite6 -m "shell" -a "rm -rf /root/backup /tmp/backup; mkdir /tmp/backup; satellite-maintain backup offline --skip-pulp-content --assumeyes /tmp/backup; mv /tmp/backup /root/"

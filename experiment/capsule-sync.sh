@@ -2,10 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
 rels="${PARAM_rels:-rhel6 rhel7 rhel8 rhel9}"
@@ -25,22 +21,21 @@ capsule_download_policy="${PARAM_capsule_download_policy:-inherit}"
 
 initial_index="${PARAM_initial_index:-0}"
 
-dl='Default Location'
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 
-section "Upload manifest"
-a 12-manifest-deploy.log \
-  -m ansible.builtin.copy \
-  -a "src=$manifest dest=/root/manifest-auto.zip force=yes" \
-  satellite6
-h 15-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Get OS content"

@@ -2,11 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
 registrations_iterations=${PARAM_registrations_iterations:-20}
 
@@ -15,16 +10,15 @@ repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellit
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
-dl="Default Location"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
 
-
-section "Util: Prepare for Red Hat content"
-a 00-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h 01-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-h 03-manifest-refresh.log "subscription refresh-manifest --organization '{{ sat_org }}'"
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Util: Sync Client repos"

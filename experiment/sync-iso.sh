@@ -2,19 +2,15 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-
 test_sync_iso_count="${PARAM_test_sync_iso_count:-8}"
 test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
 test_sync_iso_max_sync_secs="${PARAM_test_sync_iso_max_sync_secs:-600}"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
 
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check false true
+# unset skip_measurement
+# set +e
 
 
 section "Sync file repo"

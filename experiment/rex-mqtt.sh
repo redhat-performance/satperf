@@ -2,17 +2,12 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 
-dl="Default Location"
-
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts -e branch='$branch'"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check false false
+# unset skip_measurement
+# set +e
+
 
 section "Remote execution"
 job_template_ansible_default='Run Command - Ansible Default'

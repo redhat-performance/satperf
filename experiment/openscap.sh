@@ -2,11 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 registrations_batches="${PARAM_registrations_batches:-1 2 3}"
 bootstrap_additional_args="${PARAM_bootstrap_additional_args}"   # usually you want this empty
 
@@ -22,22 +17,23 @@ job_name="${PARAM_job_name:-Sat_Experiment}"
 max_age_input="${PARAM_max_age_input:-19000}"
 proxy_id="${PARAM_proxy_id:-set-in-doit-sh}"
 
-dl="Default Location"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 export skip_measurement='true'
 
 
-section "Upload manifest"
-a regs-10-manifest-deploy.log -m copy -a "src=$manifest dest=/root/manifest-auto.zip force=yes" satellite6
-h regs-10-manifest-upload.log "subscription upload --file '/root/manifest-auto.zip' --organization '{{ sat_org }}'"
-skip_measurement='true' h 03-simple-content-access-disable.log "simple-content-access disable --organization '{{ sat_org }}'"
+section 'Prepare for Red Hat content'
+test=09f-manifest-download
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_download.yaml
+
+test=09f-manifest-import
+skip_measurement=true apj $test \
+  playbooks/tests/FAM/manifest_import.yaml
 
 
 section "Sync from CDN"   # do not measure because of unpredictable network latency

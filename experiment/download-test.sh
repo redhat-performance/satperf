@@ -2,13 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
-cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
-
 ak="${PARAM_ak:-ActivationKey}"
 
 expected_concurrent_registrations=${PARAM_expected_concurrent_registrations:-64}
@@ -23,14 +16,11 @@ max_age_input="${PARAM_max_age_input:-19000}"
 skip_down_setup="${PARAM_skip_down_setup:-false}"
 skip_push_to_capsules_setup="${PARAM_skip_push_to_capsules_setup:-false}"
 
-dl="Default Location"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 
 #If we already have setup ready - all repos synced, etc we can skip directly to registering and downloading batches. PLEASE DELETE ALL HOSTS FROM SATELLITE.

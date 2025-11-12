@@ -2,30 +2,17 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
-
 test_sync_mixed_count="${PARAM_test_sync_mixed_count:-8}"
 test_sync_mixed_max_sync_secs="${PARAM_test_sync_mixed_max_sync_secs:-1200}"
 test_sync_docker_url_template="${PARAM_test_sync_docker_url_template:-https://registry-1.docker.io}"
 test_sync_repositories_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
 test_sync_iso_url_template="${PARAM_test_sync_iso_url_template:-http://storage.example.com/iso-repos*}"
 
-cdn_url_mirror="${PARAM_cdn_url_mirror:-https://cdn.redhat.com/}"
-cdn_url_full="${PARAM_cdn_url_full:-https://cdn.redhat.com/}"
 
-PARAM_docker_registry=${PARAM_docker_registry:-https://registry-1.docker.io/}
-PARAM_iso_repos=${PARAM_iso_repos:-http://storage.example.com/iso-repos/}
-
-dl="Default Location"
-
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check
+# unset skip_measurement
+# set +e
 
 
 section "Sync mixed repo"

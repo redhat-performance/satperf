@@ -2,9 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
 manifest="${PARAM_manifest:-conf/contperf/manifest_SCA.zip}"
 
 registrations_per_docker_hosts=${PARAM_registrations_per_docker_hosts:-5}
@@ -21,14 +18,11 @@ repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellit
 
 ui_pages_reloads="${PARAM_ui_pages_reloads:-10}"
 
-dl="Default Location"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
-
-
-section "Checking environment"
+section 'Checking environment'
 generic_environment_check false
+# unset skip_measurement
+# set +e
 
 
 ###section "Prepare for Red Hat content"

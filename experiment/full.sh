@@ -49,9 +49,11 @@ ui_concurrency="${PARAM_ui_concurrency:-10}"
 ui_duration="${PARAM_ui_duration:-300}"
 ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
 
-opts="--forks 100 -i $inventory"
-opts_adhoc="$opts"
 
+section 'Checking environment'
+generic_environment_check
+# unset skip_measurement
+# set +e
 
 # Initial version sanity check
 for rel in $rels; do
@@ -64,12 +66,6 @@ for rel in $rels; do
         ;;
     esac
 done
-
-
-section 'Checking environment'
-generic_environment_check
-# unset skip_measurement
-# set +e
 
 
 section 'Prepare for Red Hat content'
