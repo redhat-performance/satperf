@@ -2,25 +2,11 @@
 - name: "Configure capsule(s)"
   hosts: capsules
   gather_facts: false
+
   roles:
-    - role: ../common/roles/epel-not-present
-    - role: ../common/roles/scalelab-generic-cleanup
-      when:
-        - "'scalelab' in inventory_hostname"
-    - role: ../common/roles/plain-network
-      when:
-        - configure_plain_network is defined and configure_plain_network | bool == True
-    - role: ../common/roles/common
-    - role: ../common/roles/remove-home-extend-root
-      when:
-        - (remove_home_partition is defined and remove_home_partition | bool == True) or
-          (extend_root_partition is defined and extend_root_partition | bool == True)
-    - role: ../common/roles/enlarge-arp-table
-    - role: linux-system-roles.timesync
-    - role: linux-system-roles.rhc
-    - role: upgrade-restart
     - role: linux-system-roles.firewall
     - role: linux-system-roles.storage
+    - role: ../common/roles/enlarge-arp-table
     - role: repo_setup
     - role: capsule
     - role: capsule-location

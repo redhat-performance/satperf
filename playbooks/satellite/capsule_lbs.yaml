@@ -2,12 +2,9 @@
 - name: "Configure capsule(s) load-balancer"
   hosts: capsule_lbs
   gather_facts: false
+
   roles:
-    - role: ../common/roles/common
-    - role: ../common/roles/enlarge-arp-table
-    - role: linux-system-roles.timesync
-    - role: linux-system-roles.rhc
-    - role: upgrade-restart
     - role: linux-system-roles.firewall
+    - role: ../common/roles/enlarge-arp-table
     - role: haproxy
 ...

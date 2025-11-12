@@ -1,12 +1,11 @@
 ---
-- hosts: satellite6 capsules container_hosts
-  gather_facts: False
+- hosts: satellite6:capsules:capsule_lbs:container_hosts
+  gather_facts: false
+
   roles:
-    - role: ../common/roles/epel-not-present
-    - role: ../common/roles/scalelab-generic-cleanup
-      when: '"scalelab" in inventory_hostname'
-    - role: ../common/roles/plain-network
-      when:
-        - configure_plain_network is defined and configure_plain_network | bool == True
-    - role: ../common/roles/common
+    - role: common
+    - role: linux-system-roles.timesync
+    - role: linux-system-roles.rhc
+    - role: upgrade-restart
+    - role: epel-not-present
 ...
