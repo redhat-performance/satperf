@@ -1,17 +1,17 @@
 ---
-- name: "Register containers against a registration target"
+- name: Register containers against a registration target
   hosts: container_hosts
   gather_facts: false
   vars:
     size: 10   # TODO: would be nice to provide total expected number and that would be divided by number of container hosts
     num_retry_forks: 3
-    registration_logs: "registration_logs"
-    re_register_failed_hosts: false
-    profile: false
+    registration_logs: registration_logs
     concurrent_registrations: 100
     registration_profile_img: registration_profile.svg
     debug_rhsm: false
-    enable_iop: false
+    re_register_failed_hosts: false
+    profile: false
+
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
