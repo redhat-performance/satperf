@@ -27,15 +27,15 @@ run_lib_dryrun=false
 
 # Requirements check
 #if ! type bc >/dev/null; then
-#    echo "ERROR: bc not installed" >&2
+#    echo 'ERROR: bc not installed' >&2
 #    exit 1
 #fi
 if ! type ansible >/dev/null; then
-    echo "ERROR: ansible not installed" >&2
+    echo 'ERROR: ansible not installed' >&2
     exit 1
 fi
 # if ! type rpmdev-vercmp >/dev/null; then
-#     echo "ERROR: rpmdev-vercmp (from rpmdevtools) not installed" >&2
+#     echo 'ERROR: rpmdev-vercmp (from rpmdevtools) not installed' >&2
 #     exit 1
 # fi
 
@@ -320,19 +320,19 @@ function status_data_create() {
     sd_run=$1; shift
     sd_additional=$1
 
-    # derive testcase name from log name which is descriptive
+    # Derive testcase name from log name which is descriptive
     if [[ "$sd_log" =~ \.json$ ]]; then
         sd_name="$( basename "$sd_log" .json )"
     elif [[ "$sd_log" =~ \.log$ ]]; then
         sd_name="$( basename "$sd_log" .log )"
     fi
-    if [ -n "$STATUS_DATA_FILE" -a -f "$STATUS_DATA_FILE" ]; then
+    if [[ -n $STATUS_DATA_FILE ]] && [[ -f "$STATUS_DATA_FILE" ]]; then
         sd_file="$STATUS_DATA_FILE"
     else
         sd_file="$sd_log.json"
         rm -f "$sd_file"
     fi
-    if [ -n "$RDD_FILE" -a -f "$RDD_FILE" ]; then
+    if [[ -n $RDD_FILE ]] && [[ -f "$RDD_FILE" ]]; then
         rdd_file="$RDD_FILE"
     else
         rdd_file="$sd_log.rdd.json"
@@ -692,7 +692,7 @@ function apj() {
     local playbook="${@: -1}"
     local test=$1; shift
     local play_out_json="${logs}/${test}.json"
-    if [[ -n "$profiling_enabled" ]] && $profiling_enabled && ( [[ -z "$skip_measurement" ]] || ! $skip_measurement ); then
+    if [[ -n $profiling_enabled ]] && $profiling_enabled && ( [[ -z $skip_measurement ]] || ! $skip_measurement ); then
         profile=true
     else
         profile=false
@@ -1101,14 +1101,14 @@ function table_row() {
             echo "ERROR: Row '$row' have non-zero return code. Not considering it when counting duration :-(" >&2
             continue
         fi
-        if [ -n "$grepper" ]; then
+        if [[ -n "$grepper" ]]; then
             local log="$( echo "$row" | measurement_row_field 2 )"
             local out="$( experiment/reg-average.py "$grepper" "$log" 2>/dev/null | grep "^$grepper in " | tail -n 1 )"
             local passed="$( echo "$out" | cut -d ' ' -f 6 )"
             [[ -n $note ]] || note='Number of passed:'
             local note="$note $passed"
             local diff="$( echo "$out" | cut -d ' ' -f 8 )"
-            if [ -n "$diff" ]; then
+            if [[ -n "$diff" ]]; then
                 (( sum += diff ))
                 (( count++ ))
             fi
