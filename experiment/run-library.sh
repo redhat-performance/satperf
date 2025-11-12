@@ -115,11 +115,12 @@ function vercmp_le() {
 
 function get_inventory_var() {
     local inventory_var=$1
+    local group="${2:-satellite6}"
 
     ansible $opts_adhoc \
       -m ansible.builtin.debug \
       -a "var=$inventory_var" \
-      satellite6 |
+      $group |
       sed -E 's/.*[[:space:]]*=>[[:space:]]*\{/\{/' |
       jq -r --arg INVENTORY_VAR "$inventory_var" '.[$INVENTORY_VAR]'
 }
