@@ -2,10 +2,6 @@
 
 source experiment/run-library.sh
 
-branch="${PARAM_branch:-satcpt}"
-inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-sat_version="${PARAM_sat_version:-stream}"
-
 manifest_exercise_runs="${PARAM_manifest_exercise_runs:-5}"
 
 rels="${PARAM_rels:-rhel7 rhel8 rhel9 rhel10}"
