@@ -30,8 +30,10 @@
     - name: Register - output
       ansible.builtin.debug:
         var: registration.stdout_lines
+      vars:
+        regexp: '^.*(Traceback |curl: |Internal Server Error).*$'
       failed_when:
-        - registration is failed
+        - registration is failed or registration.stdout | regex_search(regexp, multiline=true)
 
     - name: Calculate registration duration
       ansible.builtin.set_fact:
