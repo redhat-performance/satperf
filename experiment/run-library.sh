@@ -17,7 +17,7 @@ sat_version="${PARAM_sat_version:-stream}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
 content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
 
-opts="${opts:-"--forks 100 -i $inventory"}"
+opts="${opts:-"-i $inventory --forks 25"}"
 opts_adhoc="${opts_adhoc:-$opts}"
 
 enable_iop="${PARAM_enable_iop:-false}"
