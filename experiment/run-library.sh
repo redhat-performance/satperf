@@ -12,14 +12,21 @@ set -e
 [[ -n $marker ]] || marker="${2:-run-$(date -u -Iseconds)}"
 
 branch="${PARAM_branch:-satcpt}"
-sat_version="${PARAM_sat_version:-stream}"
 inventory="${PARAM_inventory:-conf/contperf/inventory.${branch}.ini}"
-content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
+product="${PARAM_product:-satellite}"
+if [[ "$product" == 'satellite' ]]; then
+    sat_version="${PARAM_sat_version:-stream}"
+elif [[ "$product" == 'foreman' ]]; then
+    foreman_version="${PARAM_foreman_version:-nightly}"
+    katello_version="${PARAM_katello_version:-nightly}"
+fi
 
 opts="${opts:-"-i $inventory --forks 25"}"
 opts_adhoc="${opts_adhoc:-$opts}"
 
 enable_iop="${PARAM_enable_iop:-false}"
+
+content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
 
 export logs="${logs:-${marker}}"
 run_lib_dryrun=false
@@ -266,7 +273,7 @@ function status_data_create() {
     (
     set -x
 
-    [[ -n $PARAM_elasticsearch_host ]] || return 0
+    [[ -n $elasticsearch_host ]] || return 0
 
     if [ -z "$4" -o -z "$5" ]; then
         echo "WARNING: Either start '$4' or end '$5' timestamps are empty, not going to create status data" >&2
@@ -337,13 +344,13 @@ function status_data_create() {
         rdd_file="$sd_log.rdd.json"
         rm -f "$rdd_file"
     fi
-    if [ -n "$PARAM_inventory" ]; then
+    if [[ -n $inventory ]]; then
         sd_hostname="$( ansible $opts_adhoc \
           --list-hosts \
           satellite6 2>/dev/null |
           tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
     fi
-    workdir_url="${PARAM_workdir_url:-https://workdir-exporter.example.com/workspace}"
+    workdir_url="${workdir_url:-https://workdir-exporter.example.com/workspace}"
     sd_link="${workdir_url}/${JOB_NAME:-NA}/${sd_log}"
 
     # Create status data file
@@ -370,28 +377,28 @@ function status_data_create() {
     set +x
 
     # Add monitoring data to the status data file (*.log.json)
-    if [[ -n "$PARAM_grafana_host" ]] && [[ -n "$PARAM_cluster_read_config" ]]; then
+    if [[ -n $grafana_host ]] && [[ -n $cluster_read_config ]]; then
         local grafana_nodes="$( ansible $opts_adhoc \
           --list-hosts \
           satellite6,capsules 2>/dev/null | \
           grep -v '^  hosts' | \
           sed -e 's/^\s\+//' -e 's/\s\+$//' | sed 's/\./_/g' )"
 
-        for PARAM_grafana_node in $grafana_nodes; do
+        for grafana_node in $grafana_nodes; do
             set -x
-            # `node_short` will be used as Jinja2 variable in `$PARAM_cluster_read_config`
-            node_short="$( echo $PARAM_grafana_node | cut -d'_' -f1 )" status_data.py -d \
+            # `node_short` will be used as Jinja2 variable in `$cluster_read_config`
+            node_short="$( echo $grafana_node | cut -d'_' -f1 )" status_data.py -d \
               --status-data-file "$sd_file" \
-              --additional $PARAM_cluster_read_config \
+              --additional $cluster_read_config \
               --monitoring-start $sd_start \
               --monitoring-end $sd_end \
-              --grafana-host $PARAM_grafana_host \
-              --grafana-port $PARAM_grafana_port \
-              --grafana-prefix $PARAM_grafana_prefix \
-              --grafana-datasource $PARAM_grafana_datasource \
-              --grafana-interface $PARAM_grafana_interface \
-              --grafana-token $PARAM_grafana_token \
-              --grafana-node $PARAM_grafana_node
+              --grafana-host $grafana_host \
+              --grafana-port $grafana_port \
+              --grafana-prefix $grafana_prefix \
+              --grafana-datasource $grafana_datasource \
+              --grafana-interface $grafana_interface \
+              --grafana-token $grafana_token \
+              --grafana-node $grafana_node
             set +x
         done
     fi
@@ -401,13 +408,13 @@ function status_data_create() {
 
     # Based on historical data, determine result of this test
     sd_result_log="$( mktemp )"
-    if [ "$sd_rc" -eq 0 -a -n "$PARAM_investigator_config" ]; then
+    if [ "$sd_rc" -eq 0 -a -n "$investigator_config" ]; then
         export sd_section
         export sd_name
         set +e
         set -x
         pass_or_fail.py \
-          --config $PARAM_investigator_config \
+          --config $investigator_config \
           --current-file "$sd_file" 2>&1 | tee "$sd_result_log"
         pof_rc=$?
         set +x
@@ -428,7 +435,7 @@ function status_data_create() {
       "result=$sd_result"
 
     # Upload status data to ElasticSearch
-    url="http://$PARAM_elasticsearch_host:$PARAM_elasticsearch_port/${PARAM_elasticsearch_index:-satellite_perf_index}/${PARAM_elasticsearch_mapping:-_doc}/"
+    url="http://$elasticsearch_host:$elasticsearch_port/${elasticsearch_index:-satellite_perf_index}/${elasticsearch_mapping:-_doc}/"
     echo "INFO: POSTing '$sd_file' to '$url'"
     curl --silent \
       -X POST \
@@ -468,7 +475,7 @@ function status_data_create() {
     set +x
 
     # Upload status data to "results-dashboard-data" ElasticSearch
-    url="http://${PARAM_elasticsearch_host}:${PARAM_elasticsearch_port}/results-dashboard-data/${PARAM_elasticsearch_mapping:-_doc}/"
+    url="http://${elasticsearch_host}:${elasticsearch_port}/results-dashboard-data/${elasticsearch_mapping:-_doc}/"
     echo "INFO: POSTing results data to '$url'"
     curl --silent \
       -X POST \
@@ -518,13 +525,13 @@ function junit_upload() {
     # Make the file available for Jenkins on the same path every time
     cp $logs/junit.xml latest-junit.xml
 
-    [[ -n $PARAM_reportportal_host ]] || return 0
+    [[ -n $reportportal_host ]] || return 0
 
     # Activate tools virtualenv
     source venv/bin/activate
 
     # Determine ReportPortal launch name
-    launch_name="${PARAM_reportportal_launch_name:-default-launch-name}"
+    launch_name="${reportportal_launch_name:-default-launch-name}"
     if echo "$launch_name" | grep -q '%sat_ver%'; then
         sat_ver="$( echo "$satellite_rpm" | sed 's/^satellite-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
         [[ -n $sat_ver ]] || sat_ver="$( echo "$katello_rpm" | sed 's/^katello-//' | sed 's/^\([0-9]\+\.[0-9]\+\).*/\1/' )"
@@ -535,9 +542,9 @@ function junit_upload() {
     # Show content and upload to ReportPortal
     junit_cli.py --file "$logs/junit.xml" print
     junit_cli.py --file "$logs/junit.xml" upload \
-      --host $PARAM_reportportal_host \
-      --project $PARAM_reportportal_project \
-      --token $PARAM_reportportal_token \
+      --host $reportportal_host \
+      --project $reportportal_project \
+      --token $reportportal_token \
       --launch $launch_name \
       --noverify \
       --properties jenkins_build_url=$BUILD_URL run_id=$marker
