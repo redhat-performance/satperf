@@ -3,7 +3,7 @@
   hosts: satellite6:capsules
   gather_facts: false
   vars:
-    aks: "{{ aks | default('AK') | split }}"
+    aks_list: "{{ aks | default('AK') | split }}"
     hgrg: "host-registration generate-command --organization '{{ organization }}' --location {{ location }} --insecure true --force true"
     location_groupname: "location_{{ location | lower }}"
   tasks:
@@ -73,7 +73,7 @@
       ansible.builtin.command:
         cmd: |
           hammer -u {{ sat_user }} -p {{ sat_pass }} {{ hgrg }} --activation-key {{ item }}
-      loop: "{{ aks | split }}"
+      loop: "{{ aks_list }}"
       register: cmd
       delegate_to: "{{ groups['satellite6'] | first }}"
 
@@ -102,5 +102,5 @@
             dest: /var/www/html/pub/host-registration.{{ item }}.sh
             mode: '0644'
             force: true
-          loop: "{{ aks | split }}"
+          loop: "{{ aks_list }}"
 ...
