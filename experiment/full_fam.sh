@@ -977,7 +977,7 @@ for (( batch=1, remaining_containers_per_container_host=num_containers_per_conta
       -e "profile='$profiling_enabled'" \
       -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml
-      e Register "${logs}/${test}.log"
+    e Register "${logs}/${test}.log"
 done
 grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"

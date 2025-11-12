@@ -356,42 +356,37 @@ unset skip_measurement
 
 
 section 'Incremental registrations'
-number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
-number_containers_per_container_host="$( ansible $opts_adhoc -m ansible.builtin.debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
-if (( initial_expected_concurrent_registrations > number_container_hosts )); then
-    initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
-else
-    initial_concurrent_registrations_per_container_host=1
-fi
-num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
+num_containers_per_container_host="$( get_inventory_var containers_count container_hosts[0] )"
+min_containers_per_batch=4
+num_retry_forks="$(( initial_expected_concurrent_registrations / num_container_hosts ))"
+initial_concurrent_registrations_per_container_host=$min_containers_per_batch
+num_retry_forks=$min_containers_per_batch
 prefix=48-register
 
-for (( batch=1, remaining_containers_per_container_host=number_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
+for (( batch=1, remaining_containers_per_container_host=num_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
     if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
         concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
     else
         concurrent_registrations_per_container_host=$remaining_containers_per_container_host
     fi
-    concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
+    concurrent_registrations="$(( concurrent_registrations_per_container_host * num_container_hosts ))"
     (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
     (( total_registered += concurrent_registrations ))
 
-    registration_log="$prefix-${concurrent_registrations}.log"
-    registration_profile_img="$prefix-${concurrent_registrations}.svg"
-
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    ap $registration_log \
+    test="${prefix}-${concurrent_registrations}"
+    ap "${test}.log" \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "concurrent_registrations='$concurrent_registrations'" \
       -e "num_retry_forks='$num_retry_forks'" \
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
-      -e "profile='$profile'" \
-      -e "registration_profile_img='$registration_profile_img'" \
+      -e "profile='$profiling_enabled'" \
+      -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml
-    e Register $logs/$registration_log
+    e Register "${logs}/${test}.log"
 done
 grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"
