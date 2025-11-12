@@ -9,8 +9,7 @@ set -e
 # the last field of lines in measurement.log file.
 # The ID should be passed as a argument to the run-bench.sh. If there is no argument passed, default ID will be
 # generated based on the current date and time.
-marker_date="$( date -u -Iseconds )"
-[[ -n $marker ]] || marker="${1:-run-${marker_date}}"
+[[ -n $marker ]] || marker="${2:-run-$(date -u -Iseconds)}"
 
 branch="${PARAM_branch:-satcpt}"
 sat_version="${PARAM_sat_version:-stream}"
@@ -22,7 +21,7 @@ opts_adhoc="${opts_adhoc:-$opts}"
 
 enable_iop="${PARAM_enable_iop:-false}"
 
-logs=$marker
+export logs="${logs:-${marker}}"
 run_lib_dryrun=false
 
 # Requirements check
@@ -1128,6 +1127,8 @@ function table_row() {
 }
 
 
-# Create dir for logs
-[[ -d "$logs" ]] || mkdir -p "$logs"
-log "Logging into '$logs/' directory"
+# Create logs dir if it doesn't exist
+if [[ ! -d "$logs" ]]; then
+    mkdir -p "$logs"
+    log "Logging into '$logs' directory"
+fi
