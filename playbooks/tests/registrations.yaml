@@ -51,12 +51,37 @@
       ansible.builtin.assert:
         that: "containers_used_count | int < containers_count | int"
 
-    - name: "Generate list of containers we are going to use"
+    - name: Set required variables for registration script
+      ansible.builtin.set_fact:
+        used_count: "{{ ( containers_used_count | int / 4 ) | int }}"
+        select_size: "{{ ( size | int / 4 ) | int }}"
+        inventory_file: "clients_{{ size }}.ini"
+
+    # XXX: We'll group them in multiples of 4 so there are always a multiple of:
+    #      - 2 EL8
+    #      - 1 EL9
+    #      - 1 EL10
+    #      This way we'll have an apple to apple comparison to do between runs
+    - name: Generate list of containers we are going to use
       ansible.builtin.shell:
         cmd: |
-          awk 'NR > {{ containers_used_count | int }} && NR <= {{ containers_used_count | int + size | int }} {print $NF}' \
-            /root/container-ips.shuffled \
-            >clients.ini
+          used_count={{ used_count }}
+          select_size={{ select_size }}
+
+          rm -f {{ inventory_file }}
+
+          for el_version in el8 el9 el10; do
+              if [[ "$el_version" == 'el8' ]]; then
+                  start_line="$(( used_count * 2 ))"
+                  end_line="$(( start_line + ( select_size * 2 ) ))"
+              else
+                  start_line="$(( used_count ))"
+                  end_line="$(( start_line + select_size ))"
+              fi
+
+              awk -v EL=$el_version '$0 ~ "^"EL"-" {print $0}' /root/container-ips.shuffled | awk -v START_LINE=$start_line -v END_LINE=$end_line 'NR > START_LINE && NR <= END_LINE {print $NF}' | tee -a {{ inventory_file }}
+          done
+      register: clients_ini
 
     - name: Set base log name
       ansible.builtin.set_fact:
@@ -73,9 +98,8 @@
         cmd: |
           ansible-playbook \
             --private-key /root/id_rsa_key \
-            --forks {{ size }} \
-            --inventory clients.ini \
-            -e "enable_iop='{{ enable_iop }}'" \
+            --forks {{ num_retry_forks }} \
+            --inventory {{ inventory_file }} \
             host-registration_prepare.yaml |
             tee {{ host_registration_prepare_cmd_log }}
       register: host_registration_prepare_cmd
@@ -86,44 +110,49 @@
         cmd: |
           ansible \
             --private-key /root/id_rsa_key \
-            --inventory clients.ini \
-            -m ansible.builtin.shell \
+            --forks {{ num_retry_forks }} \
+            --inventory {{ inventory_file }} \
             -a 'sed -i.orig -e "/\# This really needs an exception mapper too\.\.\./i \
             \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ \ log.error(\"Response content: %s\" % response[\"content\"])" \
             /usr/lib64/python3.*/site-packages/rhsm/connection.py' \
             all |
             tee patch_rhsm_{{ size }}.log
-      when:
-        - debug_rhsm
-
-    - name: Create profiling directory
-      ansible.builtin.file:
-        path: /root/profile
-        state: directory
-        mode: '0700'
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      run_once: true
-      when:
-        - profile
-
-    - name: Start gathering BPF profile
-      ansible.builtin.shell:
-        cmd: |
-          /usr/share/bcc/tools/profile \
-            -adf \
-            --stack-storage-size 1638400 \
-            >/root/profile/out-{{ concurrent_registrations }}.profile-folded
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      async: 1800
-      poll: 0
-      run_once: true
-      ignore_errors: true
-      when:
-        - profile
 
     - name: Set `host-registration.yaml` log name
       ansible.builtin.set_fact:
         clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
+
+    - name: Profile preparation
+      when:
+        - profile | bool
+      block:
+        - name: Set profile base directory
+          ansible.builtin.set_fact:
+            profile_base_dir: '/root/profile'
+
+        - name: Set additional profile vars
+          ansible.builtin.set_fact:
+            profile_file: "{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}.profile-folded"
+            profile_image: "{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}.svg"
+
+        - name: Create profiling directory
+          ansible.builtin.file:
+            path: "{{ profile_base_dir }}"
+            state: directory
+            mode: '0700'
+
+        - name: Start gathering BPF profile
+          ansible.builtin.shell:
+            cmd: |
+              /usr/share/bcc/tools/profile \
+                -adf \
+                --stack-storage-size 1638400 \
+                >{{ profile_file }}
+          async: 1800
+          poll: 0
+          ignore_errors: true
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
 
     - name: Run `host-registration.yaml` (log = {{ clients_yaml_cmd_log }})
       ansible.builtin.shell:
@@ -131,21 +160,22 @@
           ansible-playbook \
             --private-key /root/id_rsa_key \
             --forks {{ size }} \
-            --inventory clients.ini \
-            -e "enable_iop='{{ enable_iop }}'" \
+            --inventory {{ inventory_file }} \
             host-registration.yaml |
             tee {{ clients_yaml_cmd_log }}
       ignore_errors: true
 
-    - name: Kill BPF profile process
-      ansible.builtin.command:
-        cmd: |
-          pkill -SIGINT profile
+    - name: Profile stop
+      when:
+        - profile | bool
+      block:
+        - name: Kill BPF profile process
+          ansible.builtin.command:
+            cmd: |
+              pkill -SIGINT profile
       delegate_to: "{{ groups['satellite6'] | first }}"
       run_once: true
       ignore_errors: true
-      when:
-        - profile
 
     - name: Fetch client logs
       ansible.builtin.fetch:
@@ -158,7 +188,9 @@
         cmd: |
           set -o pipefail
 
-          grep '"msg". "Register' {{ clients_yaml_cmd_log }} | cut -d '"' -f 4
+          grep \
+            '"msg". "Register' {{ clients_yaml_cmd_log }} |
+            cut -d '"' -f 4
       register: clients_yaml_grepper_timings
       ignore_errors: true
 
@@ -178,151 +210,292 @@
         var: grepper_times | length
       run_once: true
 
-    - name: "Increment number of already registered containers"
+    - name: Increment number of already registered containers
       ansible.builtin.lineinfile:
         path: /root/container-used-count
         regexp: .*
         line: "{{ containers_used_count | int + size | int }}"
         create: true
 
-    - name: "Get number of hosts that failed to register"
+    - name: "Get number of hosts that failed to register (!= Stream)"
       ansible.builtin.shell:
         cmd: |
-          grep -c \
-            -e ^'fatal: ' \
+          grep \
+            -e ^'fatal: \[.*\]: FAILED! => {"' \
             -e ^'        "Traceback ' \
             -e ^'        "curl: ' \
-            -e ' initial configuration failed' \
             -e ^'        "Internal Server Error",'$ \
-            -e 'ERROR: ' \
             -e ^'Error: Failed to download metadata for repo' \
-            {{ clients_yaml_cmd_log }}
+            -e ' initial configuration failed' \
+            -e 'ERROR: ' \
+            {{ clients_yaml_cmd_log }} |
+            uniq | wc -l
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
+      when:
+        - sat_version is defined and sat_version != 'stream'
 
-    - name: "Show number of hosts that failed to register"
-      ansible.builtin.debug:
-        var: num_failed_hosts.stdout_lines
-
-    - name: Convert BPF profile output to image
+    - name: "Get number of hosts that failed to register (== Stream)"
       ansible.builtin.shell:
         cmd: |
-          flamegraph.pl \
-            --minwidth 5 \
-            --width 2500 \
-            /root/profile/out-{{ concurrent_registrations }}.profile-folded \
-            >/root/profile/registration_profile-{{ concurrent_registrations }}.svg
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      run_once: true
-      ignore_errors: true
-      when:
-        - profile
-
-    - name: Fetch BPF profile image
-      ansible.builtin.fetch:
-        src: /root/profile/registration_profile-{{ concurrent_registrations }}.svg
-        dest: "{{ registration_logs }}/../{{ registration_profile_img }}"
-        flat: true
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      run_once: true
-      ignore_errors: true
-      when:
-        - profile
-
-    - name: "Try to show errors in /var/log/rhsm/rhsm.log when log file shows rhsm related errors"
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-
-          for client_ip in $(awk '/^fatal: .* \/var\/log\/rhsm\/rhsm.log / {print $2}' {{ clients_yaml_cmd_log }}" |
-            cut -d'[' -f2 | cut -d']' -f1); do
-              ansible \
-                --private-key /root/id_rsa_key \
-                --inventory ${client_ip}, \
-                -m ansible.builtin.command \
-                -a "cat /var/log/rhsm/rhsm.log" \
-                all |
-                tee rhsm_${client_ip}.log
-          done
-      ignore_errors: true
-      when:
-        - num_failed_hosts.stdout_lines[0] | int > 0
-        - debug_rhsm
-
-    - name: "Set additional retries log name (if needed)"
-      ansible.builtin.set_fact:
-        clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
-      when:
-        - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts | default(false) | bool
-
-    - name: "Try to re-register failed hosts (if needed)"
-      ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-
-          cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
-
-          while (( "$(grep -c \
-            -e ^'fatal: ' \
+          grep \
+            -e ^'fatal: \[.*\]: FAILED! => {'$ \
             -e ^'        "Traceback ' \
-            -e ^'        "curl: ' \
-            -e ' initial configuration failed' \
-            -e ^'        "Internal Server Error",'$ \
-            -e 'ERROR: ' \
-            -e ^'Error: Failed to download metadata for repo' \
-            {{ clients_yaml_cmd_retries_log }})" != 0 )); do
-              num_fails="$(grep -c \
-                -e ^'fatal: ' \
-                -e ^'        "Traceback ' \
-                -e ^'        "curl: ' \
-                -e ' initial configuration failed' \
-                -e ^'        "Internal Server Error",'$ \
-                -e 'ERROR: ' \
-                -e ^'Error: Failed to download metadata for repo' \
-                {{ clients_yaml_cmd_retries_log }})"
-              iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.${num_fails}"
+            {{ clients_yaml_cmd_log }} |
+            uniq | wc -l
+      register: num_failed_hosts
+      failed_when: num_failed_hosts.rc == 2
+      when:
+        - sat_version is defined and sat_version == 'stream'
 
-              cp -p {{ clients_yaml_cmd_retries_log }} ${iter_clients_yaml_cmd_retries_log}
+    - name: Show number of hosts that failed to register
+      ansible.builtin.debug:
+        var: num_failed_hosts.stdout_lines[0]
 
-              unset CLIENT_IP_LIST
-
-              for client_ip in $(awk '/^fatal: / {print $2}' ${iter_clients_yaml_cmd_retries_log} |
-                cut -d'[' -f2 | cut -d']' -f1); do
-                  CLIENT_IP_LIST+="${client_ip},"
-              done
-
-              for client_ip in $(grep \
-                -e ^'ok:' \
-                -e ^'        "Traceback ' \
-                -e ^'        "curl: ' \
-                -e ' initial configuration failed' \
-                -e ^'        "Internal Server Error",'$ \
-                -e 'ERROR: ' \
-                -e ^'Error: Failed to download metadata for repo' \
-                $iter_clients_yaml_cmd_retries_log |
-                uniq | grep -B1 \
-                -e ^'        "Traceback ' \
-                -e ^'        "curl: ' \
-                -e ' initial configuration failed' \
-                -e ^'        "Internal Server Error",'$ \
-                -e 'ERROR: ' \
-                -e ^'Error: Failed to download metadata for repo' |
-                awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
-                  CLIENT_IP_LIST+="${client_ip},"
-              done
-
-              ansible-playbook \
-                --private-key /root/id_rsa_key \
-                --inventory ${CLIENT_IP_LIST} \
-                --forks {{ num_retry_forks }} \
-                -e "enable_iop='{{ enable_iop }}'" \
-                host-registration.yaml |
-                tee {{ clients_yaml_cmd_retries_log }}
-          done
-      register: clients_yaml_cmd_retries
-      ignore_errors: true
+    - name: Failed hosts
       when:
         - num_failed_hosts.stdout_lines[0] | int > 0
-        - re_register_failed_hosts | default(false) | bool
+      block:
+        - name: Get number of hosts that failed to register due to RHSM errors
+          ansible.builtin.shell:
+            cmd: |
+              grep -c \
+                -e ^'fatal: .*: FAILED! => {.* Please see /var/log/rhsm/rhsm.log for more information.' \
+                {{ clients_yaml_cmd_log }}
+          register: num_failed_hosts_rhsm
+          failed_when: num_failed_hosts_rhsm.rc == 2
+
+        - name: RHSM errors
+          when:
+            - num_failed_hosts_rhsm.stdout_lines[0] | int > 0
+          block:
+            - name: Show number of hosts that failed to register due to RHSM errors
+              ansible.builtin.debug:
+                var: num_failed_hosts_rhsm.stdout_lines[0]
+
+            - name: Show /var/log/rhsm/rhsm.log contents when log file shows RHSM related errors
+              ansible.builtin.shell:
+                cmd: |
+                  set -o pipefail
+
+                  unset CLIENT_IP_LIST
+
+                  for client_ip in $(awk '/^fatal: \[.*\]: FAILED! => {.* Please see \/var\/log\/rhsm\/rhsm.log for more information./ {print $2}' {{ clients_yaml_cmd_log }} |
+                    cut -d'[' -f2 | cut -d']' -f1); do
+                      CLIENT_IP_LIST+="$client_ip,"
+                  done
+
+                  [[ -n $CLIENT_IP_LIST ]] &&
+                      ansible \
+                        --private-key /root/id_rsa_key \
+                        --forks {{ num_retry_forks }} \
+                        --inventory $CLIENT_IP_LIST \
+                        -a 'cat /var/log/rhsm/rhsm.log' \
+                        all |
+                        tee "{{ clients_yaml_cmd_base }}-rhsm.log"
+              ignore_errors: true
+
+            - name: Fetch /var/log/rhsm/rhsm.log that seems to have errors
+              ansible.builtin.fetch:
+                src: "{{ clients_yaml_cmd_base }}-rhsm.log"
+                dest: "{{ registration_logs }}"
+              ignore_errors: true
+
+        - name: Get number of hosts that failed to register due to `insights-client` errors
+          ansible.builtin.shell:
+            cmd: |
+              grep -c \
+                -e ^'fatal: .*: FAILED! => {.*Please see /var/log/insights-client/insights-client.log for additional information.' \
+                {{ clients_yaml_cmd_log }}
+          register: num_failed_hosts_insights_client
+          failed_when: num_failed_hosts_insights_client.rc == 2
+
+        - name: "`insights-client` errors"
+          when:
+            - num_failed_hosts_insights_client.stdout_lines[0] | int > 0
+          block:
+            - name: Show number of hosts that failed to register due to `insights-client` errors
+              ansible.builtin.debug:
+                var: num_failed_hosts_insights_client.stdout_lines[0]
+
+            - name: Show /var/log/insights-client/insights-client.log contents when log file shows `insights-client` related errors
+              ansible.builtin.shell:
+                cmd: |
+                  set -o pipefail
+
+                  unset CLIENT_IP_LIST
+
+                  for client_ip in $(awk '/^fatal: \[.*\]: FAILED! => {.*Please see \/var\/log\/insights-client\/insights-client.log for additional information./ {print $2}' {{ clients_yaml_cmd_log }} |
+                    cut -d'[' -f2 | cut -d']' -f1); do
+                      CLIENT_IP_LIST+="$client_ip,"
+                  done
+
+                  [[ -n $CLIENT_IP_LIST ]] &&
+                      ansible \
+                        --private-key /root/id_rsa_key \
+                        --forks {{ num_retry_forks }} \
+                        --inventory $CLIENT_IP_LIST \
+                        -a 'cat /var/log/insights-client/insights-client.log' \
+                        all |
+                        tee "{{ clients_yaml_cmd_base }}-insights-client.log"
+              ignore_errors: true
+
+            - name: Fetch /var/log/insights-client/insights-client.log that seems to have errors
+              ansible.builtin.fetch:
+                src: "{{ clients_yaml_cmd_base }}-insights-client.log"
+                dest: "{{ registration_logs }}"
+              ignore_errors: true
+
+        - name: Re-register failed hosts
+          when:
+            - re_register_failed_hosts | bool
+          block:
+            - name: Set additional retries log name
+              ansible.builtin.set_fact:
+                clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
+
+            - name: Try to re-register failed hosts (!= Stream)"
+              ansible.builtin.shell:
+                cmd: |
+                  set -o pipefail
+
+                  cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
+
+                  num_fails="$(grep -c \
+                    -e ^'fatal: .*: FAILED! => {"' \
+                    -e ^'        "Traceback ' \
+                    -e ^'        "curl: ' \
+                    -e ^'        "Internal Server Error",'$ \
+                    -e ^'Error: Failed to download metadata for repo' \
+                    -e 'ERROR: ' \
+                    -e ' initial configuration failed' \
+                    {{ clients_yaml_cmd_retries_log }})"
+                  while (( num_fails != 0 )); do
+                      iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.$num_fails"
+
+                      cp -p {{ clients_yaml_cmd_retries_log }} $iter_clients_yaml_cmd_retries_log
+
+                      unset CLIENT_IP_LIST
+
+                      for client_ip in $(awk '/^fatal: \[.*\]: FAILED! => {"/ {print $2}' $iter_clients_yaml_cmd_retries_log |
+                        cut -d'[' -f2 | cut -d']' -f1); do
+                          CLIENT_IP_LIST+="$client_ip,"
+                      done
+
+                      for client_ip in $(grep \
+                        -e ^'ok:' \
+                        -e ^'        "Traceback ' \
+                        -e ^'        "curl: ' \
+                        -e ^'        "Internal Server Error",'$ \
+                        -e ^'Error: Failed to download metadata for repo' \
+                        -e 'ERROR: ' \
+                        -e ' initial configuration failed' \
+                        $iter_clients_yaml_cmd_retries_log |
+                        uniq | grep -B1 \
+                        -e ^'        "Traceback ' \
+                        -e ^'        "curl: ' \
+                        -e ^'        "Internal Server Error",'$ \
+                        -e ^'Error: Failed to download metadata for repo' \
+                        -e 'ERROR: ' |
+                        -e ' initial configuration failed' \
+                        awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
+                          CLIENT_IP_LIST+="$client_ip,"
+                      done
+
+                      [[ -n $CLIENT_IP_LIST ]] &&
+                          ansible-playbook \
+                            --private-key /root/id_rsa_key \
+                            --forks {{ num_retry_forks }} \
+                            --inventory $CLIENT_IP_LIST \
+                            host-registration.yaml |
+                            tee {{ clients_yaml_cmd_retries_log }}
+
+                      num_fails="$(grep -c \
+                        -e ^'fatal: .*: FAILED! => {"' \
+                        -e ^'        "Traceback ' \
+                        -e ^'        "curl: ' \
+                        -e ^'        "Internal Server Error",'$ \
+                        -e ^'Error: Failed to download metadata for repo' \
+                        -e 'ERROR: ' \
+                        -e ' initial configuration failed' \
+                        {{ clients_yaml_cmd_retries_log }})"
+                  done
+              register: clients_yaml_cmd_retries
+              failed_when: clients_yaml_cmd_retries.rc == 2
+              ignore_errors: true
+              when:
+                - sat_version is defined and sat_version != 'stream'
+
+            - name: Try to re-register failed hosts (== Stream)"
+              ansible.builtin.shell:
+                cmd: |
+                  set -o pipefail
+
+                  cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
+
+                  num_fails="$(grep -c \
+                    -e ^'fatal: \[.*\]: FAILED! => {'$ \
+                    {{ clients_yaml_cmd_retries_log }})"
+                  while (( num_fails != 0 )); do
+                      iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.$num_fails"
+
+                      cp -p {{ clients_yaml_cmd_retries_log }} $iter_clients_yaml_cmd_retries_log
+
+                      unset CLIENT_IP_LIST
+
+                      for client_ip in $(grep \
+                        ^'fatal: \[.*\]: FAILED! => {'$ $iter_clients_yaml_cmd_retries_log |
+                        awk '{print $2}' | cut -d'[' -f2 | cut -d']' -f1); do
+                          CLIENT_IP_LIST+="$client_ip,"
+                      done
+
+                      for client_ip in $(grep \
+                        -e ^'ok:' \
+                        -e ^'        "Traceback ' \
+                        $iter_clients_yaml_cmd_retries_log |
+                        uniq | grep -B1 \
+                        -e ^'        "Traceback ' \
+                        awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
+                          CLIENT_IP_LIST+="$client_ip,"
+                      done
+
+                      [[ -n $CLIENT_IP_LIST ]] &&
+                          ansible-playbook \
+                            --private-key /root/id_rsa_key \
+                            --inventory $CLIENT_IP_LIST \
+                            --forks {{ num_retry_forks }} \
+                            host-registration.yaml |
+                            tee {{ clients_yaml_cmd_retries_log }}
+
+                      num_fails="$(grep -c \
+                        -e ^'fatal: \[.*\]: FAILED! => {'$ \
+                        {{ clients_yaml_cmd_retries_log }})"
+                  done
+              register: clients_yaml_cmd_retries
+              failed_when: clients_yaml_cmd_retries.rc == 2
+              ignore_errors: true
+              when:
+                - sat_version is defined and sat_version == 'stream'
+
+    - name: Profile flamegraphs
+      when:
+        - profile | bool
+      block:
+        - name: Convert BPF profile output to image
+          ansible.builtin.shell:
+            cmd: |
+              flamegraph.pl \
+                --minwidth 5 \
+                --width 2500 \
+                {{ profile_file }} \
+                >{{ profile_image }}
+
+        - name: Fetch BPF profile image
+          ansible.builtin.fetch:
+            src: "{{ profile_image }}"
+            dest: "{{ registration_logs }}/../{{ registration_profile_img }}"
+            flat: true
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      run_once: true
+      ignore_errors: true
 ...
