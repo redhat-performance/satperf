@@ -664,12 +664,10 @@ unset skip_measurement
 
 section 'Incremental registrations'
 num_containers_per_container_host="$( get_inventory_var containers_count container_hosts[0] )"
-if (( initial_expected_concurrent_registrations > num_container_hosts )); then
-    initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / num_container_hosts ))"
-else
-    initial_concurrent_registrations_per_container_host=1
-fi
+min_containers_per_batch=4
 num_retry_forks="$(( initial_expected_concurrent_registrations / num_container_hosts ))"
+initial_concurrent_registrations_per_container_host=$min_containers_per_batch
+num_retry_forks=$min_containers_per_batch
 prefix=48-register
 
 for (( batch=1, remaining_containers_per_container_host=num_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
@@ -681,11 +679,11 @@ for (( batch=1, remaining_containers_per_container_host=num_containers_per_conta
     concurrent_registrations="$(( concurrent_registrations_per_container_host * num_container_hosts ))"
     (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
     (( total_registered += concurrent_registrations ))
-    test="${prefix}-${concurrent_registrations}"
 
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    skip_measurement=true ap ${test}.log \
+    test="${prefix}-${concurrent_registrations}"
+    ap "${test}.log" \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "concurrent_registrations='$concurrent_registrations'" \
       -e "num_retry_forks='$num_retry_forks'" \
