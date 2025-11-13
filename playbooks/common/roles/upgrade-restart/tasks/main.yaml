@@ -1,0 +1,29 @@
+---
+- name: Set timezone to UTC
+  community.general.timezone:
+    name: UTC
+    
+- name: "Upgrade"
+  ansible.builtin.dnf:
+    name: '*'
+    state: latest
+  register: dnf_upgrade_cmd
+
+- name: "Show upgrade result"
+  ansible.builtin.debug:
+    var: dnf_upgrade_cmd
+
+- name: "Check if reboot is necessary"
+  ansible.builtin.command:
+    cmd:
+      dnf needs-restarting -r
+  register: dnf_needs_restarting_cmd
+  changed_when: false
+  failed_when:
+    - dnf_needs_restarting_cmd.rc not in [0, 1]
+
+- name: "Reboot"
+  ansible.builtin.reboot:
+  when:
+    - dnf_needs_restarting_cmd.rc == 1
+...
