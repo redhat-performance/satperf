@@ -89,6 +89,7 @@
     - name: Load balanced capsule
       when:
         - "'capsule_lbs' in groups"
+        - groups['capsule_lbs'] | length > 0
         - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
         - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
       block:
