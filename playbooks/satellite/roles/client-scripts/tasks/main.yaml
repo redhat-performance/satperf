@@ -3,6 +3,11 @@
   ansible.builtin.set_fact:
     aks_list: "{{ aks | default('AK') | split }}"
 
+- name: Assert that list of AKs is not empty
+  ansible.builtin.assert:
+    that:
+      - aks_list | length > 0
+
 # - name: "Get group name of our location"
 #   ansible.builtin.set_fact:
 #     location_groupname: "location_{{ location | lower }}"
