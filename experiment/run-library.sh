@@ -24,7 +24,11 @@ fi
 opts="${opts:-"-i $inventory --forks 25"}"
 opts_adhoc="${opts_adhoc:-$opts}"
 
-enable_iop="${PARAM_enable_iop:-false}"
+if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
+    enable_iop="${PARAM_enable_iop:-true}"
+else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
+    enable_iop=false
+fi
 
 content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
 
@@ -75,15 +79,18 @@ function _vercmp() {
             sub_vers1="${vers1[$i]}"
             sub_vers2="${vers2[$i]}"
             # echo "Comparing item $sub_vers1 vs. $sub_vers2"
-            if [[ "$sub_vers1" != 'stream' && "$sub_vers2" != 'stream' ]]; then
+            if [[ ( "$sub_vers1" != 'stream' && "$sub_vers1" != 'foremanctl' ) &&
+              ( "$sub_vers2" != 'stream' && "$sub_vers2" != 'foremanctl' ) ]]; then
                 if (( sub_vers1 > sub_vers2 )); then
                     return 11
                 elif (( sub_vers1 < sub_vers2 )); then
                     return 12
                 fi
-            elif [[ "$sub_vers1" == 'stream' && "$sub_vers2" != 'stream' ]]; then
+            elif [[ ( "$sub_vers1" == 'stream' || "$sub_vers1" == 'foremanctl' ) &&
+              ( "$sub_vers2" != 'stream' && "$sub_vers2" != 'foremanctl' ) ]]; then
                 return 11
-            elif [[ "$sub_vers1" != 'stream' && "$sub_vers2" == 'stream' ]]; then
+            elif [[ ( "$sub_vers1" != 'stream' && "$sub_vers1" != 'foremanctl' ) &&
+              ( "$sub_vers2" == 'stream' || "$sub_vers2" == 'foremanctl' ) ]]; then
                 return 12
             fi
         done
@@ -202,27 +209,40 @@ function generic_environment_check() {
     fi
 
     if $restarted; then
-        as 00-satellite-stop.log \
-          'foreman-maintain service stop'
+        if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
+            as 00-satellite-stop.log \
+            'foreman-maintain service stop'
 
-        as 00-satellite-drop-caches.log \
-          'sync; echo 3 >/proc/sys/vm/drop_caches'
+            as 00-satellite-drop-caches.log \
+            'sync; echo 3 >/proc/sys/vm/drop_caches'
 
-        as 00-satellite-start.log \
-          'foreman-maintain service start'
+            as 00-satellite-start.log \
+            'foreman-maintain service start'
+        else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
+            as 00-foremanctl-stop.log \
+            'systemctl stop foreman.target'
+
+            as 00-drop-caches.log \
+            'sync; echo 3 >/proc/sys/vm/drop_caches'
+
+            as 00-foremanctl-start.log \
+            'systemctl start foreman.target'
+        fi
     fi
 
-    as 00-info-rpm-q-katello.log \
-      'rpm -q katello'
-    katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"
-    echo "$katello_rpm" | grep '^katello-[0-9]\.' # make sure it's been detected correctly
+    if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
+        as 00-info-rpm-q-katello.log \
+        'rpm -q katello'
+        katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"
+        echo "$katello_rpm" | grep '^katello-[0-9]\.' # make sure it's been detected correctly
 
-    as 00-info-rpm-q-satellite.log \
-      'rpm -q satellite || true'
-    satellite_rpm="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
+        as 00-info-rpm-q-satellite.log \
+        'rpm -q satellite || true'
+        satellite_rpm="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
 
-    log "katello_version = $katello_rpm"
-    log "satellite_version = $satellite_rpm"
+        log "katello_version = $katello_rpm"
+        log "satellite_version = $satellite_rpm"
+    fi  # "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl'
 
     if ! $wait_for_ping; then
         h 00-check-hammer-ping.log \
