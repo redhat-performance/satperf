@@ -233,7 +233,7 @@
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
       when:
-        - sat_version is defined and sat_version != 'stream'
+        - sat_version is defined and ( sat_version != 'stream' and sat_version != 'foremanctl' )
 
     - name: "Get number of hosts that failed to register (== Stream)"
       ansible.builtin.shell:
@@ -246,7 +246,7 @@
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
       when:
-        - sat_version is defined and sat_version == 'stream'
+        - sat_version is defined and ( sat_version == 'stream' or sat_version == 'foremanctl' )
 
     - name: Show number of hosts that failed to register
       ansible.builtin.debug:
@@ -424,7 +424,7 @@
               failed_when: clients_yaml_cmd_retries.rc == 2
               ignore_errors: true
               when:
-                - sat_version is defined and sat_version != 'stream'
+                - sat_version is defined and ( sat_version != 'stream' and sat_version != 'foremanctl' )
 
             - name: Try to re-register failed hosts (== Stream)"
               ansible.builtin.shell:
@@ -475,7 +475,7 @@
               failed_when: clients_yaml_cmd_retries.rc == 2
               ignore_errors: true
               when:
-                - sat_version is defined and sat_version == 'stream'
+                - sat_version is defined and ( sat_version == 'stream' or sat_version == 'foremanctl' )
 
     - name: Profile flamegraphs
       when:
