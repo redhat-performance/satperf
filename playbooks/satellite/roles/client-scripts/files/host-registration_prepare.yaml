@@ -1,15 +1,18 @@
 ---
 - hosts: all
   gather_facts: false
+
   tasks:
     - name: Detect RHEL release
       ansible.builtin.setup:
-        filter: ansible_distribution_major_version
-      when: ansible_distribution_major_version is not defined
+        filter:
+          - ansible_distribution_major_version
+      when:
+        - ansible_facts['distribution_major_version'] is not defined
 
     - name: Set AK name
       ansible.builtin.set_fact:
-        ak: "AK_{{ ansible_distribution_major_version }}_Test"
+        ak: "AK_{{ ansible_facts['distribution_major_version'] }}_Test"
 
     - name: Cleanup
       ansible.builtin.shell:
