@@ -10,32 +10,39 @@
         password: "{{ password | default('{{ sat_pass }}') }}"
         organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
         location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
-        domain: "{{ domain }}"
 
-    - name: "Get host information"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/hosts?search=name+%3D+{{ inventory_hostname }}"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-      register: get_host_json
-      failed_when:
-        - get_host_json.json.results | length != 1
-        - get_host_json.json.results[0].name != '{{ inventory_hostname }}'
+    # - name: "Get host information"
+    #   ansible.builtin.uri:
+    #     url: "https://{{ groups['satellite6'] | first }}/api/hosts?search=name+%3D+{{ inventory_hostname }}"
+    #     method: GET
+    #     validate_certs: false
+    #     force_basic_auth: true
+    #     user: "{{ user }}"
+    #     password: "{{ password }}"
+    #   register: get_host_json
+    #   # XXX: Ignore errors in order to be able to show `deploy_cmd_out.stdout_lines`
+    #   ignore_errors: true
+    #   # failed_when:
+    #   #   - get_host_json.json.results | length != 1
+    #   #   - get_host_json.json.results[0].name != '{{ inventory_hostname }}'
 
-    - name: "Get host id"
-      ansible.builtin.set_fact:
-        host_id: "{{ get_host_json.json | community.general.json_query(query) }}"
-      vars:
-        query: "results[?name=='{{ inventory_hostname }}'].id | [0]"
+    # - debug:
+    #     var: get_host_json
+    #   failed_when:
+    #     - get_host_json.json.results | length != 1
+    #     - get_host_json.json.results[0].name != '{{ inventory_hostname }}'
 
-    - name: "Get host smart_proxy_id"
-      ansible.builtin.set_fact:
-        smart_proxy_id: "{{ get_host_json.json | community.general.json_query(query) }}"
-      vars:
-        query: "results[?name=='{{ inventory_hostname }}'].infrastructure_facet.smart_proxy_id | [0]"
+    # - name: "Get host id"
+    #   ansible.builtin.set_fact:
+    #     host_id: "{{ get_host_json.json | community.general.json_query(query) }}"
+    #   vars:
+    #     query: "results[?name=='{{ inventory_hostname }}'].id | [0]"
+
+    # - name: "Get host smart_proxy_id"
+    #   ansible.builtin.set_fact:
+    #     smart_proxy_id: "{{ get_host_json.json | community.general.json_query(query) }}"
+    #   vars:
+    #     query: "results[?name=='{{ inventory_hostname }}'].infrastructure_facet.smart_proxy_id | [0]"
 
 
     ### Organizations
@@ -106,27 +113,27 @@
       vars:
         query: "results[?name=='{{ location }}'].id | [0]"
 
-    - name: "Set host location"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ host_id }}"
-        method: PUT
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'host': {'location_id': location_id}} }}"
+    # - name: "Set host location"
+    #   ansible.builtin.uri:
+    #     url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ host_id }}"
+    #     method: PUT
+    #     validate_certs: false
+    #     force_basic_auth: true
+    #     user: "{{ user }}"
+    #     password: "{{ password }}"
+    #     body_format: json
+    #     body: "{{ {'organization_id': organization_id, 'host': {'location_id': location_id}} }}"
 
-    - name: "Set smart-proxy location"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies/{{ smart_proxy_id }}"
-        method: PUT
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'smart_proxy': {'location_ids': [location_id]}} }}"
+    # - name: "Set smart-proxy location"
+    #   ansible.builtin.uri:
+    #     url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies/{{ smart_proxy_id }}"
+    #     method: PUT
+    #     validate_certs: false
+    #     force_basic_auth: true
+    #     user: "{{ user }}"
+    #     password: "{{ password }}"
+    #     body_format: json
+    #     body: "{{ {'organization_id': organization_id, 'smart_proxy': {'location_ids': [location_id]}} }}"
 
 
     ### Subnets
