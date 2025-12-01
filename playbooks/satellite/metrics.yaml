@@ -1,8 +1,28 @@
 ---
-- name: Setup Performance Co-Pilot to gather metrics of a Satellite installation.
+- name: Setup Performance Co-Pilot to gather metrics of a Satellite installation
   hosts: satellite6
-  roles:
-    - role: theforeman.operations.metrics
+
+  tasks:
+    - name: Setup Foreman repositories to have access to `foreman-pcp`
+      ansible.builtin.include_role:
+        name: theforeman.operations.foreman_repositories
+      vars:
+        foreman_repositories_version: nightly
+      when:
+        - product is defined
+        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
+
+    - name: Metrics role (without Grafana)
+      include_role:
+        name: theforeman.operations.metrics
       vars:
         foreman_metrics_grafana_enabled: false
+
+    - name: Disable the Foreman repositories
+      ansible.builtin.dnf:
+        name: foreman-release
+        state: absent
+      when:
+        - product is defined
+        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
 ...
