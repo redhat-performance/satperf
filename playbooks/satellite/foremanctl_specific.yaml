@@ -1,0 +1,7 @@
+---
+- name: Specific configuration steps for Satellite servers deployed with `foremanctl`
+  hosts: satellite6
+
+  roles:
+    - role: foremanctl
+...
