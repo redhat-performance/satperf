@@ -1,11 +1,7 @@
 ---
 - name: Specific configuration steps for Satellite servers
   hosts: satellite6
-  gather_facts: false
 
   roles:
-    - role: repo_setup
-      when:
-        - product is not defined or product == 'satellite'
     - role: setup
 ...

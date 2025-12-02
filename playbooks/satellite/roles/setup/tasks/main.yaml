@@ -42,6 +42,10 @@
       when:
         - product is not defined or product == 'satellite'
       block:
+        - name: Setup Satellite repositories
+          ansible.builtin.include_role:
+            name: repo_setup
+
         # RHEL8 requirements
         - name: Enable satellite:el8 module
           ansible.builtin.dnf:
