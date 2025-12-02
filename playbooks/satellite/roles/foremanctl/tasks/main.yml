@@ -1,0 +1,188 @@
+---
+- name: Set default variable(s) values
+  ansible.builtin.set_fact:
+    password: "{{ password | default('{{ sat_pass }}') }}"
+    organization: "{{ organization | default('theforeman') }}"
+    version: "{{ version | default(omit) }}"
+
+- name: Enable foremanctl COPR
+  community.general.copr:
+    name: "@theforeman/foremanctl"
+    chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
+
+- name: Install foremanctl package
+  ansible.builtin.dnf:
+    name: foremanctl
+    state: present
+
+- name: Use code from git
+  when:
+    - use_git is defined and use_git | bool
+  block:
+    - name: Clone foremanctl git repo
+      ansible.builtin.git:
+        repo: "https://github.com/{{ organization }}/foremanctl.git"
+        dest: /tmp/foremanctl
+        version: "{{ version }}"
+
+    - name: Move the original src directory
+      ansible.builtin.copy:
+        src: /usr/share/foremanctl/src/
+        dest: /usr/share/foremanctl/src.orig/
+        mode: 'preserve'
+        remote_src: true
+
+    - ansible.builtin.file:
+        path: /usr/share/foremanctl/src/
+        state: absent
+
+    - name: Copy the src directory from the git clone
+      ansible.builtin.copy:
+        src: /tmp/foremanctl/src/
+        dest: /usr/share/foremanctl/src/
+        remote_src: true
+
+- name: Set deployer command
+  ansible.builtin.set_fact:
+    deployer: foremanctl
+
+- name: Pull images
+  block:
+    - name: Set command line to pull images
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ deployer }} pull-images"
+
+    - name: Show command line to pull images
+      ansible.builtin.debug:
+        msg: "{{ pull_images_cmd }}"
+
+    - name: Pull images
+      ansible.builtin.command:
+        cmd: "{{ pull_images_cmd }}"
+      register: pull_images_cmd_out
+      # XXX: Ignore errors in order to be able to show `pull_images_cmd_out.stdout_lines`
+      ignore_errors: true
+
+    - name: Show pull images output
+      ansible.builtin.debug:
+        var: pull_images_cmd_out.stdout_lines
+      failed_when:
+        - pull_images_cmd_out is failed
+
+- name: Tuning profile
+  block:
+    - name: "Determine if at least a 'medium' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'medium'
+      when:
+        - ansible_facts['processor_nproc'] | int >= 8
+        - ansible_facts['memtotal_mb'] | int >= 31000
+
+    - name: "Determine if at least a 'large' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'large'
+      when:
+        - ansible_facts['processor_nproc'] | int >= 16
+        - ansible_facts['memtotal_mb'] | int >= 63000
+
+    - name: "Determine if at least an 'extra-large' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'extra-large'
+      when:
+        - ansible_facts['processor_nproc'] | int >= 32
+        - ansible_facts['memtotal_mb'] | int >= 127000
+
+    - name: "Determine if an 'extra-extra-large' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'extra-extra-large'
+      when:
+        - ansible_facts['processor_nproc'] | int > 48
+        - ansible_facts['memtotal_mb'] | int > 255000
+
+- name: Deploy
+  block:
+    - name: Set deployment command line
+      ansible.builtin.set_fact:
+        deploy_cmd: "{{ deployer }} deploy --foreman-initial-admin-password {{ password }}"
+
+    - name: Add tuning parameters if needed
+      ansible.builtin.set_fact:
+        deploy_cmd: "{{ deploy_cmd }} --tuning {{ tuning_profile }}"
+      when:
+        - tuning_profile is defined and tuning_profile | length > 0
+
+    - name: Show deployment command line
+      ansible.builtin.debug:
+        msg: "{{ deploy_cmd }}"
+
+    - name: Run deployment
+      ansible.builtin.command:
+        cmd: "{{ deploy_cmd }}"
+      register: deploy_cmd_out
+      # XXX: Ignore errors in order to be able to show `deploy_cmd_out.stdout_lines`
+      ignore_errors: true
+
+    - name: Show deployment output
+      ansible.builtin.debug:
+        var: deploy_cmd_out.stdout_lines
+      failed_when:
+        - deploy_cmd_out is failed
+
+- name: hammer
+  block:
+    - name: Setup Foreman repositories
+      ansible.builtin.include_role:
+        name: theforeman.operations.foreman_repositories
+      vars:
+        foreman_repositories_version: nightly
+        foreman_repositories_katello_version: nightly
+
+    - name: Set `hammer` deployment command line
+      ansible.builtin.set_fact:
+        setup_hammer_cmd: "{{ deployer }} setup-hammer"
+
+    - name: Show `hammer` deployment command line
+      ansible.builtin.debug:
+        msg: "{{ setup_hammer_cmd }}"
+
+    - name: Run `hammer` deployment
+      ansible.builtin.command:
+        cmd: "{{ setup_hammer_cmd }}"
+      register: setup_hammer_cmd_out
+      # XXX: Ignore errors in order to be able to show `setup_hammer_cmd_out.stdout_lines`
+      ignore_errors: true
+
+    - name: Show `hammer` deployment output
+      ansible.builtin.debug:
+        var: setup_hammer_cmd_out.stdout_lines
+      failed_when:
+        - setup_hammer_cmd_out is failed
+
+    - name: Disable the Foreman repositories
+      ansible.builtin.dnf:
+        name: foreman-release
+        state: absent
+
+- name: foreman-proxy
+  block:
+    - name: Set `foreman-proxy` deployment command line
+      ansible.builtin.set_fact:
+        setup_foreman_proxy_cmd: "{{ deployer }} setup-foreman-proxy"
+
+    - name: Show `foreman-proxy` deployment command line
+      ansible.builtin.debug:
+        msg: "{{ setup_foreman_proxy_cmd }}"
+
+    - name: Run `foreman-proxy` deployment
+      ansible.builtin.command:
+        cmd: "{{ setup_foreman_proxy_cmd }}"
+      register: setup_foreman_proxy_cmd_out
+      # XXX: Ignore errors in order to be able to show `setup_foreman_proxy_cmd_out.stdout_lines`
+      ignore_errors: true
+
+    - name: Show `foreman-proxy` deployment output
+      ansible.builtin.debug:
+        var: setup_foreman_proxy_cmd_out.stdout_lines
+      failed_when:
+        - setup_foreman_proxy_cmd_out is failed
+...
