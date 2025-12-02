@@ -6,6 +6,7 @@
     aks_list: "{{ aks | default('AK') | split }}"
     hgrg: "host-registration generate-command --organization '{{ organization }}' --location {{ location }} --insecure true --force true"
     location_groupname: "location_{{ location | lower }}"
+
   tasks:
     - name: Capsule IDs
       when:

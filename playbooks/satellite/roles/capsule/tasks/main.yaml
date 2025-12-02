@@ -53,6 +53,10 @@
           ansible.builtin.set_fact:
             certs_generate_command: 'capsule-certs-generate'
 
+        - name: Setup Satellite repositories
+          ansible.builtin.include_role:
+            name: repo_setup
+
         # RHEL8 requirements
         - name: Enable satellite-capsule:el8 module
           ansible.builtin.dnf:

@@ -1,10 +1,7 @@
 ---
 - name: "Specific configuration steps for capsule(s) servers"
   hosts: capsules
-  gather_facts: false
+
   roles:
-    - role: repo_setup
-      when:
-        - product is not defined or product == 'satellite'
     - role: capsule
 ...
