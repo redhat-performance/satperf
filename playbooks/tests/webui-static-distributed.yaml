@@ -108,7 +108,7 @@
           killall locust
       ignore_errors: true
 
-    - name: "Start Locust leader"
+    - name: Start Locust leader
       ansible.builtin.shell:
         cmd: |
           set -o pipefail
@@ -126,6 +126,7 @@
             --locust-stop-timeout 100 \
             --locust-master-runner \
             --locust-master-expect-workers {{ locust_followers_count }} \
+            --locust-wait-for-worker-timeout {{ locust_followers_count * 15 }} \
             --test-set SatelliteWebUIPerfStaticAssets \
             --test-url-suffix / \
             --test-duration {{ ui_duration | int }} \
@@ -138,7 +139,7 @@
       when:
         - inventory_hostname == groups['container_hosts'] | first
 
-    - name: "Start Locust followers"
+    - name: Start Locust followers
       ansible.builtin.shell:
         cmd: |
           set -o pipefail
