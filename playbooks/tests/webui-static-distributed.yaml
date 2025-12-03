@@ -61,11 +61,11 @@
       tags:
         - setup
 
-    - name: "Install python"
+    - name: Install python
       ansible.builtin.package:
         name:
-          - python3.11
-          - python3.11-pip
+          - python3
+          - python3-pip
         state: present
       tags:
         - setup
