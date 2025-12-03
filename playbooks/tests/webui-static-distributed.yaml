@@ -22,11 +22,11 @@
       ansible.builtin.setup:
         gather_subset: hardware
       when:
-        - ansible_processor_vcpus is not defined
+        - ansible_facts['processor_vcpus'] is not defined
 
     - name: "Determine total number of followers per host"
       ansible.builtin.set_fact:
-        locust_per_host_followers: "{{ (ansible_processor_vcpus / 1) | int }}"   # to be able to experiment with e.g. only half of processes than CPU cores
+        locust_per_host_followers: "{{ (ansible_facts['processor_vcpus'] / 1) | int }}"   # to be able to experiment with e.g. only half of processes than CPU cores
 
     - name: "Determine total number of followers"
       ansible.builtin.set_fact:
