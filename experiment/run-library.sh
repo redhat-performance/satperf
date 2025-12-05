@@ -138,19 +138,6 @@ function get_inventory_var() {
       jq -r --arg INVENTORY_VAR "$inventory_var" '.[$INVENTORY_VAR]'
 }
 
-
-foreman_username="$( get_inventory_var foreman_username )"
-foreman_password="$( get_inventory_var foreman_password )"
-hammer_opts="-u $foreman_username -p $foreman_password"
-organization="$( get_inventory_var foreman_organization )"
-
-num_capsules="$( ansible -i $inventory --list-hosts capsules 2>/dev/null | { grep -vc '^  hosts ' || test $? = 1; } )"
-num_capsule_lbs="$( ansible -i $inventory --list-hosts capsule_lbs 2>/dev/null | { grep -vc '^  hosts ' || test $? = 1; } )"
-num_container_hosts="$( ansible -i $inventory --list-hosts container_hosts 2>/dev/null | { grep -vc '^  hosts ' || test $? = 1; } )"
-
-profiling_enabled="$( get_inventory_var enable_profiling )"
-
-
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
     if [[ -z "$skip_measurement" ]] || ! $skip_measurement; then
@@ -232,12 +219,12 @@ function generic_environment_check() {
 
     if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
         as 00-info-rpm-q-katello.log \
-        'rpm -q katello'
+          'rpm -q katello'
         katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"
         echo "$katello_rpm" | grep '^katello-[0-9]\.' # make sure it's been detected correctly
 
         as 00-info-rpm-q-satellite.log \
-        'rpm -q satellite || true'
+          'rpm -q satellite || true'
         satellite_rpm="$( tail -n 1 $logs/00-info-rpm-q-satellite.log )"
 
         log "katello_version = $katello_rpm"
