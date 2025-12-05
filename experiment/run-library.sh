@@ -138,6 +138,14 @@ function get_inventory_var() {
       jq -r --arg INVENTORY_VAR "$inventory_var" '.[$INVENTORY_VAR]'
 }
 
+function get_num_hosts() {
+    local group=$1
+
+    ansible $opts_adhoc \
+      --list-hosts $group 2>/dev/null |
+      { grep -vc '^  hosts ' || test $? = 1; }
+}
+
 function measurement_add() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
     if [[ -z "$skip_measurement" ]] || ! $skip_measurement; then
