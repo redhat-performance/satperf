@@ -30,15 +30,24 @@
           ansible.builtin.set_fact:
             hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
 
-    - name: Check if Insights client should be installed and configured (it won't be by default)
+    - name: Check if Insights client should be installed and configured (it WILL BE by default)
       # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
       ansible.builtin.set_fact:
-        hgrg: "{{ hgrg }} --setup-insights true"
+        hgrg: "{{ hgrg }} --setup-insights false"
       when:
         # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
-        # - setup_insights | default(false) | bool
-        - enable_iop | default(false) | bool
-        - sat_version != 'foremanctl' and ( sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=') )
+        # - setup_insights is not defined or setup_insights | bool == 'false'
+        - enable_iop is not defined or enable_iop | bool == 'false'
+
+    # - name: Check if Insights client should be installed and configured (it won't be by default)
+    #   # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
+    #   ansible.builtin.set_fact:
+    #     hgrg: "{{ hgrg }} --setup-insights true"
+    #   when:
+    #     # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
+    #     # - setup_insights | default(false) | bool
+    #     - enable_iop | default(false) | bool
+    #     - sat_version != 'foremanctl' and ( sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=') )
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
