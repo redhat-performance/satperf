@@ -2,6 +2,8 @@
 
 source experiment/run-library.sh
 
+organization="$( get_inventory_var foreman_organization )"
+
 manifest_exercise_runs="${PARAM_manifest_exercise_runs:-5}"
 
 lces="${PARAM_lces:-Test QA Pre Prod}"
