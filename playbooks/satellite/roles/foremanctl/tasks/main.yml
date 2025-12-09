@@ -69,47 +69,11 @@
       failed_when:
         - pull_images_cmd_out is failed
 
-- name: Tuning profile
-  block:
-    - name: "Determine if at least a 'medium' tuning profile should be applied"
-      ansible.builtin.set_fact:
-        tuning_profile: 'medium'
-      when:
-        - ansible_facts['processor_nproc'] | int >= 8
-        - ansible_facts['memtotal_mb'] | int >= 31000
-
-    - name: "Determine if at least a 'large' tuning profile should be applied"
-      ansible.builtin.set_fact:
-        tuning_profile: 'large'
-      when:
-        - ansible_facts['processor_nproc'] | int >= 16
-        - ansible_facts['memtotal_mb'] | int >= 63000
-
-    - name: "Determine if at least an 'extra-large' tuning profile should be applied"
-      ansible.builtin.set_fact:
-        tuning_profile: 'extra-large'
-      when:
-        - ansible_facts['processor_nproc'] | int >= 32
-        - ansible_facts['memtotal_mb'] | int >= 127000
-
-    - name: "Determine if an 'extra-extra-large' tuning profile should be applied"
-      ansible.builtin.set_fact:
-        tuning_profile: 'extra-extra-large'
-      when:
-        - ansible_facts['processor_nproc'] | int > 48
-        - ansible_facts['memtotal_mb'] | int > 255000
-
 - name: Deploy
   block:
     - name: Set deployment command line
       ansible.builtin.set_fact:
         deploy_cmd: "{{ deployer }} deploy --foreman-initial-admin-password {{ password }}"
-
-    - name: Add tuning parameters if needed
-      ansible.builtin.set_fact:
-        deploy_cmd: "{{ deploy_cmd }} --tuning {{ tuning_profile }}"
-      when:
-        - tuning_profile is defined and tuning_profile | length > 0
 
     - name: Show deployment command line
       ansible.builtin.debug:

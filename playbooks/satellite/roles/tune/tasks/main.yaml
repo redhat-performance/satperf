@@ -7,54 +7,41 @@
     dest: /etc/security/limits.d/25-root-limits.conf
     mode: '0644'
 
-- name: Detect number of available processors
-  ansible.builtin.setup:
-    filter: ansible_processor_nproc
-  when: ansible_processor_nproc is not defined
+- name: Assert required facts
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['processor_nproc'] is defined and ansible_facts['processor_nproc'] | int > 0
+      - ansible_facts['memtotal_mb'] is defined and ansible_facts['memtotal_mb'] | int > 0
 
-- name: Detect size of available memory
-  ansible.builtin.setup:
-    filter: ansible_memtotal_mb
-  when: ansible_memtotal_mb is not defined
-
-- when:
-    - ansible_processor_nproc is defined and ansible_processor_nproc | int > 0
-    - ansible_memtotal_mb is defined and ansible_memtotal_mb | int > 0
+- name: Determine which tuning profile is suitable
   block:
-    - name: "Determine if a 'default' tuning profile should be applied"
-      ansible.builtin.set_fact:
-        tuning_profile: 'default'
-      when:
-        - ansible_processor_nproc | int >= 4
-        - ansible_memtotal_mb | int >= 19000
-
-    - name: "Determine if a 'medium' tuning profile should be applied"
+    - name: "Determine if at least a 'medium' tuning profile should be applied"
       ansible.builtin.set_fact:
         tuning_profile: 'medium'
       when:
-        - ansible_processor_nproc | int >= 8
-        - ansible_memtotal_mb | int >= 31000
+        - ansible_facts['processor_nproc'] | int >= 8
+        - ansible_facts['memtotal_mb'] | int >= 31000
 
-    - name: "Determine if a 'large' tuning profile should be applied"
+    - name: "Determine if at least a 'large' tuning profile should be applied"
       ansible.builtin.set_fact:
         tuning_profile: 'large'
       when:
-        - ansible_processor_nproc | int >= 16
-        - ansible_memtotal_mb | int >= 63000
+        - ansible_facts['processor_nproc'] | int >= 16
+        - ansible_facts['memtotal_mb'] | int >= 63000
 
-    - name: "Determine if an 'extra-large' tuning profile should be applied"
+    - name: "Determine if at least an 'extra-large' tuning profile should be applied"
       ansible.builtin.set_fact:
         tuning_profile: 'extra-large'
       when:
-        - ansible_processor_nproc | int >= 32
-        - ansible_memtotal_mb | int >= 127000
+        - ansible_facts['processor_nproc'] | int >= 32
+        - ansible_facts['memtotal_mb'] | int >= 127000
 
     - name: "Determine if an 'extra-extra-large' tuning profile should be applied"
       ansible.builtin.set_fact:
         tuning_profile: 'extra-extra-large'
       when:
-        - ansible_processor_nproc | int > 48
-        - ansible_memtotal_mb | int > 255000
+        - ansible_facts['processor_nproc'] | int > 48
+        - ansible_facts['memtotal_mb'] | int > 255000
 
 - name: End play if no tuning is required
   ansible.builtin.meta: end_host
@@ -74,11 +61,21 @@
 
 - name: Satellite
   when:
-    - product is not defined or product == 'satellite'
+    - product is not defined or
+      ( product == 'satellite' and sat_version is defined and sat_version != 'foremanctl' )
   block:
     - name: Set Satellite facts
       ansible.builtin.set_fact:
         installer_cmd_line: 'satellite-installer'
+
+- name: foremanctl
+  when:
+    - product is defined
+    - product == 'satellite' and sat_version is defined and sat_version == 'foremanctl'
+  block:
+    - name: Set Satellite facts
+      ansible.builtin.set_fact:
+        installer_cmd_line: 'foremanctl'
 
 - name: Parameters
   block:
