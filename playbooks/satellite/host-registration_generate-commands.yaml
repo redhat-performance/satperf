@@ -80,6 +80,12 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --jwt-expiration {{ jwt_expiration | default(default_jwt_expiration) }}"
 
+    - name: "Add --setup-container-registry-certs parameter"
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --setup-container-registry-certs true"
+      when:
+        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
+
     - name: Show hgrg parameter
       ansible.builtin.debug:
         var: hgrg
