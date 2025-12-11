@@ -38,7 +38,19 @@
         # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
         # - setup_insights | default(false) | bool
         - enable_iop | default(false) | bool
-        - sat_version != 'foremanctl' and ( sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=') )
+        # - sat_version != 'foremanctl' and ( sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=') )
+        - sat_version != 'foremanctl' and sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=')
+
+    # XXX: Bug??
+    - name: Check if Insights client should be installed and configured (it shouldn't be by default)
+      # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
+      ansible.builtin.set_fact:
+        hgrg: "{{ hgrg }} --setup-insights false"
+      when:
+        # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
+        # - setup_insights | default(false) | bool
+        - not enable_iop | default(false) | bool
+        - sat_version == 'stream'
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
