@@ -68,6 +68,10 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --jwt-expiration {{ jwt_expiration | default(default_jwt_expiration) }}"
 
+    - name: Show hgrg parameter
+      ansible.builtin.debug:
+        var: hgrg
+
     - name: "Generate the host registration command"
       # XXX: Submit PR
       throttle: 1
