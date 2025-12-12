@@ -2,8 +2,6 @@
 - name: Set default variable(s) values
   ansible.builtin.set_fact:
     password: "{{ password | default('{{ sat_pass }}') }}"
-    organization: "{{ organization | default('theforeman') }}"
-    version: "{{ version | default(omit) }}"
 
 - name: Enable foremanctl COPR
   community.general.copr:
@@ -19,6 +17,11 @@
   when:
     - use_git is defined and use_git | bool
   block:
+    - name: Set required variable(s) values
+      ansible.builtin.set_fact:
+        organization: "{{ organization | default('theforeman') }}"
+        version: "{{ version | default(omit) }}"
+
     - name: Clone foremanctl git repo
       ansible.builtin.git:
         repo: "https://github.com/{{ organization }}/foremanctl.git"
@@ -103,7 +106,7 @@
 
     - name: Set `hammer` deployment command line
       ansible.builtin.set_fact:
-        setup_hammer_cmd: "{{ deployer }} setup-hammer"
+        setup_hammer_cmd: "{{ deployer }} deploy --add-feature hammer"
 
     - name: Show `hammer` deployment command line
       ansible.builtin.debug:
@@ -131,7 +134,7 @@
   block:
     - name: Set `foreman-proxy` deployment command line
       ansible.builtin.set_fact:
-        setup_foreman_proxy_cmd: "{{ deployer }} setup-foreman-proxy"
+        setup_foreman_proxy_cmd: "{{ deployer }} deploy --add-feature foreman-proxy"
 
     - name: Show `foreman-proxy` deployment command line
       ansible.builtin.debug:
