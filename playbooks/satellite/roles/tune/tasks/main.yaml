@@ -75,7 +75,7 @@
   block:
     - name: Set Satellite facts
       ansible.builtin.set_fact:
-        installer_cmd_line: 'foremanctl'
+        installer_cmd_line: 'foremanctl deploy'
 
 - name: Parameters
   block:
