@@ -951,15 +951,13 @@ function ejr() {
         return 0
     fi
 
-    local task_name=$1; shift
     local test=$1; shift
     local play_out_json="${logs}/${test}.json"
     local play_out_json_prefix="$( echo $play_out_json | cut -d'.' -f1 )"
-    local task_name_underscore="$( echo $task_name | sed -E 's/[[:space:]]/_/g' )"
-    local tasks_out_json="${play_out_json_prefix}-${task_name_underscore}.json"
+    local tasks_out_json="${play_out_json_prefix}-Tasks.json"
 
-    jq --arg TASK_NAME "$task_name" \
-      '.plays[0].tasks[] | select((.hosts.localhost.skipped != null and .hosts.localhost.skipped | not) and (.task.name | contains($TASK_NAME))) | .task' \
+    jq \
+      '.plays[0].tasks[] | select(.hosts.localhost.skipped != null and .hosts.localhost.skipped | not) | .task' \
       $play_out_json >$tasks_out_json
 
     task_ids="$( jq -r '.id' $tasks_out_json )"
@@ -986,10 +984,10 @@ function ejr() {
     done
     local average_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration / $aggr_num_tasks))" )"
     local rc="$( jq '.stats.localhost.failures' $play_out_json )"
-    log "Examined $tasks_out_json for $task_name: $aggregated_task_duration / $aggr_num_tasks = $average_task_duration (ranging from $first_task_start to $last_task_end) and has taken $average_task_duration seconds"
+    log "Examined $tasks_out_json for Tasks: $aggregated_task_duration / $aggr_num_tasks = $average_task_duration (ranging from $first_task_start to $last_task_end) and has taken $average_task_duration seconds"
 
     measurement_add \
-      "experiment/reg-average.py '$task_name' '$play_out_json'" \
+      "experiment/reg-average.py 'Tasks' '$play_out_json'" \
       "$tasks_out_json" \
       "$rc" \
       "$first_task_start" \
