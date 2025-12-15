@@ -959,7 +959,7 @@ function ejr() {
     local tasks_out_json="${play_out_json_prefix}-${task_name_underscore}.json"
 
     jq --arg TASK_NAME "$task_name" \
-      '.plays[0].tasks[] | select(.task.name | contains($TASK_NAME)) | .task' \
+      '.plays[0].tasks[] | select((.hosts.localhost.skipped != null and .hosts.localhost.skipped | not) and (.task.name | contains($TASK_NAME))) | .task' \
       $play_out_json >$tasks_out_json
 
     task_ids="$( jq -r '.id' $tasks_out_json )"
