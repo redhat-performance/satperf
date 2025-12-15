@@ -84,7 +84,7 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-container-registry-certs true"
       when:
-        - sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
+        - sat_version == 'foremanctl' or sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
 
     - name: Show hgrg parameter
       ansible.builtin.debug:
