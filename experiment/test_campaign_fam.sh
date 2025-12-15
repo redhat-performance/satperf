@@ -100,7 +100,7 @@ test=01fr-lce-create
 apj $test \
   -e "lifecycle_environments='$lifecycle_environments'" \
   playbooks/tests/FAM/lifecycle_environments.yaml
-ejr "Create Lifecycle Environments" $test &
+ejr $test &
 
 
 section 'Prepare for Red Hat content'
@@ -341,7 +341,7 @@ for product in "${tested_products[@]}"; do
     apj $test \
       -e "products='$product_products'" \
       playbooks/tests/FAM/repositories.yaml
-    ejr "Enable Red Hat Repositories" $test &
+    ejr $test &
 
     # Sync $product products
     echo "$product_products" | jq -r '.[].name' | while read product; do
@@ -556,7 +556,7 @@ for product in "${tested_products[@]}"; do
     apj $test \
       -e "content_views='$product_content_views'" \
       playbooks/tests/FAM/content_views.yaml
-    ejr "Create Content Views" $test &
+    ejr $test &
 
     # Publish $product CVs/CCVs
     test="${index_ten}5fr-cv-publish-${product_code}"
@@ -566,7 +566,7 @@ for product in "${tested_products[@]}"; do
     apj $test \
       -e "content_views='$product_content_views'" \
       playbooks/tests/FAM/content_view_publish.yaml
-    ejr "Publish content views" $test &
+    ejr $test &
 
     # Promote $product CCVs to LCEs
     test="${index_ten}6f-ccv-version-promote-${product_code}"
@@ -589,7 +589,7 @@ for product in "${tested_products[@]}"; do
     apj $test \
       -e "activation_keys='$activation_keys'" \
       playbooks/tests/FAM/activation_keys.yaml
-    ejr "Create or Delete Activation Keys" $test &
+    ejr $test &
 done  # for product
 
 
