@@ -943,6 +943,66 @@ function ej() {
     return $rc
 }
 
+# Examine JSON role
+function ejr() {
+    if $run_lib_dryrun; then
+        log 'FAKE ansible-playbook RUN'
+
+        return 0
+    fi
+
+    local task_name=$1; shift
+    local test=$1; shift
+    local play_out_json="${logs}/${test}.json"
+    local play_out_json_prefix="$( echo $play_out_json | cut -d'.' -f1 )"
+    local task_name_underscore="$( echo $task_name | sed -E 's/[[:space:]]/_/g' )"
+    local tasks_out_json="${play_out_json_prefix}-${task_name_underscore}.json"
+
+    jq --arg TASK_NAME "$task_name" \
+      '.plays[0].tasks[] | select(.task.name | contains($TASK_NAME)) | .task' \
+      $play_out_json >$tasks_out_json
+
+    task_ids="$( jq -r '.id' $tasks_out_json )"
+
+    local aggr_num_tasks=0
+    local aggregated_task_duration=0
+    for task_id in $task_ids; do
+        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
+        local task_start_z="$( jq --arg TASK_ID "$task_id" \
+          'select(.id==$TASK_ID) | .duration.start' \
+          $tasks_out_json )"
+        local task_end_z="$( jq --arg TASK_ID "$task_id" \
+          'select(.id==$TASK_ID) | .duration.end' \
+          $tasks_out_json )"
+        local task_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local task_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+        local task_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
+        if (( aggr_num_tasks == 0 )); then
+            local first_task_start=$task_start
+        fi
+        local last_task_end=$task_end
+        local aggregated_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration + $task_duration))" )"
+        (( aggr_num_tasks++ ))
+    done
+    local average_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration / $aggr_num_tasks))" )"
+    local rc="$( jq '.stats.localhost.failures' $play_out_json )"
+    log "Examined $tasks_out_json for $task_name: $aggregated_task_duration / $aggr_num_tasks = $average_task_duration (ranging from $first_task_start to $last_task_end) and has taken $average_task_duration seconds"
+
+    measurement_add \
+      "experiment/reg-average.py '$task_name' '$play_out_json'" \
+      "$tasks_out_json" \
+      "$rc" \
+      "$first_task_start" \
+      "$last_task_end" \
+      "$aggregated_task_duration" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
+      "$marker" \
+      "results.items.duration=$aggregated_task_duration results.items.passed=$aggr_num_tasks results.items.avg_duration=$average_task_duration results.items.report_rc=$rc"
+
+    return $rc
+}
+
 function ejji() {
     local task_name=GetForemanTaskResourceInfo
     local test=$1; shift
