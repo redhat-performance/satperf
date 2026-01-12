@@ -68,6 +68,17 @@
         dest: /usr/share/foremanctl/src/
         remote_src: true
 
+- name: Log in to the registry
+  containers.podman.podman_login:
+    registry: "{{ registry }}"
+    username: "{{ registry_username }}"
+    password: "{{ registry_password }}"
+    authfile: /etc/foreman/registry-auth.json
+  when:
+    - registry is defined and registry != "quay.io"
+    - registry_username is defined and registry_username | length > 0
+    - registry_password is defined and registry_password | length > 0
+
 - name: Set deployer command
   ansible.builtin.set_fact:
     deployer: foremanctl
@@ -76,12 +87,54 @@
   ansible.builtin.set_fact:
     pull_images_cmd: "{{ deployer }} pull-images"
 
-- name: Set command line to deploy
-  ansible.builtin.set_fact:
-    deploy_cmd: "{{ deployer }} deploy"
-
 - name: Pull images
   block:
+    - name: Set common container values
+      ansible.builtin.set_fact:
+        container_tag_stream: "{{ container_tag_stream }}"
+      when:
+        - container_tag_stream is defined and container_tag_stream | length > 0
+
+    - name: Set Candlepin container vars
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ pull_images_cmd }} --candlepin-container-image {{ candlepin_container_image }} --candlepin-container-tag {{ container_tag_stream }}"
+      when:
+        - candlepin_container_image is defined and candlepin_container_image | length > 0
+        - container_tag_stream is defined and container_tag_stream | length > 0
+
+    - name: Set Foreman container vars
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ pull_images_cmd }} --foreman-container-image {{ foreman_container_image }} --foreman-container-tag {{ container_tag_stream }}"
+      when:
+        - foreman_container_image is defined and foreman_container_image | length > 0
+        - container_tag_stream is defined and container_tag_stream | length > 0
+
+    - name: Set Pulp container vars
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ pull_images_cmd }} --pulp-container-image {{ pulp_container_image }} --pulp-container-tag {{ container_tag_stream }}"
+      when:
+        - pulp_container_image is defined and pulp_container_image | length > 0
+        - container_tag_stream is defined and container_tag_stream | length > 0
+
+    - name: Set Foreman proxy container vars
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ pull_images_cmd }} --foreman-proxy-container-image {{ foreman_proxy_container_image }} --foreman-proxy-container-tag {{ container_tag_stream }}"
+      when:
+        - foreman_proxy_container_image is defined and foreman_proxy_container_image | length > 0
+        - container_tag_stream is defined and container_tag_stream | length > 0
+
+    - name: Set PostgreSQL container vars
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ pull_images_cmd }} --postgresql-container-image {{ postgresql_container_image }} --postgresql-container-tag latest"
+      when:
+        - postgresql_container_image is defined and postgresql_container_image | length > 0
+
+    - name: Set Redis container vars
+      ansible.builtin.set_fact:
+        pull_images_cmd: "{{ pull_images_cmd }} --redis-container-image {{ redis_container_image }} --redis-container-tag latest"
+      when:
+        - redis_container_image is defined and redis_container_image | length > 0
+
     - name: Show command line to pull images
       ansible.builtin.debug:
         msg: "{{ pull_images_cmd }}"
@@ -98,6 +151,10 @@
         var: pull_images_cmd_out.stdout_lines
       failed_when:
         - pull_images_cmd_out is failed
+
+- name: Set command line to deploy
+  ansible.builtin.set_fact:
+    deploy_cmd: "{{ deployer }} deploy"
 
 - name: Initial deployment
   block:
@@ -132,6 +189,16 @@
 
 - name: Add features
   block:
+    - name: Set base feature deployment command line
+      ansible.builtin.set_fact:
+        add_features_cmd: "{{ deploy_cmd }}"
+
+    - name: foreman-proxy
+      block:
+        - name: Set `foreman-proxy` feature deployment command line
+          ansible.builtin.set_fact:
+            add_features_cmd: "{{ add_features_cmd }} --add-feature foreman-proxy"
+
     - name: hammer
       block:
         - name: Setup Foreman repositories
@@ -143,13 +210,7 @@
 
         - name: Set feature deployment command line
           ansible.builtin.set_fact:
-            add_features_cmd: "{{ deploy_cmd }} --add-feature hammer"
-
-    - name: foreman-proxy
-      block:
-        - name: Set `foreman-proxy` feature deployment command line
-          ansible.builtin.set_fact:
-            add_features_cmd: "{{ add_features_cmd }} --add-feature foreman-proxy"
+            add_features_cmd: "{{ add_features_cmd }} --add-feature hammer"
 
     - name: IOP
       when:
