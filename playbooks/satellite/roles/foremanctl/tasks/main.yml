@@ -31,7 +31,7 @@
             dest: /tmp/foremanctl
             refspec: '+refs/pull/*:refs/heads/*'
 
-        - name: Checkout foremanctl PRs
+        - name: "Checkout foremanctl PRs: {{ prs_list }}"
           ansible.builtin.shell:
             cmd: |
               cd /tmp/foremanctl && git pull --rebase origin refs/pull/{{ item }}/head
