@@ -2,6 +2,8 @@
 
 source experiment/run-library.sh
 
+organization="$( get_inventory_var foreman_organization )"
+
 # lces="${PARAM_lces:-Dev QA Pre Prod}"
 lces="${PARAM_lces:-Test}"
 lces_comma="$(echo "$lces" | tr ' ' ',')"
