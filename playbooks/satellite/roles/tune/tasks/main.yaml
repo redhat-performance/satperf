@@ -15,6 +15,13 @@
 
 - name: Determine which tuning profile is suitable
   block:
+    - name: "Determine if a 'default' tuning profile should be applied"
+      ansible.builtin.set_fact:
+        tuning_profile: 'default'
+      when:
+        - ansible_facts['processor_nproc'] | int >= 4
+        - ansible_facts['memtotal_mb'] | int >= 19000
+
     - name: "Determine if at least a 'medium' tuning profile should be applied"
       ansible.builtin.set_fact:
         tuning_profile: 'medium'
