@@ -1175,7 +1175,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
         section 'Generate rh_cloud_inventory report'
         a 53-foreman_inventory_upload-report-generate.log \
           -m ansible.builtin.shell \
-          -a "export organization='{{ sat_org }}'; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate" \
+          -a "cmd='export organization={{ sat_org }}; export target=/var/lib/foreman/red_hat_inventory/generated_reports/; /usr/sbin/foreman-rake rh_cloud_inventory:report:generate'" \
           satellite6
     fi
 
