@@ -1029,7 +1029,6 @@ for rex_search_query in $rex_search_queries; do
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
 
-        # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
         test="62f-rex-katello_package_install_ssh-podman-${num_matching_rex_ssh_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_ssh_hosts} hosts - %{template_name} (ssh): %{package}'" \
@@ -1052,7 +1051,6 @@ for rex_search_query in $rex_search_queries; do
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
 
-        # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
         test="62f-rex-katello_package_install_mqtt-podman-${num_matching_rex_mqtt_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt): %{package}'" \
@@ -1101,7 +1099,6 @@ for rex_search_query in $rex_search_queries; do
     fi  # vercmp_ge "$sat_version" '6.17.0'
 
     if (( num_matching_rex_ssh_hosts > 0 )); then
-        # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
         test="69f-rex-katello_package_update_ssh-${num_matching_rex_ssh_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_ssh_hosts} hosts - %{template_name} (ssh)'" \
@@ -1113,7 +1110,6 @@ for rex_search_query in $rex_search_queries; do
     fi  # num_matching_rex_ssh_hosts > 0
 
     if (( num_matching_rex_mqtt_hosts > 0 )); then
-        # XXX: Waiting for https://github.com/theforeman/foreman-ansible-modules/pull/1923
         test="69f-rex-katello_package_update_mqtt-${num_matching_rex_mqtt_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt)'" \
