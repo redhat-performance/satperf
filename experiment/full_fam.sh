@@ -1139,6 +1139,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
           -e "command='insights-client'" \
           -e "task_timeout=$(( num_matching_rex_hosts / 2 ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
     fi
 fi  # vercmp_ge "$sat_version" '6.17.0'
 
