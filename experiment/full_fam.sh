@@ -1005,6 +1005,9 @@ for rex_search_query in $rex_search_queries; do
     search_query_mqtt="$search_query and $rex_search_query_mqtt"
 
     num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
+
+    (( num_matching_rex_hosts > 0 )) || continue
+
     num_matching_rex_ssh_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query_ssh'" | grep -c "$rex_search_query")"
     num_matching_rex_mqtt_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query_mqtt'" | grep -c "$rex_search_query")"
 
