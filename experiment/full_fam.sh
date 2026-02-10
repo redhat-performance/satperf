@@ -21,6 +21,7 @@ repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 tested_products+=("$sat_client_product")
 
 rhosp_product=RHOSP
+rhosp_repo_name=rhoso/openstack-base-rhel9
 rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}"
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
 rhosp_registry_password="${PARAM_rhosp_registry_password:-password}"
@@ -78,7 +79,7 @@ for rel in $rels; do
         echo "Wrong release: $rel!!!" && exit
         ;;
     esac
-done
+done  # for rel in $rels
 
 
 section 'Create LCE(s)'
@@ -94,7 +95,7 @@ for lce in $lces; do
       '. += [{"name": $name, "prior": $prior}]')"
 
     prior=$lce
-done
+done  # for lce in $lces
 
 test=01fr-lce-create
 apj $test \
@@ -145,7 +146,7 @@ for product in "${tested_products[@]}"; do
         index_ten=4
         content_type=docker
         ;;
-    esac
+    esac  # "$product"
 
     product_products='[]'
     products='[]'
@@ -231,7 +232,7 @@ for product in "${tested_products[@]}"; do
                   --arg name "$reposet_name" \
                   --arg releasever "$releasever" \
                   '. += [{"name": $name, "releasever": $releasever}]')"
-            esac  # case "$rel_num"
+            esac  # "$rel_num"
 
             product_products="$(echo "$product_products" |
               jq -c \
@@ -253,17 +254,6 @@ for product in "${tested_products[@]}"; do
             $sat_client_product)
                 repo_name="$product for RHEL $rel_num"
                 repo_url="${repo_sat_client}/Satellite_Client_RHEL${rel_num}_${basearch}/"
-                ;;
-            $rhosp_product)
-                case "$rel_num" in
-                [8-9])
-                # [8-9]|10)
-                    repo_name="rhosp-${rel}/openstack-base"
-                    repo_url="$rhosp_registry_url"
-                    ;;
-                *)
-                    continue
-                esac  # case "$rel_num"
                 ;;
             $flatpak_product)
                 case "$rel_num" in
@@ -290,29 +280,17 @@ for product in "${tested_products[@]}"; do
                     ;;
                 *)
                     continue
-                esac  # case "$rel_num"
+                esac  # "$rel_num"
                 ;;
-            esac  # case "$product"
+            esac  # "$product"
 
-            if [[ "$product" != "$flatpak_product" ]]; then
-                if [[ "$product" == "$sat_client_product" ]]; then
-                    product_repositories="$(echo "$product_repositories" |
-                      jq -c \
-                      --arg name "$repo_name" \
-                      --arg url "$repo_url" \
-                      --arg content_type "$content_type" \
-                      '. += [{"name": $name, "url": $url, "content_type": $content_type}]')"
-                elif [[ "$product" == "$rhosp_product" ]]; then
-                    product_repositories="$(echo "$product_repositories" |
-                      jq -c \
-                      --arg name "$repo_name" \
-                      --arg content_type "$content_type" \
-                      --arg url "$repo_url" \
-                      --arg docker_upstream_name "$repo_name" \
-                      --arg upstream_username "$rhosp_registry_username" \
-                      --arg upstream_password "$rhosp_registry_password" \
-                      '. += [{"name": $name, "content_type": $content_type, "url": $url, "docker_upstream_name": $docker_upstream_name, "upstream_username": $upstream_username, "upstream_password": $upstream_password}]')"
-                fi
+            if [[ "$product" == "$sat_client_product" ]]; then
+                product_repositories="$(echo "$product_repositories" |
+                  jq -c \
+                  --arg name "$repo_name" \
+                  --arg url "$repo_url" \
+                  --arg content_type "$content_type" \
+                  '. += [{"name": $name, "url": $url, "content_type": $content_type}]')"
 
                 product_products="$(echo "$product_products" |
                   jq -c \
@@ -327,9 +305,40 @@ for product in "${tested_products[@]}"; do
                   else
                     . + [{"name": $name, "repositories": $repositories}]
                   end')"
-              fi  # "$product" != "$flatpak_product"
-        fi  # "$product" == "$rhel_product"
+            fi  # "$product" == "$sat_client_product"
+        fi  # "$product"
     done  # for rel in $rels
+
+    if [[ "$product" == "$rhosp_product" ]]; then
+        product_repositories='[]'
+
+        repo_name="$rhosp_repo_name"
+        repo_url="$rhosp_registry_url"
+
+        product_repositories="$(echo "$product_repositories" |
+          jq -c \
+          --arg name "$repo_name" \
+          --arg content_type "$content_type" \
+          --arg url "$repo_url" \
+          --arg docker_upstream_name "$repo_name" \
+          --arg upstream_username "$rhosp_registry_username" \
+          --arg upstream_password "$rhosp_registry_password" \
+          '. += [{"name": $name, "content_type": $content_type, "url": $url, "docker_upstream_name": $docker_upstream_name, "upstream_username": $upstream_username, "upstream_password": $upstream_password}]')"
+
+        product_products="$(echo "$product_products" |
+          jq -c \
+          --arg name "$product" \
+          --argjson repositories "$product_repositories" \
+          'if any(. | .name == $name) then
+            map(if .name == $name then
+              .repositories += $repositories
+            else
+              .
+            end)
+          else
+            . + [{"name": $name, "repositories": $repositories}]
+          end')"
+    fi  # "$product" == "$rhosp_product"
 
     products="$(echo "$products" | jq -c \
       --argjson product_products "$product_products" \
@@ -401,7 +410,7 @@ for product in "${tested_products[@]}"; do
                   --arg product "$product_name" \
                   '. + [{"name": $name, "product": $product}]')"
                 ;;
-            esac  # case "$rel_num"
+            esac  # "$rel_num"
         else  # "$product" != "$rhel_product"
             case "$product" in
             $sat_client_product)
@@ -412,15 +421,8 @@ for product in "${tested_products[@]}"; do
                 content_overrides='[]'
                 ;;
             $rhosp_product)
-                case "$rel_num" in
-                [8-9])
-                # [8-9]|10)
-                    repo_name="rhosp-${rel}/openstack-base"
-                    repo_name_code="$(echo ${repo_name} | tr ' ' '_' | tr '/' '_')"
-                    ;;
-                *)
-                    continue
-                esac  # case "$rel_num"
+                repo_name="$rhosp_repo_name"
+                repo_name_code="$(echo ${repo_name} | tr ' ' '_' | tr '/' '_')"
                 ;;
             $flatpak_product)
                 case "$rel_num" in
