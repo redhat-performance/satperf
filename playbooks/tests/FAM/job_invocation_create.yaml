@@ -20,6 +20,7 @@
         inputs: "{{ inputs | default(omit) }}"
         feature: "{{ feature | default(omit) }}"
       register: __job_invocation
+      ignore_errors: true
 
     - name: Get task ID
       ansible.builtin.set_fact:
@@ -28,11 +29,20 @@
     - name: Wait for forked task to finish
       theforeman.foreman.wait_for_task:
         task: "{{ task_id }}"
-        timeout: "{{ task_timeout | default(900) }}"
+        timeout: "{{ task_timeout | default(omit) }}"
+      register: __wait_for_task
+      until: >-
+        __wait_for_task is succeeded or
+        ('Remote end closed connection without response' not in (__wait_for_task.msg | default('')) or
+         'A sub task failed' in (__wait_for_task.msg | default('')))
+      retries: "{{ num_retries | default(5) }}"
+      delay: "{{ retry_delay | default(30) }}"
       ignore_errors: true
 
     - name: GetForemanTaskResourceInfo
       theforeman.foreman.resource_info:
         resource: foreman_tasks
         search: "id = {{ task_id }}"
+      failed_when:
+        - __wait_for_task is failed
 ...
