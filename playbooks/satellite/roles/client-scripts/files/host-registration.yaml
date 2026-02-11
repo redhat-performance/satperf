@@ -31,7 +31,11 @@
       ansible.builtin.debug:
         var: registration.stdout_lines
       vars:
-        regexp: '^.*(Traceback |curl: |Internal Server Error).*$'
+        ### XXX: Remove '^Traceback ' to try to avoid:
+        ### "AttributeError: 'SubscriptionManager' object has no attribute 'cp'"" false positives on
+        ### RHEL 10 containers.
+        # regexp: '^.*(Traceback |curl: |Internal Server Error).*$'
+        regexp: '^.*(curl: |Internal Server Error).*$'
       failed_when:
         - registration is failed or registration.stdout | regex_search(regexp, multiline=true)
 
