@@ -217,36 +217,14 @@
         line: "{{ containers_used_count | int + size | int }}"
         create: true
 
-    - name: "Get number of hosts that failed to register (!= Stream)"
+    - name: Get number of hosts that failed to register
       ansible.builtin.shell:
         cmd: |
-          grep \
-            -e ^'fatal: \[.*\]: FAILED! => {"' \
-            -e ^'        "Traceback ' \
-            -e ^'        "curl: ' \
-            -e ^'        "Internal Server Error",'$ \
-            -e ^'Error: Failed to download metadata for repo' \
-            -e ' initial configuration failed' \
-            -e 'ERROR: ' \
-            {{ clients_yaml_cmd_log }} |
-            uniq | wc -l
+          grep -cw \
+            -e 'failed=1' \
+            {{ clients_yaml_cmd_log }}
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
-      when:
-        - sat_version is defined and ( sat_version != 'stream' and sat_version != 'foremanctl' )
-
-    - name: "Get number of hosts that failed to register (== Stream)"
-      ansible.builtin.shell:
-        cmd: |
-          grep \
-            -e ^'fatal: \[.*\]: FAILED! => {'$ \
-            -e ^'        "Traceback ' \
-            {{ clients_yaml_cmd_log }} |
-            uniq | wc -l
-      register: num_failed_hosts
-      failed_when: num_failed_hosts.rc == 2
-      when:
-        - sat_version is defined and ( sat_version == 'stream' or sat_version == 'foremanctl' )
 
     - name: Show number of hosts that failed to register
       ansible.builtin.debug:
@@ -354,21 +332,15 @@
               ansible.builtin.set_fact:
                 clients_yaml_cmd_retries_log: "{{ clients_yaml_cmd_base }}-retries.log"
 
-            - name: Try to re-register failed hosts (!= Stream)"
+            - name: Try to re-register failed hosts
               ansible.builtin.shell:
                 cmd: |
                   set -o pipefail
 
                   cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
 
-                  num_fails="$(grep -c \
-                    -e ^'fatal: .*: FAILED! => {"' \
-                    -e ^'        "Traceback ' \
-                    -e ^'        "curl: ' \
-                    -e ^'        "Internal Server Error",'$ \
-                    -e ^'Error: Failed to download metadata for repo' \
-                    -e 'ERROR: ' \
-                    -e ' initial configuration failed' \
+                  num_fails="$(grep -cw \
+                    -e 'failed=1' \
                     {{ clients_yaml_cmd_retries_log }})"
                   while (( num_fails != 0 )); do
                       iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.$num_fails"
@@ -377,28 +349,7 @@
 
                       unset CLIENT_IP_LIST
 
-                      for client_ip in $(awk '/^fatal: \[.*\]: FAILED! => {"/ {print $2}' $iter_clients_yaml_cmd_retries_log |
-                        cut -d'[' -f2 | cut -d']' -f1); do
-                          CLIENT_IP_LIST+="$client_ip,"
-                      done
-
-                      for client_ip in $(grep \
-                        -e ^'ok:' \
-                        -e ^'        "Traceback ' \
-                        -e ^'        "curl: ' \
-                        -e ^'        "Internal Server Error",'$ \
-                        -e ^'Error: Failed to download metadata for repo' \
-                        -e 'ERROR: ' \
-                        -e ' initial configuration failed' \
-                        $iter_clients_yaml_cmd_retries_log |
-                        uniq | grep -B1 \
-                        -e ^'        "Traceback ' \
-                        -e ^'        "curl: ' \
-                        -e ^'        "Internal Server Error",'$ \
-                        -e ^'Error: Failed to download metadata for repo' \
-                        -e 'ERROR: ' |
-                        -e ' initial configuration failed' \
-                        awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
+                      for client_ip in $(awk '/[[:blank:]]+failed=1[[:blank:]]+/ {print $1}' $iter_clients_yaml_cmd_retries_log); do
                           CLIENT_IP_LIST+="$client_ip,"
                       done
 
@@ -410,72 +361,13 @@
                             host-registration.yaml |
                             tee {{ clients_yaml_cmd_retries_log }}
 
-                      num_fails="$(grep -c \
-                        -e ^'fatal: .*: FAILED! => {"' \
-                        -e ^'        "Traceback ' \
-                        -e ^'        "curl: ' \
-                        -e ^'        "Internal Server Error",'$ \
-                        -e ^'Error: Failed to download metadata for repo' \
-                        -e 'ERROR: ' \
-                        -e ' initial configuration failed' \
+                      num_fails="$(grep -cw \
+                        -e 'failed=1' \
                         {{ clients_yaml_cmd_retries_log }})"
                   done
               register: clients_yaml_cmd_retries
               failed_when: clients_yaml_cmd_retries.rc == 2
               ignore_errors: true
-              when:
-                - sat_version is defined and ( sat_version != 'stream' and sat_version != 'foremanctl' )
-
-            - name: Try to re-register failed hosts (== Stream)"
-              ansible.builtin.shell:
-                cmd: |
-                  set -o pipefail
-
-                  cp -p {{ clients_yaml_cmd_log }} {{ clients_yaml_cmd_retries_log }}
-
-                  num_fails="$(grep -c \
-                    -e ^'fatal: \[.*\]: FAILED! => {'$ \
-                    {{ clients_yaml_cmd_retries_log }})"
-                  while (( num_fails != 0 )); do
-                      iter_clients_yaml_cmd_retries_log="{{ clients_yaml_cmd_retries_log }}.$num_fails"
-
-                      cp -p {{ clients_yaml_cmd_retries_log }} $iter_clients_yaml_cmd_retries_log
-
-                      unset CLIENT_IP_LIST
-
-                      for client_ip in $(grep \
-                        ^'fatal: \[.*\]: FAILED! => {'$ $iter_clients_yaml_cmd_retries_log |
-                        awk '{print $2}' | cut -d'[' -f2 | cut -d']' -f1); do
-                          CLIENT_IP_LIST+="$client_ip,"
-                      done
-
-                      for client_ip in $(grep \
-                        -e ^'ok:' \
-                        -e ^'        "Traceback ' \
-                        $iter_clients_yaml_cmd_retries_log |
-                        uniq | grep -B1 \
-                        -e ^'        "Traceback ' \
-                        awk -F'[' '/ok:/ {print $2}' | cut -d']' -f1); do
-                          CLIENT_IP_LIST+="$client_ip,"
-                      done
-
-                      [[ -n $CLIENT_IP_LIST ]] &&
-                          ansible-playbook \
-                            --private-key /root/id_rsa_key \
-                            --inventory $CLIENT_IP_LIST \
-                            --forks {{ num_retry_forks }} \
-                            host-registration.yaml |
-                            tee {{ clients_yaml_cmd_retries_log }}
-
-                      num_fails="$(grep -c \
-                        -e ^'fatal: \[.*\]: FAILED! => {'$ \
-                        {{ clients_yaml_cmd_retries_log }})"
-                  done
-              register: clients_yaml_cmd_retries
-              failed_when: clients_yaml_cmd_retries.rc == 2
-              ignore_errors: true
-              when:
-                - sat_version is defined and ( sat_version == 'stream' or sat_version == 'foremanctl' )
 
     - name: Profile flamegraphs
       when:
