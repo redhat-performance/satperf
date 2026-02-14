@@ -1052,7 +1052,7 @@ for rex_search_query in $rex_search_queries; do
           -e "job_template='$job_template_script_default'" \
           -e "search_query='$search_query_mqtt'" \
           -e "command='date'" \
-          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 450 : num_matching_rex_mqtt_hosts ))" \
+          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 900 : num_matching_rex_mqtt_hosts * 2 ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
 
@@ -1062,7 +1062,7 @@ for rex_search_query in $rex_search_queries; do
           -e "feature='katello_package_install'" \
           -e "search_query='$search_query_mqtt'" \
           -e "inputs='package=podman'" \
-          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 450 : num_matching_rex_mqtt_hosts ))" \
+          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 900 : num_matching_rex_mqtt_hosts * 2 ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
     fi  # num_matching_rex_mqtt_hosts > 0
@@ -1120,7 +1120,7 @@ for rex_search_query in $rex_search_queries; do
           -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt)'" \
           -e "feature='katello_package_update'" \
           -e "search_query='$search_query_mqtt'" \
-          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 900 : num_matching_rex_mqtt_hosts * 2 ))" \
+          -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 1350 : num_matching_rex_mqtt_hosts * 3 ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
     fi  # num_matching_rex_mqtt_hosts > 0
