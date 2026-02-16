@@ -8,6 +8,7 @@
       username: "{{ foreman_username | default(omit) }}"
       password: "{{ foreman_password | default(omit) }}"
       validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      organization: "{{ foreman_organization }}"
 
   vars:
     # Optional filter by task label (e.g., "Actions::RemoteExecution::RunHostsJob")
@@ -35,7 +36,6 @@
 
     - name: Get pending tasks
       theforeman.foreman.resource_info:
-        organization: "{{ foreman_organization | default(omit) }}"
         resource: foreman_tasks
         search: "{{ task_search_query }}"
       register: __pending_tasks
@@ -98,27 +98,26 @@
         msg: "No pending tasks found matching the search criteria"
       when: __pending_tasks.resources | length == 0
 
-    - name: Wait a moment for tasks to update
-      ansible.builtin.pause:
-        seconds: 2
+    - name: Verify task cancellation/stop
       when: __pending_tasks.resources | length > 0
+      block:
+        - name: Wait a moment for tasks to update
+          ansible.builtin.pause:
+            seconds: 5
 
-    - name: Verify tasks were cancelled/stopped
-      when: __pending_tasks.resources | length > 0
-      theforeman.foreman.resource_info:
-        organization: "{{ foreman_organization | default(omit) }}"
-        resource: foreman_tasks
-        search: "id ^ ({{ __pending_tasks.resources | map(attribute='id') | join(',') }})"
-      register: __tasks_after
+        - name: Verify tasks were cancelled/stopped
+          theforeman.foreman.resource_info:
+            resource: foreman_tasks
+            search: "id ^ ({{ __pending_tasks.resources | map(attribute='id') | join(',') }})"
+          register: __tasks_after
 
-    - name: Show final task states
-      when: __pending_tasks.resources | length > 0
-      ansible.builtin.debug:
-        msg:
-          - "Task ID: {{ item.id }}"
-          - "Previous State: running/pending"
-          - "Current State: {{ item.state }}/{{ item.result }}"
-      loop: "{{ __tasks_after.resources }}"
-      loop_control:
-        label: "Task {{ item.id }}"
+        - name: Show final task states
+          ansible.builtin.debug:
+            msg:
+              - "Task ID: {{ item.id }}"
+              - "Previous State: running/pending"
+              - "Current State: {{ item.state }}/{{ item.result }}"
+          loop: "{{ __tasks_after.resources }}"
+          loop_control:
+            label: "Task {{ item.id }}"
 ...
