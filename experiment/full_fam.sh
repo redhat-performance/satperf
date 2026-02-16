@@ -1145,6 +1145,15 @@ if vercmp_ge "$sat_version" '6.17.0'; then
 fi  # vercmp_ge "$sat_version" '6.17.0'
 
 
+# ReX cleanup
+task_label='Actions::RemoteExecution::RunHostsJob'
+
+test=69f-kill-rex-jobs
+skip_measurement=true apj $test \
+  -e "task_label='task_label'" \
+  playbooks/tests/FAM/kill_pending_tasks.yaml
+
+
 section 'Misc simple tests'
 test=50-hammer-list
 ap "${test}.log" \
