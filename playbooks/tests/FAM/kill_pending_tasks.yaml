@@ -11,10 +11,6 @@
       organization: "{{ foreman_organization }}"
 
   vars:
-    # Optional filter by task label (e.g., "Actions::RemoteExecution::RunHostsJob")
-    task_label: "{{ filter_task_label | default(omit) }}"
-    # Optional filter by action pattern (e.g., "Remote action:")
-    action_pattern: "{{ filter_action_pattern | default(omit) }}"
     # Operation mode: 'cancel' (default) or 'stop'
     operation: "{{ task_operation | default('cancel') }}"
 
@@ -23,11 +19,11 @@
       ansible.builtin.set_fact:
         task_search_query: >-
           state = running and result = pending
-          {%- if task_label is defined and task_label %}
+          {%- if task_label is defined and task_label | length > 0 %}
            and label = {{ task_label }}
           {%- endif %}
-          {%- if action_pattern is defined and action_pattern %}
-           and action ~ "{{ action_pattern }}"
+          {%- if task_action is defined and task_action | length > 0  %}
+           and action ~ "{{ task_action }}"
           {%- endif %}
 
     - name: Show search query
