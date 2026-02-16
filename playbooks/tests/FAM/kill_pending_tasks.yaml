@@ -1,0 +1,124 @@
+---
+- hosts: localhost
+  gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+
+  vars:
+    # Optional filter by task label (e.g., "Actions::RemoteExecution::RunHostsJob")
+    task_label: "{{ filter_task_label | default(omit) }}"
+    # Optional filter by action pattern (e.g., "Remote action:")
+    action_pattern: "{{ filter_action_pattern | default(omit) }}"
+    # Operation mode: 'cancel' (default) or 'stop'
+    operation: "{{ task_operation | default('cancel') }}"
+
+  tasks:
+    - name: Build search query for pending tasks
+      ansible.builtin.set_fact:
+        task_search_query: >-
+          state = running and result = pending
+          {%- if task_label is defined and task_label %}
+           and label = {{ task_label }}
+          {%- endif %}
+          {%- if action_pattern is defined and action_pattern %}
+           and action ~ "{{ action_pattern }}"
+          {%- endif %}
+
+    - name: Show search query
+      ansible.builtin.debug:
+        msg: "Searching for tasks with: {{ task_search_query }}"
+
+    - name: Get pending tasks
+      theforeman.foreman.resource_info:
+        organization: "{{ foreman_organization | default(omit) }}"
+        resource: foreman_tasks
+        search: "{{ task_search_query }}"
+      register: __pending_tasks
+
+    - name: Show pending tasks found
+      ansible.builtin.debug:
+        msg:
+          - "Found {{ __pending_tasks.resources | length }} pending task(s)"
+          - "Operation: {{ operation }}"
+
+    - name: Display tasks to be cancelled/stopped
+      ansible.builtin.debug:
+        msg:
+          - "Task ID: {{ item.id }}"
+          - "Label: {{ item.label | default('N/A') }}"
+          - "Action: {{ item.action | default('N/A') }}"
+          - "Started: {{ item.started_at | default('N/A') }}"
+          - "State: {{ item.state }}/{{ item.result }}"
+      loop: "{{ __pending_tasks.resources }}"
+      loop_control:
+        label: "Task {{ item.id }}"
+
+    - name: Bulk cancel/stop pending tasks
+      when: __pending_tasks.resources | length > 0
+      block:
+        - name: Set API endpoint based on operation
+          ansible.builtin.set_fact:
+            api_endpoint: "{{ 'bulk_cancel' if operation == 'cancel' else 'bulk_stop' }}"
+
+        - name: Execute bulk operation via API
+          ansible.builtin.uri:
+            url: "{{ foreman_server_url }}/foreman_tasks/api/tasks/{{ api_endpoint }}"
+            method: POST
+            user: "{{ foreman_username }}"
+            password: "{{ foreman_password }}"
+            force_basic_auth: true
+            validate_certs: "{{ foreman_validate_certs | default(false) }}"
+            body_format: json
+            body:
+              search: "{{ task_search_query }}"
+              organization_id: "{{ foreman_organization | default(omit) }}"
+            status_code: [200, 400]
+          register: __bulk_operation_result
+
+        - name: Show bulk operation result
+          ansible.builtin.debug:
+            msg:
+              - "Status: {{ __bulk_operation_result.status }}"
+              - "Response: {{ __bulk_operation_result.json | default(__bulk_operation_result.msg | default('N/A')) }}"
+
+        - name: Verify operation result
+          ansible.builtin.fail:
+            msg: "Bulk {{ operation }} operation failed: {{ __bulk_operation_result.json | default(__bulk_operation_result.msg) }}"
+          when:
+            - __bulk_operation_result.status == 400
+            - __bulk_operation_result.json is defined
+
+    - name: No tasks to process
+      ansible.builtin.debug:
+        msg: "No pending tasks found matching the search criteria"
+      when: __pending_tasks.resources | length == 0
+
+    - name: Wait a moment for tasks to update
+      ansible.builtin.pause:
+        seconds: 2
+      when: __pending_tasks.resources | length > 0
+
+    - name: Verify tasks were cancelled/stopped
+      when: __pending_tasks.resources | length > 0
+      theforeman.foreman.resource_info:
+        organization: "{{ foreman_organization | default(omit) }}"
+        resource: foreman_tasks
+        search: "id ^ ({{ __pending_tasks.resources | map(attribute='id') | join(',') }})"
+      register: __tasks_after
+
+    - name: Show final task states
+      when: __pending_tasks.resources | length > 0
+      ansible.builtin.debug:
+        msg:
+          - "Task ID: {{ item.id }}"
+          - "Previous State: running/pending"
+          - "Current State: {{ item.state }}/{{ item.result }}"
+      loop: "{{ __tasks_after.resources }}"
+      loop_control:
+        label: "Task {{ item.id }}"
+...
