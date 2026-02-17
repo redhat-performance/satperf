@@ -26,6 +26,12 @@
       ansible.builtin.set_fact:
         task_id: "{{ __job_invocation.entity.job_invocations[0].task.id }}"
 
+    - name: Define transient error patterns
+      ansible.builtin.set_fact:
+        transient_errors:
+          - 'Remote end closed connection without response'
+          - 'Internal Server Error'
+
     - name: Wait for forked task to finish
       theforeman.foreman.wait_for_task:
         task: "{{ task_id }}"
@@ -34,8 +40,7 @@
       until: >-
         __wait_for_task is succeeded or
         'A sub task failed' in (__wait_for_task.msg | default('')) or
-        ('Remote end closed connection without response' not in (__wait_for_task.msg | default('')) and
-         'Internal Server Error' not in (__wait_for_task.msg | default('')))
+        (transient_errors | select('in', __wait_for_task.msg | default('')) | list | length == 0)
       retries: "{{ num_retries | default(5) }}"
       delay: "{{ retry_delay | default(30) }}"
       ignore_errors: true
