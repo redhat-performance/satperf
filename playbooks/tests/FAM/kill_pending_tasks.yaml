@@ -20,7 +20,7 @@
         task_search_query: >-
           state = running and result = pending
           {%- if task_label is defined and task_label | length > 0 %}
-           and label = {{ task_label }}
+           and label = "{{ task_label }}"
           {%- endif %}
           {%- if task_action is defined and task_action | length > 0  %}
            and action ~ "{{ task_action }}"
