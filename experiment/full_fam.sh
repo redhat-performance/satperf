@@ -887,7 +887,7 @@ for content in $contents; do
         test_le_value="$test_sync_docker_le"
         ;;
     ansible-collections)
-        index=82
+        index=83
         content_alias=ansible_collections
         test_count_var="test_sync_${content_alias}_count"
         test_url_template_var="test_sync_${content_alias}_url_template"
