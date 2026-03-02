@@ -1077,31 +1077,53 @@ for rex_search_query in $rex_search_queries; do
       playbooks/tests/FAM/job_invocation_create.yaml
     ejji $test
 
-    if vercmp_ge "$sat_version" '6.17.0'; then
-        if $enable_iop; then
-            test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
+    if $enable_iop && vercmp_ge "$version" '6.17.0'; then
+        test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
+        apj $test \
+          -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
+          -e "job_template='$job_template_ansible_default'" \
+          -e "search_query='$search_query'" \
+          -e "command='insights-client'" \
+          -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
+          playbooks/tests/FAM/job_invocation_create.yaml
+        ejji $test
+
+        if (( num_matching_rex_ssh_hosts > 0 )); then
+            test="65f-rex-script_ssh-insigths-client-${num_matching_rex_ssh_hosts}"
             apj $test \
-              -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
-              -e "job_template='$job_template_ansible_default'" \
-              -e "search_query='$search_query'" \
-              -e "command='insights-client'" \
-              -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
+              -e "description_format='${num_matching_rex_ssh_hosts} hosts - %{template_name} (ssh): %{command}'" \
+              -e "job_template='$job_template_script_default'" \
+              -e "search_query='$search_query_ssh'" \
+              -e "command='insigths-client'" \
+              -e "task_timeout=$(( num_matching_rex_ssh_hosts < 450 ? 450 : num_matching_rex_ssh_hosts ))" \
               playbooks/tests/FAM/job_invocation_create.yaml
             ejji $test
+        fi  # num_matching_rex_ssh_hosts > 0
 
-            # if vercmp_ge "$sat_version" '6.18.0'; then
-            #     test="66f-rex-apply_remediation-${num_matching_rex_hosts}"
-            #     apj $test \
-            #       -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}'" \
-            #       -e "job_template='$job_template_lightspeed_remediation'" \
-            #       -e "search_query='$search_query'" \
-            #       -e "inputs=hit_remediation_pairs='$lightspeed_remediation_pairs'" \
-            #       -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
-            #       playbooks/tests/FAM/job_invocation_create.yaml
-            #     ejji $test
-            # fi  # vercmp_ge "$sat_version" '6.18.0'
-        fi  # $enable_iop
-    fi  # vercmp_ge "$sat_version" '6.17.0'
+        if (( num_matching_rex_mqtt_hosts > 0 )); then
+            test="65f-rex-script_mqtt-insigths-client-${num_matching_rex_mqtt_hosts}"
+            apj $test \
+              -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt): %{command}'" \
+              -e "job_template='$job_template_script_default'" \
+              -e "search_query='$search_query_mqtt'" \
+              -e "command='insigths-client'" \
+              -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 1350 : num_matching_rex_mqtt_hosts * 2 ))" \
+              playbooks/tests/FAM/job_invocation_create.yaml
+            ejji $test
+        fi  # num_matching_rex_mqtt_hosts > 0
+
+        # if vercmp_ge "$sat_version" '6.18.0'; then
+        #     test="66f-rex-apply_remediation-${num_matching_rex_hosts}"
+        #     apj $test \
+        #       -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}'" \
+        #       -e "job_template='$job_template_lightspeed_remediation'" \
+        #       -e "search_query='$search_query'" \
+        #       -e "inputs=hit_remediation_pairs='$lightspeed_remediation_pairs'" \
+        #       -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
+        #       playbooks/tests/FAM/job_invocation_create.yaml
+        #     ejji $test
+        # fi  # vercmp_ge "$sat_version" '6.18.0'
+    fi  # $enable_iop && vercmp_ge "$version" '6.17.0'
 
     if (( num_matching_rex_ssh_hosts > 0 )); then
         test="69f-rex-katello_package_update_ssh-${num_matching_rex_ssh_hosts}"
