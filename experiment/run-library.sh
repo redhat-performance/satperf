@@ -1041,13 +1041,14 @@ function ejji() {
       "$play_out_json" >"$task_resources_out_json"
 
     task_id="$( jq -r '.id' "$task_resources_out_json" )"
+    duration="$( jq -r '.duration' "$task_resources_out_json" )"
     cancelled="$( jq -r '.output.cancelled_count' "$task_resources_out_json" )"
     failed="$( jq -r '.output.failed_count' "$task_resources_out_json" )"
     pending="$( jq -r '.output.pending_count' "$task_resources_out_json" )"
     success="$( jq -r '.output.success_count' "$task_resources_out_json" )"
     total="$( jq -r '.output.total_count' "$task_resources_out_json" )"
 
-    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending)"
+    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending) and has taken $duration seconds""
 }
 
 function task_examine() {
