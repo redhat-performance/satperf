@@ -82,6 +82,17 @@ for rel in $rels; do
 done  # for rel in $rels
 
 
+settings='[]'
+settings="$(echo "$settings" |
+  jq -c \
+  '. += [{"name": "foreman_proxy_content_auto_sync", "value": "false"}]')"
+
+test=00fr-settings
+apj $test \
+  -e "settings='$settings'" \
+  playbooks/tests/FAM/settings.yaml
+
+
 section 'Create LCE(s)'
 lifecycle_environments='[]'
 
