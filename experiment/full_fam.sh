@@ -1163,19 +1163,17 @@ rex_search_query=container
 search_query="name ~ $rex_search_query"
 num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
 
-if vercmp_ge "$sat_version" '6.17.0'; then
-    if $enable_iop; then
-        test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
-        apj $test \
-          -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
-          -e "job_template='$job_template_ansible_default'" \
-          -e "search_query='$search_query'" \
-          -e "command='insights-client'" \
-          -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
-          playbooks/tests/FAM/job_invocation_create.yaml
-        ejji $test
-    fi
-fi  # vercmp_ge "$sat_version" '6.17.0'
+if $enable_iop && vercmp_ge "$version" '6.17.0'; then
+    test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
+    apj $test \
+      -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
+      -e "job_template='$job_template_ansible_default'" \
+      -e "search_query='$search_query'" \
+      -e "command='insights-client'" \
+      -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
+      playbooks/tests/FAM/job_invocation_create.yaml
+    ejji $test
+fi  # $enable_iop && vercmp_ge "$version" '6.17.0'
 
 
 # ReX cleanup
