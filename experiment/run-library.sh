@@ -24,12 +24,11 @@ fi
 opts="${opts:-"-i $inventory --forks 25"}"
 opts_adhoc="${opts_adhoc:-$opts}"
 
-# if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
-#     enable_iop="${PARAM_enable_iop:-true}"
-# else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
-#     enable_iop=false
-# fi
-enable_iop="${PARAM_enable_iop:-true}"
+if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
+    enable_iop="${PARAM_enable_iop:-true}"
+else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
+    enable_iop=false
+fi
 
 content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
 
@@ -172,10 +171,12 @@ function generic_environment_check() {
       'hostname'
 
     a 00-info-ip-a.log \
+      -m ansible.builtin.command \
       -a 'ip a' \
       satellite6,capsules,container_hosts
 
     a 00-check-ping-registration-target.log \
+      -m ansible.builtin.command \
       -a 'ping -c 10 {{ tests_registration_target }}' \
       container_hosts
 
@@ -183,13 +184,11 @@ function generic_environment_check() {
         ap 00-remove-hosts-if-any.log \
           playbooks/satellite/satellite-remove-hosts.yaml
 
-        # XXX:
-        # number_container_hosts="$( ansible $opts_adhoc \
-        #   --list-hosts \
-        #   container_hosts 2>/dev/null |
-        #   grep -cv '^  hosts' )"
-        # if (( number_container_hosts > 0 )); then
-        if (( num_container_hosts > 0 )); then
+        number_container_hosts="$( ansible $opts_adhoc \
+          --list-hosts \
+          container_hosts 2>/dev/null |
+          grep -cv '^  hosts' )"
+        if (( number_container_hosts > 0 )); then
             ap 00-tierdown-containers.log \
               ansible-container-host-mgr/tierdown.yaml
 
@@ -308,18 +307,18 @@ function status_data_create() {
         sd_start=$1; shift
     else
         sd_start_seconds=$1; shift
-        sd_start="$( gdate -u -Iseconds -d @$sd_start_seconds )"
+        sd_start="$( date -u -Iseconds -d @$sd_start_seconds )"
     fi
     if [[ "$1" =~ [[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.*\+[[:digit:]]{2}:[[:digit:]]{2} ]]; then
         sd_end=$1; shift
     else
         sd_end_seconds=$1; shift
-        sd_end="$( gdate -u -Iseconds -d @$sd_end_seconds )"
+        sd_end="$( date -u -Iseconds -d @$sd_end_seconds )"
     fi
     if [[ "$1" =~ [[:digit:]]+\.[[:digit:]]{6} ]]; then
         sd_duration=$1; shift
     else
-        sd_duration="$(( $( gdate -d @$sd_end_seconds +%s ) - $( gdate -d @$sd_start_seconds +%s ) ))"
+        sd_duration="$(( $( date -d @$sd_end_seconds +%s ) - $( date -d @$sd_start_seconds +%s ) ))"
     fi
     sd_kat_rpm=$1; shift
     [[ -n $sd_kat_rpm ]] ||
@@ -757,13 +756,12 @@ function apj() {
           satellite6,capsules >"${logs}/profile/${test}-profiling.log"
     fi
 
-    # ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json && local rc=$? || local rc=$?
-    ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json
-    local rc=$?
+    ANSIBLE_STDOUT_CALLBACK='ansible.posix.json' ansible-playbook $opts_adhoc "$@" >$play_out_json && local rc=$? || local rc=$?
 
     if $profile; then
         # Kill BPF profile process
         a_out \
+          -m ansible.builtin.command \
           -a 'pkill -SIGINT profile' \
           satellite6,capsules >"${logs}/profile/${test}-kill-profiling.log"
     fi
@@ -915,74 +913,6 @@ function e() {
       "results.items.duration=$duration results.items.passed=$passed results.items.avg_duration=$avg_duration results.items.report_rc=$rc"
 }
 
-function ejCVP() {
-    if $run_lib_dryrun; then
-        log 'FAKE ansible-playbook RUN'
-
-        return 0
-    fi
-
-    local task_name=$1; shift
-    local test=$1; shift
-    local play_out_json="$logs/$test.json"
-    local play_out_json_prefix="$( echo $play_out_json | cut -d'.' -f1 )"
-    local tasks_out_json="$play_out_json_prefix-$task_name.json"
-
-    jq --arg TASK_NAME "$task_name" \
-      '.plays[0].tasks[] | select(.task.name==$TASK_NAME)' \
-      "$play_out_json" >"$tasks_out_json"
-
-    local task_start_z="$( jq \
-      '.task.duration.start' \
-      $tasks_out_json )"
-    local task_end_z="$( jq \
-      '.task.duration.end' \
-      $tasks_out_json )"
-    local task_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-    local task_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-    
-    case "$task_name" in
-    ProductSync)
-        local task_duration="$( jq \
-          '.hosts.localhost.results[0].task.duration' \
-          $tasks_out_json )"
-        local num_results="$( jq \
-          '.hosts.localhost.results[0].task.output.total_count' \
-          $tasks_out_json )"
-        local num_successful_results="$( jq \
-          '.hosts.localhost.results[0].task.output.success_count' \
-          $tasks_out_json )"
-        ;;
-    ContentViewPublish|ContentViewVersionPromote)
-        local task_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
-        local num_results="$( jq \
-          '.hosts.localhost.results | length' \
-          $tasks_out_json )"
-        local num_successful_results="$( jq \
-          '.hosts.localhost.results | map(select(.failed | not)) | length' \
-          $tasks_out_json )"
-        ;;
-    esac    # $task_name
-
-    local average_task_duration="$( python3 -c "print('{:.6f}'.format($task_duration / $num_results))" )"
-    local rc=0
-    log "Examined $tasks_out_json for $task_name: $task_duration / $num_results = $average_task_duration (ranging from $task_start to $task_end) and has taken $average_task_duration seconds"
-
-    measurement_add \
-      "experiment/reg-average.py '$task_name' '$play_out_json'" \
-      "$tasks_out_json" \
-      "$rc" \
-      "$task_start" \
-      "$task_end" \
-      "$task_duration" \
-      "$katello_rpm" \
-      "$satellite_rpm" \
-      "$marker" \
-      "results.items.duration=$task_duration results.items.passed=$num_successful_results results.items.total=$num_results results.items.avg_duration=$average_task_duration results.items.report_rc=$rc"
-
-    return $rc
-}
-
 function ej() {
     if $run_lib_dryrun; then
         log 'FAKE ansible-playbook RUN'
@@ -992,13 +922,13 @@ function ej() {
 
     local task_name=$1; shift
     local test=$1; shift
-    local play_out_json="$logs/$test.json"
+    local play_out_json="${logs}/${test}.json"
     local play_out_json_prefix="$( echo $play_out_json | cut -d'.' -f1 )"
-    local tasks_out_json="$play_out_json_prefix-$task_name.json"
+    local tasks_out_json="${play_out_json_prefix}-${task_name}.json"
 
     jq --arg TASK_NAME "$task_name" \
       '.plays[0].tasks[] | select(.task.name==$TASK_NAME and (.hosts.localhost.skipped != null and .hosts.localhost.skipped | not)) | .task' \
-      "$play_out_json" >"$tasks_out_json"
+      $play_out_json >$tasks_out_json
 
     task_ids="$( jq -r '.id' $tasks_out_json )"
 
@@ -1056,7 +986,7 @@ function ejr() {
 
     jq \
       '.plays[0].tasks[] | select(.hosts.localhost.skipped != null and .hosts.localhost.skipped | not) | .task' \
-      "$play_out_json" >"$tasks_out_json"
+      $play_out_json >$tasks_out_json
 
     task_ids="$( jq -r '.id' $tasks_out_json )"
 
@@ -1118,7 +1048,7 @@ function ejji() {
     success="$( jq -r '.output.success_count' "$task_resources_out_json" )"
     total="$( jq -r '.output.total_count' "$task_resources_out_json" )"
 
-    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending) and has taken $duration seconds"
+    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending) and has taken $duration seconds""
 }
 
 function task_examine() {
@@ -1146,9 +1076,9 @@ function task_examine() {
 
     if (( rc == 0 )); then
         started="$( awk -F'"' '/^results.tasks.start=/ {printf ("%s", $2)}' $log_report )"
-        started_ts="$( gdate -d $started +%s )"
+        started_ts="$( date -d $started +%s )"
         ended="$( awk -F'"' '/^results.tasks.end=/ {printf ("%s", $2)}' $log_report )"
-        ended_ts="$( gdate -d $ended +%s )"
+        ended_ts="$( date -d $ended +%s )"
         duration="$( awk -F'"' '/^results.tasks.duration=/ {printf ("%.0f", $2)}' $log_report )"
         head_tail_perc="$( awk -F'"' '/^results.tasks.percentage_removed=/ {printf ("%.2f", $2)}' $log_report )"
         log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts) and has taken $duration seconds"
