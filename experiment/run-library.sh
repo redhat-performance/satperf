@@ -1048,7 +1048,7 @@ function ejji() {
     success="$( jq -r '.output.success_count' "$task_resources_out_json" )"
     total="$( jq -r '.output.total_count' "$task_resources_out_json" )"
 
-    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending) and has taken $duration seconds""
+    echo "Examined task $task_id: $success / $total successful executions ($failed failed / $cancelled cancelled / $pending pending) and has taken $duration seconds"
 }
 
 function task_examine() {
