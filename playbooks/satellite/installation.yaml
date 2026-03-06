@@ -18,7 +18,7 @@
     - role: ../common/roles/enlarge-arp-table
     - role: linux-system-roles.timesync
     - role: linux-system-roles.rhc
-    - role: upgrade-restart
+    - role: ../common/roles/upgrade-restart
     - role: linux-system-roles.firewall
     - role: linux-system-roles.storage
     - role: repo_setup
