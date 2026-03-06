@@ -2,12 +2,15 @@
 - name: Enable foremanctl COPR
   community.general.copr:
     name: "@theforeman/foremanctl"
+    # name: "ekohl/foreman-nightly-staging"
     chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
 
 - name: Install foremanctl package
   ansible.builtin.dnf:
     name: foremanctl
     state: present
+    # # XXX:
+    # disable_gpg_check: true
 
 - name: Use code from git
   when:
@@ -15,7 +18,7 @@
   block:
     - name: Set required variable(s) values
       ansible.builtin.set_fact:
-        organization: "{{ organization | default('theforeman') }}"
+        _foremanctl_organization: "{{ organization | default('theforeman') }}"
 
     - name: PRs
       when:
@@ -23,31 +26,29 @@
       block:
         - name: Set required variable(s) values
           ansible.builtin.set_fact:
-            prs_list: "{{ prs | split }}"
+            _foremanctl_prs_list: "{{ prs | split }}"
 
-        - name: Clone foremanctl git repo
+        - name: Clone foremanctl git repo  # noqa: latest[git]
           ansible.builtin.git:
-            repo: "https://github.com/{{ organization }}/foremanctl.git"
+            repo: "https://github.com/{{ _foremanctl_organization }}/foremanctl.git"
             dest: /tmp/foremanctl
             refspec: '+refs/pull/*:refs/heads/*'
+            version: HEAD
 
-        - name: "Checkout foremanctl PRs: {{ prs_list }}"
-          ansible.builtin.shell:
-            cmd: |
-              cd /tmp/foremanctl && git pull --rebase origin refs/pull/{{ item }}/head
-          loop: "{{ prs_list }}"
+        - name: "Checkout foremanctl PRs: {{ _foremanctl_prs_list }}"  # noqa: command-instead-of-module
+          ansible.builtin.command:
+            cmd: git pull --rebase origin refs/pull/{{ item }}/head
+            chdir: /tmp/foremanctl
+          loop: "{{ _foremanctl_prs_list }}"
+          changed_when: true
 
-    - name: version
+    - name: Version
       when:
         - version is defined and version | length > 0
       block:
-        - name: Set required variable(s) values
-          ansible.builtin.set_fact:
-            version: "{{ version }}"
-
         - name: Clone foremanctl git repo
           ansible.builtin.git:
-            repo: "https://github.com/{{ organization }}/foremanctl.git"
+            repo: "https://github.com/{{ _foremanctl_organization }}/foremanctl.git"
             dest: /tmp/foremanctl
             version: "{{ version }}"
 
@@ -58,7 +59,8 @@
         mode: 'preserve'
         remote_src: true
 
-    - ansible.builtin.file:
+    - name: Remove original src directory
+      ansible.builtin.file:
         path: /usr/share/foremanctl/src/
         state: absent
 
@@ -66,6 +68,7 @@
       ansible.builtin.copy:
         src: /tmp/foremanctl/src/
         dest: /usr/share/foremanctl/src/
+        mode: 'preserve'
         remote_src: true
 
 - name: Log in to the registry
@@ -79,168 +82,125 @@
     - registry_username is defined and registry_username | length > 0
     - registry_password is defined and registry_password | length > 0
 
+- name: Override images vars file
+  ansible.builtin.include_role:
+    name: override_images
+  when:
+    - override_images_content_file is defined and override_images_content_file | length > 0
+
 - name: Set deployer command
   ansible.builtin.set_fact:
-    deployer: foremanctl
+    _foremanctl_deployer: foremanctl
 
 - name: Set command line to pull images
   ansible.builtin.set_fact:
-    pull_images_cmd: "{{ deployer }} pull-images"
+    _foremanctl_pull_images_cmd: "{{ _foremanctl_deployer }} pull-images"
 
 - name: Pull images
   block:
-    - name: Set common container values
-      ansible.builtin.set_fact:
-        container_tag_stream: "{{ container_tag_stream }}"
-      when:
-        - container_tag_stream is defined and container_tag_stream | length > 0
-
-    - name: Set Candlepin container vars
-      ansible.builtin.set_fact:
-        pull_images_cmd: "{{ pull_images_cmd }} --candlepin-container-image {{ candlepin_container_image }} --candlepin-container-tag {{ container_tag_stream }}"
-      when:
-        - candlepin_container_image is defined and candlepin_container_image | length > 0
-        - container_tag_stream is defined and container_tag_stream | length > 0
-
-    - name: Set Foreman container vars
-      ansible.builtin.set_fact:
-        pull_images_cmd: "{{ pull_images_cmd }} --foreman-container-image {{ foreman_container_image }} --foreman-container-tag {{ container_tag_stream }}"
-      when:
-        - foreman_container_image is defined and foreman_container_image | length > 0
-        - container_tag_stream is defined and container_tag_stream | length > 0
-
-    - name: Set Pulp container vars
-      ansible.builtin.set_fact:
-        pull_images_cmd: "{{ pull_images_cmd }} --pulp-container-image {{ pulp_container_image }} --pulp-container-tag {{ container_tag_stream }}"
-      when:
-        - pulp_container_image is defined and pulp_container_image | length > 0
-        - container_tag_stream is defined and container_tag_stream | length > 0
-
-    - name: Set Foreman proxy container vars
-      ansible.builtin.set_fact:
-        pull_images_cmd: "{{ pull_images_cmd }} --foreman-proxy-container-image {{ foreman_proxy_container_image }} --foreman-proxy-container-tag {{ container_tag_stream }}"
-      when:
-        - foreman_proxy_container_image is defined and foreman_proxy_container_image | length > 0
-        - container_tag_stream is defined and container_tag_stream | length > 0
-
-    - name: Set PostgreSQL container vars
-      ansible.builtin.set_fact:
-        pull_images_cmd: "{{ pull_images_cmd }} --postgresql-container-image {{ postgresql_container_image }} --postgresql-container-tag latest"
-      when:
-        - postgresql_container_image is defined and postgresql_container_image | length > 0
-
-    - name: Set Redis container vars
-      ansible.builtin.set_fact:
-        pull_images_cmd: "{{ pull_images_cmd }} --redis-container-image {{ redis_container_image }} --redis-container-tag latest"
-      when:
-        - redis_container_image is defined and redis_container_image | length > 0
-
     - name: Show command line to pull images
       ansible.builtin.debug:
-        msg: "{{ pull_images_cmd }}"
+        msg: "{{ _foremanctl_pull_images_cmd }}"
 
     - name: Pull images
       ansible.builtin.command:
-        cmd: "{{ pull_images_cmd }}"
-      register: pull_images_cmd_out
-      # XXX: Ignore errors in order to be able to show `pull_images_cmd_out.stdout_lines`
+        cmd: "{{ _foremanctl_pull_images_cmd }}"
+      register: _foremanctl_pull_images_cmd_out
+      # XXX: Ignore errors in order to be able to show `_foremanctl_pull_images_cmd_out.stdout_lines`
       ignore_errors: true
+      changed_when: true
 
     - name: Show pull images output
       ansible.builtin.debug:
-        var: pull_images_cmd_out.stdout_lines
+        var: _foremanctl_pull_images_cmd_out.stdout_lines
       failed_when:
-        - pull_images_cmd_out is failed
+        - _foremanctl_pull_images_cmd_out is failed
 
 - name: Set command line to deploy
   ansible.builtin.set_fact:
-    deploy_cmd: "{{ deployer }} deploy"
+    _foremanctl_deploy_cmd: "{{ _foremanctl_deployer }} deploy"
 
 - name: Initial deployment
   block:
     - name: Set basic deployment command line
       ansible.builtin.set_fact:
-        initial_deploy_cmd: "{{ deploy_cmd }} --foreman-initial-admin-password {{ password | default('{{ foreman_password }}') }}"
+        _foremanctl_initial_deploy_cmd: >-
+          {{ _foremanctl_deploy_cmd }}
+          --foreman-initial-admin-password {{ password | default('{{ foreman_password }}') }}
 
     - name: Show deployment command line
       ansible.builtin.debug:
-        msg: "{{ initial_deploy_cmd }}"
+        msg: "{{ _foremanctl_initial_deploy_cmd }}"
 
     - name: Run deployment
       ansible.builtin.command:
-        cmd: "{{ initial_deploy_cmd }}"
-      register: initial_deploy_cmd_out
-      # XXX: Ignore errors in order to be able to show `initial_deploy_cmd_out.stdout_lines`
+        cmd: "{{ _foremanctl_initial_deploy_cmd }}"
+      register: _foremanctl_initial_deploy_cmd_out
+      # XXX: Ignore errors in order to be able to show `_foremanctl_initial_deploy_cmd_out.stdout_lines`
       ignore_errors: true
+      changed_when: true
 
     - name: Show deployment output
       ansible.builtin.debug:
-        var: initial_deploy_cmd_out.stdout_lines
+        var: _foremanctl_initial_deploy_cmd_out.stdout_lines
       failed_when:
-        - initial_deploy_cmd_out is failed
+        - _foremanctl_initial_deploy_cmd_out is failed
 
     - name: Calculate deployment duration
       ansible.builtin.set_fact:
-        duration: "{{ (initial_deploy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (initial_deploy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+        _foremanctl_duration: >-
+          {{ (_foremanctl_initial_deploy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+             - (_foremanctl_initial_deploy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
 
     - name: Show deployment duration
       ansible.builtin.debug:
-        msg: "ForemanctlDeploy {{ initial_deploy_cmd_out.start }} to {{ initial_deploy_cmd_out.end }} taking {{ duration }} seconds"
+        msg: >-
+          ForemanctlDeploy {{ _foremanctl_initial_deploy_cmd_out.start }}
+          to {{ _foremanctl_initial_deploy_cmd_out.end }}
+          taking {{ _foremanctl_duration }} seconds
 
 - name: Add features
   block:
-    - name: Set base feature deployment command line
+    - name: Add iop to features if enabled
       ansible.builtin.set_fact:
-        add_features_cmd: "{{ deploy_cmd }}"
+        foremanctl_features: "{{ foremanctl_features + ['iop'] }}"
+      when: enable_iop | default(false) | bool
 
-    - name: foreman-proxy
-      block:
-        - name: Set `foreman-proxy` feature deployment command line
-          ansible.builtin.set_fact:
-            add_features_cmd: "{{ add_features_cmd }} --add-feature foreman-proxy"
+    - name: Setup Foreman repositories for hammer
+      ansible.builtin.include_role:
+        name: theforeman.operations.foreman_repositories
+      vars:
+        foreman_repositories_version: nightly
+        foreman_repositories_katello_version: nightly
+      when: "'hammer' in foremanctl_features"
 
-    - name: hammer
-      block:
-        - name: Setup Foreman repositories
-          ansible.builtin.include_role:
-            name: theforeman.operations.foreman_repositories
-          vars:
-            foreman_repositories_version: nightly
-            foreman_repositories_katello_version: nightly
-
-        - name: Set feature deployment command line
-          ansible.builtin.set_fact:
-            add_features_cmd: "{{ add_features_cmd }} --add-feature hammer"
-
-    - name: IOP
-      when:
-        - enable_iop | default(false) | bool
-      block:
-        - name: Set `IOP` feature deployment command line
-          ansible.builtin.set_fact:
-            add_features_cmd: "{{ add_features_cmd }} --add-feature iop"
+    - name: Set features deployment command line
+      ansible.builtin.set_fact:
+        _foremanctl_add_features_cmd: >-
+          {{ _foremanctl_deploy_cmd }}
+          {{ foremanctl_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ') }}
 
     - name: Show features deployment command line
       ansible.builtin.debug:
-        msg: "{{ add_features_cmd }}"
+        msg: "{{ _foremanctl_add_features_cmd }}"
 
     - name: Run features deployment
       ansible.builtin.command:
-        cmd: "{{ add_features_cmd }}"
-      register: add_features_cmd_out
-      # XXX: Ignore errors in order to be able to show `add_features_cmd_out.stdout_lines`
+        cmd: "{{ _foremanctl_add_features_cmd }}"
+      register: _foremanctl_add_features_cmd_out
+      # XXX: Ignore errors in order to be able to show
+      # `_foremanctl_add_features_cmd_out.stdout_lines`
       ignore_errors: true
+      changed_when: true
 
     - name: Show features deployment output
       ansible.builtin.debug:
-        var: add_features_cmd_out.stdout_lines
+        var: _foremanctl_add_features_cmd_out.stdout_lines
       failed_when:
-        - add_features_cmd_out is failed
+        - _foremanctl_add_features_cmd_out is failed
 
-    - name: hammer
-      block:
-        - name: Disable the Foreman repositories
-          ansible.builtin.dnf:
-            name: foreman-release
-            state: absent
-...
+    - name: Disable Foreman repositories
+      ansible.builtin.dnf:
+        name: foreman-release
+        state: absent
+      when: "'hammer' in foremanctl_features"
