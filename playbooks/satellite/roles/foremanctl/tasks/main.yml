@@ -35,9 +35,12 @@
             refspec: '+refs/pull/*:refs/heads/*'
             version: HEAD
 
-        - name: "Checkout foremanctl PRs: {{ _foremanctl_prs_list }}"  # noqa: command-instead-of-module
-          ansible.builtin.command:
-            cmd: git pull --rebase origin refs/pull/{{ item }}/head
+        - name: "Apply foremanctl PRs: {{ _foremanctl_prs_list }}"  # noqa: command-instead-of-module
+          ansible.builtin.shell:
+            cmd: >-
+              git fetch origin refs/pull/{{ item }}/head &&
+              git format-patch $(git merge-base HEAD FETCH_HEAD)..FETCH_HEAD --stdout |
+              git am
             chdir: /tmp/foremanctl
           loop: "{{ _foremanctl_prs_list }}"
           changed_when: true
