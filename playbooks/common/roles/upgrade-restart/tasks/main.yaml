@@ -1,19 +1,41 @@
 ---
+- name: Gather facts
+  ansible.builtin.gather_facts:
+
 - name: Set timezone to UTC
   community.general.timezone:
     name: UTC
-    
-- name: "Upgrade"
+
+# Ensure redhat-release is up to date before upgrading to avoid conflicts
+# with packages that depend on a specific redhat-release version.
+# See: https://access.redhat.com/solutions/3449341
+- name: Update redhat-release before upgrade when version is below 10.1-17
+  when:
+    - ansible_distribution == "RedHat"
+    - ansible_distribution_version == "10.1"
+  block:
+    - name: Gather package facts for redhat-release version check
+      ansible.builtin.package_facts:
+        manager: rpm
+
+    - name: Update redhat-release if version is below 10.1-17
+      ansible.builtin.dnf:
+        name: redhat-release
+        state: latest
+      when:
+        - ansible_facts.packages['redhat-release'][0].release.split('.')[0] | int < 17
+
+- name: Upgrade
   ansible.builtin.dnf:
     name: '*'
     state: latest
   register: dnf_upgrade_cmd
 
-- name: "Show upgrade result"
+- name: Show upgrade result
   ansible.builtin.debug:
     var: dnf_upgrade_cmd
 
-- name: "Check if reboot is necessary"
+- name: Check if reboot is necessary
   ansible.builtin.command:
     cmd:
       dnf needs-restarting -r
@@ -22,7 +44,7 @@
   failed_when:
     - dnf_needs_restarting_cmd.rc not in [0, 1]
 
-- name: "Reboot"
+- name: Reboot
   ansible.builtin.reboot:
   when:
     - dnf_needs_restarting_cmd.rc == 1
