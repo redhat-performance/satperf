@@ -70,17 +70,17 @@ $ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/docker/
 ### To prepare Satellite:
 
 ```
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/common/common.yaml --skip-tags "non-async"
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/satellite-capsule_common.yaml --skip-tags "non-async"
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/satellite_specific.yaml --skip-tags "non-async"
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/common/common.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/satellite-capsule_common.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/satellite_specific.yaml
 ```
 
 ### To prepare Capsules:
 
 ```
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/common/common.yaml --skip-tags "non-async"
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/satellite-capsule_common.yaml --skip-tags "non-async"
-$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/capsules_specific.yaml --skip-tags "non-async"
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/common/common.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/satellite-capsule_common.yaml
+$ ansible-playbook --private-key conf/id_rsa -i conf/hosts.ini playbooks/satellite/capsules_specific.yaml
 ```
 
 ### To install Collectd:
