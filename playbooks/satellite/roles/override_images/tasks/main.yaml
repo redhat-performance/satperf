@@ -1,0 +1,26 @@
+---
+- name: Check that provided path is a real file
+  ansible.builtin.stat:
+    path: "{{ override_images_content_file }}"
+  delegate_to: localhost
+  register: _override_images_st
+
+- name: Copy content_file to /usr/share/foremanctl/src/vars/images.yml
+  ansible.builtin.copy:
+    src: "{{ override_images_content_file }}"
+    dest: /usr/share/foremanctl/src/vars/images.yml
+    mode: 'preserve'
+  when: _override_images_st.stat.exists
+
+- name: Write inline content to /usr/share/foremanctl/src/vars/images.yml
+  ansible.builtin.copy:
+    content: "{{ override_images_content_file }}"
+    dest: /usr/share/foremanctl/src/vars/images.yml
+    mode: '0644'
+  when: not _override_images_st.stat.exists
+
+- name: Remove content_file now that its content has been copied
+  ansible.builtin.file:
+    path: "{{ override_images_content_file }}"
+    state: absent
+  delegate_to: localhost
