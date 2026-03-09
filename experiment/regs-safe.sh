@@ -363,7 +363,7 @@ section 'Register'
 number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
 number_containers_per_container_host="$( ansible $opts_adhoc -m ansible.builtin.debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 total_number_containers="$(( number_container_hosts * number_containers_per_container_host ))"
-concurrent_registrations_per_container_host="$(( expected_concurrent_registrations / number_container_hosts ))"
+concurrent_registrations_per_container_host="$(( expected_concurrent_registrations / number_container_hosts / 4 * 4 < 4 ? 4 : expected_concurrent_registrations / number_container_hosts / 4 * 4 ))"
 concurrent_registrations="$(( concurrent_registrations_per_container_host * number_container_hosts ))"
 registration_iterations="$(( ( total_number_containers + concurrent_registrations - 1 ) / concurrent_registrations ))" # We want ceiling rounding: Ceiling( X / Y ) = ( X + Y – 1 ) / Y
 prefix=70-register
