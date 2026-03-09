@@ -66,9 +66,9 @@ section "Incremental registrations and remote execution"
 number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
 number_containers_per_container_host="$( ansible $opts_adhoc -m debug -a "var=containers_count" container_hosts[0] | awk '/    "containers_count":/ {print $NF}' )"
 if (( initial_expected_concurrent_registrations > number_container_hosts )); then
-    initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
+    initial_concurrent_registrations_per_container_host="$(( initial_expected_concurrent_registrations / number_container_hosts / 4 * 4 < 4 ? 4 : initial_expected_concurrent_registrations / number_container_hosts / 4 * 4 ))"
 else
-    initial_concurrent_registrations_per_container_host=1
+    initial_concurrent_registrations_per_container_host=4
 fi
 num_retry_forks="$(( initial_expected_concurrent_registrations / number_container_hosts ))"
 job_template_ssh_default='Run Command - Script Default'
