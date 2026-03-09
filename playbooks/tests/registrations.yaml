@@ -51,6 +51,15 @@
       ansible.builtin.assert:
         that: "containers_used_count | int < containers_count | int"
 
+    - name: Assert size is a multiple of 4 and at least 4
+      ansible.builtin.assert:
+        that:
+          - size | int >= 4
+          - size | int % 4 == 0
+        fail_msg: >-
+          size must be a multiple of 4 (got {{ size }}): containers are
+          selected in groups of 4 (2×EL8 + 1×EL9 + 1×EL10)
+
     - name: Set required variables for registration script
       ansible.builtin.set_fact:
         used_count: "{{ ( containers_used_count | int / 4 ) | int }}"
