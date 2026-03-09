@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Kill pending tasks"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:
@@ -97,23 +98,79 @@
     - name: Verify task cancellation/stop
       when: __pending_tasks.resources | length > 0
       block:
-        - name: Wait a moment for tasks to update
-          ansible.builtin.pause:
-            seconds: 5
+        - name: Set task ID search query
+          ansible.builtin.set_fact:
+            _task_ids_query: "id ^ ({{ __pending_tasks.resources | map(attribute='id') | join(',') }})"
 
-        - name: Verify tasks were cancelled/stopped
+        - name: Wait for tasks to react to cancellation
+          ansible.builtin.pause:
+            seconds: 30
+
+        - name: Check if tasks are still pending
           theforeman.foreman.resource_info:
             resource: foreman_tasks
-            search: "id ^ ({{ __pending_tasks.resources | map(attribute='id') | join(',') }})"
-          register: __tasks_after
+            search: "{{ _task_ids_query }} and state = running and result = pending"
+          register: __still_pending_tasks
+
+        - name: Force stop still-pending tasks
+          when: __still_pending_tasks.resources | length > 0
+          block:
+            - name: Show tasks that ignored cancellation
+              ansible.builtin.debug:
+                msg: >-
+                  {{ __still_pending_tasks.resources | length }} task(s) still pending after
+                  {{ operation }}; attempting force stop
+
+            - name: Force stop via bulk_stop
+              ansible.builtin.uri:
+                url: "{{ foreman_server_url }}/foreman_tasks/api/tasks/bulk_stop"
+                method: POST
+                user: "{{ foreman_username }}"
+                password: "{{ foreman_password }}"
+                force_basic_auth: true
+                validate_certs: "{{ foreman_validate_certs | default(false) }}"
+                body_format: json
+                body:
+                  search: "{{ _task_ids_query }} and state = running and result = pending"
+                status_code: [200, 400]
+              register: __force_stop_result
+
+            - name: Show force stop result
+              ansible.builtin.debug:
+                msg: "{{ __force_stop_result.json | default(__force_stop_result.msg | default('N/A')) }}"
+
+            - name: Wait for force stopped tasks to terminate
+              ansible.builtin.pause:
+                seconds: 60
+
+            - name: Check if tasks are still pending after force stop
+              theforeman.foreman.resource_info:
+                resource: foreman_tasks
+                search: "{{ _task_ids_query }} and state = running and result = pending"
+              register: __still_pending_after_force
+
+            - name: Show tasks still pending after force stop
+              ansible.builtin.debug:
+                msg: "{{ __still_pending_after_force.resources | length }} task(s) still pending after force stop"
+
+            - name: Fail if tasks could not be stopped
+              ansible.builtin.fail:
+                msg: >-
+                  {{ __still_pending_after_force.resources | length }} task(s) could not be stopped:
+                  {{ __still_pending_after_force.resources | map(attribute='id') | join(', ') }}
+              when: __still_pending_after_force.resources | length > 0
 
         - name: Show final task states
+          theforeman.foreman.resource_info:
+            resource: foreman_tasks
+            search: "{{ _task_ids_query }}"
+          register: __tasks_after
+
+        - name: Display final task states
           ansible.builtin.debug:
             msg:
               - "Task ID: {{ item.id }}"
-              - "Previous State: running/pending"
               - "Current State: {{ item.state }}/{{ item.result }}"
           loop: "{{ __tasks_after.resources }}"
           loop_control:
             label: "Task {{ item.id }}"
-...
