@@ -47,6 +47,53 @@
       ansible.builtin.debug:
         msg: "Register {{ registration.start }} to {{ registration.end }} taking {{ reg_duration }} seconds"
 
+    - name: Configure yggdrasil log-level to debug
+      when:
+        - registration is succeeded
+      block:
+        - name: Check if yggdrasil config exists
+          ansible.builtin.stat:
+            path: /etc/yggdrasil/config.toml
+          register: yggdrasil_config_file
+
+        - name: Configure yggdrasil debug logging
+          when:
+            - yggdrasil_config_file.stat.exists
+          block:
+            - name: Detect RHEL release
+              ansible.builtin.setup:
+                filter:
+                  - ansible_distribution_major_version
+
+            - name: Set yggdrasil service name
+              ansible.builtin.set_fact:
+                yggdrasil_service_name: "{{ 'yggdrasil' if ansible_facts['distribution_major_version'] == '10' else 'yggdrasild' }}"
+
+            - name: Check if yggdrasil service is running
+              ansible.builtin.systemd:
+                name: "{{ yggdrasil_service_name }}"
+              register: yggdrasil_service_status
+              failed_when: false
+
+            - name: Apply debug configuration
+              when:
+                - yggdrasil_service_status.status is defined
+                - yggdrasil_service_status.status.ActiveState == "active"
+              block:
+                - name: Set yggdrasil log-level to debug
+                  ansible.builtin.lineinfile:
+                    path: /etc/yggdrasil/config.toml
+                    regexp: '^log-level\s*=\s*".*"'
+                    line: 'log-level = "debug"'
+                  register: yggdrasil_config
+
+                - name: Restart yggdrasil service
+                  ansible.builtin.systemd:
+                    name: "{{ yggdrasil_service_name }}"
+                    state: restarted
+                  when:
+                    - yggdrasil_config is changed
+
     # - name: "Disable insights-client automatic scheduling"
     #   ansible.builtin.shell:
     #     cmd: |
