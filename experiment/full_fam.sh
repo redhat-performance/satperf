@@ -1088,7 +1088,7 @@ for rex_search_query in $rex_search_queries; do
       playbooks/tests/FAM/job_invocation_create.yaml
     ejji $test
 
-    if $enable_iop && vercmp_ge "$version" '6.17.0'; then
+    if $enable_iop && vercmp_ge "$sat_version" '6.17.0'; then
         test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
@@ -1134,7 +1134,7 @@ for rex_search_query in $rex_search_queries; do
         #       playbooks/tests/FAM/job_invocation_create.yaml
         #     ejji $test
         # fi  # vercmp_ge "$sat_version" '6.18.0'
-    fi  # $enable_iop && vercmp_ge "$version" '6.17.0'
+    fi  # $enable_iop && vercmp_ge "$sat_version" '6.17.0'
 
     if (( num_matching_rex_ssh_hosts > 0 )); then
         test="69f-rex-katello_package_update_ssh-${num_matching_rex_ssh_hosts}"
@@ -1163,7 +1163,7 @@ rex_search_query=container
 search_query="name ~ $rex_search_query"
 num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
 
-if $enable_iop && vercmp_ge "$version" '6.17.0'; then
+if $enable_iop && vercmp_ge "$sat_version" '6.17.0'; then
     test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
     apj $test \
       -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
@@ -1173,7 +1173,7 @@ if $enable_iop && vercmp_ge "$version" '6.17.0'; then
       -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
       playbooks/tests/FAM/job_invocation_create.yaml
     ejji $test
-fi  # $enable_iop && vercmp_ge "$version" '6.17.0'
+fi  # $enable_iop && vercmp_ge "$sat_version" '6.17.0'
 
 
 # ReX cleanup
