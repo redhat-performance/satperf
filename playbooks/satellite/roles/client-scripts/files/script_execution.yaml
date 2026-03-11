@@ -1,0 +1,46 @@
+---
+- hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Execute script
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          if [[ -f /root/script-execution.log && ! -f /root/script-execution.log.orig ]]; then
+              cp -p /root/script-execution.log /root/script-execution.log.orig
+          fi
+
+          {{ script }} &>/root/script-execution.log
+          ret=$?
+
+          echo '-' >>/root/script-execution.log
+          echo "Return code: $ret" >>/root/script-execution.log
+          echo '-----' >>/root/script-execution.log
+
+          cat /root/script-execution.log
+          exit $ret
+      environment:
+        TZ: UTC
+      register: execution
+      ignore_errors: true
+
+    - name: Execute script - output
+      ansible.builtin.debug:
+        var: execution.stdout_lines
+      failed_when:
+        - execution is failed
+
+    - name: Calculate execution duration
+      ansible.builtin.set_fact:
+        exec_duration: >-
+          {{ (execution.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() -
+             (execution.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
+
+    - name: Execute script - timings
+      ansible.builtin.debug:
+        msg: >-
+          Execute {{ execution.start }} to {{ execution.end }}
+          taking {{ exec_duration }} seconds
+...

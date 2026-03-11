@@ -58,6 +58,7 @@
   loop:
     - host-registration_prepare.yaml
     - host-registration.yaml
+    - script_execution.yaml
 
 - name: Distribute podman related scripts
   ansible.builtin.template:

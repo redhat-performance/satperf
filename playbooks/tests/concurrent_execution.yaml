@@ -1,0 +1,176 @@
+---
+- name: Execute script concurrently on containers
+  hosts: container_hosts
+  gather_facts: false
+  vars:
+    size: 10
+    script: "echo 'Hello World'"
+    execution_logs: execution_logs
+
+  tasks:
+    - name: "Set default variable(s) values"
+      ansible.builtin.set_fact:
+        location: >-
+          {{ location | default('{{ sat_loc }}') | default('Default Location') }}
+
+    - name: "Get group name of the location(s)"
+      ansible.builtin.set_fact:
+        location_groupname: "location_{{ location | lower }}"
+
+    - name: Check whether we have already used some containers
+      ansible.builtin.stat:
+        path: /root/container-used-count
+      register: container_used_count_path
+
+    - name: No containers yet used
+      when:
+        - not container_used_count_path.stat.exists
+      block:
+        - name: Set number of used containers to 0
+          ansible.builtin.set_fact:
+            containers_used_count: 0
+
+    - name: Containers already used
+      when:
+        - container_used_count_path.stat.exists
+      block:
+        - name: Get number of containers already used
+          ansible.builtin.command:
+            cmd: cat /root/container-used-count
+          register: containers_used_count_cmd
+
+        - name: Set number of used containers based on file contents
+          ansible.builtin.set_fact:
+            containers_used_count: "{{ containers_used_count_cmd.stdout }}"
+
+    - name: Ensure we have enough free containers
+      ansible.builtin.assert:
+        that: "containers_used_count | int < containers_count | int"
+
+    - name: Assert size is a multiple of 4 and at least 4
+      ansible.builtin.assert:
+        that:
+          - size | int >= 4
+          - size | int % 4 == 0
+        fail_msg: >-
+          size must be a multiple of 4 (got {{ size }}): containers are
+          selected in groups of 4 (2×EL8 + 1×EL9 + 1×EL10)
+
+    - name: Set required variables for script execution
+      ansible.builtin.set_fact:
+        used_count: "{{ ( containers_used_count | int / 4 ) | int }}"
+        select_size: "{{ ( size | int / 4 ) | int }}"
+        inventory_file: "clients_execution_{{ size }}.ini"
+
+    - name: Generate list of containers we are going to use
+      ansible.builtin.shell:
+        cmd: |
+          used_count={{ used_count }}
+          select_size={{ select_size }}
+
+          rm -f {{ inventory_file }}
+
+          for el_version in el8 el9 el10; do
+              if [[ "$el_version" == 'el8' ]]; then
+                  start_line="$(( used_count * 2 ))"
+                  end_line="$(( start_line + ( select_size * 2 ) ))"
+              else
+                  start_line="$(( used_count ))"
+                  end_line="$(( start_line + select_size ))"
+              fi
+
+              awk -v EL=$el_version '$0 ~ "^"EL"-" {print $0}' \
+                /root/container-ips.shuffled |
+                awk -v START_LINE=$start_line -v END_LINE=$end_line \
+                'NR > START_LINE && NR <= END_LINE {print $NF}' |
+                tee -a {{ inventory_file }}
+          done
+      register: clients_ini
+      changed_when: false
+
+    - name: Set base log name
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: >-
+          /root/out-{{
+            lookup('pipe', 'date -u -Iseconds') |
+            regex_replace('[^A-Za-z0-9-]', '_')
+          }}
+      run_once: true
+
+    - name: Set script_execution.yaml log name
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}_execution.log"
+      run_once: true
+
+    - name: Run script_execution.yaml (log = {{ clients_yaml_cmd_log }})
+      ansible.builtin.shell:
+        cmd: |
+          ansible-playbook \
+            --private-key /root/id_rsa_key \
+            --forks {{ size }} \
+            --inventory {{ inventory_file }} \
+            --extra-vars 'script="{{ script }}"' \
+            script_execution.yaml |
+            tee {{ clients_yaml_cmd_log }}
+      ignore_errors: true
+
+    - name: Fetch execution logs
+      ansible.builtin.fetch:
+        src: "{{ clients_yaml_cmd_log }}"
+        dest: "{{ execution_logs }}"
+      ignore_errors: true
+
+    - name: Get execution timings
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          grep \
+            '"msg". "Execute' {{ clients_yaml_cmd_log }} |
+            cut -d '"' -f 4
+      register: clients_yaml_grepper_timings
+      ignore_errors: true
+      changed_when: false
+
+    - name: "Append execution timings to central list"
+      ansible.builtin.set_fact:
+        grepper_times: >-
+          {{
+            grepper_times | default([]) +
+            hostvars[item]['clients_yaml_grepper_timings']['stdout_lines']
+          }}
+      with_items: "{{ ansible_play_batch }}"
+      run_once: true
+
+    - name: "Show execution timings"
+      ansible.builtin.debug:
+        var: grepper_times
+      run_once: true
+
+    - name: "Show number of successful execution events"
+      ansible.builtin.debug:
+        var: grepper_times | length
+      run_once: true
+
+    - name: Increment number of already used containers
+      ansible.builtin.lineinfile:
+        path: /root/container-used-count
+        regexp: .*
+        line: "{{ containers_used_count | int + size | int }}"
+        create: true
+        mode: '0644'
+
+    - name: Get number of hosts that failed to execute
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          grep 'failed=1' {{ clients_yaml_cmd_log }} | wc -l
+      register: num_failed_hosts
+      ignore_errors: true
+      changed_when: false
+
+    - name: Show number of hosts that failed to execute
+      ansible.builtin.debug:
+        msg: "{{ num_failed_hosts.stdout }} host(s) failed to execute the script"
+...
