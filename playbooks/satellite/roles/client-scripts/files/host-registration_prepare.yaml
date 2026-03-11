@@ -18,6 +18,7 @@
       ansible.builtin.shell:
         cmd: |
           rm -f /etc/yum.repos.d/*.repo
+      changed_when: false
 
     - name: Upload host registration script to content host
       ansible.builtin.copy:
