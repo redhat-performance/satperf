@@ -41,7 +41,9 @@
 
     - name: Calculate registration duration
       ansible.builtin.set_fact:
-        reg_duration: "{{ (registration.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (registration.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+        reg_duration: >-
+          {{ (registration.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() -
+             (registration.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
 
     - name: Register - timings
       ansible.builtin.debug:
