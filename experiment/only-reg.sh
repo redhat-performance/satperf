@@ -54,6 +54,7 @@ ap 44-generate-host-registration-command.log \
 
 skip_measurement='true' ap 44-recreate-client-scripts.log \
   -e "ak=ActivationKey" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/client-scripts.yaml
 
 
@@ -63,6 +64,7 @@ for i in $( seq $registrations_iterations ); do
       -e "size=$registrations_per_docker_hosts" \
       -e "registration_logs='../../$logs/44-register-docker-host-client-logs'" \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       playbooks/tests/registrations.yaml
     e Register $logs/44-register-$i.log
 done

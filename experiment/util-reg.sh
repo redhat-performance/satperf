@@ -77,6 +77,7 @@ ap 44-generate-host-registration-command.log \
 
 skip_measurement='true' ap 44-recreate-client-scripts.log \
   -e "ak=ActivationKey" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/client-scripts.yaml
 
 
@@ -87,6 +88,7 @@ for i in $( seq $registrations_iterations ); do
       -e "registration_logs='../../$logs/50-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       playbooks/tests/registrations.yaml
     e Register $logs/50-register-$i.log
 done

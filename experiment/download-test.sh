@@ -59,6 +59,7 @@ skip_measurement='true' ap downtest-44-generate-host-registration-command.log \
 
 skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
   -e "ak='$ak'" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/client-scripts.yaml
 
 
@@ -98,6 +99,7 @@ for (( batch=1, remaining_containers_per_container_host=$number_containers_per_c
       -e "registration_logs='../../$logs/44b-register-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='${sat_version}'" \
+      -e "enable_iop='$enable_iop'" \
       playbooks/tests/registrations.yaml
     e Register $logs/downtest-50-register-${batch}-${concurrent_registrations}.log
 

@@ -227,8 +227,8 @@ if ! $skip_down_setup; then
       "product create --organization '{{ sat_org }}' --name '$sat_client_product'"
 
     for rel in $rels; do
-        ccv="CCV_${rel}"
         os_rel="${rel##rhel}"
+        ccv="CCV_$os_rel"
         sat_client_repo_name="Satellite Client for RHEL $os_rel"
         sat_client_repo_url="${repo_sat_client}/Satellite_Client_RHEL${os_rel}_${basearch}/"
 
@@ -282,9 +282,9 @@ if ! $skip_down_setup; then
         ccv="CCV_${rel}"
 
         case $rel in
-        rhel[89])
-        # rhel[89]|rhel10)
-            rhsop_repo_name="rhosp-${rel}/openstack-base"
+        rhel[89]|rhel10)
+            # rhsop_repo_name="rhosp-${rel}/openstack-base"
+            rhsop_repo_name=rhoso/openstack-base-rhel9
 
             h "42-repository-create-rhosp-${rel}_openstack-base.log" \
               "repository create --organization '{{ sat_org }}' --product '$rhosp_product' --name '$rhsop_repo_name' --content-type docker --url '$rhosp_registry_url' --docker-upstream-name '$rhsop_repo_name' --upstream-username '$rhosp_registry_username' --upstream-password '$rhosp_registry_password'"
@@ -339,16 +339,20 @@ fi
 section 'Prepare for registrations'
 unset aks
 for rel in $rels; do
+    rel_num="${rel##rhel}"
+
     for lce in $lces; do
-        ak="AK_${rel}_${lce}"
-        aks+="$ak "
+        ak="AK_${rel_num}_${lce}"
+        aks+=" $ak"
     done
 done
 
+# XXX: FAM: theforeman.foreman.registration_command
 ap 60-generate-host-registration-commands.log \
   -e "organization='{{ sat_org }}'" \
   -e "aks='$aks'" \
   -e "sat_version='$sat_version'" \
+  -e "enable_iop='$enable_iop'" \
   playbooks/satellite/host-registration_generate-commands.yaml
 
 ap 61-recreate-client-scripts.log \
@@ -358,6 +362,7 @@ ap 61-recreate-client-scripts.log \
 
 unset skip_measurement
 
+export skip_measurement=true
 
 section 'Register'
 number_container_hosts="$( ansible $opts_adhoc --list-hosts container_hosts 2>/dev/null | grep -cv '^  hosts' )"
@@ -380,7 +385,8 @@ for (( i=initial_batch; i <= registration_iterations; i++ )); do
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
-      -e "profile='$profile'" \
+      -e "enable_iop='$enable_iop'" \
+      -e "profile='$profiling_enabled'" \
       -e "registration_profile_img='$registration_profile_img'" \
       playbooks/tests/registrations.yaml
     e Register $logs/$registration_log

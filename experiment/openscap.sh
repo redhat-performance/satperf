@@ -80,6 +80,7 @@ ap 44-generate-host-registration-command.log \
 
 skip_measurement='true' ap 44-recreate-client-scripts.log \
   -e "ak=ActivationKey" \
+  -e "sat_version='$sat_version'" \
   playbooks/satellite/client-scripts.yaml
 
 section "Prepare env for openSCAP test"
@@ -103,6 +104,7 @@ for batch in $registrations_batches; do
       -e "size=$batch" \
       -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       playbooks/tests/registrations.yaml
     e Register $logs/regs-50-register-$iter-$batch.log
     let sum=$(($sum + $batch))

@@ -12,6 +12,18 @@ generic_environment_check
 # unset skip_measurement
 # set +e
 
+# Initial version sanity check
+for rel in $rels; do
+    case "$rel" in
+    rhel[7-9]|rhel10)
+        continue
+        ;;
+    *)
+        echo "Wrong release: $rel!!!" && exit
+        ;;
+    esac
+done
+
 
 section 'Prepare for registrations'
 unset aks
@@ -65,6 +77,7 @@ for (( batch=1, remaining_containers_per_container_host=num_containers_per_conta
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       -e "profile='$profiling_enabled'" \
       -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml

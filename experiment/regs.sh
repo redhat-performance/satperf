@@ -97,6 +97,7 @@ for batch in $registrations_batches; do
       -e "registration_logs='../../$logs/regs-50-register-container-host-client-logs'" \
       -e "config_server_server_timeout=$registrations_config_server_server_timeout" \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       playbooks/tests/registrations.yaml
     e Register $logs/regs-50-register-$iter-$batch.log
     let iter+=1

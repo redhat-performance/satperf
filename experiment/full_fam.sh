@@ -64,10 +64,10 @@ ui_duration="${PARAM_ui_duration:-300}"
 ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
 
 
-section 'Checking environment'
-generic_environment_check
-# unset skip_measurement
-# set +e
+# section 'Checking environment'
+# generic_environment_check
+unset skip_measurement
+set +e
 
 # Initial version sanity check
 for rel in $rels; do
@@ -80,17 +80,6 @@ for rel in $rels; do
         ;;
     esac
 done  # for rel in $rels
-
-
-settings='[]'
-settings="$(echo "$settings" |
-  jq -c \
-  '. += [{"name": "foreman_proxy_content_auto_sync", "value": "false"}]')"
-
-test=00fr-settings
-apj $test \
-  -e "settings='$settings'" \
-  playbooks/tests/FAM/settings.yaml
 
 
 section 'Create LCE(s)'
@@ -119,7 +108,7 @@ test=09f-manifest-download
 skip_measurement=true apj $test \
   playbooks/tests/FAM/manifest_download.yaml
 
-test=09f-manifest-excercise
+test=09f-manifest-exercise
 skip_measurement=true apj $test \
   -e "runs='$manifest_exercise_runs'" \
   playbooks/tests/FAM/manifest_test.yaml
@@ -133,6 +122,17 @@ skip_measurement=true apj $test \
 
 
 # Get content
+settings="$(jq -cn \
+  '[{"name": "foreman_proxy_content_auto_sync", "value": "false"}]')"
+
+test=00fr-settings-foreman_proxy_content_auto_sync
+skip_measurement=true apj $test \
+  -e "settings='$settings'" \
+  playbooks/tests/FAM/settings.yaml
+
+
+# XXX: Move it here??
+# products='[]'
 content_views='[]'
 activation_keys='[]'
 
@@ -160,6 +160,7 @@ for product in "${tested_products[@]}"; do
     esac  # "$product"
 
     product_products='[]'
+    # XXX: Move it from here??
     products='[]'
 
     if [[ "$product" == "$flatpak_product" ]]; then
@@ -613,7 +614,6 @@ section 'Create, publish and promote big CV'
 product_code=Bench
 index_ten=6
 
-product_lifecycle_environments='[]'
 product_repositories='[]'
 
 # LCE creation
@@ -735,7 +735,6 @@ section 'Create, publish and promote filtered CV'
 product_code=BenchFiltered
 index_ten=7
 
-product_lifecycle_environments='[]'
 product_repositories='[]'
 
 # LCE creation
@@ -935,6 +934,7 @@ for content in $contents; do
     e CapusuleSync "${logs}/${test}.log"
 done  # for content in $contents
 
+exit
 
 section 'Prepare for registrations'
 unset aks
@@ -981,18 +981,19 @@ for (( batch=1, remaining_containers_per_container_host=num_containers_per_conta
 
     log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
 
-    test="${prefix}-${concurrent_registrations}"
-    ap "${test}.log" \
+    test="$prefix-${concurrent_registrations}"
+    ap "$test.log" \
       -e "size='$concurrent_registrations_per_container_host'" \
       -e "concurrent_registrations='$concurrent_registrations'" \
       -e "num_retry_forks='$num_retry_forks'" \
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       -e "profile='$profiling_enabled'" \
       -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml
-    e Register "${logs}/${test}.log"
+    e Register "$logs/$test.log"
 done
 grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
 e Register "$logs/$prefix-overall.log"

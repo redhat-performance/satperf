@@ -73,7 +73,7 @@ test=00f-manifest-download
 skip_measurement=true apj $test \
   playbooks/tests/FAM/manifest_download.yaml
 
-test=00f-manifest-excercise
+test=00f-manifest-exercise
 skip_measurement=true apj $test \
   -e "runs='$manifest_exercise_runs'" \
   playbooks/tests/FAM/manifest_test.yaml
@@ -313,6 +313,23 @@ skip_measurement=true h "26b-le-create-big-${prior}-${lce}.log" \
   "lifecycle-environment create --organization '{{ sat_org }}' --prior '$prior' --name '$lce'"
 h "26b-cv-promote-big-${prior}-${lce}.log" \
   "content-view version promote --organization '{{ sat_org }}' --content-view '$cv' --to-lifecycle-environment '$prior' --to-lifecycle-environment '$lce'"
+
+
+if vercmp_ge "$sat_version" '6.18.0'; then
+    section 'Create rolling CV'
+    cv=BenchRollingContentView
+    rel=rhel9
+    os_rel="${rel##rhel}"
+    os_releasever=$os_rel
+    os_product="Red Hat Enterprise Linux for $basearch"
+    os_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - BaseOS RPMs $os_releasever"
+    os_appstream_repo_name="Red Hat Enterprise Linux $os_rel for $basearch - AppStream RPMs $os_releasever"
+    os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_repo_name" )"
+    os_rids+=",$( get_repo_id '{{ sat_org }}' "$os_product" "$os_appstream_repo_name" )"
+
+    h 27-cv-create-rolling.log \
+      "content-view create --organization '{{ sat_org }}' --name '$cv' --repository-ids '$os_rids' --rolling"
+fi
 
 
 export skip_measurement=true
@@ -649,6 +666,7 @@ ap 44-generate-host-registration-commands.log \
   -e "organization='{{ sat_org }}'" \
   -e "aks='$aks'" \
   -e "sat_version='$sat_version'" \
+  -e "enable_iop='$enable_iop'" \
   playbooks/satellite/host-registration_generate-commands.yaml
 
 ap 44-recreate-client-scripts.log \
@@ -686,6 +704,7 @@ for (( batch=1, remaining_containers_per_container_host=num_containers_per_conta
       -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
       -e 're_register_failed_hosts=true' \
       -e "sat_version='$sat_version'" \
+      -e "enable_iop='$enable_iop'" \
       -e "profile='$profiling_enabled'" \
       -e "registration_profile_img='$test.svg'" \
       playbooks/tests/registrations.yaml

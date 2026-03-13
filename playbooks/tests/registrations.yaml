@@ -10,6 +10,7 @@
     registration_profile_img: registration_profile.svg
     re_register_failed_hosts: false
     profile: false
+    enable_iop: false
 
   tasks:
     - name: "Set default variable(s) values"
@@ -62,8 +63,8 @@
 
     - name: Set required variables for registration script
       ansible.builtin.set_fact:
-        used_count: "{{ ( containers_used_count | int / 4 ) | int }}"
-        select_size: "{{ ( size | int / 4 ) | int }}"
+        used_count: "{{ (containers_used_count | int / 4) | int }}"
+        select_size: "{{ (size | int / 4) | int }}"
         inventory_file: "clients_{{ size }}.ini"
 
     # XXX: We'll group them in multiples of 4 so there are always a multiple of:
@@ -109,10 +110,11 @@
             --private-key /root/id_rsa_key \
             --forks {{ num_retry_forks }} \
             --inventory {{ inventory_file }} \
+            --extra-vars 'enable_iop={{ enable_iop }}' \
             host-registration_prepare.yaml |
             tee {{ host_registration_prepare_cmd_log }}
       register: host_registration_prepare_cmd
-      ignore_errors: true
+      # ignore_errors: true
 
     - name: Try to patch `rhsm/connection.py` to add some error logging
       ansible.builtin.shell:
