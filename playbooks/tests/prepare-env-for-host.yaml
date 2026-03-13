@@ -1,0 +1,66 @@
+- hosts: satellite6
+  remote_user: root
+  gather_facts: no
+  vars_files:
+    - ../../conf/satperf.yaml
+    - ../../conf/satperf.local.yaml
+  tasks:
+   - name: create org
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" organization create --name "MyOrg"
+
+   - name: create loc
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" organization create --name "MyLoc"
+
+   - name: add org
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" add-organization --name "MyLoc" --organization "MyOrg"
+
+   - name: environment create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" environment create --name "MyEnvironment" --organization "MyOrg" --locations "MyLoc"
+
+   - name: add environment
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" add-environment --puppet-environment MyEnvironment --name "MyOrg"
+
+   - name: medium create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}"  medium create --os-family "Redhat" --name "RHEL mirror" --path "http://download.eng.brq.redhat.com/released/rhel-6-7-8/rhel-8/RHEL-8/8.4.0/BaseOS/x86_64/os/" --organization "MyOrg" --locations "MyLoc"
+
+   - name: subnet create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" subnet create --name "mysubnet" --network "192.168.111.0" --mask "255.255.255.0" --gateway "192.168.111.1" --dns-primary "192.168.111.10" --ipam "DHCP" --from "192.168.111.110" --to "192.168.111.240" --tftp-id "1" --dhcp-id "1" --dns-id "1" --organizations "MyOrg" --locations "MyLoc"
+
+   - name: domain create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" domain create --name "mydomain.lan" --dns-id "1" --organizations "MyOrg" --locations "MyLoc" DOMAIN_ID=$(hammer --csv domain list --per-page 9999 | grep mydomain.lan | tail -n1 | awk -F, '{print $1}')
+
+   - name: compute-resource create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" compute-resource create --provider "libvirt" --name "MyLibvirtComputeResource" --set-console-password "false" --url "qemu+ssh://root@192.168.111.1/system" --organizations "MyOrg" --locations "MyLoc"
+
+        # For testing we don't need to have them locked
+
+   - name: lock
+     command: "{{item}}"
+     with_items:
+      - echo "ProvisioningTemplate.update_all(locked: false)" | foreman-rake console
+      - hammer template build-pxe-default
+      - PROV_TEMPLATES="Kickstart default,Kickstart default finish,Kickstart default PXELinux,Kickstart default user data"
+
+   - name: hammer architecture create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" os create --name "RHEL" --major 8 --minor 4 --description="RHEL 8.4" --media "RHEL mirror" --provisioning-templates "$PROV_TEMPLATES" --architectures "x86_64" --family Redhat --partition-tables "Kickstart default"
+
+   - name: hammer architecture create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" hostgroup create --name "RHEL 8.4" --architecture x86_64 --pxe-loader "PXELinux BIOS" --domain mydomain.lan --subnet mysubnet --operatingsystem "RHEL 8.4" --medium "RHEL mirror" --partition-table "Kickstart default" --organizations "MyOrg" --locations "MyLoc"
+
+   - name: hammer architecture create
+     command:
+        hammer -u "{{ sat_user}}" -p "{{ sat_pass }}" lifecycle-environment create --organization="MyOrg" --prior="Library" --name="MyLifecycleEnvironment"
+
+...
+
