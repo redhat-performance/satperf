@@ -135,7 +135,7 @@
 
     - name: Profile preparation
       when:
-        - profile | bool
+        - profile | default(false) | bool
       block:
         - name: Set profile base directory
           ansible.builtin.set_fact:
@@ -178,7 +178,7 @@
 
     - name: Profile stop
       when:
-        - profile | bool
+        - profile | default(false) | bool
       block:
         - name: Kill BPF profile process
           ansible.builtin.command:
@@ -337,7 +337,7 @@
 
         - name: Re-register failed hosts
           when:
-            - re_register_failed_hosts | bool
+            - re_register_failed_hosts | default(false) | bool
           block:
             - name: Set additional retries log name
               ansible.builtin.set_fact:
@@ -382,7 +382,7 @@
 
     - name: Profile flamegraphs
       when:
-        - profile | bool
+        - profile | default(false) | bool
       block:
         - name: Convert BPF profile output to image
           ansible.builtin.shell:
