@@ -38,6 +38,8 @@
         - name: "Apply foremanctl PRs: {{ _foremanctl_prs_list }}"  # noqa: command-instead-of-module
           ansible.builtin.shell:
             cmd: >-
+              set -o pipefail
+
               git fetch origin refs/pull/{{ item }}/head &&
               git format-patch $(git merge-base HEAD FETCH_HEAD)..FETCH_HEAD --stdout |
               git am
