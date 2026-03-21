@@ -1,4 +1,26 @@
 ---
+- name: Requirements
+  block:
+    - name: Foreman
+      when:
+        - product is defined and product == 'foreman'
+      block:
+        - name: Assert required Foreman facts
+          ansible.builtin.assert:
+            that:
+              - foreman_version is defined and foreman_version | length > 0
+              - katello_version is defined and katello_version | length > 0
+
+    - name: Satellite
+      when:
+        - product is not defined or product == 'satellite'
+      block:
+        - name: Setup Satellite repositories
+          ansible.builtin.include_role:
+            name: repo_setup
+          vars:
+            sat_version: 'stream'
+
 - name: Enable foremanctl COPR
   community.general.copr:
     name: "@theforeman/foremanctl"
@@ -8,7 +30,7 @@
 - name: Install foremanctl package
   ansible.builtin.dnf:
     name: foremanctl
-    state: present
+    state: latest
     # # XXX:
     # disable_gpg_check: true
 
@@ -19,6 +41,16 @@
     - name: Set required variable(s) values
       ansible.builtin.set_fact:
         _foremanctl_organization: "{{ organization | default('theforeman') }}"
+
+    - name: Vanilla git
+      when:
+        - prs is not defined
+        - version is not defined
+      block:
+        - name: Clone foremanctl git repo # noqa: latest[git]
+          ansible.builtin.git:
+            repo: "https://github.com/theforeman/foremanctl.git"
+            dest: /tmp/foremanctl
 
     - name: PRs
       when:
@@ -171,13 +203,17 @@
         foremanctl_features: "{{ foremanctl_features + ['iop'] }}"
       when: enable_iop | default(false) | bool
 
-    - name: Setup Foreman repositories for hammer
-      ansible.builtin.include_role:
-        name: theforeman.operations.foreman_repositories
-      vars:
-        foreman_repositories_version: nightly
-        foreman_repositories_katello_version: nightly
-      when: "'hammer' in foremanctl_features"
+    - name: Foreman
+      when:
+        - product is defined and product == 'foreman'
+      block:
+        - name: Setup Foreman repositories for hammer
+          ansible.builtin.include_role:
+            name: theforeman.operations.foreman_repositories
+          vars:
+            foreman_repositories_version: nightly
+            foreman_repositories_katello_version: nightly
+          when: "'hammer' in foremanctl_features"
 
     - name: Set features deployment command line
       ansible.builtin.set_fact:
@@ -204,8 +240,12 @@
       failed_when:
         - _foremanctl_add_features_cmd_out is failed
 
-    - name: Disable Foreman repositories
-      ansible.builtin.dnf:
-        name: foreman-release
-        state: absent
-      when: "'hammer' in foremanctl_features"
+    - name: Foreman
+      when:
+        - product is defined and product == 'foreman'
+      block:
+        - name: Disable Foreman repositories
+          ansible.builtin.dnf:
+            name: foreman-release
+            state: absent
+          when: "'hammer' in foremanctl_features"
