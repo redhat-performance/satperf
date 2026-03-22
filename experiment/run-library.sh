@@ -237,22 +237,22 @@ function generic_environment_check() {
 
         log "katello_version = $katello_rpm"
         log "satellite_version = $satellite_rpm"
-    fi  # "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl'
 
-    if ! $wait_for_ping; then
-        h 00-check-hammer-ping.log \
-          'ping'
-    else
-        while true; do
-            set +e
-
+        if ! $wait_for_ping; then
             h 00-check-hammer-ping.log \
-              'ping' &&
-              break
+            'ping'
+        else
+            while true; do
+                set +e
 
-            set -e
-        done
-    fi
+                h 00-check-hammer-ping.log \
+                'ping' &&
+                break
+
+                set -e
+            done
+        fi
+    fi  # "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl'
 
     if $profiling_enabled; then
         # Create profiling directory
