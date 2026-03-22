@@ -68,4 +68,5 @@
   loop:
     - podman-login.sh
     - podman-pull-rhosp.sh
+    - skopeo-sync-rhosp.sh
 ...
