@@ -3,9 +3,21 @@
   hosts: container_hosts
   gather_facts: false
   vars:
-    size: 10
+    size: 4
+    total: 0
+    reuse_hosts: false
 
   tasks:
+    - name: Calculate size from total
+      when:
+        - total | int > 0
+      ansible.builtin.set_fact:
+        size: >-
+          {{
+            (((total | int + (groups['container_hosts'] | length) - 1)
+              // (groups['container_hosts'] | length) + 3) // 4) * 4
+          }}
+
     - name: Assert size is a multiple of 4 and at least 4
       ansible.builtin.assert:
         that:
@@ -15,19 +27,29 @@
           size must be a multiple of 4 (got {{ size }}): containers are
           selected in groups of 4 (2×EL8 + 1×EL9 + 1×EL10)
 
+    - name: Reuse hosts - set containers_used_count to 0
+      when:
+        - reuse_hosts | default(false) | bool
+      ansible.builtin.set_fact:
+        containers_used_count: 0
+
     - name: Check whether we have already used some containers
+      when:
+        - not reuse_hosts | default(false) | bool
       ansible.builtin.stat:
         path: /root/container-exec-used-count
       register: container_used_count_path
 
     - name: No containers yet used
       when:
+        - not reuse_hosts | default(false) | bool
         - not container_used_count_path.stat.exists
       ansible.builtin.set_fact:
         containers_used_count: 0
 
     - name: Containers already used
       when:
+        - not reuse_hosts | default(false) | bool
         - container_used_count_path.stat.exists
       block:
         - name: Get number of containers already used
@@ -83,17 +105,19 @@
           }}
       run_once: true
 
+    - name: Propagate base log name to all hosts
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "{{ hostvars[ansible_play_hosts[0]]['clients_yaml_cmd_base'] }}"
+
     - name: Set script_execution.yaml log name
       ansible.builtin.set_fact:
         clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}_execution.log"
-      run_once: true
 
     - name: Write log path for subsequent plays
       ansible.builtin.copy:
         content: "{{ clients_yaml_cmd_log }}"
         dest: /root/.current_exec_log
         mode: '0644'
-      run_once: true
 
 
 - name: Start BPF profiling
@@ -124,7 +148,7 @@
                 >{{ profile_base_dir }}/execution_profile-{{ size }}-{{ inventory_hostname }}.profile-folded
           async: 1800
           poll: 0
-          ignore_errors: true
+          # ignore_errors: true
 
 
 - name: Execute script concurrently on containers - execution
@@ -138,13 +162,11 @@
       ansible.builtin.slurp:
         src: /root/.current_exec_log
       register: log_path_slurp
-      run_once: true
 
     - name: Set log path and inventory facts
       ansible.builtin.set_fact:
         clients_yaml_cmd_log: "{{ log_path_slurp.content | b64decode }}"
         local_inventory: "clients_execution_{{ size }}.ini"
-      run_once: true
 
     - name: Run script_execution.yaml (log = {{ clients_yaml_cmd_log }})
       ansible.builtin.shell:
@@ -170,22 +192,24 @@
     execution_profile_img: execution_profile.svg
 
   tasks:
-    - name: Profile stop
+    - name: Profile stop and flamegraphs generation
       when:
         - profile | default(false) | bool
+      ignore_errors: true
       block:
         - name: Kill BPF profile process
           ansible.builtin.command:
             cmd: pkill -SIGINT profile
-      ignore_errors: true
+          register: pkill_result
+          failed_when: pkill_result.rc not in [0, 1]
 
-    - name: Profile flamegraphs
-      when:
-        - profile | default(false) | bool
-      block:
         - name: Convert BPF profile output to image
           ansible.builtin.shell:
             cmd: |
+              set -o pipefail
+
+              [[ -s {{ profile_base_dir }}/execution_profile-{{ size }}-{{ inventory_hostname }}.profile-folded ]] || exit 0
+
               flamegraph.pl \
                 --minwidth 5 \
                 --width 2500 \
@@ -197,7 +221,7 @@
             src: "{{ profile_base_dir }}/execution_profile-{{ size }}-{{ inventory_hostname }}.svg"
             dest: "{{ execution_logs }}/../{{ inventory_hostname }}-{{ execution_profile_img }}"
             flat: true
-      ignore_errors: true
+          failed_when: false
 
 
 - name: Execute script concurrently on containers - post-execution
@@ -206,23 +230,23 @@
   vars:
     size: 10
     execution_logs: execution_logs
+    reuse_hosts: false
 
   tasks:
     - name: Read log path from file
       ansible.builtin.slurp:
         src: /root/.current_exec_log
       register: log_path_slurp
-      run_once: true
 
     - name: Set log path fact
       ansible.builtin.set_fact:
         clients_yaml_cmd_log: "{{ log_path_slurp.content | b64decode }}"
-      run_once: true
 
     - name: Fetch execution logs
       ansible.builtin.fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ execution_logs }}"
+      failed_when: false
       ignore_errors: true
 
     - name: Get execution timings
@@ -234,7 +258,7 @@
             '"msg". "Execute' {{ clients_yaml_cmd_log }} |
             cut -d '"' -f 4
       register: clients_yaml_grepper_timings
-      ignore_errors: true
+      failed_when: clients_yaml_grepper_timings.rc == 2
       changed_when: false
 
     - name: Append execution timings to central list
@@ -258,6 +282,8 @@
       run_once: true
 
     - name: Increment number of already used containers
+      when:
+        - not reuse_hosts | default(false) | bool
       ansible.builtin.shell:
         cmd: |
           current=$(cat /root/container-exec-used-count 2>/dev/null || echo 0)
@@ -266,12 +292,9 @@
 
     - name: Get number of hosts that failed to execute
       ansible.builtin.shell:
-        cmd: |
-          set -o pipefail
-
-          grep 'failed=1' {{ clients_yaml_cmd_log }} | wc -l
+        cmd: grep -cw 'failed=1' {{ clients_yaml_cmd_log }}
       register: num_failed_hosts
-      ignore_errors: true
+      failed_when: num_failed_hosts.rc == 2
       changed_when: false
 
     - name: Show number of hosts that failed to execute
