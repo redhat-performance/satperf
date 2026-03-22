@@ -1,0 +1,40 @@
+#!/bin/bash
+
+set -eu
+
+
+SOURCE_REGISTRY={{ tests_registration_target }}
+# SOURCE_REGISTRY="$(awk '/^hostname/ {print $NF}' /etc/rhsm/rhsm.conf)"
+RHEL_MAJOR_VERSION="$(awk -F'[=".]' '/VERSION_ID/ {print $3}' /etc/os-release)"
+RHOSP_REPO_PATH=default_organization/test/ccv_${RHEL_MAJOR_VERSION}/rhosp
+TAG=18.0.17
+
+TMPDIR="$( mktemp -d )"
+trap "rm -rf $TMPDIR" EXIT
+
+skopeo sync --src yaml --dest dir /dev/stdin "$TMPDIR" <<EOF
+${SOURCE_REGISTRY}:
+  images:
+    ${RHOSP_REPO_PATH}/rhoso_openstack-base-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-neutron-dhcp-agent-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-neutron-metadata-agent-ovn-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-neutron-ovn-agent-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-neutron-server-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-neutron-sriov-agent-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-nova-api-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-nova-compute-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-nova-conductor-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-nova-novncproxy-rhel9:
+      - "${TAG}"
+    ${RHOSP_REPO_PATH}/rhoso_openstack-nova-scheduler-rhel9:
+      - "${TAG}"
+EOF
