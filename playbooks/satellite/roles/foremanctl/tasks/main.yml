@@ -21,11 +21,23 @@
           vars:
             sat_version: 'stream'
 
-- name: Enable foremanctl COPR
-  community.general.copr:
-    name: "@theforeman/foremanctl"
-    # name: "ekohl/foreman-nightly-staging"
-    chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
+- name: EL 9
+  when:
+    - ansible_facts['distribution_major_version'] | int == 9
+  block:
+    - name: Enable foremanctl COPR
+      community.general.copr:
+        name: "@theforeman/foremanctl"
+        chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
+
+- name: EL 10
+  when:
+    - ansible_facts['distribution_major_version'] | int == 10
+  block:
+    - name: Enable foremanctl COPR
+      community.general.copr:
+        name: "ekohl/foreman-nightly-staging"
+        chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
 
 - name: Install foremanctl package
   ansible.builtin.dnf:
@@ -67,7 +79,7 @@
             refspec: '+refs/pull/*:refs/heads/*'
             version: HEAD
 
-        - name: "Apply foremanctl PRs: {{ _foremanctl_prs_list }}"  # noqa: command-instead-of-module
+        - name: "Apply foremanctl PRs: {{ prs }}"  # noqa: command-instead-of-module
           ansible.builtin.shell:
             cmd: >-
               set -o pipefail
@@ -107,6 +119,17 @@
         dest: /usr/share/foremanctl/src/
         mode: 'preserve'
         remote_src: true
+
+    # XXX: Hack!!!
+    - name: Install foremanctl Ansible collections from src
+      when:
+        - ansible_facts['distribution_major_version'] | int == 10
+      ansible.builtin.command:
+        cmd: >-
+          ansible-galaxy collection install
+          -r /usr/share/foremanctl/src/requirements.yml
+          -p /usr/share/foremanctl/collections/ansible_collections
+      changed_when: true
 
 - name: Log in to the registry
   containers.podman.podman_login:
