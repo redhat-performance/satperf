@@ -3,11 +3,10 @@
   ansible.builtin.set_fact:
     location_groupname: "location_{{ location | lower }}"
 
-- name: Detect EL release
-  ansible.builtin.setup:
-    filter: ansible_distribution_major_version
-  when:
-    - ansible_distribution_major_version is not defined
+- name: Assert required facts
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution_major_version'] is defined
 
 - name: Requirements
   block:
@@ -15,25 +14,22 @@
       when:
         - product is defined and product == 'foreman'
       block:
-        - name: Detect EL release
-          ansible.builtin.setup:
-            filter:
-              - ansible_architecture
-          when:
-            - ansible_architecture is not defined
+        - name: Assert required Foreman facts
+          ansible.builtin.assert:
+            that:
+              - foreman_version is defined and foreman_version | length > 0
+              - katello_version is defined and katello_version | length > 0
 
         - name: Set Foreman facts
           ansible.builtin.set_fact:
             certs_generate_command: 'foreman-proxy-certs-generate'
 
-        - name: Install Foreman required packages
-          ansible.builtin.dnf:
-            name:
-              - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/foreman-release.rpm"
-              - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/katello-repos-latest.rpm"
-              - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
-            state: latest
-            disable_gpg_check: true
+        - name: Setup Foreman repositories
+          ansible.builtin.include_role:
+            name: theforeman.operations.foreman_repositories
+          vars:
+            foreman_repositories_version: "{{ foreman_version }}"
+            foreman_repositories_katello_version: "{{ katello_version }}"
 
         - name: Install foreman-proxy-content package
           ansible.builtin.dnf:
@@ -62,7 +58,7 @@
           ansible.builtin.dnf:
             name: '@satellite-capsule:el8'
           when:
-            - ansible_distribution_major_version | int == 8
+            - ansible_facts['distribution_major_version'] | int == 8
 
         - name: Ensure sat_version is string to avoid hard to detect issues
           ansible.builtin.assert:
