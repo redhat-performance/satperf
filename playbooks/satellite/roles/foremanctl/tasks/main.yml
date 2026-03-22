@@ -44,8 +44,8 @@
 
     - name: Vanilla git
       when:
-        - prs is not defined
-        - version is not defined
+        - prs is not defined or prs | length == 0
+        - version is not defined or version | length == 0
       block:
         - name: Clone foremanctl git repo # noqa: latest[git]
           ansible.builtin.git:
