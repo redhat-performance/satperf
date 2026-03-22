@@ -65,9 +65,9 @@ ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
 
 
 # section 'Checking environment'
-# generic_environment_check
-unset skip_measurement
-set +e
+generic_environment_check
+# unset skip_measurement
+# set +e
 
 # Initial version sanity check
 for rel in $rels; do
@@ -934,7 +934,6 @@ for content in $contents; do
     e CapusuleSync "${logs}/${test}.log"
 done  # for content in $contents
 
-exit
 
 section 'Prepare for registrations'
 unset aks
