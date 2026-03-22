@@ -22,7 +22,7 @@
 
     - name: Upload host registration script to content host
       ansible.builtin.copy:
-        src: /root/host-registration.{{ ak }}.sh
+        src: "/root/host-registration.{{ ak }}.sh"
         dest: /root/host-registration.sh
         mode: '0500'
 

@@ -64,6 +64,7 @@
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "/root/{{ item }}"
+    mode: '0700'
     force: true
   loop:
     - podman-login.sh
