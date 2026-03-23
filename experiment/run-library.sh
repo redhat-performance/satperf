@@ -27,7 +27,7 @@ opts_adhoc="${opts_adhoc:-$opts}"
 if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
     enable_iop="${PARAM_enable_iop:-true}"
 else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
-    enable_iop=false
+    enable_iop="${PARAM_enable_iop:-false}"
 fi
 
 content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
