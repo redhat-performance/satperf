@@ -1,0 +1,10 @@
+---
+- name: "Configure Foreman settings"
+  hosts: localhost
+  gather_facts: false
+
+  roles:
+    - role: theforeman.foreman.settings
+      vars:
+        foreman_settings: "{{ settings }}"
+...
