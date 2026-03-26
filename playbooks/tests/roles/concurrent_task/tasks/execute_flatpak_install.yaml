@@ -3,12 +3,8 @@
   ansible.builtin.shell:
     cmd: |
       awk '/^el10/ {print $NF}' /root/container-ips.shuffled \
-        > /tmp/_flatpak_el10_ips.tmp
-      grep -F \
-        -f /tmp/_flatpak_el10_ips.tmp \
-        {{ _concurrent_task_local_inventory }} \
+        | grep -Fxf - {{ _concurrent_task_local_inventory }} \
         > {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_el10.ini
-      rm -f /tmp/_flatpak_el10_ips.tmp
   register: _flatpak_create_inv
   failed_when: _flatpak_create_inv.rc not in [0, 1]
   changed_when: false
