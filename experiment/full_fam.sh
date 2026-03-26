@@ -1078,12 +1078,12 @@ for rex_search_query in $rex_search_queries; do
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
 
-        test="62f-rex-katello_package_install_ssh-podman-${num_matching_rex_ssh_hosts}"
+        test="62f-rex-katello_package_install_ssh-rust-${num_matching_rex_ssh_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_ssh_hosts} hosts - %{template_name} (ssh): %{package}'" \
           -e "feature='katello_package_install'" \
           -e "search_query='$search_query_ssh'" \
-          -e "inputs='package=podman'" \
+          -e "inputs='package=rust'" \
           -e "task_timeout=$(( num_matching_rex_ssh_hosts < 450 ? 450 : num_matching_rex_ssh_hosts ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
@@ -1100,12 +1100,12 @@ for rex_search_query in $rex_search_queries; do
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
 
-        test="62f-rex-katello_package_install_mqtt-podman-${num_matching_rex_mqtt_hosts}"
+        test="62f-rex-katello_package_install_mqtt-rust-${num_matching_rex_mqtt_hosts}"
         apj $test \
           -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt): %{package}'" \
           -e "feature='katello_package_install'" \
           -e "search_query='$search_query_mqtt'" \
-          -e "inputs='package=podman'" \
+          -e "inputs='package=rust'" \
           -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 900 : num_matching_rex_mqtt_hosts * 2 ))" \
           playbooks/tests/FAM/job_invocation_create.yaml
         ejji $test
