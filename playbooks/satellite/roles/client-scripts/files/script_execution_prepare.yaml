@@ -1,0 +1,29 @@
+---
+- hosts: all
+  gather_facts: false
+
+  tasks:
+    - name: Upload skopeo-sync-rhosp.sh to content host
+      ansible.builtin.copy:
+        src: "{{ item }}"
+        dest: "{{ item }}"
+        mode: '0500'
+      loop:
+        - /root/skopeo-sync-rhosp.sh
+
+    - name: Upload and run skopeo login (< 6.18)
+      when:
+        - sat_version not in ['stream', 'foremanctl']
+        - sat_version is version('6.18.0', '<')
+      block:
+        - name: Upload skopeo-login.sh to content host
+          ansible.builtin.copy:
+            src: /root/skopeo-login.sh
+            dest: /root/skopeo-login.sh
+            mode: '0500'
+
+        - name: Log in to container registry
+          ansible.builtin.shell:
+            cmd: /root/skopeo-login.sh
+          changed_when: true
+...

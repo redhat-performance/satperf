@@ -26,15 +26,6 @@
         dest: /root/host-registration.sh
         mode: '0500'
 
-    - name: Upload podman related scripts to content host
-      ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: "{{ item }}"
-        mode: '0500'
-      loop:
-        - /root/podman-login.sh
-        - /root/podman-pull-rhosp.sh
-
     - name: Introduce issue to be fixed by 'Remediations' service
       ansible.builtin.file:
         path: /etc/ssh/sshd_config

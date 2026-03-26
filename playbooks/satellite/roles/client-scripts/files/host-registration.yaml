@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Register content host
+  hosts: all
   gather_facts: false
 
   tasks:
@@ -24,8 +25,9 @@
       environment:
         TZ: UTC   # make sure returned times are in UTC
       register: registration
-      # XXX: Ignore errors in order to be able to show `registration.stdout_lines`
-      ignore_errors: true
+      # XXX: failed_when set on the next task to be able to show `registration.stdout_lines` first
+      changed_when: true
+      failed_when: false
 
     - name: Register - output
       ansible.builtin.debug:
@@ -36,8 +38,11 @@
         ### RHEL 10 containers.
         # regexp: '^.*(Traceback |curl: |Internal Server Error).*$'
         regexp: '^.*(curl: |Internal Server Error).*$'
+      # NOTE: must use registration.rc != 0, not 'registration is failed'.
+      # failed_when: false on the shell task suppresses the failed flag permanently,
+      # so 'is failed' always evaluates to False regardless of the actual exit code.
       failed_when:
-        - registration is failed or registration.stdout | regex_search(regexp, multiline=true)
+        - registration.rc != 0 or registration.stdout | regex_search(regexp, multiline=true)
 
     - name: Calculate registration duration
       ansible.builtin.set_fact:
@@ -47,7 +52,7 @@
 
     - name: Register - timings
       ansible.builtin.debug:
-        msg: "Register {{ registration.start }} to {{ registration.end }} taking {{ reg_duration }} seconds"
+        msg: "Execute {{ task | default('registration') }} {{ registration.start }} to {{ registration.end }} taking {{ reg_duration }} seconds"
 
     - name: Configure yggdrasil log-level to debug
       when:
@@ -89,7 +94,7 @@
                     line: 'log-level = "debug"'
                   register: yggdrasil_config
 
-                - name: Restart yggdrasil service
+                - name: Restart yggdrasil service  # noqa: no-handler
                   ansible.builtin.systemd:
                     name: "{{ yggdrasil_service_name }}"
                     state: restarted

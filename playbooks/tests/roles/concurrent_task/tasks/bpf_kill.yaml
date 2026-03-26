@@ -1,0 +1,7 @@
+---
+- name: Kill BPF profile process
+  ansible.builtin.command:
+    cmd: pkill -SIGINT profile
+  register: _concurrent_task_pkill_result
+  failed_when: _concurrent_task_pkill_result.rc not in [0, 1]
+  changed_when: true

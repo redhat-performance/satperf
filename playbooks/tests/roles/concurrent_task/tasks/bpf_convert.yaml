@@ -1,0 +1,22 @@
+---
+- name: Convert BPF profile output to image
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      [[ -s {{ profile_base_dir }}/{{ task_name | replace('-', '_') }}_profile-{{ size }}-{{ inventory_hostname }}.profile-folded ]] || exit 0
+
+      flamegraph.pl \
+        --minwidth 5 \
+        --width 2500 \
+        {{ profile_base_dir }}/{{ task_name | replace('-', '_') }}_profile-{{ size }}-{{ inventory_hostname }}.profile-folded \
+        >{{ profile_base_dir }}/{{ task_name | replace('-', '_') }}_profile-{{ size }}-{{ inventory_hostname }}.svg
+  failed_when: false
+  changed_when: true
+
+- name: Fetch BPF profile image
+  ansible.builtin.fetch:
+    src: "{{ profile_base_dir }}/{{ task_name | replace('-', '_') }}_profile-{{ size }}-{{ inventory_hostname }}.svg"
+    dest: "{{ execution_logs }}/../{{ inventory_hostname }}-{{ task_name | replace('-', '_') }}_profile.svg"
+    flat: true
+  failed_when: false

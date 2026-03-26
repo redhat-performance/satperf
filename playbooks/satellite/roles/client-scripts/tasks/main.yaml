@@ -54,20 +54,30 @@
   ansible.builtin.copy:
     src: "{{ item }}"
     dest: "/root/{{ item }}"
+    mode: '0644'
     force: true
   loop:
     - host-registration_prepare.yaml
     - host-registration.yaml
+    - script_execution_prepare.yaml
     - script_execution.yaml
 
-- name: Distribute podman related scripts
+- name: Distribute container pulling related scripts
   ansible.builtin.template:
     src: "{{ item }}.j2"
     dest: "/root/{{ item }}"
     mode: '0700'
     force: true
   loop:
-    - podman-login.sh
-    - podman-pull-rhosp.sh
     - skopeo-sync-rhosp.sh
+
+- name: Distribute skopeo-login.sh (< 6.18)
+  when:
+    - sat_version not in ['stream', 'foremanctl']
+    - sat_version is version('6.18.0', '<')
+  ansible.builtin.template:
+    src: skopeo-login.sh.j2
+    dest: /root/skopeo-login.sh
+    mode: '0700'
+    force: true
 ...

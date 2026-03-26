@@ -1,0 +1,30 @@
+---
+- name: "{{ task_name }} - Run script_execution_prepare.yaml"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      ansible-playbook \
+        --private-key /root/id_rsa_key \
+        --forks {{ size }} \
+        --inventory {{ _concurrent_task_local_inventory }} \
+        --extra-vars 'sat_version="{{ sat_version }}"' \
+        script_execution_prepare.yaml |
+        tee {{ _concurrent_task_clients_yaml_cmd_base }}_container_prepare.log
+  changed_when: true
+
+- name: "{{ task_name }} - Run skopeo-sync-rhosp.sh via script_execution.yaml"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      ansible-playbook \
+        --private-key /root/id_rsa_key \
+        --forks {{ size }} \
+        --inventory {{ _concurrent_task_local_inventory }} \
+        --extra-vars 'script="/root/skopeo-sync-rhosp.sh"' \
+        --extra-vars 'task="container_pull"' \
+        script_execution.yaml |
+        tee {{ _concurrent_task_clients_yaml_cmd_base }}_container_pull.log
+  changed_when: true
+  failed_when: false

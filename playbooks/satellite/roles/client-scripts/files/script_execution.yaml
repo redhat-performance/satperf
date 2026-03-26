@@ -1,5 +1,6 @@
 ---
-- hosts: all
+- name: Execute script on content host
+  hosts: all
   gather_facts: false
 
   tasks:
@@ -24,13 +25,18 @@
       environment:
         TZ: UTC
       register: execution
-      ignore_errors: true
+      changed_when: true
+      failed_when: false
 
     - name: Execute script - output
       ansible.builtin.debug:
         var: execution.stdout_lines
+      # NOTE: must use execution.rc != 0, not 'execution is failed'.
+      # failed_when: false on the shell task suppresses the failed flag permanently,
+      # so 'is failed' always evaluates to False regardless of the actual exit code.
+      # execution.rc reflects the real shell exit code and is unaffected by failed_when.
       failed_when:
-        - execution is failed
+        - execution.rc != 0
 
     - name: Calculate execution duration
       ansible.builtin.set_fact:
@@ -41,6 +47,6 @@
     - name: Execute script - timings
       ansible.builtin.debug:
         msg: >-
-          Execute {{ execution.start }} to {{ execution.end }}
+          Execute {{ task | default(script) }} {{ execution.start }} to {{ execution.end }}
           taking {{ exec_duration }} seconds
 ...

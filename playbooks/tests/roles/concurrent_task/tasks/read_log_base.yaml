@@ -1,0 +1,10 @@
+---
+- name: Read base log path from file
+  ansible.builtin.slurp:
+    src: /root/.current_tasks_log_base
+  register: _concurrent_task_log_base_slurp
+
+- name: Set base log path and inventory facts
+  ansible.builtin.set_fact:
+    _concurrent_task_clients_yaml_cmd_base: "{{ _concurrent_task_log_base_slurp.content | b64decode }}"
+    _concurrent_task_local_inventory: "clients_{{ size }}.ini"

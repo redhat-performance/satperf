@@ -1,0 +1,33 @@
+---
+- name: Read log base
+  ansible.builtin.include_tasks: read_log_base.yaml
+  when:
+    - inventory_hostname in groups['container_hosts']
+
+- name: BPF start
+  ansible.builtin.include_tasks: bpf_start.yaml
+  when:
+    - profile | default(false) | bool
+    - inventory_hostname in (groups['satellite6'] + groups.get('capsules', []))
+
+- name: "Execute {{ task_name }}"
+  ansible.builtin.include_tasks: "execute_{{ task_name | replace('-', '_') }}.yaml"
+  when:
+    - inventory_hostname in groups['container_hosts']
+
+- name: BPF kill
+  ansible.builtin.include_tasks: bpf_kill.yaml
+  when:
+    - profile | default(false) | bool
+    - inventory_hostname in (groups['satellite6'] + groups.get('capsules', []))
+
+- name: Post-execution
+  ansible.builtin.include_tasks: post_execution.yaml
+  when:
+    - inventory_hostname in groups['container_hosts']
+
+- name: BPF convert
+  ansible.builtin.include_tasks: bpf_convert.yaml
+  when:
+    - profile | default(false) | bool
+    - inventory_hostname in (groups['satellite6'] + groups.get('capsules', []))

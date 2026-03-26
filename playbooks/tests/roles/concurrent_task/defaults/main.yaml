@@ -1,0 +1,10 @@
+---
+task_name: task  # noqa: var-naming[no-role-prefix]
+size: 4  # noqa: var-naming[no-role-prefix]
+num_retry_forks: 4  # noqa: var-naming[no-role-prefix]
+enable_iop: false  # noqa: var-naming[no-role-prefix]
+retry_failed: false  # noqa: var-naming[no-role-prefix]
+reuse_hosts: false  # noqa: var-naming[no-role-prefix]
+profile: false  # noqa: var-naming[no-role-prefix]
+profile_base_dir: '/root/profile'  # noqa: var-naming[no-role-prefix]
+execution_logs: execution_logs  # noqa: var-naming[no-role-prefix]

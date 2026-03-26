@@ -1,0 +1,17 @@
+---
+- name: Create profiling directory
+  ansible.builtin.file:
+    path: "{{ profile_base_dir }}"
+    state: directory
+    mode: '0700'
+
+- name: Start gathering BPF profile
+  ansible.builtin.shell:
+    cmd: |
+      /usr/share/bcc/tools/profile \
+        -adf \
+        --stack-storage-size 1638400 \
+        >{{ profile_base_dir }}/{{ task_name | replace('-', '_') }}_profile-{{ size }}-{{ inventory_hostname }}.profile-folded
+  async: 1800
+  poll: 0
+  changed_when: true

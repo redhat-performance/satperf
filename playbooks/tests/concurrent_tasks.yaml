@@ -1,0 +1,187 @@
+---
+# Runs a configurable list of tasks concurrently against a set of containers.
+# Each task gets its own BPF profile, execution, and post-execution phase,
+# driven by the concurrent_task role looped over tasks_list.
+#
+# Parameters:
+#   tasks_list:      list of tasks to run: registration, insights-client, container_pull
+#   size:            containers per host (multiple of 4, default 4)
+#   total:           total containers across all hosts (overrides size if > 0)
+#   reuse_hosts:     bool - reuse containers from previous run (default false)
+#   retry_failed:    bool - retry failed hosts, currently for registration only (default false)
+#   enable_iop:      bool - passed to host-registration_prepare.yaml (default false)
+#   num_retry_forks: ansible forks for prepare/retry steps (default 3)
+#   profile:         bool - enable BPF profiling (default false)
+#   profile_base_dir: directory for BPF profiles (default /root/profile)
+#   execution_logs:  directory for fetched logs (default execution_logs)
+
+
+# ─── common preparation ─────────────────────────────────────────────────────
+
+- name: Concurrent tasks - preparation
+  hosts: container_hosts
+  gather_facts: false
+  vars:
+    size: 4
+    total: 0
+    concurrent_total: 0
+    reuse_hosts: false
+    tasks_list: []
+
+  tasks:
+    - name: Normalize tasks_list to a list
+      when: tasks_list is string
+      ansible.builtin.set_fact:
+        tasks_list: "{{ tasks_list | split }}"
+
+    - name: Calculate size from total
+      when:
+        - total | int > 0
+      ansible.builtin.set_fact:
+        size: >-
+          {{
+            (((total | int + (groups['container_hosts'] | length) - 1)
+              // (groups['container_hosts'] | length) + 3) // 4) * 4
+          }}
+
+    - name: Assert size is a multiple of 4 and at least 4
+      ansible.builtin.assert:
+        that:
+          - size | int >= 4
+          - size | int % 4 == 0
+        fail_msg: >-
+          size must be a multiple of 4 (got {{ size }}): containers are
+          selected in groups of 4 (2×EL8 + 1×EL9 + 1×EL10)
+
+    - name: Reuse hosts - set containers_used_count to 0
+      when:
+        - reuse_hosts | default(false) | bool
+      ansible.builtin.set_fact:
+        containers_used_count: 0
+
+    - name: Read containers_used_count from file
+      when:
+        - not reuse_hosts | default(false) | bool
+      block:
+        - name: Check whether we have already used some containers
+          ansible.builtin.stat:
+            path: /root/container-used-count
+          register: container_used_count_path
+
+        - name: No containers yet used
+          when:
+            - not container_used_count_path.stat.exists
+          ansible.builtin.set_fact:
+            containers_used_count: 0
+
+        - name: Containers already used
+          when:
+            - container_used_count_path.stat.exists
+          block:
+            - name: Get number of containers already used
+              ansible.builtin.command:
+                cmd: cat /root/container-used-count
+              register: containers_used_count_cmd
+              changed_when: false
+
+            - name: Set number of used containers based on file contents
+              ansible.builtin.set_fact:
+                containers_used_count: "{{ containers_used_count_cmd.stdout }}"
+
+    - name: Set required variables
+      ansible.builtin.set_fact:
+        used_count: "{{ (containers_used_count | int / 4) | int }}"
+        select_size: "{{ (size | int / 4) | int }}"
+        local_inventory: "clients_{{ size }}.ini"
+
+    - name: Generate list of containers we are going to use
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+
+          used_count={{ used_count }}
+          select_size={{ select_size }}
+
+          rm -f {{ local_inventory }}
+
+          for el_version in el8 el9 el10; do
+              if [[ "$el_version" == 'el8' ]]; then
+                  start_line="$(( used_count * 2 ))"
+                  end_line="$(( start_line + ( select_size * 2 ) ))"
+              else
+                  start_line="$(( used_count ))"
+                  end_line="$(( start_line + select_size ))"
+              fi
+
+              awk -v EL=$el_version '$0 ~ "^"EL"-" {print $0}' \
+                /root/container-ips.shuffled |
+                awk -v START_LINE=$start_line -v END_LINE=$end_line \
+                'NR > START_LINE && NR <= END_LINE {print $NF}' |
+                tee -a {{ local_inventory }}
+          done
+      register: clients_ini
+      changed_when: false
+
+    - name: Set base log name
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "/root/out_{{ concurrent_total }}"
+      run_once: true  # noqa: run-once[task]
+
+    - name: Propagate base log name to all hosts
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "{{ hostvars[ansible_play_hosts[0]]['clients_yaml_cmd_base'] }}"
+
+    - name: Write base log path for subsequent plays
+      ansible.builtin.copy:
+        content: "{{ clients_yaml_cmd_base }}"
+        dest: /root/.current_tasks_log_base
+        mode: '0644'
+
+
+# ─── per-task: BPF + execution + BPF stop + post-execution ──────────────────
+
+- name: Concurrent tasks - execution
+  hosts: container_hosts:satellite6:capsules
+  gather_facts: false
+  vars:
+    tasks_list: []
+    size: 4
+    num_retry_forks: 3
+    enable_iop: false
+    retry_failed: false
+    profile: false
+    profile_base_dir: '/root/profile'
+    execution_logs: execution_logs
+
+  tasks:
+    - name: Run concurrent_task role
+      ansible.builtin.include_role:
+        name: concurrent_task
+        tasks_from: main.yaml
+      vars:
+        task_name: "{{ concurrent_task_item }}"  # noqa: var-naming[no-role-prefix]
+      loop: "{{ tasks_list | split if tasks_list is string else tasks_list }}"
+      loop_control:
+        loop_var: concurrent_task_item
+        label: "{{ concurrent_task_item }}"
+
+
+# ─── common final ───────────────────────────────────────────────────────────
+
+- name: Concurrent tasks - increment container counter
+  hosts: container_hosts
+  gather_facts: false
+  vars:
+    size: 4
+    reuse_hosts: false
+
+  tasks:
+    - name: Increment number of already used containers
+      when:
+        - not reuse_hosts | default(false) | bool
+      ansible.builtin.shell:
+        cmd: |
+          current=$(cat /root/container-used-count 2>/dev/null || echo 0)
+          echo $(( current + {{ size | int }} )) >/root/container-used-count
+      changed_when: true
+...

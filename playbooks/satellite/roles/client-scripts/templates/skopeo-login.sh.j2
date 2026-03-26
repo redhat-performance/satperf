@@ -1,0 +1,12 @@
+#!/bin/bash
+
+set -eu
+
+
+REGISTRY={{ tests_registration_target }}
+
+{% if sat_version in ['stream', 'foremanctl'] or sat_version is version('6.18.0', '>=') %}
+skopeo login --username {{ sat_user }} --password {{ sat_pass }} $REGISTRY
+{% else %}
+skopeo login --tls-verify=false --username {{ sat_user }} --password {{ sat_pass }} $REGISTRY
+{% endif %}

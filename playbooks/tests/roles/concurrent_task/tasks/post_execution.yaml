@@ -1,0 +1,110 @@
+---
+# Task-specific log fetching and retry
+
+- name: "{{ task_name }} - Fetch registration prepare log"
+  when: task_name == 'registration'
+  ansible.builtin.fetch:
+    src: "{{ _concurrent_task_clients_yaml_cmd_base }}_registration_prepare.log"
+    dest: "{{ execution_logs }}"
+  failed_when: false
+
+- name: "{{ task_name }} - Fetch registration log"
+  when: task_name == 'registration'
+  ansible.builtin.fetch:
+    src: "{{ _concurrent_task_clients_yaml_cmd_base }}_registration.log"
+    dest: "{{ execution_logs }}"
+  failed_when: false
+
+- name: "{{ task_name }} - Retry failed registrations"
+  when:
+    - task_name == 'registration'
+    - retry_failed | default(false) | bool
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      cp -p {{ _concurrent_task_clients_yaml_cmd_base }}_registration.log \
+             {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log
+
+      num_fails="$(grep -cw 'failed=1' {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log)"
+      while (( num_fails != 0 )); do
+          iter_log="{{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log.$num_fails"
+          cp -p {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log $iter_log
+
+          unset CLIENT_IP_LIST
+          for client_ip in $(awk '/[[:blank:]]+failed=1[[:blank:]]+/ {print $1}' $iter_log); do
+              CLIENT_IP_LIST+="$client_ip,"
+          done
+
+          [[ -n $CLIENT_IP_LIST ]] &&
+              ansible-playbook \
+                --private-key /root/id_rsa_key \
+                --forks {{ num_retry_forks }} \
+                --inventory $CLIENT_IP_LIST \
+                --extra-vars 'task="registration"' \
+                host-registration.yaml |
+                tee {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log
+
+          num_fails="$(grep -cw 'failed=1' {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log)"
+      done
+  register: _concurrent_task_registration_retries_cmd
+  failed_when: _concurrent_task_registration_retries_cmd.rc == 2
+  changed_when: false
+
+- name: "{{ task_name }} - Fetch insights-client log"
+  when: task_name == 'insights-client'
+  ansible.builtin.fetch:
+    src: "{{ _concurrent_task_clients_yaml_cmd_base }}_insights-client.log"
+    dest: "{{ execution_logs }}"
+  failed_when: false
+
+- name: "{{ task_name }} - Fetch container pull log"
+  when: task_name == 'container_pull'
+  ansible.builtin.fetch:
+    src: "{{ _concurrent_task_clients_yaml_cmd_base }}_container_pull.log"
+    dest: "{{ execution_logs }}"
+  failed_when: false
+
+# Common: timings and failure count
+
+- name: "{{ task_name }} - Get timings"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      grep '"msg". "Execute {{ task_name }}' \
+        {{ _concurrent_task_clients_yaml_cmd_base }}_{{ task_name }}.log |
+        cut -d '"' -f 4
+  register: _concurrent_task_clients_yaml_grepper_timings
+  failed_when: _concurrent_task_clients_yaml_grepper_timings.rc == 2
+  changed_when: false
+
+# Cross-host aggregation disabled: run_once conflicts with the when condition inherited
+# from include_tasks when satellite6/capsules are in ansible_play_hosts before container_hosts.
+# Re-enable if aggregation is needed and host ordering can be guaranteed.
+# - name: "{{ task_name }} - Append timings to central list  # noqa: var-naming[no-role-prefix]"
+#   ansible.builtin.set_fact:
+#     _concurrent_task_grepper_times: >-
+#       {{
+#         _concurrent_task_grepper_times | default([]) +
+#         hostvars[item]['_concurrent_task_clients_yaml_grepper_timings']['stdout_lines']
+#       }}
+#   with_items: "{{ ansible_play_batch | intersect(groups['container_hosts']) }}"
+#   when: inventory_hostname == (ansible_play_batch | intersect(groups["container_hosts"]) | first)
+
+- name: "{{ task_name }} - Show timings"
+  ansible.builtin.debug:
+    var: _concurrent_task_clients_yaml_grepper_timings.stdout_lines
+
+- name: "{{ task_name }} - Get number of hosts that failed"
+  ansible.builtin.command:
+    cmd: >-
+      grep -cw 'failed=1'
+      {{ _concurrent_task_clients_yaml_cmd_base }}_{{ task_name }}.log
+  register: _concurrent_task_num_failed_hosts
+  failed_when: _concurrent_task_num_failed_hosts.rc == 2
+  changed_when: false
+
+- name: "{{ task_name }} - Show number of hosts that failed"
+  ansible.builtin.debug:
+    msg: "{{ _concurrent_task_num_failed_hosts.stdout }} host(s) failed to run {{ task_name }}"
