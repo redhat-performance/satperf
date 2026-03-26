@@ -1,0 +1,44 @@
+---
+- name: "{{ task_name }} - Create el10-only inventory"
+  ansible.builtin.shell:
+    cmd: |
+      awk '/^el10/ {print $NF}' /root/container-ips.shuffled \
+        > /tmp/_flatpak_el10_ips.tmp
+      grep -F \
+        -f /tmp/_flatpak_el10_ips.tmp \
+        {{ _concurrent_task_local_inventory }} \
+        > {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_el10.ini
+      rm -f /tmp/_flatpak_el10_ips.tmp
+  register: _flatpak_create_inv
+  failed_when: _flatpak_create_inv.rc not in [0, 1]
+  changed_when: false
+
+- name: "{{ task_name }} - Run script_execution_prepare.yaml"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      ansible-playbook \
+        --private-key /root/id_rsa_key \
+        --forks {{ size }} \
+        --inventory {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_el10.ini \
+        --extra-vars 'sat_version="{{ sat_version }}"' \
+        script_execution_prepare.yaml |
+        tee {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_prepare.log
+  changed_when: true
+
+- name: "{{ task_name }} - Run flatpak-install.sh via script_execution.yaml"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      ansible-playbook \
+        --private-key /root/id_rsa_key \
+        --forks {{ size }} \
+        --inventory {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_el10.ini \
+        --extra-vars 'script="/root/flatpak-install.sh"' \
+        --extra-vars 'task="flatpak_install"' \
+        script_execution.yaml |
+        tee {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_install.log
+  changed_when: true
+  failed_when: false

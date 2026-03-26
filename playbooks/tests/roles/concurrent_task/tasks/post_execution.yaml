@@ -65,6 +65,13 @@
     dest: "{{ execution_logs }}"
   failed_when: false
 
+- name: "{{ task_name }} - Fetch flatpak install log"
+  when: task_name == 'flatpak_install'
+  ansible.builtin.fetch:
+    src: "{{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_install.log"
+    dest: "{{ execution_logs }}"
+  failed_when: false
+
 # Common: timings and failure count
 
 - name: "{{ task_name }} - Get timings"

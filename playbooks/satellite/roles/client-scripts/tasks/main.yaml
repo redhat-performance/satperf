@@ -80,4 +80,13 @@
     dest: /root/skopeo-login.sh
     mode: '0700'
     force: true
+
+- name: Distribute flatpak-install.sh (>= 6.17)
+  when:
+    - sat_version in ['stream', 'foremanctl'] or sat_version is version('6.17.0', '>=')
+  ansible.builtin.template:
+    src: flatpak-install.sh.j2
+    dest: /root/flatpak-install.sh
+    mode: '0700'
+    force: true
 ...
