@@ -24,6 +24,7 @@ flatpak_remote_url="https://${PARAM_flatpak_remote:-https://flatpak.example.io}"
 flatpak_remote_username="${PARAM_flatpak_remote_username:-user}"
 flatpak_remote_password="${PARAM_flatpak_remote_password:-password}"
 
+tasks_list="${PARAM_tasks_list:-registration insights-client container_pull}"
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
@@ -676,42 +677,51 @@ ap 44-recreate-client-scripts.log \
 unset skip_measurement
 
 
-section 'Incremental registrations'
+section 'Incremental concurrent execution'
+# Clean up logs from previous runs
+skip_measurement=true a 49-cleanup-container-host-logs.log \
+  -m ansible.builtin.shell \
+  -a 'rm -f /root/out_*.log*' \
+  container_hosts
+
+
 num_containers_per_container_host="$( get_inventory_var containers_count container_hosts[0] )"
 min_containers_per_batch=4
-num_retry_forks="$(( initial_expected_concurrent_registrations / num_container_hosts ))"
-initial_concurrent_registrations_per_container_host=$min_containers_per_batch
-num_retry_forks=$min_containers_per_batch
-prefix=48-register
+initial_concurrent_per_container_host=$min_containers_per_batch
+prefix=50-concurrent-exec
 
-for (( batch=1, remaining_containers_per_container_host=num_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
-    if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
-        concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
+for (( batch=1, remaining_containers_per_container_host=num_containers_per_container_host, total_executed=0; remaining_containers_per_container_host > 0; batch++ )); do
+    if (( remaining_containers_per_container_host > initial_concurrent_per_container_host * batch )); then
+        concurrent_per_container_host=$(( initial_concurrent_per_container_host * batch ))
     else
-        concurrent_registrations_per_container_host=$remaining_containers_per_container_host
+        concurrent_per_container_host=$remaining_containers_per_container_host
     fi
-    concurrent_registrations="$(( concurrent_registrations_per_container_host * num_container_hosts ))"
-    (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
-    (( total_registered += concurrent_registrations ))
+    concurrent_total=$(( concurrent_per_container_host * num_container_hosts ))
+    (( remaining_containers_per_container_host -= concurrent_per_container_host ))
+    (( total_executed += concurrent_total ))
 
-    log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
+    log "Running '$tasks_list' on $concurrent_total content hosts concurrently in this batch"
 
-    test="${prefix}-${concurrent_registrations}"
-    ap "${test}.log" \
-      -e "size='$concurrent_registrations_per_container_host'" \
-      -e "concurrent_registrations='$concurrent_registrations'" \
-      -e "num_retry_forks='$num_retry_forks'" \
-      -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
-      -e 're_register_failed_hosts=true' \
+    test="$prefix-$concurrent_total"
+    ap "$test.log" \
+      -e "size=$concurrent_per_container_host" \
+      -e "concurrent_total=$concurrent_total" \
+      -e "tasks_list='$tasks_list'" \
       -e "sat_version='$sat_version'" \
+      -e 'retry_failed=true' \
       -e "enable_iop='$enable_iop'" \
-      -e "profile='$profiling_enabled'" \
-      -e "registration_profile_img='$test.svg'" \
-      playbooks/tests/registrations.yaml
-    e Register "${logs}/${test}.log"
+      -e "reuse_hosts=false" \
+      -e "execution_logs='../../$logs/$prefix-container-host-client-logs'" \
+      -e "profile=$profiling_enabled" \
+      playbooks/tests/concurrent_tasks.yaml
+    for task in $tasks_list; do
+        e "Execute $task" "$logs/$test.log"
+    done
 done
-grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
-e Register "$logs/$prefix-overall.log"
+for task in $tasks_list; do
+    grep "Execute $task" "$logs"/$prefix-*.log >"$logs/$prefix-$task-overall.log"
+    e "Execute $task" "$logs/$prefix-$task-overall.log"
+done
 
 
 section 'Remote execution (ReX)'
@@ -747,9 +757,9 @@ for rex_search_query in $rex_search_queries; do
         jsr "${logs}/${test}.log"
         j "${logs}/${test}.log"
 
-        test=62-rex-katello_package_install_ssh-podman-${num_matching_rex_ssh_hosts}
+        test=62-rex-katello_package_install_ssh-rust-${num_matching_rex_ssh_hosts}
         skip_measurement=true h ${test}.log \
-          "job-invocation create --async --description-format '${num_matching_rex_ssh_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query '$search_query_ssh'"
+          "job-invocation create --async --description-format '${num_matching_rex_ssh_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='rust' --search-query '$search_query_ssh'"
         jsr "${logs}/${test}.log"
         j "${logs}/${test}.log"
     fi  # num_matching_rex_ssh_hosts > 0
@@ -761,18 +771,13 @@ for rex_search_query in $rex_search_queries; do
         jsr "${logs}/${test}.log"
         j "${logs}/${test}.log"
 
-        test=62-rex-katello_package_install_mqtt-podman-${num_matching_rex_mqtt_hosts}
+        test=62-rex-katello_package_install_mqtt-rust-${num_matching_rex_mqtt_hosts}
         skip_measurement=true h ${test}.log \
-          "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='podman' --search-query '$search_query_mqtt'"
+          "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='rust' --search-query '$search_query_mqtt'"
         jsr "${logs}/${test}.log"
         j "${logs}/${test}.log"
     fi  # num_matching_rex_mqtt_hosts > 0
 
-    test=63-rex-ansible-podman_login_pull_rhosp-${num_matching_rex_hosts}
-    skip_measurement=true h ${test}.log \
-      "job-invocation create --async --description-format '${num_matching_rex_hosts} hosts - Run %{command} (%{template_name})' --inputs command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh' --job-template '$job_template_ansible_default' --search-query '$search_query'"
-    jsr "${logs}/${test}.log"
-    j "${logs}/${test}.log"
 
     if vercmp_ge "$sat_version" '6.17.0'; then
         if $enable_iop; then
