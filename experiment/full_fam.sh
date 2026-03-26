@@ -13,6 +13,8 @@ rels="${PARAM_rels:-rhel7 rhel8 rhel9 rhel10}"
 
 basearch=x86_64
 
+tasks_list="${PARAM_tasks_list:-registration insights-client container_pull}"
+
 rhel_product=RHEL
 tested_products+=("$rhel_product")
 
@@ -46,9 +48,9 @@ if vercmp_ge "$sat_version" '6.17.0'; then
     flatpak_remote_username="${PARAM_flatpak_remote_username:-user}"
     flatpak_remote_password="${PARAM_flatpak_remote_password:-password}"
     tested_products+=("$flatpak_product")
+    tasks_list+=" flatpak_install"
 fi
 
-tasks_list="${PARAM_tasks_list:-registration insights-client container_pull}"
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
@@ -998,7 +1000,7 @@ section 'Incremental concurrent execution'
 # Clean up logs from previous runs
 skip_measurement=true a 49-cleanup-container-host-logs.log \
   -m ansible.builtin.shell \
-  -a 'rm -f /root/out_*.log' \
+  -a 'rm -f /root/out_*.log*' \
   container_hosts
 
 
