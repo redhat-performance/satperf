@@ -48,6 +48,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
     tested_products+=("$flatpak_product")
 fi
 
+tasks_list="${PARAM_tasks_list:-registration insights-client container_pull}"
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
 test_sync_repositories_count="${PARAM_test_sync_repositories_count:-8}"
@@ -186,7 +187,7 @@ for product in "${tested_products[@]}"; do
           '. + [{"name": $name, "repositories": $repositories}]')"
 
         test="${index_ten}0fr-product-create-${product_code}-fake"
-        # We do not want to measure it because it's fake
+        # We don't want to measure it because it's fake
         skip_measurement=true apj $test \
           -e "products='$product_products'" \
           playbooks/tests/FAM/repositories.yaml
@@ -993,42 +994,51 @@ ap 44-recreate-client-scripts.log \
   playbooks/satellite/client-scripts.yaml
 
 
-section 'Incremental registrations'
+section 'Incremental concurrent execution'
+# Clean up logs from previous runs
+skip_measurement=true a 49-cleanup-container-host-logs.log \
+  -m ansible.builtin.shell \
+  -a 'rm -f /root/out_*.log' \
+  container_hosts
+
+
 num_containers_per_container_host="$( get_inventory_var containers_count container_hosts[0] )"
 min_containers_per_batch=4
-num_retry_forks="$(( initial_expected_concurrent_registrations / num_container_hosts ))"
-initial_concurrent_registrations_per_container_host=$min_containers_per_batch
-num_retry_forks=$min_containers_per_batch
-prefix=48-register
+initial_concurrent_per_container_host=$min_containers_per_batch
+prefix=50-concurrent-exec
 
-for (( batch=1, remaining_containers_per_container_host=num_containers_per_container_host, total_registered=0; remaining_containers_per_container_host > 0; batch++ )); do
-    if (( remaining_containers_per_container_host > initial_concurrent_registrations_per_container_host * batch )); then
-        concurrent_registrations_per_container_host="$(( initial_concurrent_registrations_per_container_host * batch ))"
+for (( batch=1, remaining_containers_per_container_host=num_containers_per_container_host, total_executed=0; remaining_containers_per_container_host > 0; batch++ )); do
+    if (( remaining_containers_per_container_host > initial_concurrent_per_container_host * batch )); then
+        concurrent_per_container_host=$(( initial_concurrent_per_container_host * batch ))
     else
-        concurrent_registrations_per_container_host=$remaining_containers_per_container_host
+        concurrent_per_container_host=$remaining_containers_per_container_host
     fi
-    concurrent_registrations="$(( concurrent_registrations_per_container_host * num_container_hosts ))"
-    (( remaining_containers_per_container_host -= concurrent_registrations_per_container_host ))
-    (( total_registered += concurrent_registrations ))
+    concurrent_total=$(( concurrent_per_container_host * num_container_hosts ))
+    (( remaining_containers_per_container_host -= concurrent_per_container_host ))
+    (( total_executed += concurrent_total ))
 
-    log "Trying to register $concurrent_registrations content hosts concurrently in this batch"
+    log "Running '$tasks_list' on $concurrent_total content hosts concurrently in this batch"
 
-    test="$prefix-${concurrent_registrations}"
+    test="$prefix-$concurrent_total"
     ap "$test.log" \
-      -e "size='$concurrent_registrations_per_container_host'" \
-      -e "concurrent_registrations='$concurrent_registrations'" \
-      -e "num_retry_forks='$num_retry_forks'" \
-      -e "registration_logs='../../$logs/$prefix-container-host-client-logs'" \
-      -e 're_register_failed_hosts=true' \
+      -e "size=$concurrent_per_container_host" \
+      -e "concurrent_total=$concurrent_total" \
+      -e "tasks_list='$tasks_list'" \
       -e "sat_version='$sat_version'" \
+      -e 'retry_failed=true' \
       -e "enable_iop='$enable_iop'" \
-      -e "profile='$profiling_enabled'" \
-      -e "registration_profile_img='$test.svg'" \
-      playbooks/tests/registrations.yaml
-    e Register "$logs/$test.log"
+      -e "reuse_hosts=false" \
+      -e "execution_logs='../../$logs/$prefix-container-host-client-logs'" \
+      -e "profile=$profiling_enabled" \
+      playbooks/tests/concurrent_tasks.yaml
+    for task in $tasks_list; do
+        e "Execute $task" "$logs/$test.log"
+    done
 done
-grep Register "$logs"/$prefix-*.log >"$logs/$prefix-overall.log"
-e Register "$logs/$prefix-overall.log"
+for task in $tasks_list; do
+    grep "Execute $task" "$logs"/$prefix-*.log >"$logs/$prefix-$task-overall.log"
+    e "Execute $task" "$logs/$prefix-$task-overall.log"
+done
 
 
 section 'Remote execution (ReX)'
@@ -1111,63 +1121,17 @@ for rex_search_query in $rex_search_queries; do
         ejji $test
     fi  # num_matching_rex_mqtt_hosts > 0
 
-    test="63f-rex-ansible-podman_login_pull_rhosp-${num_matching_rex_hosts}"
-    apj $test \
-      -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
-      -e "job_template='$job_template_ansible_default'" \
-      -e "search_query='$search_query'" \
-      -e "command='bash -x /root/podman-login.sh && bash -x /root/podman-pull-rhosp.sh'" \
-      -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 450 : num_matching_rex_hosts ))" \
-      playbooks/tests/FAM/job_invocation_create.yaml
-    ejji $test
-
-    if $enable_iop && vercmp_ge "$sat_version" '6.17.0'; then
-        test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
-        apj $test \
-          -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
-          -e "job_template='$job_template_ansible_default'" \
-          -e "search_query='$search_query'" \
-          -e "command='insights-client'" \
-          -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
-          playbooks/tests/FAM/job_invocation_create.yaml
-        ejji $test
-
-        if (( num_matching_rex_ssh_hosts > 0 )); then
-            test="65f-rex-script_ssh-insigths-client-${num_matching_rex_ssh_hosts}"
-            apj $test \
-              -e "description_format='${num_matching_rex_ssh_hosts} hosts - %{template_name} (ssh): %{command}'" \
-              -e "job_template='$job_template_script_default'" \
-              -e "search_query='$search_query_ssh'" \
-              -e "command='insigths-client'" \
-              -e "task_timeout=$(( num_matching_rex_ssh_hosts < 450 ? 450 : num_matching_rex_ssh_hosts ))" \
-              playbooks/tests/FAM/job_invocation_create.yaml
-            ejji $test
-        fi  # num_matching_rex_ssh_hosts > 0
-
-        if (( num_matching_rex_mqtt_hosts > 0 )); then
-            test="65f-rex-script_mqtt-insigths-client-${num_matching_rex_mqtt_hosts}"
-            apj $test \
-              -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt): %{command}'" \
-              -e "job_template='$job_template_script_default'" \
-              -e "search_query='$search_query_mqtt'" \
-              -e "command='insigths-client'" \
-              -e "task_timeout=$(( num_matching_rex_mqtt_hosts < 450 ? 1350 : num_matching_rex_mqtt_hosts * 2 ))" \
-              playbooks/tests/FAM/job_invocation_create.yaml
-            ejji $test
-        fi  # num_matching_rex_mqtt_hosts > 0
-
-        # if vercmp_ge "$sat_version" '6.18.0'; then
-        #     test="66f-rex-apply_remediation-${num_matching_rex_hosts}"
-        #     apj $test \
-        #       -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}'" \
-        #       -e "job_template='$job_template_lightspeed_remediation'" \
-        #       -e "search_query='$search_query'" \
-        #       -e "inputs=hit_remediation_pairs='$lightspeed_remediation_pairs'" \
-        #       -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
-        #       playbooks/tests/FAM/job_invocation_create.yaml
-        #     ejji $test
-        # fi  # vercmp_ge "$sat_version" '6.18.0'
-    fi  # $enable_iop && vercmp_ge "$sat_version" '6.17.0'
+    # if $enable_iop && vercmp_ge "$sat_version" '6.18.0'; then
+    #     test="66f-rex-apply_remediation-${num_matching_rex_hosts}"
+    #     apj $test \
+    #       -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}'" \
+    #       -e "job_template='$job_template_lightspeed_remediation'" \
+    #       -e "search_query='$search_query'" \
+    #       -e "inputs=hit_remediation_pairs='$lightspeed_remediation_pairs'" \
+    #       -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
+    #       playbooks/tests/FAM/job_invocation_create.yaml
+    #     ejji $test
+    # fi  # $enable_iop && vercmp_ge "$sat_version" '6.18.0'
 
     if (( num_matching_rex_ssh_hosts > 0 )); then
         test="69f-rex-katello_package_update_ssh-${num_matching_rex_ssh_hosts}"
@@ -1191,22 +1155,6 @@ for rex_search_query in $rex_search_queries; do
         ejji $test
     fi  # num_matching_rex_mqtt_hosts > 0
 done
-
-rex_search_query=container
-search_query="name ~ $rex_search_query"
-num_matching_rex_hosts="$(h_out "--no-headers --csv host list --organization '{{ sat_org }}' --thin true --search '$search_query'" | grep -c "$rex_search_query")"
-
-if $enable_iop && vercmp_ge "$sat_version" '6.17.0'; then
-    test="65f-rex-ansible-insigths-client-${num_matching_rex_hosts}"
-    apj $test \
-      -e "description_format='${num_matching_rex_hosts} hosts - %{template_name}: %{command}'" \
-      -e "job_template='$job_template_ansible_default'" \
-      -e "search_query='$search_query'" \
-      -e "command='insights-client'" \
-      -e "task_timeout=$(( num_matching_rex_hosts < 450 ? 900 : num_matching_rex_hosts * 2 ))" \
-      playbooks/tests/FAM/job_invocation_create.yaml
-    ejji $test
-fi  # $enable_iop && vercmp_ge "$sat_version" '6.17.0'
 
 
 # ReX cleanup
