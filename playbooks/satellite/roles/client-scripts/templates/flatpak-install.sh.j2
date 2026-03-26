@@ -6,12 +6,19 @@ set -eu
 REGISTRY={{ tests_registration_target }}
 FLATPAK_REMOTE=katello
 
-# Add Satellite as Flatpak remote (idempotent)
+# Add Satellite/capsule as Flatpak remote (idempotent)
 flatpak remote-add \
   --if-not-exists \
   --authenticator-name=org.flatpak.Authenticator.Oci \
   "${FLATPAK_REMOTE}" \
   "oci+https://${REGISTRY}/"
 
-# Install thunderbird
-flatpak install --assumeyes "${FLATPAK_REMOTE}" thunderbird
+# Install thunderbird via a D-Bus session (required for OCI authenticator)
+set +e
+dbus-run-session bash -c "
+  flatpak install --assumeyes ${FLATPAK_REMOTE} org.mozilla.Thunderbird
+"
+dbus_status=$?
+set -e
+pkill -TERM -f flatpak-oci-authenticator || true
+exit $dbus_status
