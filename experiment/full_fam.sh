@@ -484,8 +484,8 @@ for product in "${tested_products[@]}"; do
                     ;;
                 *)
                     continue
-                esac  # case "$rel_num"
-            esac  # case "$product"
+                esac  # "$rel_num"
+            esac  # "$product"
 
             if [[ "$product" != "$flatpak_product" && "$product" != "$rhosp_product" ]]; then
                 product_repositories="$(echo "$product_repositories" |
@@ -717,7 +717,7 @@ for rel in $rels; do
           --arg name "$repo_name_appstream" \
           '. + [{"product": $product, "name": $name}]')"
         ;;
-    esac  # case "$rel_num"
+    esac  # "$rel_num"
 done
 
 # CV
@@ -941,7 +941,7 @@ for content in $contents; do
         test_max_sync_secs_value="$test_sync_ansible_collections_max_sync_secs"
         test_le_value="$test_sync_ansible_collections_le"
         ;;
-    esac  # case "$content"
+    esac  # "$content"
 
 
     section "Sync $content content"
