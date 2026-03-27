@@ -2,4 +2,4 @@
 foremanctl_features:
   - foreman-proxy
   - hammer
-  - rex
+  - remote-execution
