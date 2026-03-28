@@ -596,8 +596,8 @@ for product in "${tested_products[@]}"; do
 
     product_content_views="$(echo "$content_views" |
       jq -c \
-      --arg product_code "CV_${product_code}_" \
-      'map(select(.components or (.repositories and (.name | test($product_code)))))')"
+      --arg product_code "CV_${product_code}" \
+      'map(select(.components or (.repositories and (.name | startswith($product_code)))))')"
 
     # Create $product CVs/CCVs
     test="${index_ten}5fr-cv-create-${product_code}"
