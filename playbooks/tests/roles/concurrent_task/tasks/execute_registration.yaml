@@ -22,7 +22,7 @@
         --private-key /root/id_rsa_key \
         --forks {{ size }} \
         --inventory {{ _concurrent_task_local_inventory }} \
-        --extra-vars 'task="registration"' \
+        --extra-vars "task='{{ task_name }}'" \
         host-registration.yaml |
         tee {{ _concurrent_task_clients_yaml_cmd_base }}_registration.log
   changed_when: true

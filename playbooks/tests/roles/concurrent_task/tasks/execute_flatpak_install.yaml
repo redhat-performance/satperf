@@ -23,7 +23,7 @@
         tee {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_prepare.log
   changed_when: true
 
-- name: "{{ task_name }} - Run flatpak-install.sh via script_execution.yaml"
+- name: "{{ task_name }} - Run flatpak_install.sh via script_execution.yaml"
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
@@ -32,8 +32,7 @@
         --private-key /root/id_rsa_key \
         --forks {{ size }} \
         --inventory {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_el10.ini \
-        --extra-vars 'script="/root/flatpak-install.sh"' \
-        --extra-vars 'task="flatpak_install"' \
+        --extra-vars "task='{{ task_name }}'" \
         script_execution.yaml |
         tee {{ _concurrent_task_clients_yaml_cmd_base }}_flatpak_install.log
   changed_when: true

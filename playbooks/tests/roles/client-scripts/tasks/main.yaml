@@ -62,14 +62,12 @@
     - script_execution_prepare.yaml
     - script_execution.yaml
 
-- name: Distribute container pulling related scripts
+- name: Distribute container_pull.sh
   ansible.builtin.template:
-    src: "{{ item }}.j2"
-    dest: "/root/{{ item }}"
+    src: container_pull.sh.j2
+    dest: /root/container_pull.sh
     mode: '0700'
     force: true
-  loop:
-    - skopeo-sync-rhosp.sh
 
 - name: Distribute skopeo-login.sh (< 6.18)
   when:
@@ -81,12 +79,12 @@
     mode: '0700'
     force: true
 
-- name: Distribute flatpak-install.sh (>= 6.17)
+- name: Distribute flatpak_install.sh (>= 6.17)
   when:
     - sat_version in ['stream', 'foremanctl'] or sat_version is version('6.17.0', '>=')
   ansible.builtin.template:
-    src: flatpak-install.sh.j2
-    dest: /root/flatpak-install.sh
+    src: flatpak_install.sh.j2
+    dest: /root/flatpak_install.sh
     mode: '0700'
     force: true
 ...

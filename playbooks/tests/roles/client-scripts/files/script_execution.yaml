@@ -9,18 +9,21 @@
         cmd: |
           set -o pipefail
 
-          if [[ -f /root/script-execution.log && ! -f /root/script-execution.log.orig ]]; then
-              cp -p /root/script-execution.log /root/script-execution.log.orig
+          script={{ script | default('./' + task + '.sh') }}
+          log={{ task }}.log
+
+          if [[ -f "$log" && ! -f "$log.orig" ]]; then
+              cp -p "$log" "$log.orig"
           fi
 
-          {{ script }} &>/root/script-execution.log
+          $script &>"$log"
           ret=$?
 
-          echo '-' >>/root/script-execution.log
-          echo "Return code: $ret" >>/root/script-execution.log
-          echo '-----' >>/root/script-execution.log
+          echo '-' >>"$log"
+          echo "Return code: $ret" >>"$log"
+          echo '-----' >>"$log"
 
-          cat /root/script-execution.log
+          cat "$log"
           exit $ret
       environment:
         TZ: UTC

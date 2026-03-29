@@ -81,7 +81,7 @@ ap 44-generate-host-registration-command.log \
 skip_measurement='true' ap 44-recreate-client-scripts.log \
   -e "ak=ActivationKey" \
   -e "sat_version='$sat_version'" \
-  playbooks/satellite/client-scripts.yaml
+  playbooks/tests/client-scripts.yaml
 
 section "Prepare env for openSCAP test"
 ap openSCAP-sat-prep.log playbooks/tests/openSCAP-sat-prep.yaml -e "proxy_id=$proxy_id hostgroup_name={{ tests_registration_target }}"

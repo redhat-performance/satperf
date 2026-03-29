@@ -60,7 +60,7 @@ skip_measurement='true' ap downtest-44-generate-host-registration-command.log \
 skip_measurement='true' ap downtest-44-recreate-client-scripts.log \
   -e "ak='$ak'" \
   -e "sat_version='$sat_version'" \
-  playbooks/satellite/client-scripts.yaml
+  playbooks/tests/client-scripts.yaml
 
 
 section "Incremental registrations and remote execution"

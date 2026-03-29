@@ -3,13 +3,11 @@
   gather_facts: false
 
   tasks:
-    - name: Upload skopeo-sync-rhosp.sh to content host
+    - name: Upload container_pull.sh to content host
       ansible.builtin.copy:
-        src: "{{ item }}"
-        dest: "{{ item }}"
+        src: /root/container_pull.sh
+        dest: /root/container_pull.sh
         mode: '0500'
-      loop:
-        - /root/skopeo-sync-rhosp.sh
 
     - name: Upload and run skopeo login (< 6.18)
       when:
@@ -27,11 +25,11 @@
             cmd: /root/skopeo-login.sh
           changed_when: true
 
-    - name: Upload flatpak-install.sh to content host (>= 6.17)
+    - name: Upload flatpak_install.sh to content host (>= 6.17)
       when:
         - sat_version in ['stream', 'foremanctl'] or sat_version is version('6.17.0', '>=')
       ansible.builtin.copy:
-        src: /root/flatpak-install.sh
-        dest: /root/flatpak-install.sh
+        src: /root/flatpak_install.sh
+        dest: /root/flatpak_install.sh
         mode: '0500'
 ...
