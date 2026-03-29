@@ -29,8 +29,7 @@
 
     - name: Upload flatpak-install.sh to content host (>= 6.17)
       when:
-        - sat_version not in ['stream', 'foremanctl']
-        - sat_version is version('6.17.0', '>=')
+        - sat_version in ['stream', 'foremanctl'] or sat_version is version('6.17.0', '>=')
       ansible.builtin.copy:
         src: /root/flatpak-install.sh
         dest: /root/flatpak-install.sh
