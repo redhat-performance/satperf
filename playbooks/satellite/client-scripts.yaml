@@ -1,6 +1,7 @@
 ---
 - hosts: container_hosts
   gather_facts: false
+
   roles:
     - role: client-scripts
 ...

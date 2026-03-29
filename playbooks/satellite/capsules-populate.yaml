@@ -1,6 +1,7 @@
 ---
 - hosts: capsules
   gather_facts: false
+
   roles:
     - capsule-populate
 ...
