@@ -39,7 +39,7 @@
         # - setup_insights | default(false) | bool
         - enable_iop | default(false) | bool
         # - sat_version != 'foremanctl' and ( sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=') )
-        - sat_version != 'foremanctl' and sat_version != 'stream' and sat_version is ansible.builtin.version('6.17.0', '>=')
+        - sat_version not in ['stream', 'foremanctl'] and sat_version is ansible.builtin.version('6.17.0', '>=')
 
     # XXX: Bug??
     - name: Check if Insights client should be installed and configured (it shouldn't be by default)
@@ -68,13 +68,13 @@
       ansible.builtin.set_fact:
         default_jwt_expiration: 999999
       when:
-        - sat_version != 'foremanctl' and sat_version != 'stream' and sat_version is ansible.builtin.version('6.15.0', '<')
+        - sat_version not in ['stream', 'foremanctl'] and sat_version is ansible.builtin.version('6.15.0', '<')
 
     - name: "Set default JWT expiration time (0)"
       ansible.builtin.set_fact:
         default_jwt_expiration: 0
       when:
-        - sat_version == 'foremanctl' or sat_version == 'stream' or sat_version is ansible.builtin.version('6.15.0', '>=')
+        - sat_version in ['stream', 'foremanctl'] or sat_version is ansible.builtin.version('6.15.0', '>=')
 
     - name: "Add --jwt-expiration parameter"
       ansible.builtin.set_fact:
@@ -84,7 +84,7 @@
       ansible.builtin.set_fact:
         hgrg: "{{ hgrg }} --setup-container-registry-certs true"
       when:
-        - sat_version == 'foremanctl' or sat_version == 'stream' or sat_version is ansible.builtin.version('6.18.0', '>=')
+        - sat_version in ['stream', 'foremanctl'] or sat_version is ansible.builtin.version('6.18.0', '>=')
 
     - name: Show hgrg parameter
       ansible.builtin.debug:
