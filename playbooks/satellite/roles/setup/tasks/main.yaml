@@ -228,7 +228,7 @@
             name: apply_custom-hiera
           vars:
             content_file: "{{ custom_hiera_iop_content_file }}"
-            marker_postfix: IoPç
+            marker_postfix: IoP
 
     - name: Set common variable(s) values
       ansible.builtin.set_fact:
