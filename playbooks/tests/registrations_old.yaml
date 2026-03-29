@@ -1,5 +1,5 @@
 ---
-- name: Register containers against a registration target
+- name: Register containers against a registration target - preparation
   hosts: container_hosts
   gather_facts: false
   vars:
@@ -7,9 +7,7 @@
     num_retry_forks: 3
     registration_logs: registration_logs
     concurrent_registrations: 100
-    registration_profile_img: registration_profile.svg
     re_register_failed_hosts: false
-    profile: false
     enable_iop: false
 
   tasks:
@@ -98,10 +96,13 @@
         clients_yaml_cmd_base: "/root/out-{{ lookup('pipe', 'date -u -Iseconds') | regex_replace('[^A-Za-z0-9-]', '_') }}"
       run_once: true
 
+    - name: Propagate base log name to all hosts
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "{{ hostvars[ansible_play_hosts[0]]['clients_yaml_cmd_base'] }}"
+
     - name: Set `host-registration_prepare.yaml` log name
       ansible.builtin.set_fact:
         host_registration_prepare_cmd_log: "{{ clients_yaml_cmd_base }}_prepare.log"
-      run_once: true
 
     - name: Run `host-registration_prepare.yaml`
       ansible.builtin.shell:
@@ -133,19 +134,26 @@
       ansible.builtin.set_fact:
         clients_yaml_cmd_log: "{{ clients_yaml_cmd_base }}.log"
 
+    - name: Write log base for subsequent plays
+      ansible.builtin.copy:
+        content: "{{ clients_yaml_cmd_base }}"
+        dest: /root/.current_reg_log
+        mode: '0644'
+
+
+- name: Start BPF profiling
+  hosts: satellite6
+  gather_facts: false
+  vars:
+    concurrent_registrations: 100
+    profile: false
+    profile_base_dir: '/root/profile'
+
+  tasks:
     - name: Profile preparation
       when:
         - profile | default(false) | bool
       block:
-        - name: Set profile base directory
-          ansible.builtin.set_fact:
-            profile_base_dir: '/root/profile'
-
-        - name: Set additional profile vars
-          ansible.builtin.set_fact:
-            profile_file: "{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}.profile-folded"
-            profile_image: "{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}.svg"
-
         - name: Create profiling directory
           ansible.builtin.file:
             path: "{{ profile_base_dir }}"
@@ -158,12 +166,30 @@
               /usr/share/bcc/tools/profile \
                 -adf \
                 --stack-storage-size 1638400 \
-                >{{ profile_file }}
+                >{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}.profile-folded
           async: 1800
           poll: 0
-          ignore_errors: true
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      run_once: true
+          # ignore_errors: true
+
+
+- name: Register containers against a registration target - execution
+  hosts: container_hosts
+  gather_facts: false
+  vars:
+    size: 10
+    num_retry_forks: 3
+
+  tasks:
+    - name: Read log base from file
+      ansible.builtin.slurp:
+        src: /root/.current_reg_log
+      register: log_base_slurp
+
+    - name: Set log base and derived facts
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "{{ log_base_slurp.content | b64decode }}"
+        clients_yaml_cmd_log: "{{ log_base_slurp.content | b64decode }}.log"
+        inventory_file: "clients_{{ size }}.ini"
 
     - name: Run `host-registration.yaml` (log = {{ clients_yaml_cmd_log }})
       ansible.builtin.shell:
@@ -176,25 +202,77 @@
             tee {{ clients_yaml_cmd_log }}
       ignore_errors: true
 
-    - name: Profile stop
+
+- name: Stop BPF profiling and generate flamegraphs
+  hosts: satellite6
+  gather_facts: false
+  vars:
+    concurrent_registrations: 100
+    profile: false
+    profile_base_dir: '/root/profile'
+    registration_logs: registration_logs
+    registration_profile_img: registration_profile.svg
+
+  tasks:
+    - name: Profile stop and flamegraphs generation
       when:
         - profile | default(false) | bool
+      ignore_errors: true
       block:
         - name: Kill BPF profile process
           ansible.builtin.command:
-            cmd: |
-              pkill -SIGINT profile
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      run_once: true
-      ignore_errors: true
+            cmd: pkill -SIGINT profile
+          register: pkill_result
+          failed_when: pkill_result.rc not in [0, 1]
 
-    - name: Fetch client logs
+        - name: Convert BPF profile output to image
+          ansible.builtin.shell:
+            cmd: |
+              set -o pipefail
+
+              [[ -s {{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}-{{ inventory_hostname }}.profile-folded ]] || exit 0
+
+              flamegraph.pl \
+                --minwidth 5 \
+                --width 2500 \
+                {{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}-{{ inventory_hostname }}.profile-folded \
+                >{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}-{{ inventory_hostname }}.svg
+
+        - name: Fetch BPF profile image
+          ansible.builtin.fetch:
+            src: "{{ profile_base_dir }}/registration_profile-{{ concurrent_registrations }}-{{ inventory_hostname }}.svg"
+            dest: "{{ registration_logs }}/../{{ inventory_hostname }}-{{ registration_profile_img }}"
+            flat: true
+          failed_when: false
+
+
+- name: Register containers against a registration target - post-execution
+  hosts: container_hosts
+  gather_facts: false
+  vars:
+    size: 10
+    num_retry_forks: 3
+    registration_logs: registration_logs
+    re_register_failed_hosts: false
+
+  tasks:
+    - name: Read log base from file
+      ansible.builtin.slurp:
+        src: /root/.current_reg_log
+      register: log_base_slurp
+
+    - name: Set log base and derived facts
+      ansible.builtin.set_fact:
+        clients_yaml_cmd_base: "{{ log_base_slurp.content | b64decode }}"
+        clients_yaml_cmd_log: "{{ log_base_slurp.content | b64decode }}.log"
+
+    - name: Fetch registration logs
       ansible.builtin.fetch:
         src: "{{ clients_yaml_cmd_log }}"
         dest: "{{ registration_logs }}"
       ignore_errors: true
 
-    - name: Get how long registration took
+    - name: Get registration timings
       ansible.builtin.shell:
         cmd: |
           set -o pipefail
@@ -203,39 +281,42 @@
             '"msg". "Register' {{ clients_yaml_cmd_log }} |
             cut -d '"' -f 4
       register: clients_yaml_grepper_timings
-      ignore_errors: true
+      failed_when: clients_yaml_grepper_timings.rc == 2
+      changed_when: false
 
-    - name: "Append registration timings to central list"
+    - name: Append registration timings to central list
       ansible.builtin.set_fact:
-        grepper_times: "{{ grepper_times | default([]) + hostvars[item]['clients_yaml_grepper_timings']['stdout_lines'] }}"
+        grepper_times: >-
+          {{
+            grepper_times | default([]) +
+            hostvars[item]['clients_yaml_grepper_timings']['stdout_lines']
+          }}
       with_items: "{{ ansible_play_batch }}"
       run_once: true
 
-    - name: "Show how long registration took"
+    - name: Show registration timings
       ansible.builtin.debug:
         var: grepper_times
       run_once: true
 
-    - name: "Show number of successful registration events"
+    - name: Show number of successful execution events
       ansible.builtin.debug:
         var: grepper_times | length
       run_once: true
 
-    - name: Increment number of already registered containers
-      ansible.builtin.lineinfile:
-        path: /root/container-used-count
-        regexp: .*
-        line: "{{ containers_used_count | int + size | int }}"
-        create: true
+    - name: Increment number of already used containers
+      ansible.builtin.shell:
+        cmd: |
+          current=$(cat /root/container-used-count 2>/dev/null || echo 0)
+          echo $(( current + {{ size | int }} )) >/root/container-used-count
+      changed_when: true
 
     - name: Get number of hosts that failed to register
       ansible.builtin.shell:
-        cmd: |
-          grep -cw \
-            -e 'failed=1' \
-            {{ clients_yaml_cmd_log }}
+        cmd: grep -cw 'failed=1' {{ clients_yaml_cmd_log }}
       register: num_failed_hosts
       failed_when: num_failed_hosts.rc == 2
+      changed_when: false
 
     - name: Show number of hosts that failed to register
       ansible.builtin.debug:
@@ -253,6 +334,7 @@
                 {{ clients_yaml_cmd_log }}
           register: num_failed_hosts_rhsm
           failed_when: num_failed_hosts_rhsm.rc == 2
+          changed_when: false
 
         - name: RHSM errors
           when:
@@ -288,6 +370,7 @@
               ansible.builtin.fetch:
                 src: "{{ clients_yaml_cmd_base }}-rhsm.log"
                 dest: "{{ registration_logs }}"
+              failed_when: false
               ignore_errors: true
 
         - name: Get number of hosts that failed to register due to `insights-client` errors
@@ -298,6 +381,7 @@
                 {{ clients_yaml_cmd_log }}
           register: num_failed_hosts_insights_client
           failed_when: num_failed_hosts_insights_client.rc == 2
+          changed_when: false
 
         - name: "`insights-client` errors"
           when:
@@ -333,6 +417,7 @@
               ansible.builtin.fetch:
                 src: "{{ clients_yaml_cmd_base }}-insights-client.log"
                 dest: "{{ registration_logs }}"
+              failed_when: false
               ignore_errors: true
 
         - name: Re-register failed hosts
@@ -378,27 +463,6 @@
                   done
               register: clients_yaml_cmd_retries
               failed_when: clients_yaml_cmd_retries.rc == 2
+              changed_when: false
               ignore_errors: true
-
-    - name: Profile flamegraphs
-      when:
-        - profile | default(false) | bool
-      block:
-        - name: Convert BPF profile output to image
-          ansible.builtin.shell:
-            cmd: |
-              flamegraph.pl \
-                --minwidth 5 \
-                --width 2500 \
-                {{ profile_file }} \
-                >{{ profile_image }}
-
-        - name: Fetch BPF profile image
-          ansible.builtin.fetch:
-            src: "{{ profile_image }}"
-            dest: "{{ registration_logs }}/../{{ registration_profile_img }}"
-            flat: true
-      delegate_to: "{{ groups['satellite6'] | first }}"
-      run_once: true
-      ignore_errors: true
 ...
