@@ -119,10 +119,6 @@ apj $test \
 
 
 section 'Prepare for Red Hat content'
-test=09f-manifest-download
-skip_measurement=true apj $test \
-  playbooks/tests/FAM/manifest_download.yaml
-
 test=09f-manifest-exercise
 skip_measurement=true apj $test \
   -e "runs='$manifest_exercise_runs'" \
