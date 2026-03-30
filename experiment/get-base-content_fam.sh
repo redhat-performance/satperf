@@ -20,7 +20,19 @@ repo_sat_client="${PARAM_repo_sat_client:-http://mirror.example.com}"
 tested_products+=("$sat_client_product")
 
 rhosp_product=RHOSP
-rhosp_repo_name=rhoso/openstack-base-rhel9
+rhosp_repo_names=(
+    rhoso/openstack-base-rhel9
+    rhoso/openstack-neutron-dhcp-agent-rhel9
+    rhoso/openstack-neutron-metadata-agent-ovn-rhel9
+    rhoso/openstack-neutron-ovn-agent-rhel9
+    rhoso/openstack-neutron-server-rhel9
+    rhoso/openstack-neutron-sriov-agent-rhel9
+    rhoso/openstack-nova-api-rhel9
+    rhoso/openstack-nova-compute-rhel9
+    rhoso/openstack-nova-conductor-rhel9
+    rhoso/openstack-nova-novncproxy-rhel9
+    rhoso/openstack-nova-scheduler-rhel9
+)
 rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}"
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
 rhosp_registry_password="${PARAM_rhosp_registry_password:-password}"
@@ -276,18 +288,17 @@ for product in "${tested_products[@]}"; do
     if [[ "$product" == "$rhosp_product" ]]; then
         product_repositories='[]'
 
-        repo_name="$rhosp_repo_name"
-        repo_url="$rhosp_registry_url"
-
-        product_repositories="$(echo "$product_repositories" |
-          jq -c \
-          --arg name "$repo_name" \
-          --arg content_type "$content_type" \
-          --arg url "$repo_url" \
-          --arg docker_upstream_name "$repo_name" \
-          --arg upstream_username "$rhosp_registry_username" \
-          --arg upstream_password "$rhosp_registry_password" \
-          '. += [{"name": $name, "content_type": $content_type, "url": $url, "docker_upstream_name": $docker_upstream_name, "upstream_username": $upstream_username, "upstream_password": $upstream_password}]')"
+        for rhosp_repo_name in "${rhosp_repo_names[@]}"; do
+            product_repositories="$(echo "$product_repositories" |
+              jq -c \
+              --arg name "$rhosp_repo_name" \
+              --arg content_type "$content_type" \
+              --arg url "$rhosp_registry_url" \
+              --arg docker_upstream_name "$rhosp_repo_name" \
+              --arg upstream_username "$rhosp_registry_username" \
+              --arg upstream_password "$rhosp_registry_password" \
+              '. += [{"name": $name, "content_type": $content_type, "url": $url, "docker_upstream_name": $docker_upstream_name, "upstream_username": $upstream_username, "upstream_password": $upstream_password}]')"
+        done
 
         product_products="$(echo "$product_products" |
           jq -c \
@@ -326,6 +337,27 @@ for product in "${tested_products[@]}"; do
 
 
     section "Create $product CVs/CCVs"
+
+    if [[ "$product" == "$rhosp_product" ]]; then
+        # Build single shared CV_rhosp with all repos (not per-rel)
+        cv_rhosp="CV_${product_code}"
+        rhosp_product_repositories='[]'
+
+        for rhosp_repo_name in "${rhosp_repo_names[@]}"; do
+            rhosp_product_repositories="$(echo "$rhosp_product_repositories" |
+              jq -c \
+              --arg name "$rhosp_repo_name" \
+              --arg product "$product" \
+              '. + [{"name": $name, "product": $product}]')"
+        done
+
+        content_views="$(echo "$content_views" |
+          jq -c \
+          --arg name "$cv_rhosp" \
+          --argjson repositories "$rhosp_product_repositories" \
+          '. + [{"name": $name, "repositories": $repositories}]')"
+    fi  # "$product" == "$rhosp_product"
+
     for rel in $rels; do
         rel_num="${rel##rhel}"
         product_code_rel_num="${product_code}_${rel_num}"
@@ -384,10 +416,6 @@ for product in "${tested_products[@]}"; do
                 content_label="${organization_underscore}_${product_underscore}_${repo_name_code}"
                 content_overrides='[]'
                 ;;
-            $rhosp_product)
-                repo_name="$rhosp_repo_name"
-                repo_name_code="$(echo ${repo_name} | tr ' ' '_' | tr '/' '_')"
-                ;;
             $flatpak_product)
                 case "$rel_num" in
                 [8-9]|10)
@@ -410,22 +438,26 @@ for product in "${tested_products[@]}"; do
                 esac  # "$rel_num"
             esac  # "$product"
 
-            if [[ "$product" != "$flatpak_product" ]]; then
+            if [[ "$product" != "$flatpak_product" && "$product" != "$rhosp_product" ]]; then
                 product_repositories="$(echo "$product_repositories" |
                   jq -c \
                     --arg name "$repo_name" \
                     --arg product "$product" \
                     '. + [{"name": $name, "product": $product}]')"
-            fi  # "$product" != "$flatpak_product"
-        fi  # "$product"
+            fi  # "$product" != "$flatpak_product" && "$product" != "$rhosp_product"
+        fi  # "$product" == "$rhel_product"
 
         # CV
-        cv="CV_${product_code_rel_num}"
-        content_views="$(echo "$content_views" |
-          jq -c \
-          --arg name "$cv" \
-          --argjson repositories "$product_repositories" \
-          '. + [{"name": $name, "repositories": $repositories}]')"
+        if [[ "$product" != "$rhosp_product" ]]; then
+            cv="CV_${product_code_rel_num}"
+            content_views="$(echo "$content_views" |
+              jq -c \
+              --arg name "$cv" \
+              --argjson repositories "$product_repositories" \
+              '. + [{"name": $name, "repositories": $repositories}]')"
+        else  # "$product" == "$rhosp_product"
+            cv="CV_${product_code}"
+        fi  # "$product" != "$rhosp_product"
 
         # CCV
         ccv="CCV_${rel_num}"
