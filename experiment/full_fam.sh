@@ -146,8 +146,7 @@ skip_measurement=true apj $test \
   playbooks/tests/FAM/settings.yaml
 
 
-# XXX: Move it here??
-# products='[]'
+products='[]'
 content_views='[]'
 activation_keys='[]'
 
@@ -155,6 +154,7 @@ for product in "${tested_products[@]}"; do
     section "Get $product content"
     product_code="$(echo $product | tr '[:upper:]' '[:lower:]' | tr ' ' '_')"
     product_underscore="$(echo $product | tr ' ' '_')"
+    product_products='[]'
 
     case "$product" in
     $rhel_product)
@@ -173,10 +173,6 @@ for product in "${tested_products[@]}"; do
         content_type=docker
         ;;
     esac  # "$product"
-
-    product_products='[]'
-    # XXX: Move it from here??
-    products='[]'
 
     if [[ "$product" == "$flatpak_product" ]]; then
         ### XXX
