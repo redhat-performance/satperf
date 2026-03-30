@@ -1261,24 +1261,14 @@ apj $test \
   -e "lifecycle_environments='$lifecycle_environments'" \
   playbooks/tests/FAM/lifecycle_environments.yaml
 
-# Repository deletion
-for rid in $rids; do
-    h "103-repository-delete-${rid}.log" \
-      "repository delete --organization '{{ sat_org }}' --name '$rid'"
-done
-
 # Product deletion
-# Satellite Client
-h 104-product-delete-sat-client.log \
-  "product delete --organization '{{ sat_org }}' --name '$sat_client_product'"
-# RHOSP
-h "104-product-delete-${rhosp_product}.log" \
-  "product delete --organization '{{ sat_org }}' --name '$rhosp_product'"
-if vercmp_ge "$sat_version" '6.17.0'; then
-    # Flatpak
-    h "104-product-delete-${flatpak_product}.log" \
-      "product delete --organization '{{ sat_org }}' --name '$flatpak_product'"
-fi
+products="$(echo "$products" | jq -c \
+  'map({"name": .name, "state": "absent"})')"
+
+test="${index_ten}4fr-product-delete"
+apj $test \
+  -e "products='$products'" \
+  playbooks/tests/FAM/repositories.yaml
 
 
 section 'Sosreport'
