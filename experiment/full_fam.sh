@@ -13,7 +13,7 @@ rels="${PARAM_rels:-rhel7 rhel8 rhel9 rhel10}"
 
 basearch=x86_64
 
-tasks_list="${PARAM_tasks_list:-registration insights-client container_pull}"
+tasks_list="${PARAM_tasks_list:-registration insights-client subscription-manager_refresh container_pull}"
 
 rhel_product=RHEL
 tested_products+=("$rhel_product")

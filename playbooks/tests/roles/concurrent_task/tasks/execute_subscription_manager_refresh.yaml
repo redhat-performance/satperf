@@ -1,0 +1,16 @@
+---
+- name: "{{ task_name }} - Run subscription-manager refresh via script_execution.yaml"
+  ansible.builtin.shell:
+    cmd: |
+      set -o pipefail
+
+      ansible-playbook \
+        --private-key /root/id_rsa_key \
+        --forks {{ size }} \
+        --inventory {{ _concurrent_task_local_inventory }} \
+        --extra-vars 'script="subscription-manager refresh"' \
+        --extra-vars 'task="subscription-manager_refresh"' \
+        script_execution.yaml |
+        tee {{ _concurrent_task_clients_yaml_cmd_base }}_subscription-manager_refresh.log
+  changed_when: true
+  failed_when: false

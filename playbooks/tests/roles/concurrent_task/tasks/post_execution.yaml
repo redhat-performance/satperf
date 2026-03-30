@@ -72,6 +72,13 @@
     dest: "{{ execution_logs }}"
   failed_when: false
 
+- name: "{{ task_name }} - Fetch subscription-manager refresh log"
+  when: task_name == 'subscription-manager_refresh'
+  ansible.builtin.fetch:
+    src: "{{ _concurrent_task_clients_yaml_cmd_base }}_subscription-manager_refresh.log"
+    dest: "{{ execution_logs }}"
+  failed_when: false
+
 # Common: timings and failure count
 
 - name: "{{ task_name }} - Get timings"
