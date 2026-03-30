@@ -98,6 +98,16 @@ skip_measurement=true apj $test \
 
 
 # Get content
+settings="$(jq -cn \
+  '[{"name": "foreman_proxy_content_auto_sync", "value": "false"}]')"
+
+test=00fr-settings-foreman_proxy_content_auto_sync
+skip_measurement=true apj $test \
+  -e "settings='$settings'" \
+  playbooks/tests/FAM/settings.yaml
+
+
+products='[]'
 content_views='[]'
 activation_keys='[]'
 
@@ -105,6 +115,7 @@ for product in "${tested_products[@]}"; do
     section "Get $product content"
     product_code="$(echo $product | tr '[:upper:]' '[:lower:]' | tr ' ' '_')"
     product_underscore="$(echo $product | tr ' ' '_')"
+    product_products='[]'
 
     case "$product" in
     $rhel_product)
@@ -124,9 +135,6 @@ for product in "${tested_products[@]}"; do
         ;;
     esac  # "$product"
 
-    product_products='[]'
-    products='[]'
-
     if [[ "$product" == "$flatpak_product" ]]; then
         ### XXX
         # Create a product with an empty list of repos
@@ -138,7 +146,8 @@ for product in "${tested_products[@]}"; do
           '. + [{"name": $name, "repositories": $repositories}]')"
 
         test="${index_ten}0fr-product-create-${product_code}-fake"
-        apj $test \
+        # We don't want to measure it because it's fake
+        skip_measurement=true apj $test \
           -e "products='$product_products'" \
           playbooks/tests/FAM/repositories.yaml
         ### XXX
