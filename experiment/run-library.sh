@@ -182,22 +182,21 @@ function generic_environment_check() {
         ap 00-remove-hosts-if-any.log \
           playbooks/satellite/satellite-remove-hosts.yaml
 
-        number_container_hosts="$( ansible $opts_adhoc \
-          --list-hosts \
-          container_hosts 2>/dev/null |
-          grep -cv '^  hosts' )"
-        if (( number_container_hosts > 0 )); then
-            ap 00-tierdown-containers.log \
-              ansible-container-host-mgr/tierdown.yaml
+        if (( num_container_hosts > 0 )); then
+            {
+                ap 00-tierdown-containers.log \
+                  ansible-container-host-mgr/tierdown.yaml
 
-            a 00-delete-private-connection.log \
-              -m ansible.builtin.shell \
-              -a 'nmcli con delete {{ private_nic }} 2>/dev/null; echo' \
-              container_hosts
+                a 00-delete-private-connection.log \
+                  -m ansible.builtin.shell \
+                  -a 'nmcli con delete {{ private_nic }} 2>/dev/null; echo' \
+                  container_hosts
 
-            ap 00-tierup-containers.log \
-              -e "content_host_base_image='$content_host_base_image'" \
-              ansible-container-host-mgr/tierup.yaml
+                ap 00-tierup-containers.log \
+                  -e "content_host_base_image='$content_host_base_image'" \
+                  ansible-container-host-mgr/tierup.yaml
+            } &
+            tierup_pid=$!
         fi
     fi
 
@@ -236,6 +235,8 @@ function generic_environment_check() {
         log "katello_version = $katello_rpm"
         log "satellite_version = $satellite_rpm"
     fi  # "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl'
+
+    $extended && (( num_container_hosts > 0 )) && wait $tierup_pid
 
     if ! $wait_for_ping; then
         h 00-check-hammer-ping.log \
