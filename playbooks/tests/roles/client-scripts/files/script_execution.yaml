@@ -9,14 +9,14 @@
         cmd: |
           set -o pipefail
 
-          script={{ script | default('./' + task + '.sh') }}
+          script="{{ script | default('./' + task + '.sh') }}"
           log={{ task }}.log
 
           if [[ -f "$log" && ! -f "$log.orig" ]]; then
               cp -p "$log" "$log.orig"
           fi
 
-          $script &>"$log"
+          eval "$script" &>"$log"
           ret=$?
 
           echo '-' >>"$log"
