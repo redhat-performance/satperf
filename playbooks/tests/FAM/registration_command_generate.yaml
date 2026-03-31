@@ -1,0 +1,94 @@
+---
+- name: Generate the host registration command
+  hosts: satellite6:capsules
+  gather_facts: false
+  vars:
+    aks_list: "{{ aks | default('AK') | split }}"
+    location_groupname: "location_{{ location | lower }}"
+
+  tasks:
+    - name: Set smart_proxy for capsules
+      when:
+        - "'capsules' in group_names"
+      ansible.builtin.set_fact:
+        registration_smart_proxy: "{{ inventory_hostname }}"
+
+    - name: Set jwt_expiration default
+      ansible.builtin.set_fact:
+        default_jwt_expiration: >-
+          {{ 0 if (sat_version in ['stream', 'foremanctl']
+             or sat_version is version('6.15.0', '>=')) else 999999 }}
+
+    - name: Generate the host registration command
+      theforeman.foreman.registration_command:
+        server_url: "{{ foreman_server_url | default(omit) }}"
+        username: "{{ foreman_username | default(omit) }}"
+        password: "{{ foreman_password | default(omit) }}"
+        validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+        organization: "{{ foreman_organization }}"
+        location: "{{ location }}"
+        activation_keys:
+          - "{{ item }}"
+        smart_proxy: "{{ registration_smart_proxy | default(omit) }}"
+        insecure: true
+        force: true
+        setup_insights: >-
+          {{ (enable_iop | default(false) | bool)
+             if (sat_version in ['stream', 'foremanctl']
+                 or sat_version is version('6.17.0', '>='))
+             else false }}
+        setup_remote_execution_pull: >-
+          {{ true if (rex_mode is defined and rex_mode == 'mqtt') else omit }}
+        packages: "{{ packages | default(omit) }}"
+        jwt_expiration: "{{ jwt_expiration | default(default_jwt_expiration) | int }}"
+      loop: "{{ aks_list }}"
+      register: cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+
+    # Guard: setup_container_registry_certs is not yet supported by
+    # theforeman.foreman.registration_command. Once upstream support is added,
+    # these two tasks can be removed and setup_container_registry_certs: true
+    # added to the module call above.
+    - name: Guard - append &setup_container_registry_certs=true to each command (>= 6.18)
+      when:
+        - sat_version in ['stream', 'foremanctl'] or sat_version is version('6.18.0', '>=')
+      ansible.builtin.set_fact:
+        _updated_cmd_results: >-
+          {{ _updated_cmd_results | default([]) +
+             [item | combine({'registration_command': item.registration_command |
+               replace("' --header", "&setup_container_registry_certs=true' --header")})] }}
+      loop: "{{ cmd.results }}"
+
+    - name: Guard - apply updated results to cmd
+      when:
+        - _updated_cmd_results is defined
+      ansible.builtin.set_fact:
+        cmd: "{{ cmd | combine({'results': _updated_cmd_results}) }}"
+
+    - name: Copy registration command to Apache pub directory
+      ansible.builtin.copy:
+        content: "{{ item.registration_command }}\n"
+        dest: /var/www/html/pub/host-registration.{{ item.item }}.sh
+        mode: '0644'
+      loop: "{{ cmd.results }}"
+      when:
+        - not item.failed
+
+    - name: Load balanced capsule
+      when:
+        - "'capsule_lbs' in groups"
+        - groups['capsule_lbs'] | length > 0
+        - groups[location_groupname] | intersect(groups['capsule_lbs']) | length > 0
+        - groups[location_groupname] | intersect(groups['capsules']) | sort | first != inventory_hostname
+      block:
+        - name: Set name of first capsule
+          ansible.builtin.set_fact:
+            first_capsule: "{{ groups[location_groupname] | intersect(groups['capsules']) | sort | first }}"
+
+        - name: Download host registration script from the first capsule
+          ansible.builtin.get_url:
+            url: http://{{ first_capsule }}/pub/host-registration.{{ item }}.sh
+            dest: /var/www/html/pub/host-registration.{{ item }}.sh
+            mode: '0644'
+            force: true
+          loop: "{{ aks_list }}"
