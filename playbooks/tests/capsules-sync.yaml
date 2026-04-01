@@ -99,7 +99,7 @@
 
     - name: "Print sync results"
       ansible.builtin.debug:
-        msg: "CapusuleSync {{ wait_sync.stdout_lines[-3] }} to {{ wait_sync.stdout_lines[-2] }} taking {{ wait_sync.stdout_lines[-1] }} seconds"
+        msg: "CapsuleSync {{ wait_sync.stdout_lines[-3] }} to {{ wait_sync.stdout_lines[-2] }} taking {{ wait_sync.stdout_lines[-1] }} seconds"
       when: wait_sync is succeeded
 
     - name: "Retry failed syncs (async)"

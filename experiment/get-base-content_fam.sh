@@ -595,7 +595,7 @@ for product in "${tested_products[@]}"; do
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
       playbooks/tests/capsules-sync.yaml
-    # e CapusuleSync "${logs}/${test}.log"
+    # e CapsuleSync "${logs}/${test}.log"
 done  # for product
 
 

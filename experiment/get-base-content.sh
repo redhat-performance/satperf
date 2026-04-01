@@ -351,7 +351,7 @@ if ! $skip_push_to_capsules_setup ; then
       -e "lces='$lces'" \
       -e "download_policy='${capsule_download_policy}'" \
       playbooks/tests/capsules-sync.yaml
-    e CapusuleSync "$logs/50-capsules-sync.log"
+    e CapsuleSync "$logs/50-capsules-sync.log"
 fi
 
 

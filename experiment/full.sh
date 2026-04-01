@@ -244,7 +244,7 @@ skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
+e CapsuleSync "${logs}/${test}.log"
 
 
 section 'Publish and promote big CV'
@@ -400,7 +400,7 @@ skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
+e CapsuleSync "${logs}/${test}.log"
 
 
 export skip_measurement=true
@@ -479,7 +479,7 @@ skip_measurement=true ap ${test}.log \
   -e "organization='{{ sat_org }}'" \
   -e "lces='$lces'" \
   playbooks/tests/capsules-sync.yaml
-e CapusuleSync "${logs}/${test}.log"
+e CapsuleSync "${logs}/${test}.log"
 
 
 if vercmp_ge "$sat_version" '6.17.0'; then
@@ -566,7 +566,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
       -e "organization='{{ sat_org }}'" \
       -e "lces='$lces'" \
       playbooks/tests/capsules-sync.yaml
-    e CapusuleSync "${logs}/${test}.log"
+    e CapsuleSync "${logs}/${test}.log"
 fi
 
 
@@ -645,7 +645,7 @@ for content in $contents; do
       -e "organization='{{ sat_org }}'" \
       -e "lces='$test_le_value'" \
       playbooks/tests/capsules-sync.yaml
-    e CapusuleSync "${logs}/${test}.log"
+    e CapsuleSync "${logs}/${test}.log"
 done  # for content in $contents
 
 
