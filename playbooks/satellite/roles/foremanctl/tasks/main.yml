@@ -52,44 +52,16 @@
   block:
     - name: Set required variable(s) values
       ansible.builtin.set_fact:
-        _foremanctl_organization: "{{ organization | default('theforeman') }}"
+        foremanctl_organization: "{{ organization | default('theforeman') }}"
 
     - name: Vanilla git
       when:
-        - prs is not defined or prs | length == 0
         - version is not defined or version | length == 0
       block:
         - name: Clone foremanctl git repo # noqa: latest[git]
           ansible.builtin.git:
-            repo: "https://github.com/theforeman/foremanctl.git"
+            repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
             dest: /tmp/foremanctl
-
-    - name: PRs
-      when:
-        - prs is defined and prs | length > 0
-      block:
-        - name: Set required variable(s) values
-          ansible.builtin.set_fact:
-            _foremanctl_prs_list: "{{ prs | split }}"
-
-        - name: Clone foremanctl git repo  # noqa: latest[git]
-          ansible.builtin.git:
-            repo: "https://github.com/{{ _foremanctl_organization }}/foremanctl.git"
-            dest: /tmp/foremanctl
-            refspec: '+refs/pull/*:refs/heads/*'
-            version: HEAD
-
-        - name: "Apply foremanctl PRs: {{ prs }}"  # noqa: command-instead-of-module
-          ansible.builtin.shell:
-            cmd: >-
-              set -o pipefail
-
-              git fetch origin refs/pull/{{ item }}/head &&
-              git format-patch $(git merge-base HEAD FETCH_HEAD)..FETCH_HEAD --stdout |
-              git am
-            chdir: /tmp/foremanctl
-          loop: "{{ _foremanctl_prs_list }}"
-          changed_when: true
 
     - name: Version
       when:
@@ -97,9 +69,16 @@
       block:
         - name: Clone foremanctl git repo
           ansible.builtin.git:
-            repo: "https://github.com/{{ _foremanctl_organization }}/foremanctl.git"
+            repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
             dest: /tmp/foremanctl
             version: "{{ version }}"
+
+    - name: Apply PRs
+      when:
+        - apply_prs is defined
+        - apply_prs is string or apply_prs.targets | default([]) | length > 0
+      ansible.builtin.include_tasks:
+        file: "{{ role_path }}/../../../common/roles/common/tasks/apply_prs.yaml"
 
     - name: Move the original src directory
       ansible.builtin.copy:

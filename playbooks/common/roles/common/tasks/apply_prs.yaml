@@ -1,0 +1,44 @@
+---
+# Apply a list of PRs/MRs to one or more codebases.
+#
+# Variables:
+#   apply_prs         - dict (or YAML/JSON string) with:
+#     method          - 'diff' (default, uses patch -p1) or
+#                       'patch' (uses git am, requires git repo)
+#     targets         - list of:
+#       org           - organization/namespace
+#       repo          - repository name
+#       base_dir      - filesystem path of the codebase (supports globs)
+#       prs           - list of PR/MR numbers
+#       forge         - VCS forge base URL (default: https://github.com)
+
+- name: Parse apply_prs into _apply_prs (extra_vars cannot be overwritten by set_fact)
+  ansible.builtin.set_fact:
+    _apply_prs: "{{ apply_prs | from_yaml if apply_prs is string else apply_prs }}"
+
+- name: Validate _apply_prs.targets
+  ansible.builtin.assert:
+    that:
+      - _apply_prs.targets is sequence and _apply_prs.targets is not string
+      - item.org is defined and item.org | length > 0
+      - item.repo is defined and item.repo | length > 0
+      - item.base_dir is defined and item.base_dir | length > 0
+      - item.prs is defined
+      - item.prs is sequence and item.prs is not string
+      - item.prs | length > 0
+    fail_msg: "Invalid _apply_prs.targets entry: {{ item }}"
+  loop: "{{ _apply_prs.targets }}"
+
+- name: "Apply {{ item.0.org }}/{{ item.0.repo }}#{{ item.1 }}"
+  ansible.builtin.shell:
+    cmd: >-
+      set -o pipefail
+
+      cd {{ item.0.base_dir }} &&
+      curl -sf
+      {{ item.0.forge | default('https://github.com') }}/{{ item.0.org }}/{{ item.0.repo }}/pull/{{ item.1 }}.{{ _apply_prs.method | default('diff') }}
+      | {{ 'git am' if _apply_prs.method | default('diff') == 'patch' else 'patch -p1' }}
+  loop: "{{ _apply_prs.targets | subelements('prs') }}"
+  loop_control:
+    label: "{{ item.0.org }}/{{ item.0.repo }}#{{ item.1 }}"
+  changed_when: true

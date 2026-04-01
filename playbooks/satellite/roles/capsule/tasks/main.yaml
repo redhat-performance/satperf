@@ -111,6 +111,13 @@
       ansible.builtin.shell:
         cmd: "{{ run_before_installer }}"
 
+- name: Apply PRs
+  when:
+    - apply_prs is defined
+    - apply_prs is string or apply_prs.targets | default([]) | length > 0
+  ansible.builtin.include_tasks:
+    file: "{{ role_path }}/../../../common/roles/common/tasks/apply_prs.yaml"
+
 - name: certs-generate parameters
   block:
     - name: Set certs-generate base options
