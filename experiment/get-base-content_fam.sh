@@ -22,16 +22,9 @@ tested_products+=("$sat_client_product")
 rhosp_product=RHOSP
 rhosp_repo_names=(
     rhoso/openstack-base-rhel9
-    rhoso/openstack-neutron-dhcp-agent-rhel9
-    rhoso/openstack-neutron-metadata-agent-ovn-rhel9
-    rhoso/openstack-neutron-ovn-agent-rhel9
     rhoso/openstack-neutron-server-rhel9
-    rhoso/openstack-neutron-sriov-agent-rhel9
     rhoso/openstack-nova-api-rhel9
     rhoso/openstack-nova-compute-rhel9
-    rhoso/openstack-nova-conductor-rhel9
-    rhoso/openstack-nova-novncproxy-rhel9
-    rhoso/openstack-nova-scheduler-rhel9
 )
 rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}"
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
@@ -342,7 +335,6 @@ for product in "${tested_products[@]}"; do
 
 
     section "Create $product CVs/CCVs"
-
     if [[ "$product" == "$rhosp_product" ]]; then
         # Build single shared CV_rhosp with all repos (not per-rel)
         cv_rhosp="CV_${product_code}"

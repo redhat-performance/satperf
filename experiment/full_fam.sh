@@ -25,16 +25,9 @@ tested_products+=("$sat_client_product")
 rhosp_product=RHOSP
 rhosp_repo_names=(
     rhoso/openstack-base-rhel9
-    rhoso/openstack-neutron-dhcp-agent-rhel9
-    rhoso/openstack-neutron-metadata-agent-ovn-rhel9
-    rhoso/openstack-neutron-ovn-agent-rhel9
     rhoso/openstack-neutron-server-rhel9
-    rhoso/openstack-neutron-sriov-agent-rhel9
     rhoso/openstack-nova-api-rhel9
     rhoso/openstack-nova-compute-rhel9
-    rhoso/openstack-nova-conductor-rhel9
-    rhoso/openstack-nova-novncproxy-rhel9
-    rhoso/openstack-nova-scheduler-rhel9
 )
 rhosp_registry_url="https://${PARAM_rhosp_registry:-https://registry.example.io}"
 rhosp_registry_username="${PARAM_rhosp_registry_username:-user}"
@@ -48,7 +41,7 @@ if vercmp_ge "$sat_version" '6.17.0'; then
     flatpak_remote_username="${PARAM_flatpak_remote_username:-user}"
     flatpak_remote_password="${PARAM_flatpak_remote_password:-password}"
     tested_products+=("$flatpak_product")
-    tasks_list+=" flatpak_install"
+    tasks_list="${tasks_list:+$tasks_list }flatpak_install"
 fi
 
 initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
