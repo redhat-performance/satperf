@@ -1148,7 +1148,7 @@ done
 task_label='Actions::RemoteExecution::RunHostsJob'
 
 test=69f-kill-rex-jobs
-skip_measurement=true apj $test \
+skip_measurement=true ap "${test}.log" \
   -e "task_label='$task_label'" \
   playbooks/tests/FAM/kill_pending_tasks.yaml
 
