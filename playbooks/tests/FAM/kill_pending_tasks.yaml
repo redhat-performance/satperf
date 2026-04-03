@@ -160,6 +160,25 @@
                   {{ __still_pending_after_force.resources | map(attribute='id') | join(', ') }}
               when: __still_pending_after_force.resources | length > 0
 
+        - name: Stop orphaned per-host sub-tasks
+          ansible.builtin.uri:
+            url: "{{ foreman_server_url }}/foreman_tasks/api/tasks/bulk_stop"
+            method: POST
+            user: "{{ foreman_username }}"
+            password: "{{ foreman_password }}"
+            force_basic_auth: true
+            validate_certs: "{{ foreman_validate_certs | default(false) }}"
+            body_format: json
+            body:
+              search: "state = running and result = pending and label = \"Actions::RemoteExecution::RunHostJob\""
+            status_code: [200, 400]
+          register: __subtask_stop_result
+          delegate_to: localhost
+
+        - name: Show sub-task stop result
+          ansible.builtin.debug:
+            msg: "{{ __subtask_stop_result.json | default(__subtask_stop_result.msg | default('N/A')) }}"
+
         - name: Show final task states
           theforeman.foreman.resource_info:
             resource: foreman_tasks
