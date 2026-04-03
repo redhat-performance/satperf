@@ -2,7 +2,10 @@
 
 source experiment/run-library.sh
 
-tasks_list="${PARAM_tasks_list:-registration insights-client container_pull}"
+tasks_list="${PARAM_tasks_list:-registration insights-client subscription-manager_refresh container_pull}"
+if vercmp_ge "$sat_version" '6.17.0'; then
+    tasks_list="${tasks_list:+$tasks_list }flatpak_install"
+fi
 
 
 section 'Checking environment'
