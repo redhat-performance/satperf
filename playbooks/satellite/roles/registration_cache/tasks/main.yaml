@@ -1,0 +1,58 @@
+---
+# Select package/service/config based on OS version.
+# RHEL 9 and earlier: Redis (from AppStream)
+# RHEL 10 and later:  Valkey (Redis fork; Redis removed from RHEL 10 due to
+#                     SSPL license change). Both use port 6379 and the same
+#                     redis:// wire protocol.
+- name: "Set cache backend facts for RHEL {{ os_major_release }}"
+  ansible.builtin.set_fact:
+    registration_cache_package: "{{ 'valkey' if os_major_release | int >= 10 else 'redis' }}"
+    registration_cache_service:  "{{ 'valkey' if os_major_release | int >= 10 else 'redis' }}"
+    registration_cache_config:   "{{ '/etc/valkey/valkey.conf' if os_major_release | int >= 10 else '/etc/redis/redis.conf' }}"
+
+- name: "Install {{ registration_cache_package }}"
+  ansible.builtin.dnf:
+    name: "{{ registration_cache_package }}"
+    state: latest
+
+# Bind to localhost (for local HAProxy stats queries) and to the private IP
+# so that capsule nodes on the private network can reach the cache.
+- name: "Configure cache backend bind address"
+  ansible.builtin.lineinfile:
+    path: "{{ registration_cache_config }}"
+    regexp: '^bind '
+    line: "bind 127.0.0.1 {{ private_ip }}"
+    backup: true
+  notify: Restart registration cache
+
+- name: "Configure cache backend maxmemory"
+  ansible.builtin.lineinfile:
+    path: "{{ registration_cache_config }}"
+    regexp: '^#?\s*maxmemory\s'
+    line: "maxmemory {{ registration_cache_maxmemory }}"
+    backup: true
+  notify: Restart registration cache
+
+- name: "Configure cache backend maxmemory-policy"
+  ansible.builtin.lineinfile:
+    path: "{{ registration_cache_config }}"
+    regexp: '^#?\s*maxmemory-policy\s'
+    line: "maxmemory-policy {{ registration_cache_maxmemory_policy }}"
+    backup: true
+  notify: Restart registration cache
+
+# Open the cache port for capsule nodes on the private network.
+# The firewall role has already run; this task adds the cache-specific rule.
+- name: "Open cache port {{ registration_cache_port }}/tcp for private network"
+  ansible.posix.firewalld:
+    port: "{{ registration_cache_port }}/tcp"
+    zone: internal
+    permanent: true
+    immediate: true
+    state: enabled
+
+- name: "Start and enable {{ registration_cache_service }}"
+  ansible.builtin.systemd_service:
+    name: "{{ registration_cache_service }}"
+    state: started
+    enabled: true

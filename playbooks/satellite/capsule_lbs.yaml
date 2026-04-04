@@ -6,5 +6,6 @@
   roles:
     - role: linux-system-roles.firewall
     - role: ../common/roles/enlarge-arp-table
+    - role: registration_cache
     - role: haproxy
 ...

@@ -1,0 +1,13 @@
+---
+# Maximum memory the cache backend is allowed to use.
+# Registration scripts are small (~5-10 KB each); 64 MB handles thousands
+# of distinct parameter combinations before any eviction occurs.
+registration_cache_maxmemory: 64mb
+
+# Eviction policy when maxmemory is reached.
+# allkeys-lru evicts the least-recently-used key regardless of TTL,
+# which is appropriate since all cached scripts share the same TTL.
+registration_cache_maxmemory_policy: allkeys-lru
+
+# Port the cache backend listens on. Both Redis and Valkey default to 6379.
+registration_cache_port: 6379
