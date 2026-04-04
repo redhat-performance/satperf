@@ -1,0 +1,14 @@
+---
+# Number of consecutive health check failures before a capsule is removed
+# from rotation in the host_registration backend.
+#
+# Default is 9999 (effectively never) to prevent load-induced false failover
+# during stress tests — a capsule under heavy registration load may fail the
+# /register/health check transiently even though it is still functioning.
+# Removing it from rotation would concentrate load on the remaining capsules
+# and cause cascading failures.
+#
+# Set to 3 for production-grade failover (removes capsule after ~90s of
+# consecutive failures at the default 30s check interval):
+#   haproxy_registration_fall: 3
+haproxy_registration_fall: 9999

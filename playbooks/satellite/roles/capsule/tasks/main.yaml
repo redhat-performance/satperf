@@ -331,6 +331,29 @@
       ansible.builtin.shell:
         cmd: "{{ run_after_installer }}"
 
+- name: Configure registration script shared cache
+  # Set :cache_url in the smart-proxy registration settings so this capsule
+  # connects to the shared Redis/Valkey instance on the LB host. This allows
+  # a single warm request on any capsule to populate the cache for all nodes
+  # behind the same LB.
+  when:
+    - "'capsule_lbs' in groups"
+    - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+  vars:
+    location_lb: "{{ groups['capsule_lbs'] | intersect(groups[location_groupname]) | first }}"
+  block:
+    - name: Set :cache_url in smart-proxy registration settings
+      ansible.builtin.lineinfile:
+        path: /etc/foreman-proxy/settings.d/registration.yml
+        regexp: '^#?\s*:cache_url'
+        line: ":cache_url: redis://{{ hostvars[location_lb]['private_ip'] }}:6379/0"
+        create: false
+
+    - name: Restart foreman-proxy to pick up cache URL
+      ansible.builtin.systemd_service:
+        name: foreman-proxy
+        state: restarted
+
 - name: Load-balanced capsule IDs
   when:
     - "'capsule_lbs' in groups"
