@@ -828,6 +828,72 @@ def _metrics_to_dict(m: Metrics) -> dict:
 
 
 # ---------------------------------------------------------------------------
+# Redis/Valkey cache stats (optional, inventory mode only)
+# ---------------------------------------------------------------------------
+
+def _fetch_cache_stats(hosts: List['_InventoryHost']) -> Optional[dict]:
+    """SSH to the first LB host and query redis-cli INFO for cache metrics.
+
+    Returns a dict with keyspace_hits, keyspace_misses, connected_clients,
+    and hit_rate, or None if no LB host is available or redis-cli fails.
+    """
+    lbs = [h for h in hosts if h.role == 'lb']
+    if not lbs:
+        return None
+
+    h = lbs[0]
+    cmd = ['ssh']
+    if h.key_file:
+        cmd += ['-i', h.key_file]
+    if h.ssh_args:
+        cmd += shlex.split(h.ssh_args)
+    cmd += [f'{h.user}@{h.hostname}',
+            'redis-cli INFO stats keyspace clients 2>/dev/null || '
+            'valkey-cli INFO stats keyspace clients 2>/dev/null']
+
+    logging.debug('Cache stats cmd: %s', ' '.join(cmd))
+    try:
+        out = subprocess.check_output(cmd, text=True, timeout=10)
+    except (subprocess.CalledProcessError, subprocess.TimeoutExpired, FileNotFoundError) as e:
+        logging.warning('Could not fetch cache stats from %s: %s', h.hostname, e)
+        return None
+
+    stats: dict = {}
+    for line in out.splitlines():
+        line = line.strip()
+        if ':' not in line or line.startswith('#'):
+            continue
+        key, _, val = line.partition(':')
+        stats[key.strip()] = val.strip()
+
+    hits = int(stats.get('keyspace_hits', 0))
+    misses = int(stats.get('keyspace_misses', 0))
+    total = hits + misses
+    return {
+        'host': h.hostname,
+        'keyspace_hits': hits,
+        'keyspace_misses': misses,
+        'connected_clients': int(stats.get('connected_clients', 0)),
+        'hit_rate': f'{hits / total * 100:.1f}%' if total else 'n/a (cold)',
+        'db0': stats.get('db0', 'empty'),
+    }
+
+
+def print_cache_stats(stats: dict) -> None:
+    """Print Redis/Valkey cache statistics section."""
+    print()
+    print('Registration Script Cache Stats')
+    print('=' * 70)
+    print(f'Source:  {stats["host"]} (redis-cli INFO)')
+    print(f'  Hits:             {stats["keyspace_hits"]:>10,}')
+    print(f'  Misses:           {stats["keyspace_misses"]:>10,}')
+    print(f'  Hit rate:         {stats["hit_rate"]:>10}')
+    print(f'  Connected nodes:  {stats["connected_clients"]:>10}  (capsule nodes using this cache)')
+    print(f'  Keys (db0):       {stats["db0"]:>10}  (one per distinct registration parameter set)')
+    print()
+
+
+# ---------------------------------------------------------------------------
 # CLI
 # ---------------------------------------------------------------------------
 
@@ -857,6 +923,8 @@ def main() -> None:
                         help='Time window to associate calls to a session (default: 120)')
     parser.add_argument('-v', '--verbose', action='store_true',
                         help='Enable debug logging to stderr')
+    parser.add_argument('--cache-stats', action='store_true',
+                        help='Query Redis/Valkey cache stats from LB host (--inventory only)')
     parser.add_argument('--no-verify-ssl', action='store_true',
                         help='Disable SSL certificate verification (for internal self-signed certs)')
 
@@ -923,11 +991,19 @@ def main() -> None:
 
     groups = _analyze(lines, label, args.window, topology)
     if args.json:
-        print(json.dumps({k: _metrics_to_dict(v) for k, v in groups.items()},
-                         indent=2))
+        result = {k: _metrics_to_dict(v) for k, v in groups.items()}
+        if args.inventory and args.cache_stats:
+            cache_stats = _fetch_cache_stats(hosts)
+            if cache_stats:
+                result['cache_stats'] = cache_stats
+        print(json.dumps(result, indent=2))
     else:
         for m in groups.values():
             print_metrics(m)
+        if args.inventory and args.cache_stats:
+            cache_stats = _fetch_cache_stats(hosts)
+            if cache_stats:
+                print_cache_stats(cache_stats)
 
 
 if __name__ == '__main__':
