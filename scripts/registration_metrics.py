@@ -447,14 +447,21 @@ def _production_log_lines_from_inventory(inv_path: str,
         logging.warning('No [satellite6] hosts in %s', inv_path)
         return
     for h in sats:
-        # Fetch all rotated logs (date-named: production.log-YYYYMMDD[.gz])
-        # then the current production.log, in chronological order.
-        # zcat -f passes non-gzip files through unchanged.
+        # Fetch production.log (and rotated copies) if the file exists —
+        # this is the standard foreman-installer / RPM-based deployment.
+        # Fall back to journalctl -u foreman (rootful foremanctl, where
+        # Rails logs go to stdout captured by the system journal).
+        # NOTE: journalctl --user is NOT used here; rootless foremanctl
+        # will be handled separately when that becomes the default.
         remote_cmd = (
-            'for f in $(ls /var/log/foreman/production.log-* 2>/dev/null | sort) '
-            '/var/log/foreman/production.log; do '
-            'case "$f" in *.gz) zcat "$f";; *) cat "$f";; esac; '
-            'done 2>/dev/null'
+            'if [ -f /var/log/foreman/production.log ]; then '
+            '  for f in $(ls /var/log/foreman/production.log-* 2>/dev/null | sort) '
+            '  /var/log/foreman/production.log; do '
+            '    case "$f" in *.gz) zcat "$f";; *) cat "$f";; esac; '
+            '  done 2>/dev/null; '
+            'else '
+            '  journalctl -u foreman --output=cat --no-pager 2>/dev/null; '
+            'fi'
         )
         logging.info('Fetching all production.log files from %s', h.hostname)
         cmd = ['ssh']

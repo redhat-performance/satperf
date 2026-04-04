@@ -145,9 +145,15 @@ frontend host_registration
     default_backend         host_registration-backend
 
 backend host_registration-backend
-    option tcp-check
+    # HTTP health check against the smart-proxy /register/health endpoint.
+    # Returns 200 if the capsule can reach Foreman, 503 if not.
+    # 'fall' defaults to 9999 (see defaults/main.yaml) to prevent
+    # load-induced false failover during stress tests. Set
+    # haproxy_registration_fall: 3 for production-grade automatic failover.
+    option httpchk GET /register/health HTTP/1.1\r\nHost:\ localhost
+    http-check expect status 200
     balance roundrobin
 
 {% for capsule in lb_capsules %}
-    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check
+    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s
 {% endfor %}
