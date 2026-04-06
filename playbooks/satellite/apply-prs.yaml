@@ -1,0 +1,13 @@
+---
+- name: Apply PRs
+  hosts: satellite6:capsules:capsule_lbs
+  gather_facts: false
+
+  tasks:
+    - name: Apply PRs
+      when:
+        - apply_prs is defined
+        - apply_prs is string or apply_prs.targets | default([]) | length > 0
+      ansible.builtin.include_role:
+        name: apply_prs
+...

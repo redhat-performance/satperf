@@ -29,7 +29,7 @@
     fail_msg: "Invalid _apply_prs.targets entry: {{ item }}"
   loop: "{{ _apply_prs.targets }}"
 
-- name: "Apply {{ item.0.org }}/{{ item.0.repo }}#{{ item.1 }}"
+- name: Apply PR
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail
