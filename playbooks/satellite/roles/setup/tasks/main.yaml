@@ -1,10 +1,8 @@
 ---
-- name: Detect EL release
-  ansible.builtin.setup:
-    filter:
-      - ansible_distribution_major_version
-  when:
-    - ansible_distribution_major_version is not defined
+- name: Assert required facts
+  ansible.builtin.assert:
+    that:
+      - ansible_facts['distribution_major_version'] is defined
 
 - name: Requirements
   block:
@@ -12,21 +10,18 @@
       when:
         - product is defined and product == 'foreman'
       block:
-        - name: Detect EL release
-          ansible.builtin.setup:
-            filter:
-              - ansible_architecture
-          when:
-            - ansible_architecture is not defined
+        - name: Assert required Foreman facts
+          ansible.builtin.assert:
+            that:
+              - foreman_version is defined and foreman_version | length > 0
+              - katello_version is defined and katello_version | length > 0
 
-        - name: Install Foreman required packages
-          ansible.builtin.dnf:
-            name:
-              - "https://yum.theforeman.org/releases/{{ foreman_version }}/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/foreman-release.rpm"
-              - "https://yum.theforeman.org/katello/{{ katello_version }}/katello/el{{ ansible_distribution_major_version }}/{{ ansible_architecture }}/katello-repos-latest.rpm"
-              - "https://yum.puppet.com/puppet8-release-el-{{ ansible_distribution_major_version }}.noarch.rpm"
-            state: present
-            disable_gpg_check: true
+        - name: Setup Foreman repositories
+          ansible.builtin.include_role:
+            name: theforeman.operations.foreman_repositories
+          vars:
+            foreman_repositories_version: "{{ foreman_version }}"
+            foreman_repositories_katello_version: "{{ katello_version }}"
 
         - name: Install foreman-installer-katello package
           ansible.builtin.dnf:
@@ -52,7 +47,7 @@
             name: '@satellite:el8'
             state: present
           when:
-            - ansible_distribution_major_version | int == 8
+            - ansible_facts['distribution_major_version'] | int == 8
 
         - name: Ensure sat_version is string to avoid hard to detect issues
           ansible.builtin.assert:
@@ -68,7 +63,12 @@
           block:
             - name: Get the current version number from the 'name' line
               ansible.builtin.shell:
-                cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/satellite.repo | cut -d'.' -f1 | uniq"
+                cmd: >-
+                  set -o pipefail
+
+                  awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/satellite.repo |
+                  cut -d'.' -f1 |
+                  uniq
               register: snap_version
               changed_when: false
               check_mode: false # This task must run, even in --check mode, to get the variable.
@@ -109,8 +109,8 @@
   when:
     - apply_prs is defined
     - apply_prs is string or apply_prs.targets | default([]) | length > 0
-  ansible.builtin.include_tasks:
-    file: "{{ role_path }}/../../../common/roles/common/tasks/apply_prs.yaml"
+  ansible.builtin.include_role:
+    name: apply_prs
 
 - name: custom_hiera
   when:
@@ -126,8 +126,8 @@
   block:
     - name: Set default variable(s) values
       ansible.builtin.set_fact:
-        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-        password: "{{ password | default('{{ sat_pass }}') }}"
+        user: "{{ user | default(sat_user) | default('admin') }}"
+        password: "{{ password | default(sat_pass) }}"
 
     - name: Foreman
       when:
@@ -147,13 +147,9 @@
             installer_command: 'satellite-installer'
             scenario: 'satellite'
 
-    - name: Set base installer parameters
-      ansible.builtin.set_fact:
-        installer_opts: "--foreman-initial-admin-username {{ user }} --foreman-initial-admin-password {{ password }}"
-
     - name: Set installer command line
       ansible.builtin.set_fact:
-        installer_cmd_line: "{{ installer_command }} --scenario {{ scenario }} {{ installer_opts }}"
+        installer_cmd_line: "{{ installer_command }} --scenario {{ scenario }} --foreman-initial-admin-username {{ user }} --foreman-initial-admin-password {{ password }}"
 
     - name: Show installer command line
       ansible.builtin.debug:
@@ -272,7 +268,7 @@
 
         - name: Pull IoP advisor engine container image
           containers.podman.podman_image:
-            name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_distribution_major_version }}:{{ iop_registry_tag }}"
+            name: "{{ iop_registry }}/satellite/iop-advisor-engine-rhel{{ ansible_facts['distribution_major_version'] }}:{{ iop_registry_tag }}"
 
         - name: Set IoP advisor engine parameters
           ansible.builtin.set_fact:
