@@ -3,7 +3,7 @@
 # Client domain is added to the location
 - name: "Set location name"
   ansible.builtin.set_fact:
-    location: "{{ location | default('Location for {{ inventory_hostname }}') }}"
+    location: "{{ location | default('Location for ' + inventory_hostname) }}"
 
 - name: "Get id of a domain"
   ansible.builtin.uri:

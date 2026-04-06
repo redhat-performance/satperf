@@ -13,7 +13,7 @@
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
-        location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
+        location: "{{ location | default(sat_loc) | default('Default Location') }}"
 
     - name: "Get group name of the location(s)"
       ansible.builtin.set_fact:

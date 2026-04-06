@@ -115,8 +115,8 @@
   when:
     - apply_prs is defined
     - apply_prs is string or apply_prs.targets | default([]) | length > 0
-  ansible.builtin.include_tasks:
-    file: "{{ role_path }}/../../../common/roles/common/tasks/apply_prs.yaml"
+  ansible.builtin.include_role:
+    name: apply_prs
 
 - name: certs-generate parameters
   block:
@@ -361,9 +361,9 @@
   block:
     - name: Set default variable(s) values
       ansible.builtin.set_fact:
-        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-        password: "{{ password | default('{{ sat_pass }}') }}"
-        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+        user: "{{ user | default(sat_user) | default('admin') }}"
+        password: "{{ password | default(sat_pass) }}"
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
 
     - name: Get capsule ID
       ansible.builtin.command:

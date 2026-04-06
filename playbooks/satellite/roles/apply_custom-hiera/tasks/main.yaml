@@ -10,7 +10,7 @@
   block:
     - name: Copy content over to /etc/foreman-installer/custom-hiera.yaml
       ansible.builtin.blockinfile:
-        block: "{{ lookup('ansible.builtin.file', '{{ content_file }}') }}"
+        block: "{{ lookup('ansible.builtin.file', content_file) }}"
         path: /etc/foreman-installer/custom-hiera.yaml
         prepend_newline: true
         append_newline: true
@@ -20,7 +20,7 @@
 
     - name: Copy content over to /etc/foreman-installer/custom-hiera.yaml
       ansible.builtin.blockinfile:
-        block: "{{ lookup('ansible.builtin.file', '{{ content_file }}') }}"
+        block: "{{ lookup('ansible.builtin.file', content_file) }}"
         path: /etc/foreman-installer/custom-hiera.yaml
         marker: "# {mark} ANSIBLE MANAGED BLOCK - {{ marker_postfix }}"
         prepend_newline: true

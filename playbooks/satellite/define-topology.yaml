@@ -7,10 +7,10 @@
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
-        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-        password: "{{ password | default('{{ sat_pass }}') }}"
-        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
-        location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
+        user: "{{ user | default(sat_user) | default('admin') }}"
+        password: "{{ password | default(sat_pass) }}"
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
+        location: "{{ location | default(sat_loc) | default('Default Location') }}"
 
     - when:
         - sat_version != 'foremanctl'
@@ -30,15 +30,15 @@
 
         - name: "Get host id"
           ansible.builtin.set_fact:
-            host_id: "{{ get_host_json.json | community.general.json_query(query) }}"
+            host_id: "{{ get_host_json.json | community.general.json_query(_query) }}"
           vars:
-            query: "results[?name=='{{ inventory_hostname }}'].id | [0]"
+            _query: "results[?name=='{{ inventory_hostname }}'].id | [0]"
 
         - name: "Get host smart_proxy_id"
           ansible.builtin.set_fact:
-            smart_proxy_id: "{{ get_host_json.json | community.general.json_query(query) }}"
+            smart_proxy_id: "{{ get_host_json.json | community.general.json_query(_query) }}"
           vars:
-            query: "results[?name=='{{ inventory_hostname }}'].infrastructure_facet.smart_proxy_id | [0]"
+            _query: "results[?name=='{{ inventory_hostname }}'].infrastructure_facet.smart_proxy_id | [0]"
 
 
     ### Organizations
@@ -70,9 +70,9 @@
 
     - name: "Get organization_id(s)"
       ansible.builtin.set_fact:
-        organization_id: "{{ organizations_json.json | community.general.json_query(query) }}"
+        organization_id: "{{ organizations_json.json | community.general.json_query(_query) }}"
       vars:
-        query: "results[?name=='{{ organization }}'].id | [0]"
+        _query: "results[?name=='{{ organization }}'].id | [0]"
 
 
     ### Locations
@@ -105,9 +105,9 @@
 
     - name: "Get location_id(s)"
       ansible.builtin.set_fact:
-        location_id: "{{ locations_json.json | community.general.json_query(query) }}"
+        location_id: "{{ locations_json.json | community.general.json_query(_query) }}"
       vars:
-        query: "results[?name=='{{ location }}'].id | [0]"
+        _query: "results[?name=='{{ location }}'].id | [0]"
 
     - when:
         - sat_version != 'foremanctl'
@@ -189,9 +189,9 @@
 
     - name: "Get subnet_id(s)"
       ansible.builtin.set_fact:
-        subnet_id: "{{ subnets_json.json | community.general.json_query(query) }}"
+        subnet_id: "{{ subnets_json.json | community.general.json_query(_query) }}"
       vars:
-        query: "results[?name=='{{ subnet }}'].id | [0]"
+        _query: "results[?name=='{{ subnet }}'].id | [0]"
       when:
         - subnet is defined
 

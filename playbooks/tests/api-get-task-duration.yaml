@@ -4,8 +4,8 @@
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
-        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-        password: "{{ password | default('{{ sat_pass }}') }}"
+        user: "{{ user | default(sat_user) | default('admin') }}"
+        password: "{{ password | default(sat_pass) }}"
         action: "{{ action }}"
 
     - name: "Get foreman_tasks information"

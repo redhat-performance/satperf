@@ -44,7 +44,7 @@
       # failed_when: false on the shell task suppresses the failed flag permanently,
       # so 'is failed' always evaluates to False regardless of the actual exit code.
       failed_when:
-        - registration.rc != 0 or registration.stdout | regex_search(regexp, multiline=true)
+        - registration.rc != 0 or registration.stdout | regex_search(regexp, multiline=true) is not none
 
     - name: Calculate registration duration
       ansible.builtin.set_fact:

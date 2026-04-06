@@ -77,8 +77,8 @@
       when:
         - apply_prs is defined
         - apply_prs is string or apply_prs.targets | default([]) | length > 0
-      ansible.builtin.include_tasks:
-        file: "{{ role_path }}/../../../common/roles/common/tasks/apply_prs.yaml"
+      ansible.builtin.include_role:
+        name: apply_prs
 
     - name: Move the original src directory
       ansible.builtin.copy:
@@ -165,7 +165,7 @@
       ansible.builtin.set_fact:
         _foremanctl_initial_deploy_cmd: >-
           {{ _foremanctl_deploy_cmd }}
-          --foreman-initial-admin-password {{ password | default('{{ foreman_password }}') }}
+          --foreman-initial-admin-password {{ password | default(foreman_password) }}
 
     - name: Show deployment command line
       ansible.builtin.debug:

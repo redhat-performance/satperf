@@ -5,9 +5,9 @@
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
-        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-        password: "{{ password | default('{{ sat_pass }}') }}"
-        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
+        user: "{{ user | default(sat_user) | default('admin') }}"
+        password: "{{ password | default(sat_pass) }}"
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
 
     - name: "Create organization"
       # XXX: Submit PR

@@ -6,10 +6,10 @@
   tasks:
     - name: "Set default variable(s) values"
       ansible.builtin.set_fact:
-        user: "{{ user | default('{{ sat_user }}') | default('admin') }}"
-        password: "{{ password | default('{{ sat_pass }}') }}"
-        organization: "{{ organization | default('{{ sat_org }}') | default('Default Organization') }}"
-        location: "{{ location | default('{{ sat_loc }}') | default('Default Location') }}"
+        user: "{{ user | default(sat_user) | default('admin') }}"
+        password: "{{ password | default(sat_pass) }}"
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
+        location: "{{ location | default(sat_loc) | default('Default Location') }}"
 
     - name: "Get organizations information"
       ansible.builtin.uri:
