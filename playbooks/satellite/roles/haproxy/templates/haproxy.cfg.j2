@@ -150,7 +150,8 @@ backend host_registration-backend
     # 'fall' defaults to 9999 (see defaults/main.yaml) to prevent
     # load-induced false failover during stress tests. Set
     # haproxy_registration_fall: 3 for production-grade automatic failover.
-    option httpchk GET /register/health HTTP/1.1\r\nHost:\ localhost
+    option httpchk
+    http-check send meth GET uri /register/health ver HTTP/1.1 hdr Host localhost
     http-check expect status 200
     balance roundrobin
 
