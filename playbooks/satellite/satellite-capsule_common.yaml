@@ -3,6 +3,12 @@
   hosts: satellite6:capsules
   gather_facts: false
 
+  pre_tasks:
+    - name: Convert storage_pools to native type
+      ansible.builtin.set_fact:
+        storage_pools: "{{ storage_pools | from_yaml }}"
+      when: storage_pools is string
+
   roles:
     - role: linux-system-roles.firewall
     - role: linux-system-roles.storage
