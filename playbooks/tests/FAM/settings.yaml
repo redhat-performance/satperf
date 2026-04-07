@@ -6,5 +6,5 @@
   roles:
     - role: theforeman.foreman.settings
       vars:
-        foreman_settings: "{{ settings }}"
+        foreman_settings: "{{ settings | from_yaml if settings is string else settings }}"
 ...

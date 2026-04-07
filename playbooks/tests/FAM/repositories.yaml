@@ -1,9 +1,10 @@
 ---
-- hosts: localhost
+- name: "Manage repositories"
+  hosts: localhost
   gather_facts: false
 
   roles:
     - role: theforeman.foreman.repositories
       vars:
-        foreman_products: "{{ products }}"
+        foreman_products: "{{ products | from_yaml if products is string else products }}"
 ...

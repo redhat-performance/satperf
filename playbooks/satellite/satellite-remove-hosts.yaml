@@ -16,8 +16,10 @@
         headers:
           Content-Type: application/json
           Accept: application/json
-        body: >
-          {'organization_id': {{ organization_id }}, 'included': {'search': "{{ search }}"}}
+        body:
+          organization_id: "{{ organization_id | int }}"
+          included:
+            search: "{{ search }}"
         body_format: json
         # If host list is empty katello will return 403 :S
         # https://github.com/Katello/katello/blob/master/app/controllers/katello/concerns/api/v2/bulk_hosts_extensions.rb

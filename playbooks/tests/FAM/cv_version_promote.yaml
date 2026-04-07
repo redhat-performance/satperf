@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Promote content view version"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:
@@ -27,7 +28,7 @@
         lifecycle_environments: "{{ lifecycle_environments | default(omit) }}"
         current_lifecycle_environment: "{{ current_lifecycle_environment | default(omit) }}"
       # XXX: We want to promote only CCVs, not CVs
-      loop: "{{ content_views | from_json | selectattr('components', 'defined') | list }}"
+      loop: "{{ (content_views | from_yaml if content_views is string else content_views) | selectattr('components', 'defined') | list }}"
       loop_control:
         loop_var: content_view
       when:

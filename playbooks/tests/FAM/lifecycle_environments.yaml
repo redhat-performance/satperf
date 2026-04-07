@@ -1,9 +1,10 @@
 ---
-- hosts: localhost
+- name: "Manage lifecycle environments"
+  hosts: localhost
   gather_facts: false
 
   roles:
     - role: theforeman.foreman.lifecycle_environments
       vars:
-        foreman_lifecycle_environments: "{{ lifecycle_environments }}"
+        foreman_lifecycle_environments: "{{ lifecycle_environments | from_yaml if lifecycle_environments is string else lifecycle_environments }}"
 ...

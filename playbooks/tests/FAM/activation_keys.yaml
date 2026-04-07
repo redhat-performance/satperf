@@ -1,9 +1,10 @@
 ---
-- hosts: localhost
+- name: "Manage activation keys"
+  hosts: localhost
   gather_facts: false
 
   roles:
     - role: theforeman.foreman.activation_keys
       vars:
-        foreman_activation_keys: "{{ activation_keys }}"
+        foreman_activation_keys: "{{ activation_keys | from_yaml if activation_keys is string else activation_keys }}"
 ...
