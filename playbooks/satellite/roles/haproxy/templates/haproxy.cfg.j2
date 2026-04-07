@@ -145,13 +145,13 @@ frontend host_registration
     default_backend         host_registration-backend
 
 backend host_registration-backend
-    # HTTP health check against the smart-proxy /register/health endpoint.
-    # Returns 200 if the capsule can reach Foreman, 503 if not.
+    # HTTP health check against the smart-proxy /features endpoint.
+    # Returns 200 with the list of enabled features when the capsule is healthy.
     # 'fall' defaults to 9999 (see defaults/main.yaml) to prevent
     # load-induced false failover during stress tests. Set
     # haproxy_registration_fall: 3 for production-grade automatic failover.
     option httpchk
-    http-check send meth GET uri /register/health ver HTTP/1.1 hdr Host localhost
+    http-check send meth GET uri /features ver HTTP/1.1 hdr Host localhost
     http-check expect status 200
     balance roundrobin
 
