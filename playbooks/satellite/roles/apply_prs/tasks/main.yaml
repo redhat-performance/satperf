@@ -11,10 +11,18 @@
 #       base_dir      - filesystem path of the codebase (supports globs)
 #       prs           - list of PR/MR numbers
 #       forge         - VCS forge base URL (default: https://github.com)
+#       exclude_patterns - optional list of filterdiff --exclude patterns
+#                          (e.g. ['*/test/*', '*/spec/*']) requires patchutils
 
 - name: Parse apply_prs into _apply_prs (extra_vars cannot be overwritten by set_fact)
   ansible.builtin.set_fact:
     _apply_prs: "{{ apply_prs | from_yaml if apply_prs is string else apply_prs }}"
+
+- name: Set default exclude patterns
+  ansible.builtin.set_fact:
+    _apply_prs_default_exclude_patterns:
+      - '*/test/*'
+      - '*/spec/*'
 
 - name: Validate _apply_prs.targets
   ansible.builtin.assert:
@@ -29,16 +37,32 @@
     fail_msg: "Invalid _apply_prs.targets entry: {{ item }}"
   loop: "{{ _apply_prs.targets }}"
 
+- name: Install patchutils (required for filterdiff)
+  ansible.builtin.dnf:
+    name: patchutils
+    state: present
+    disable_plugin:
+      - foreman-protector
+  when: _apply_prs.method | default('diff') == 'diff'
+
 - name: Apply PR
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail
 
       cd {{ item.0.base_dir }} &&
-      curl -sf
+      curl -L -N -sf
       {{ item.0.forge | default('https://github.com') }}/{{ item.0.org }}/{{ item.0.repo }}/pull/{{ item.1 }}.{{ _apply_prs.method | default('diff') }}
-      | {{ 'git am' if _apply_prs.method | default('diff') == 'patch' else 'patch -p1' }}
+      {% set _excl = item.0.exclude_patterns if 'exclude_patterns' in item.0 else _apply_prs_default_exclude_patterns %}
+      {% if _excl | length > 0 %}
+      | filterdiff {{ _excl | map('regex_replace', '^(.*)$', '--exclude=\1') | join(' ') }}
+      {% endif %}
+      | {{ 'git am' if _apply_prs.method | default('diff') == 'patch' else 'patch -b -p1 --forward' }}
   loop: "{{ _apply_prs.targets | subelements('prs') }}"
   loop_control:
     label: "{{ item.0.org }}/{{ item.0.repo }}#{{ item.1 }}"
-  changed_when: true
+  register: _apply_pr_result
+  changed_when: _apply_pr_result.rc == 0
+  failed_when:
+    - _apply_pr_result.rc != 0
+    - "'Reversed (or previously applied) patch detected' not in _apply_pr_result.stdout"
