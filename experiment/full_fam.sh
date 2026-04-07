@@ -72,7 +72,7 @@ ui_duration="${PARAM_ui_duration:-300}"
 ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
 
 
-# section 'Checking environment'
+section 'Checking environment'
 generic_environment_check
 # unset skip_measurement
 # set +e
