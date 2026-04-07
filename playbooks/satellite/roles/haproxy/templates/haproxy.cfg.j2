@@ -156,5 +156,5 @@ backend host_registration-backend
     balance roundrobin
 
 {% for capsule in lb_capsules %}
-    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s
+    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check check-ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s
 {% endfor %}
