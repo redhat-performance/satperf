@@ -15,10 +15,20 @@
     dest: "{{ execution_logs }}"
   failed_when: false
 
+- name: "{{ task_name }} - Get number of hosts that failed"
+  ansible.builtin.command:
+    cmd: >-
+      grep -cw 'failed=1'
+      {{ _concurrent_task_clients_yaml_cmd_base }}_{{ task_name }}.log
+  register: _concurrent_task_num_failed_hosts
+  failed_when: _concurrent_task_num_failed_hosts.rc == 2
+  changed_when: false
+
 - name: "{{ task_name }} - Retry failed registrations"
   when:
     - task_name == 'registration'
     - retry_failed | default(false) | bool
+    - _concurrent_task_num_failed_hosts.stdout | default('0') | int > 0
   ansible.builtin.shell:
     cmd: |
       set -o pipefail
@@ -109,15 +119,6 @@
 - name: "{{ task_name }} - Show timings"
   ansible.builtin.debug:
     var: _concurrent_task_clients_yaml_grepper_timings.stdout_lines
-
-- name: "{{ task_name }} - Get number of hosts that failed"
-  ansible.builtin.command:
-    cmd: >-
-      grep -cw 'failed=1'
-      {{ _concurrent_task_clients_yaml_cmd_base }}_{{ task_name }}.log
-  register: _concurrent_task_num_failed_hosts
-  failed_when: _concurrent_task_num_failed_hosts.rc == 2
-  changed_when: false
 
 - name: "{{ task_name }} - Show number of hosts that failed"
   ansible.builtin.debug:
