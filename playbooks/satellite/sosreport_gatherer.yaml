@@ -1,5 +1,5 @@
 ---
-- hosts: satellite6,capsules
+- hosts: satellite6,capsules,capsule_lbs
   gather_facts: no
   roles:
     - name: sosreport_gatherer
