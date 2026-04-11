@@ -14,7 +14,7 @@ Each metric is tied directly to a specific in-flight PR:
 
 Usage:
   # Ansible inventory — SSH to all satellite6 hosts (recommended)
-  ./registration_metrics.py --inventory conf/contperf/inventory.blue.ini
+  ./registration_metrics.py --inventory conf/hosts.ini
 
   # Single sosreport archive or extracted directory
   ./registration_metrics.py --sosreport satellite.tar.xz
@@ -36,6 +36,7 @@ Usage:
 """
 
 import argparse
+import bisect
 import collections
 import configparser
 import datetime
@@ -76,13 +77,37 @@ _RE_LOG_LINE = re.compile(
 _RE_STARTED = re.compile(
     r'^Started (GET|POST|PUT|DELETE|PATCH) "([^"?]+)'
 )
-_RE_SOURCE_IP = re.compile(r' for (\d+\.\d+\.\d+\.\d+)')
+_RE_SOURCE_IP = re.compile(r' for ([\da-fA-F:\.]+)(?:\s|$)')
+
+# Audit log lines written during POST /rhsm/consumers — same req_id, exact UUID.
+# Both ContentFacet and SubscriptionFacet carry the same UUID; we match either:
+#   [I|aud|REQ_ID] Katello::Host::ContentFacet (N) create event on uuid UUID
+#   [I|aud|REQ_ID] Katello::Host::SubscriptionFacet (N) create event on uuid UUID
+_RE_FACET_UUID = re.compile(
+    r'^Katello::Host::\w+Facet \(\d+\) create event on uuid '
+    r'([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})$'
+)
 _RE_COMPLETED = re.compile(
     r'^Completed (\d+) .* in (\d+)ms'
 )
 _RE_CONSUMER_UUID = re.compile(
     r'/consumers/([0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12})'
 )
+
+# Cache HIT/MISS lines emitted by the :registration logger (katello#11692 / #11696).
+# These appear in production.log when those PRs are applied and the logger is at debug level.
+# Body format (group 3 of _RE_LOG_LINE):
+#   compliance cache=HIT uuid=UUID   |  compliance cache=MISS uuid=UUID
+#   rhsm_status cache=HIT            |  rhsm_status cache=MISS
+_RE_CACHE_COMPLIANCE = re.compile(r'^compliance cache=(HIT|MISS)')
+_RE_CACHE_STATUS = re.compile(r'^rhsm_status cache=(HIT|MISS)')
+
+# Cache HIT/MISS lines emitted by foreman-proxy (smart-proxy#935).
+# These appear in proxy.log at INFO level when that PR is applied.
+# Body format (group 3 of _RE_PROXY_LINE):
+#   registration_script cache=HIT age=42s key_prefix=...
+#   registration_script cache=MISS key_prefix=...
+_RE_CACHE_SCRIPT = re.compile(r'^registration_script cache=(HIT|MISS)')
 
 # Paths that matter for registration analysis
 _P_CONSUMER_CREATE = re.compile(r'^/rhsm/consumers$')
@@ -98,6 +123,28 @@ _SATELLITE_LOG_PATHS = [
     'var/log/foreman/production.log.1.gz',
 ]
 
+_CAPSULE_LOG_PATHS = [
+    'var/log/foreman-proxy/proxy.log',
+    'var/log/foreman-proxy/proxy.log.1',
+    'var/log/foreman-proxy/proxy.log.1.gz',
+]
+
+# ---------------------------------------------------------------------------
+# foreman-proxy proxy.log patterns
+# Format: 2026-04-04T17:59:38 e3c9c5ad [I] Started GET /register ...
+#         2026-04-04T17:59:38 1d83b327 [I] Finished GET /register with 200 (351.05 ms)
+# ---------------------------------------------------------------------------
+
+_RE_PROXY_LINE = re.compile(
+    r'^(\S+)\s+([a-f0-9]{8})\s+\[[^\]]+\]\s+(.+)$'
+)
+_RE_PROXY_STARTED = re.compile(
+    r'^Started (GET|POST|PUT|DELETE|PATCH) (/[^\s?]*)'
+)
+_RE_PROXY_FINISHED = re.compile(
+    r'^Finished \S+ \S+ with (\d+) \((\d+(?:\.\d+)?) ms\)'
+)
+
 
 # ---------------------------------------------------------------------------
 # Data structures
@@ -112,6 +159,46 @@ class _Req:
     source_ip: str = ''
     status: int = 0
     duration_ms: int = 0
+    consumer_uuid: str = ''   # populated from audit log for POST /rhsm/consumers
+
+
+@dataclass
+class CacheStats:
+    """Cache HIT/MISS counts from production.log and proxy.log.
+
+    Populated by parse_sat_cache_stats() (katello#11692 / #11696) and
+    parse_proxy_cache_stats() (smart-proxy#935).  All counters are zero when
+    the relevant PRs have not been applied or logging is not enabled at the
+    required level.  Check has_data before rendering.
+    """
+    compliance_hits: int = 0
+    compliance_misses: int = 0
+    status_hits: int = 0
+    status_misses: int = 0
+    script_hits: int = 0
+    script_misses: int = 0
+
+    @property
+    def has_data(self) -> bool:
+        return (self.compliance_hits + self.compliance_misses
+                + self.status_hits + self.status_misses
+                + self.script_hits + self.script_misses) > 0
+
+    def _rate(self, hits: int, misses: int) -> Optional[str]:
+        total = hits + misses
+        return f'{hits / total * 100:.1f}%' if total else None
+
+    @property
+    def compliance_rate(self) -> Optional[str]:
+        return self._rate(self.compliance_hits, self.compliance_misses)
+
+    @property
+    def status_rate(self) -> Optional[str]:
+        return self._rate(self.status_hits, self.status_misses)
+
+    @property
+    def script_rate(self) -> Optional[str]:
+        return self._rate(self.script_hits, self.script_misses)
 
 
 @dataclass
@@ -119,6 +206,7 @@ class RegistrationSession:
     """Server-side view of one host registration, keyed by consumer UUID."""
     consumer_uuid: str
     started_at: Optional[datetime.datetime]
+    consumer_create_req_id: str = ''  # req_id of the POST /rhsm/consumers anchor
     consumer_create_ms: int = 0     # POST /rhsm/consumers   (key bottleneck)
     consumer_create_status: int = 0
     script_fetch_ms: int = 0        # GET  /register
@@ -139,6 +227,7 @@ class Metrics:
     window_end: Optional[datetime.datetime]
     session_count: int
     error_count: int = 0
+    error_breakdown: Dict[str, int] = field(default_factory=dict)
     consumer_create_ms: List[int] = field(default_factory=list)
     script_fetch_ms: List[int] = field(default_factory=list)
     host_register_ms: List[int] = field(default_factory=list)
@@ -146,6 +235,27 @@ class Metrics:
     compliance_calls: List[int] = field(default_factory=list)
     status_calls: List[int] = field(default_factory=list)
     redundant_consumer_gets: List[int] = field(default_factory=list)
+
+
+# ---------------------------------------------------------------------------
+# Error categorisation
+# ---------------------------------------------------------------------------
+
+def _error_type(status: int) -> str:
+    """Classify an HTTP status code into a human-readable error category."""
+    if status == 0:
+        return 'timeout/no-response'
+    if status == 401:
+        return 'auth-failure'
+    if status == 403:
+        return 'auth-failure'
+    if status == 429:
+        return 'rate-limited'
+    if status >= 500:
+        return 'server-error'
+    if status >= 400:
+        return 'client-error'
+    return 'ok'
 
 
 # ---------------------------------------------------------------------------
@@ -253,13 +363,24 @@ def _open_tarball(path_or_url: str) -> tarfile.TarFile:
 
 
 def _production_log_lines_from_tarball(path_or_url: str) -> Iterator[str]:
-    """Yield production.log lines from a sosreport tarball (local or HTTP)."""
+    """Yield production.log lines from a satellite sosreport tarball (local or HTTP)."""
     with _open_tarball(path_or_url) as tf:
         for member in tf:
             # Strip leading sosreport-hostname-date/ component
             parts = member.name.split('/', 1)
             rel = parts[1] if len(parts) > 1 else member.name
             if any(rel == p or rel == p + '.gz' for p in _SATELLITE_LOG_PATHS):
+                logging.info('Extracting %s from %s', rel, path_or_url)
+                yield from _lines_from_tarball_member(tf, member)
+
+
+def proxy_log_lines_from_tarball(path_or_url: str) -> Iterator[str]:
+    """Yield proxy.log lines from a capsule sosreport tarball (local or HTTP)."""
+    with _open_tarball(path_or_url) as tf:
+        for member in tf:
+            parts = member.name.split('/', 1)
+            rel = parts[1] if len(parts) > 1 else member.name
+            if any(rel == p or rel == p + '.gz' for p in _CAPSULE_LOG_PATHS):
                 logging.info('Extracting %s from %s', rel, path_or_url)
                 yield from _lines_from_tarball_member(tf, member)
 
@@ -427,11 +548,13 @@ def _parse_inventory(path: str) -> List[_InventoryHost]:
     # Build IP → (role, hostname, rex_mode) topology map from per-host vars.
     # This lets _pass2 classify each session's source IP into direct/capsule/lb.
     # rex_mode defaults to 'ssh'; set to 'mqtt' on MQTT-enabled capsules.
+    # Both IPv4 and IPv6 addresses are mapped: Foreman's production.log records
+    # the source IP of /rhsm/consumers requests, which may be IPv6.
     topology: Dict[str, Tuple[str, str, str]] = {}  # ip → (role, hostname, rex_mode)
     for h in hosts:
         hvars = _host_vars.get(h.hostname, {})
         rex = hvars.get('rex_mode', 'ssh')
-        for ip_key in ('private_ip', 'public_ip'):
+        for ip_key in ('private_ip', 'public_ip', 'private_ip6', 'public_ip6'):
             ip = hvars.get(ip_key, '')
             if ip:
                 topology[ip] = (h.role, h.hostname, rex)
@@ -488,6 +611,56 @@ def _production_log_lines_from_inventory(inv_path: str,
 # Parser: two-pass log → sessions
 # ---------------------------------------------------------------------------
 
+def parse_sat_cache_stats(lines: Iterator[str]) -> CacheStats:
+    """Count compliance and status cache HITs/MISSes from production.log.
+
+    Scans for lines emitted by the :registration logger (katello#11692/#11696).
+    Returns CacheStats with all zeros when those PRs are absent or the logger
+    is not enabled at debug level — callers must check has_data before rendering.
+    """
+    stats = CacheStats()
+    for line in lines:
+        m = _RE_LOG_LINE.match(line.rstrip('\n'))
+        if not m:
+            continue
+        body = m.group(3)
+        c = _RE_CACHE_COMPLIANCE.match(body)
+        if c:
+            if c.group(1) == 'HIT':
+                stats.compliance_hits += 1
+            else:
+                stats.compliance_misses += 1
+            continue
+        s = _RE_CACHE_STATUS.match(body)
+        if s:
+            if s.group(1) == 'HIT':
+                stats.status_hits += 1
+            else:
+                stats.status_misses += 1
+    return stats
+
+
+def parse_proxy_cache_stats(lines: Iterator[str]) -> CacheStats:
+    """Count registration_script cache HITs/MISSes from proxy.log.
+
+    Scans for lines emitted by foreman-proxy (smart-proxy#935) at INFO level.
+    Returns CacheStats with all zeros when that PR is absent or logging was
+    not at INFO — callers must check has_data before rendering.
+    """
+    stats = CacheStats()
+    for line in lines:
+        m = _RE_PROXY_LINE.match(line.rstrip('\n'))
+        if not m:
+            continue
+        s = _RE_CACHE_SCRIPT.match(m.group(3))
+        if s:
+            if s.group(1) == 'HIT':
+                stats.script_hits += 1
+            else:
+                stats.script_misses += 1
+    return stats
+
+
 def _pass1(lines: Iterator[str]) -> Dict[str, _Req]:
     """Extract Started/Completed pairs keyed by request ID."""
     records: Dict[str, _Req] = {}
@@ -509,13 +682,102 @@ def _pass1(lines: Iterator[str]) -> Dict[str, _Req]:
         if c and req_id in records:
             records[req_id].status = int(c.group(1))
             records[req_id].duration_ms = int(c.group(2))
+            continue
+
+        # Intermediate audit line: Katello writes the consumer UUID during
+        # POST /rhsm/consumers processing, tied to the same req_id.
+        # This gives an exact req_id → UUID mapping with no heuristics.
+        if req_id in records and not records[req_id].consumer_uuid:
+            u = _RE_FACET_UUID.match(body)
+            if u:
+                records[req_id].consumer_uuid = u.group(1)
 
     return records
 
 
+def _pass1_proxy(lines: Iterator[str]) -> Dict[str, '_Req']:
+    """Extract Started/Finished pairs from foreman-proxy proxy.log.
+
+    proxy.log format:
+      2026-04-04T17:59:38 e3c9c5ad [I] Started GET /register activation_keys=...
+      2026-04-04T17:59:38 1d83b327 [I] Finished GET /register with 200 (351.05 ms)
+    """
+    records: Dict[str, _Req] = {}
+    for line in lines:
+        m = _RE_PROXY_LINE.match(line.rstrip('\n'))
+        if not m:
+            continue
+        ts_str, req_id, body = m.group(1), m.group(2), m.group(3)
+
+        s = _RE_PROXY_STARTED.match(body)
+        if s and req_id not in records:
+            records[req_id] = _Req(req_id, s.group(1), s.group(2),
+                                   _parse_ts(ts_str))
+            continue
+
+        f = _RE_PROXY_FINISHED.match(body)
+        if f and req_id in records:
+            records[req_id].status = int(f.group(1))
+            records[req_id].duration_ms = int(float(f.group(2)))
+
+    return records
+
+
+def _pass2_proxy(records: Dict[str, '_Req'],
+                 window_sec: int = 120,
+                 since: Optional[datetime.datetime] = None,
+                 until: Optional[datetime.datetime] = None) -> List[RegistrationSession]:
+    """Build registration sessions from capsule proxy.log records.
+
+    Anchors on POST /register (one session per proxied registration).
+    GET /register (script delivery) is correlated by looking backward in time.
+    No UUID, no source IP — all requests belong to this capsule.
+    """
+    host_regs, script_fetches = [], []
+
+    for r in records.values():
+        path = r.path.split('?')[0]
+        if r.method == 'POST' and _P_REGISTER.match(path):
+            host_regs.append(r)
+        elif r.method == 'GET' and _P_REGISTER.match(path):
+            script_fetches.append(r)
+
+    host_regs.sort(key=lambda r: r.ts or datetime.datetime.min)
+    script_fetches.sort(key=lambda r: r.ts or datetime.datetime.min)
+
+    window = datetime.timedelta(seconds=window_sec)
+    sessions: List[RegistrationSession] = []
+
+    for hr in host_regs:
+        if hr.ts is None:
+            continue
+        if since and hr.ts < since:
+            continue
+        if until and hr.ts > until:
+            continue
+
+        sess = RegistrationSession(
+            consumer_uuid=hr.req_id,
+            started_at=hr.ts,
+            host_register_ms=hr.duration_ms,
+            consumer_create_status=hr.status,
+        )
+
+        for sf in reversed(script_fetches):
+            if sf.ts and (hr.ts - window) <= sf.ts <= hr.ts:
+                sess.script_fetch_ms = sf.duration_ms
+                break
+
+        sessions.append(sess)
+
+    return sessions
+
+
 def _pass2(records: Dict[str, _Req],
            window_sec: int = 120,
-           topology: Optional[Dict[str, Tuple[str, str, str]]] = None) -> List[RegistrationSession]:
+           topology: Optional[Dict[str, Tuple[str, str, str]]] = None,
+           since: Optional[datetime.datetime] = None,
+           until: Optional[datetime.datetime] = None) -> List[RegistrationSession]:
     """Group request records into per-registration sessions."""
     creates, script_fetches, host_regs = [], [], []
     compliance, status_calls, fact_updates, consumer_gets = [], [], [], []
@@ -556,27 +818,65 @@ def _pass2(records: Dict[str, _Req],
     window = datetime.timedelta(seconds=window_sec)
     sessions: List[RegistrationSession] = []
 
+    # Pre-build sorted timestamp arrays for O(log n) bisect lookups.
+    # Each list is already sorted by _sort(); None timestamps → datetime.min.
+    _MIN = datetime.datetime.min
+
+    def _ts(r):
+        return r.ts if r.ts is not None else _MIN
+    sf_times         = [_ts(r) for r in script_fetches]
+    hr_times         = [_ts(r) for r in host_regs]
+    fu_times         = [_ts(r) for r in fact_updates]
+    cr_times         = [_ts(r) for r in creates]
+    st_times         = [_ts(r) for r in status_calls]
+    compliance_times = [_ts(r) for r in compliance]
+
     for create in creates:
         if create.ts is None:
             continue
+        if since and create.ts < since:
+            continue
+        if until and create.ts > until:
+            continue
         t0 = create.ts
         t1 = t0 + window
+        # Pre-compute window indices for fact_updates — needed by UUID fallback
+        # and also reused later for the fact_update_ms assignment.
+        fu_lo = bisect.bisect_left(fu_times, t0)
+        fu_hi = bisect.bisect_right(fu_times, t1)
 
-        # Discover the UUID from compliance or fact-update calls in window
-        uuid = 'unknown'
-        for r in compliance:
-            if r.ts and t0 <= r.ts <= t1:
+        # Discover the UUID for this consumer create.
+        #
+        # Primary (exact): the audit log writes a SubscriptionFacet line with
+        # the UUID during POST /rhsm/consumers, sharing the same req_id.
+        # _pass1() extracts this into create.consumer_uuid — use it directly.
+        #
+        # Fallback: when the audit line is absent (older Foreman, redacted logs,
+        # or non-standard deployments), look for the UUID in compliance or
+        # fact-update paths within the session window.
+        uuid = create.consumer_uuid  # exact — populated by _pass1() from audit log
+
+        if not uuid:
+            # Fallback: scan only compliance calls in [t0, t1] using bisect.
+            # compliance_times is built below; reuse fu_times already available.
+            c_lo = bisect.bisect_left(compliance_times, t0)
+            c_hi = bisect.bisect_right(compliance_times, t1)
+            for r in compliance[c_lo:c_hi]:
                 m = _RE_CONSUMER_UUID.search(r.path)
                 if m:
                     uuid = m.group(1)
                     break
-        if uuid == 'unknown':
-            for r in fact_updates:
-                if r.ts and t0 <= r.ts <= t1:
-                    m = _RE_CONSUMER_UUID.search(r.path)
-                    if m:
-                        uuid = m.group(1)
-                        break
+
+        if not uuid:
+            # Reuse fu_times (already built) to limit the scan.
+            for r in fact_updates[fu_lo:fu_hi]:
+                m = _RE_CONSUMER_UUID.search(r.path)
+                if m:
+                    uuid = m.group(1)
+                    break
+
+        if not uuid:
+            uuid = 'unknown'
 
         # Classify routing from the source IP of the consumer create request.
         src_ip = create.source_ip
@@ -588,6 +888,7 @@ def _pass2(records: Dict[str, _Req],
         sess = RegistrationSession(
             consumer_uuid=uuid,
             started_at=t0,
+            consumer_create_req_id=create.req_id,
             consumer_create_ms=create.duration_ms,
             consumer_create_status=create.status,
             source_ip=src_ip,
@@ -595,23 +896,23 @@ def _pass2(records: Dict[str, _Req],
             rex_mode=rex_mode,
         )
 
-        # Script fetch: nearest GET /register just before this consumer create
-        for sf in reversed(script_fetches):
-            if sf.ts and (t0 - window) <= sf.ts <= t0:
-                sess.script_fetch_ms = sf.duration_ms
-                break
+        # Script fetch: nearest GET /register just before this consumer create.
+        # bisect to find the rightmost sf with ts ≤ t0, then check the window.
+        sf_hi = bisect.bisect_right(sf_times, t0)
+        sf_lo = bisect.bisect_left(sf_times, t0 - window)
+        if sf_lo < sf_hi:
+            sess.script_fetch_ms = script_fetches[sf_hi - 1].duration_ms
 
-        # Host register: first POST /register in window
-        for hr in host_regs:
-            if hr.ts and t0 <= hr.ts <= t1:
-                sess.host_register_ms = hr.duration_ms
-                break
+        # Host register: first POST /register in [t0, t1].
+        hr_lo = bisect.bisect_left(hr_times, t0)
+        hr_hi = bisect.bisect_right(hr_times, t1)
+        if hr_lo < hr_hi:
+            sess.host_register_ms = host_regs[hr_lo].duration_ms
 
-        # Fact update: first PUT /rhsm/consumers/:id in window
-        for fu in fact_updates:
-            if fu.ts and t0 <= fu.ts <= t1:
-                sess.fact_update_ms = fu.duration_ms
-                break
+        # Fact update: first PUT /rhsm/consumers/:id in [t0, t1].
+        # fu_lo/fu_hi already computed before UUID discovery.
+        if fu_lo < fu_hi:
+            sess.fact_update_ms = fact_updates[fu_lo].duration_ms
 
         # Compliance calls: look up by UUID — every call for this UUID is counted
         # regardless of window, since UUID uniquely identifies the session.
@@ -619,12 +920,14 @@ def _pass2(records: Dict[str, _Req],
             sess.compliance_calls = len(uuid_compliance[uuid])
 
         # Status calls: global endpoint with no UUID — apportion by dividing
-        # total calls in window by number of concurrent sessions in that window
-        concurrent = sum(1 for other in creates if other.ts and t0 <= other.ts <= t1)
-        total_status_in_window = sum(
-            1 for s in status_calls if s.ts and t0 <= s.ts <= t1
-        )
-        sess.status_calls = round(total_status_in_window / max(1, concurrent))
+        # total calls in window by number of concurrent sessions.
+        # Both counts now use bisect instead of O(n) scans.
+        cr_lo = bisect.bisect_left(cr_times, t0)
+        cr_hi = bisect.bisect_right(cr_times, t1)
+        concurrent = max(1, cr_hi - cr_lo)
+        st_lo = bisect.bisect_left(st_times, t0)
+        st_hi = bisect.bisect_right(st_times, t1)
+        sess.status_calls = round((st_hi - st_lo) / concurrent)
 
         # Redundant GET /consumers/:id calls for this UUID (should be 0 after #11694)
         if uuid != 'unknown':
@@ -645,12 +948,24 @@ def _build_metrics(sessions: List[RegistrationSession],
                        window_end=None, session_count=0)
 
     timestamps = [s.started_at for s in sessions if s.started_at]
+    errors = [s for s in sessions if s.consumer_create_status not in (0, 200, 201)]
+    breakdown: Dict[str, int] = {}
+    for s in errors:
+        et = _error_type(s.consumer_create_status)
+        breakdown[et] = breakdown.get(et, 0) + 1
+    # Status 0 means no Completed line found (timeout or log truncation)
+    timeouts = sum(1 for s in sessions
+                   if s.consumer_create_ms == 0 and s.consumer_create_status == 0)
+    if timeouts:
+        breakdown['timeout/no-response'] = breakdown.get('timeout/no-response', 0) + timeouts
+
     return Metrics(
         source_label=label,
         window_start=min(timestamps) if timestamps else None,
         window_end=max(timestamps) if timestamps else None,
         session_count=len(sessions),
-        error_count=sum(1 for s in sessions if s.consumer_create_status >= 400),
+        error_count=len(errors) + timeouts,
+        error_breakdown=breakdown,
         consumer_create_ms=[s.consumer_create_ms for s in sessions if s.consumer_create_ms],
         script_fetch_ms=[s.script_fetch_ms for s in sessions if s.script_fetch_ms],
         host_register_ms=[s.host_register_ms for s in sessions if s.host_register_ms],
@@ -661,8 +976,26 @@ def _build_metrics(sessions: List[RegistrationSession],
     )
 
 
+def analyze_proxy(lines: Iterator[str], label: str, window_sec: int = 120,
+                  since: Optional[datetime.datetime] = None,
+                  until: Optional[datetime.datetime] = None) -> 'Metrics':
+    """Parse capsule proxy.log lines and return a Metrics summary.
+
+    Only script_fetch_ms (GET /register) and host_register_ms (POST /register)
+    are populated — RHSM calls are not proxied through foreman-proxy and
+    therefore do not appear in proxy.log.
+    """
+    records = _pass1_proxy(lines)
+    logging.info('%s (proxy): %d request records', label, len(records))
+    sessions = _pass2_proxy(records, window_sec, since, until)
+    logging.info('%s (proxy): %d registration sessions', label, len(sessions))
+    return _build_metrics(sessions, label)
+
+
 def _analyze(lines: Iterator[str], label: str, window_sec: int = 120,
              topology: Optional[Dict[str, Tuple[str, str, str]]] = None,
+             since: Optional[datetime.datetime] = None,
+             until: Optional[datetime.datetime] = None,
              ) -> Dict[str, 'Metrics']:
     """Parse lines and return a dict of group_label → Metrics.
 
@@ -676,7 +1009,7 @@ def _analyze(lines: Iterator[str], label: str, window_sec: int = 120,
     """
     records = _pass1(lines)
     logging.info('%s: %d request records', label, len(records))
-    sessions = _pass2(records, window_sec, topology)
+    sessions = _pass2(records, window_sec, topology, since, until)
     logging.info('%s: %d registration sessions', label, len(sessions))
 
     def _category(s: RegistrationSession) -> str:
@@ -738,6 +1071,8 @@ def print_metrics(m: Metrics) -> None:
     if m.error_count:
         pct_err = m.error_count / m.session_count * 100
         print(f'Errors:   {m.error_count:,} consumer create failures ({pct_err:.1f}%)')
+        for etype, count in sorted(m.error_breakdown.items()):
+            print(f'            {etype}: {count}')
     print()
     print(f'  {"Per-request timings (ms)":<42}   {"P50":>8}   {"P95":>8}   {"P99":>8}')
     print('  ' + '-' * 68)
@@ -817,6 +1152,7 @@ def _metrics_to_dict(m: Metrics) -> dict:
         'window_end': m.window_end.isoformat() if m.window_end else None,
         'session_count': m.session_count,
         'error_count': m.error_count,
+        'error_breakdown': m.error_breakdown,
         'consumer_create_ms': stats(m.consumer_create_ms),
         'script_fetch_ms': stats(m.script_fetch_ms),
         'host_register_ms': stats(m.host_register_ms),
@@ -915,6 +1251,10 @@ def main() -> None:
     src.add_argument('--compare', nargs=2, metavar=('BEFORE', 'AFTER'),
                      help='Compare two sources (same formats as --sosreport-dir)')
 
+    parser.add_argument('--since', metavar='EPOCH', type=float,
+                        help='Only include sessions starting at or after this Unix epoch')
+    parser.add_argument('--until', metavar='EPOCH', type=float,
+                        help='Only include sessions starting at or before this Unix epoch')
     parser.add_argument('--json', action='store_true',
                         help='Output JSON instead of text table')
     parser.add_argument('--log-size-limit', metavar='MB', type=int, default=200,
@@ -963,6 +1303,11 @@ def main() -> None:
             print_comparison(before_m, after_m)
         return
 
+    since_dt = (datetime.datetime.utcfromtimestamp(args.since)
+                if args.since else None)
+    until_dt = (datetime.datetime.utcfromtimestamp(args.until)
+                if args.until else None)
+
     # Single source — topology only available from inventory
     topology: Optional[Dict[str, Tuple[str, str, str]]] = None
     if args.inventory:
@@ -989,7 +1334,7 @@ def main() -> None:
         )
         return
 
-    groups = _analyze(lines, label, args.window, topology)
+    groups = _analyze(lines, label, args.window, topology, since_dt, until_dt)
     if args.json:
         result = {k: _metrics_to_dict(v) for k, v in groups.items()}
         if args.inventory and args.cache_stats:
