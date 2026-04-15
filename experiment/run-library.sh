@@ -1234,9 +1234,36 @@ function table_row() {
     echo -e "$description\t$avg\t$note"
 }
 
+organization="$(get_inventory_var foreman_organization)"
 
 # Create logs dir if it doesn't exist
 if [[ ! -d "$logs" ]]; then
     mkdir -p "$logs"
     log "Logging into '$logs' directory"
 fi
+
+# Load section function libraries if present
+_run_library_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+[[ -f "${_run_library_dir}/lib/fam.sh" ]] && source "${_run_library_dir}/lib/fam.sh"
+[[ -f "${_run_library_dir}/lib/hammer.sh" ]] && source "${_run_library_dir}/lib/hammer.sh"
+unset _run_library_dir
+
+check_env() {
+    section 'Checking environment'
+    generic_environment_check
+    # unset skip_measurement
+    # set +e
+
+    # Initial version sanity check
+    for rel in $rels; do
+        case "$rel" in
+        rhel[7-9] | rhel10)
+            continue
+            ;;
+        *)
+            echo "Wrong release: $rel!!!" && exit
+            ;;
+        esac
+    done # for rel in $rels
+
+} # check_env
