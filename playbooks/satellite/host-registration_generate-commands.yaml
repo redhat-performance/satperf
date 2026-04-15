@@ -4,7 +4,12 @@
   gather_facts: false
   vars:
     aks_list: "{{ aks | default('AK') | split }}"
-    hgrg: "host-registration generate-command --organization '{{ organization }}' --location {{ location }} --insecure true --force true"
+    hgrg: >-
+      host-registration generate-command
+      --organization '{{ organization }}'
+      --location {{ location }}
+      --insecure true
+      --force true
     location_groupname: "location_{{ location | lower }}"
 
   tasks:
@@ -16,8 +21,13 @@
           # XXX: Submit PR
           throttle: 1
           ansible.builtin.command:
-            cmd: |
-              hammer --no-headers -u {{ sat_user }} -p {{ sat_pass }} capsule list --organization '{{ organization }}' --search 'name = {{ inventory_hostname }}' --fields id
+            cmd: >-
+              hammer --no-headers
+              -u {{ sat_user }} -p {{ sat_pass }}
+              capsule list
+              --organization '{{ organization }}'
+              --search 'name = {{ inventory_hostname }}'
+              --fields id
           register: capsule_id_cmd
           changed_when: capsule_id_cmd.rc != 0
           delegate_to: "{{ groups['satellite6'] | first }}"
@@ -30,27 +40,22 @@
           ansible.builtin.set_fact:
             hgrg: "{{ hgrg }} --smart-proxy-id {{ capsule_id }}"
 
-    - name: Check if Insights client should be installed and configured (it won't be by default)
-      # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
-      ansible.builtin.set_fact:
-        hgrg: "{{ hgrg }} --setup-insights true"
+    - name: Insights client
       when:
-        # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
-        # - setup_insights | default(false) | bool
-        - enable_iop | default(false) | bool
-        # - sat_version != 'foremanctl' and ( sat_version == 'stream' or sat_version is ansible.builtin.version('6.17.0', '>=') )
-        - sat_version not in ['stream', 'foremanctl'] and sat_version is ansible.builtin.version('6.17.0', '>=')
+        - sat_version in ['stream', 'foremanctl'] or sat_version is ansible.builtin.version('6.17.0', '>=')
+      block:
+        - name: Check if Insights client should be installed and configured (it won't be by default)
+          ansible.builtin.set_fact:
+            hgrg: "{{ hgrg }} --setup-insights true"
+          when:
+            - enable_iop | default(false) | bool
 
-    # XXX: Bug??
-    - name: Check if Insights client should be installed and configured (it shouldn't be by default)
-      # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
-      ansible.builtin.set_fact:
-        hgrg: "{{ hgrg }} --setup-insights false"
-      when:
-        # XXX: Only enable Insights when using IoP to avoid registering against the hosted instance
-        # - setup_insights | default(false) | bool
-        - not enable_iop | default(false) | bool
-        - sat_version == 'stream'
+        # XXX: Bug??
+        - name: Check if Insights client should be installed and configured (it shouldn't be by default)
+          ansible.builtin.set_fact:
+            hgrg: "{{ hgrg }} --setup-insights false"
+          when:
+            - not enable_iop | default(false) | bool
 
     - name: "Check if MQTT REX mode is needed"
       ansible.builtin.set_fact:
@@ -94,7 +99,7 @@
       # XXX: Submit PR
       throttle: 1
       ansible.builtin.command:
-        cmd: |
+        cmd: >-
           hammer -u {{ sat_user }} -p {{ sat_pass }} {{ hgrg }} --activation-key {{ item }}
       loop: "{{ aks_list }}"
       register: cmd
