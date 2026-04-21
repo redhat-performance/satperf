@@ -40,11 +40,13 @@ def _authenticate(client, username, password):
     """
     with _auth_lock:
         response = client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
-        try:
-            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
-        except AttributeError:
-            logging.fatal("Unable to gather CSRF token (status=%s, body=%s)", response.status_code, response.text[:500])
-            raise
+        match = re.search("<meta name=\"csrf-token\" content=\"([^\"]+)\"", response.text)
+        if not match:
+            match = re.search("<input[^>]*name=\"authenticity_token\"[^>]*value=\"([^\"]+)\"", response.text)
+        if not match:
+            logging.fatal("Unable to gather CSRF token (status=%s, len=%d)", response.status_code, len(response.text))
+            raise RuntimeError("Unable to gather CSRF token")
+        csrf_token = match.group(1)
         payload = {
             "authenticity_token": csrf_token,
             "login[login]": username,
@@ -64,7 +66,7 @@ def _wait_for_all_users(environment, timeout=60):
     running tasks at the same time from an authenticated state.
     """
     global _auth_barrier_count
-    target = environment.runner.target_users_count
+    target = getattr(environment.runner, 'target_users_count', None) or environment.user_classes[0].num_clients
     with _auth_barrier_lock:
         _auth_barrier_count += 1
         if _auth_barrier_count >= target:
@@ -471,6 +473,7 @@ def doit(args, status_data):
     test_set.satellite_username = args.satellite_username
     test_set.satellite_password = args.satellite_password
     test_set.satellite_max_static_size = args.satellite_max_static_size
+    test_set.num_clients = args.num_clients
 
     # Add parameters to status data file
     status_data.set('name', f'Satellite UI perf test, concurrency { args.num_clients }, duration { args.test_duration }')
