@@ -198,6 +198,15 @@ misc() {
         playbooks/tests/webui-static-distributed.yaml
     STATUS_DATA_FILE=/tmp/status-data-webui-static-distributed.json e "WebUIStaticDistributedTest_c${ui_concurrency}_d${ui_duration}" "${logs}/${test}.log"
 
+    rm -f /tmp/status-data-webui-pages-at-scale.json
+    test=53-webui-pages-at-scale
+    ap "${test}.log" \
+        -e "sat_version='$sat_version'" \
+        -e "ui_concurrency='${PARAM_ui_at_scale_concurrency:-5}'" \
+        -e "ui_duration='${PARAM_ui_at_scale_duration:-300}'" \
+        playbooks/tests/webui-pages-at-scale.yaml
+    STATUS_DATA_FILE=/tmp/status-data-webui-pages-at-scale.json e "WebUIPagesAtScaleTest_c${PARAM_ui_at_scale_concurrency:-5}_d${PARAM_ui_at_scale_duration:-300}" "${logs}/${test}.log"
+
     if vercmp_ge "$sat_version" '6.17.0'; then
         if $enable_iop; then
             section 'Generate rh_cloud_inventory report'
