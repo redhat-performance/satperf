@@ -272,17 +272,13 @@ class SatelliteWebUIPerfAtScale(HttpUser):
                         self.job_ids["medium"] = jid
                     elif total > 500 and not self.job_ids["large"]:
                         self.job_ids["large"] = jid
-                # Fall back: use whatever we found for missing buckets
-                fallback = next((jid for jid in self.job_ids.values() if jid), None)
-                if fallback is None and jobs:
-                    fallback = jobs[0]["id"]
-                for size in self.job_ids:
-                    if self.job_ids[size] is None:
-                        self.job_ids[size] = fallback
-                logging.info(f"Discovered job IDs: {self.job_ids}")
+                found = {k: v for k, v in self.job_ids.items() if v is not None}
+                missing = [k for k, v in self.job_ids.items() if v is None]
+                if missing:
+                    logging.info(f"No jobs found for buckets: {missing}")
+                logging.info(f"Discovered job IDs: {found}")
         except Exception as e:
             logging.warning(f"Failed to discover job invocations: {e}")
-            self.job_ids = {"small": 1, "medium": 1, "large": 1}
 
     # ── Index pages ──────────────────────────────────────────────────────
 
@@ -296,37 +292,49 @@ class SatelliteWebUIPerfAtScale(HttpUser):
 
     @task(1)
     def hosts_index_new(self):
-        _get(self.client, "/new/hosts", "Hosts")
+        _get(self.client, "/new/hosts", "ReactApp")
 
     @task(1)
     def foreman_tasks_index(self):
-        _get(self.client, "/foreman_tasks/tasks", "<foreman-react-component name=\"ForemanTasks\"")
+        _get(self.client, "/foreman_tasks/tasks", "ReactApp")
 
     # ── Job invocation detail: React (new) vs Legacy (old) ───────────────
 
     @task(3)
     def job_detail_small(self):
-        _get(self.client, f"/job_invocations/{self.job_ids['small']}?page=1&per_page=20", "Job invocation")
+        if not self.job_ids.get("small"):
+            return
+        _get(self.client, f"/job_invocations/{self.job_ids['small']}?page=1&per_page=20", "ReactApp")
 
     @task(3)
     def job_detail_small_legacy(self):
-        _get(self.client, f"/legacy/job_invocations/{self.job_ids['small']}?page=1&per_page=20", "Job invocation")
+        if not self.job_ids.get("small"):
+            return
+        _get(self.client, f"/legacy/job_invocations/{self.job_ids['small']}?page=1&per_page=20", "total_hosts")
 
     @task(3)
     def job_detail_medium(self):
-        _get(self.client, f"/job_invocations/{self.job_ids['medium']}?page=1&per_page=20", "Job invocation")
+        if not self.job_ids.get("medium"):
+            return
+        _get(self.client, f"/job_invocations/{self.job_ids['medium']}?page=1&per_page=20", "ReactApp")
 
     @task(3)
     def job_detail_medium_legacy(self):
-        _get(self.client, f"/legacy/job_invocations/{self.job_ids['medium']}?page=1&per_page=20", "Job invocation")
+        if not self.job_ids.get("medium"):
+            return
+        _get(self.client, f"/legacy/job_invocations/{self.job_ids['medium']}?page=1&per_page=20", "total_hosts")
 
     @task(3)
     def job_detail_large(self):
-        _get(self.client, f"/job_invocations/{self.job_ids['large']}?page=1&per_page=20", "Job invocation")
+        if not self.job_ids.get("large"):
+            return
+        _get(self.client, f"/job_invocations/{self.job_ids['large']}?page=1&per_page=20", "ReactApp")
 
     @task(3)
     def job_detail_large_legacy(self):
-        _get(self.client, f"/legacy/job_invocations/{self.job_ids['large']}?page=1&per_page=20", "Job invocation")
+        if not self.job_ids.get("large"):
+            return
+        _get(self.client, f"/legacy/job_invocations/{self.job_ids['large']}?page=1&per_page=20", "total_hosts")
 
     # ── API endpoints ────────────────────────────────────────────────────
 
@@ -483,7 +491,7 @@ def doit(args, status_data):
     status_data.set('parameters.test.satellite_username', args.satellite_username)
     status_data.set('parameters.test.satellite_max_static_size', args.satellite_max_static_size)
 
-    return opl.locust.run_locust(args, status_data, test_set, new_stats=True, summary_only=args.summary_only)
+    return opl.locust.run_locust(args, status_data, test_set, new_stats=True, summary_only=args.summary_only, sort_stats=args.sort_stats)
 
 
 def main():
@@ -506,6 +514,12 @@ def main():
         action=argparse.BooleanOptionalAction,
         default=True,
         help='Only store SUMMARY stats in status data (use --no-summary-only for per-endpoint p50/p90/p99)',
+    )
+    parser.add_argument(
+        '--sort-stats',
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help='Sort stats table alphabetically by request name',
     )
     parser.add_argument(
         '--satellite-version',
