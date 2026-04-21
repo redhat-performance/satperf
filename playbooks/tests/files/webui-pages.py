@@ -6,6 +6,7 @@ import itertools
 import logging
 import re
 import sys
+import time
 
 from locust import HttpUser, FastHttpUser
 from locust import constant
@@ -24,21 +25,27 @@ import urllib3
 urllib3.disable_warnings()
 
 
-def _authenticate(client, username, password):
+def _authenticate(client, username, password, retries=3):
     """
     Authenticate via CSRF token extraction and login form POST.
 
     Populates the session cookie so subsequent requests are authenticated.
-    Raises on failure so Locust stops the user.
+    Retries on CSRF extraction failure (concurrent startup race).
+    Raises on final failure so Locust stops the user.
     """
-    response = client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
-    try:
-        csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
-    except AttributeError:
-        logging.fatal("Unable to gather CSRF token")
-        raise
+    for attempt in range(retries):
+        response = client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
+        match = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text)
+        if match:
+            break
+        logging.warning(f"CSRF token not found (attempt {attempt + 1}/{retries}), retrying...")
+        time.sleep(1 + attempt)
+    else:
+        logging.fatal("Unable to gather CSRF token after %d attempts", retries)
+        raise RuntimeError("Unable to gather CSRF token")
+
     payload = {
-        "authenticity_token": csrf_token,
+        "authenticity_token": match.group(1),
         "login[login]": username,
         "login[password]": password,
     }
