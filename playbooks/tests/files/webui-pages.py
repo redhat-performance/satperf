@@ -24,6 +24,30 @@ import urllib3
 urllib3.disable_warnings()
 
 
+def _authenticate(client, username, password):
+    """
+    Authenticate via CSRF token extraction and login form POST.
+
+    Populates the session cookie so subsequent requests are authenticated.
+    Raises on failure so Locust stops the user.
+    """
+    response = client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
+    try:
+        csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
+    except AttributeError:
+        logging.fatal("Unable to gather CSRF token")
+        raise
+    payload = {
+        "authenticity_token": csrf_token,
+        "login[login]": username,
+        "login[password]": password,
+    }
+    response = client.post("/users/login", data=payload, verify=False, name="users_login_post", catch_response=True)
+    if "<title>Login</title>" in response.text:
+        logging.fatal("Login failed")
+        raise RuntimeError("Login failed")
+
+
 def _get(client, uri, pattern, headers={}):
     """
     Simple wrapper around GET requests used by tasks below.
@@ -105,28 +129,7 @@ class SatelliteWebUIPerf(HttpUser):
     wait_time = constant(0)
 
     def on_start(self):
-        """
-        Get CSRF token, use it in login call and that populates session
-        cookie so we can access pages. Some older text about it:
-        https://mojo.redhat.com/groups/satellite6qe/blog/2018/08/14/maybe-you-need-to-load-satellite-6-ui-page-without-selenium
-        """
-        response = self.client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
-        try:
-            # csrf_token = self.client.cookies["csrf-token"]
-            # <meta name="csrf-token" content="pN+PkZI8OHLvYlXPXisAbwRVXeSm8hcNk5LKuysAvD979wlbEPQX+/yn0PBouxkxChEAttUMUms0V9ANDrZyLQ==" />
-            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
-        except AttributeError:
-            logging.fatal("Unable to gather CSRF token")
-            raise
-        payload = {
-            "authenticity_token": csrf_token,
-            "login[login]": self.satellite_username,
-            "login[password]": self.satellite_password,
-        }
-        response = self.client.post("/users/login", data=payload, verify=False, name="users_login_post", catch_response=True)
-        if "<title>Login</title>" in response.text:
-            logging.fatal("Login failed")
-            self.interrupt()
+        _authenticate(self.client, self.satellite_username, self.satellite_password)
 
     @task
     def overview(self):
@@ -223,22 +226,7 @@ class SatelliteWebUIPerfAtScale(HttpUser):
     wait_time = constant(0)
 
     def on_start(self):
-        # Authenticate
-        response = self.client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
-        try:
-            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
-        except AttributeError:
-            logging.fatal("Unable to gather CSRF token")
-            raise
-        payload = {
-            "authenticity_token": csrf_token,
-            "login[login]": self.satellite_username,
-            "login[password]": self.satellite_password,
-        }
-        response = self.client.post("/users/login", data=payload, verify=False, name="users_login_post", catch_response=True)
-        if "<title>Login</title>" in response.text:
-            logging.fatal("Login failed")
-            self.interrupt()
+        _authenticate(self.client, self.satellite_username, self.satellite_password)
 
         # Discover job invocations of different sizes
         self.job_ids = {"small": None, "medium": None, "large": None}
@@ -327,6 +315,126 @@ class SatelliteWebUIPerfAtScale(HttpUser):
         _get(self.client, "/foreman_tasks/api/tasks?include_permissions=true", "\"total\"")
 
 
+class SatelliteWebUIPerfMenu(HttpUser):
+    """Dynamic test that discovers all navigable pages from /menu endpoint.
+
+    Instead of a hardcoded page list, fetches /menu (available since
+    Foreman 2.0) which returns all menu items the authenticated user
+    can access.  Cycles through every discovered page measuring TTFB.
+    """
+    wait_time = constant(0)
+
+    def on_start(self):
+        _authenticate(self.client, self.satellite_username, self.satellite_password)
+
+        # Discover pages from /menu
+        self.pages = []
+        self.index = 0
+        with self.client.get("/menu", verify=False, name="discover_menu", catch_response=True) as resp:
+            try:
+                resp.raise_for_status()
+                for item in resp.json():
+                    self.pages.append({"name": item["name"], "url": item["url"]})
+                logging.info(f"Discovered {len(self.pages)} menu pages")
+            except Exception as e:
+                logging.fatal(f"Failed to parse /menu: {e}")
+                raise
+
+    @task
+    def load_page(self):
+        page = self.pages[self.index]
+        with self.client.get(page["url"], verify=False, name=page["name"], catch_response=True) as response:
+            try:
+                response.raise_for_status()
+            except Exception as e:
+                logging.warning(f"Error loading {page['url']}: {e}")
+                response.failure(str(e))
+        self.index = (self.index + 1) % len(self.pages)
+
+
+class SatelliteWebUIPerfAssetInventory(HttpUser):
+    """Inventory static assets and measure cache behavior.
+
+    Discovers all JS/CSS assets from key pages, records total bundle
+    sizes during startup, then runs cold (no cache headers) vs warm
+    (If-None-Match/If-Modified-Since) requests to measure cache
+    effectiveness.  Designed for cross-version comparison of JS bundle
+    sizes (e.g. Foreman 3.11 reduced plugins from ~24 MB to ~4 MB).
+    """
+    wait_time = constant(0)
+    _inventory_done = False
+    _assets = []
+
+    def on_start(self):
+        _authenticate(self.client, self.satellite_username, self.satellite_password)
+
+        # Run inventory once across all Locust users
+        if not SatelliteWebUIPerfAssetInventory._inventory_done:
+            SatelliteWebUIPerfAssetInventory._inventory_done = True
+            self._run_inventory()
+
+        self.index = 0
+
+    def _run_inventory(self):
+        seen = set()
+        assets = []
+
+        # Crawl key pages for asset references (using requests, not Locust client)
+        for page in ["/users/login", "/", "/hosts"]:
+            with requests.get(f"{self.host_base}{page}", verify=False,
+                              cookies={c.name: c.value for c in self.client.cookiejar}) as resp:
+                find_links = re.finditer(r'<link[^>]* href="(/[^"]+\.css[^"]*)"', resp.text)
+                find_scripts = re.finditer(r'<script[^>]* src="(/[^"]+\.js[^"]*)"', resp.text)
+                for match in itertools.chain(find_links, find_scripts):
+                    url = match.group(1)
+                    if url not in seen:
+                        seen.add(url)
+                        asset_type = "js" if ".js" in url else "css"
+                        assets.append({"url": url, "type": asset_type})
+
+        # Download each asset to measure size and capture cache headers
+        total_js = 0
+        total_css = 0
+        for asset in assets:
+            with requests.get(f"{self.host_base}{asset['url']}", verify=False) as resp:
+                size = len(resp.content)
+                asset["size"] = size
+                asset["etag"] = resp.headers.get("ETag")
+                asset["last_modified"] = resp.headers.get("Last-Modified")
+                if asset["type"] == "js":
+                    total_js += size
+                else:
+                    total_css += size
+
+        SatelliteWebUIPerfAssetInventory._assets = assets
+        logging.info(
+            f"Asset inventory: {len(assets)} assets, "
+            f"JS={total_js} bytes ({total_js / 1048576:.1f} MB), "
+            f"CSS={total_css} bytes ({total_css / 1048576:.1f} MB)"
+        )
+
+    @task(1)
+    def cold_request(self):
+        """Request asset without cache headers (simulates first visit)."""
+        asset = SatelliteWebUIPerfAssetInventory._assets[self.index]
+        name = f"cold_{asset['type']}"
+        self.client.get(asset["url"], verify=False, name=name)
+        self.index = (self.index + 1) % len(SatelliteWebUIPerfAssetInventory._assets)
+
+    @task(1)
+    def warm_request(self):
+        """Request asset with cache headers (simulates return visit)."""
+        asset = SatelliteWebUIPerfAssetInventory._assets[self.index]
+        headers = {}
+        if asset.get("etag"):
+            headers["If-None-Match"] = asset["etag"]
+        if asset.get("last_modified"):
+            headers["If-Modified-Since"] = asset["last_modified"]
+        name = f"warm_{asset['type']}"
+        self.client.get(asset["url"], headers=headers, verify=False, name=name)
+        self.index = (self.index + 1) % len(SatelliteWebUIPerfAssetInventory._assets)
+
+
 def doit(args, status_data):
     test_set = getattr(sys.modules[__name__], args.test_set)
     test_set.host_base = f"{args.host}{args.test_url_suffix}"
@@ -359,7 +467,7 @@ def main():
     parser.add_argument(
         '--test-set',
         default='SatelliteWebUIPerf',
-        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth', 'SatelliteWebUIPerfStaticAssets', 'SatelliteWebUIPerfAtScale'],
+        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth', 'SatelliteWebUIPerfStaticAssets', 'SatelliteWebUIPerfAtScale', 'SatelliteWebUIPerfMenu', 'SatelliteWebUIPerfAssetInventory'],
         help='What test set to use?',
     )
     parser.add_argument(
