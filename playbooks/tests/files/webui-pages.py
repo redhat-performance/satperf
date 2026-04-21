@@ -43,7 +43,7 @@ def _authenticate(client, username, password):
         try:
             csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
         except AttributeError:
-            logging.fatal("Unable to gather CSRF token")
+            logging.fatal("Unable to gather CSRF token (status=%s, body=%s)", response.status_code, response.text[:500])
             raise
         payload = {
             "authenticity_token": csrf_token,
