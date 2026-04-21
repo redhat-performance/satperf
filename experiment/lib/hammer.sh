@@ -207,6 +207,24 @@ misc() {
         playbooks/tests/webui-pages-at-scale.yaml
     STATUS_DATA_FILE=/tmp/status-data-webui-pages-at-scale.json e "WebUIPagesAtScaleTest_c${PARAM_ui_at_scale_concurrency:-5}_d${PARAM_ui_at_scale_duration:-300}" "${logs}/${test}.log"
 
+    rm -f /tmp/status-data-webui-pages-menu.json
+    test=54-webui-pages-menu
+    ap "${test}.log" \
+        -e "sat_version='$sat_version'" \
+        -e "ui_concurrency='${PARAM_ui_menu_concurrency:-5}'" \
+        -e "ui_duration='${PARAM_ui_menu_duration:-300}'" \
+        playbooks/tests/webui-pages-menu.yaml
+    STATUS_DATA_FILE=/tmp/status-data-webui-pages-menu.json e "WebUIPagesMenuTest_c${PARAM_ui_menu_concurrency:-5}_d${PARAM_ui_menu_duration:-300}" "${logs}/${test}.log"
+
+    rm -f /tmp/status-data-webui-pages-asset-inventory.json
+    test=55-webui-pages-asset-inventory
+    ap "${test}.log" \
+        -e "sat_version='$sat_version'" \
+        -e "ui_concurrency='${PARAM_ui_asset_inventory_concurrency:-5}'" \
+        -e "ui_duration='${PARAM_ui_asset_inventory_duration:-300}'" \
+        playbooks/tests/webui-pages-asset-inventory.yaml
+    STATUS_DATA_FILE=/tmp/status-data-webui-pages-asset-inventory.json e "WebUIPagesAssetInventoryTest_c${PARAM_ui_asset_inventory_concurrency:-5}_d${PARAM_ui_asset_inventory_duration:-300}" "${logs}/${test}.log"
+
     if vercmp_ge "$sat_version" '6.17.0'; then
         if $enable_iop; then
             section 'Generate rh_cloud_inventory report'
