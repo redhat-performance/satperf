@@ -213,6 +213,120 @@ class SatelliteWebUIPerf(HttpUser):
         _get(self.client, "/rhsm/status", "\"mode\":")
 
 
+class SatelliteWebUIPerfAtScale(HttpUser):
+    """Focused test for pages known to degrade at scale (many hosts/jobs).
+
+    Discovers job invocations of different sizes (small/medium/large) at
+    startup and tests both React and legacy detail pages for each, plus
+    index pages and API endpoints.
+    """
+    wait_time = constant(0)
+
+    def on_start(self):
+        # Authenticate
+        response = self.client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
+        try:
+            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
+        except AttributeError:
+            logging.fatal("Unable to gather CSRF token")
+            raise
+        payload = {
+            "authenticity_token": csrf_token,
+            "login[login]": self.satellite_username,
+            "login[password]": self.satellite_password,
+        }
+        response = self.client.post("/users/login", data=payload, verify=False, name="users_login_post", catch_response=True)
+        if "<title>Login</title>" in response.text:
+            logging.fatal("Login failed")
+            self.interrupt()
+
+        # Discover job invocations of different sizes
+        self.job_ids = {"small": None, "medium": None, "large": None}
+        try:
+            with self.client.get("/api/job_invocations?per_page=50&page=1&order=id+DESC",
+                                 verify=False, name="discover_jobs", catch_response=True) as resp:
+                resp.raise_for_status()
+                jobs = resp.json().get("results", [])
+                for job in jobs:
+                    total = job.get("total_hosts_count", 0) or 0
+                    jid = job["id"]
+                    if total <= 50 and not self.job_ids["small"]:
+                        self.job_ids["small"] = jid
+                    elif 50 < total <= 500 and not self.job_ids["medium"]:
+                        self.job_ids["medium"] = jid
+                    elif total > 500 and not self.job_ids["large"]:
+                        self.job_ids["large"] = jid
+                # Fall back: use whatever we found for missing buckets
+                fallback = next((jid for jid in self.job_ids.values() if jid), None)
+                if fallback is None and jobs:
+                    fallback = jobs[0]["id"]
+                for size in self.job_ids:
+                    if self.job_ids[size] is None:
+                        self.job_ids[size] = fallback
+                logging.info(f"Discovered job IDs: {self.job_ids}")
+        except Exception as e:
+            logging.warning(f"Failed to discover job invocations: {e}")
+            self.job_ids = {"small": 1, "medium": 1, "large": 1}
+
+    # ── Index pages ──────────────────────────────────────────────────────
+
+    @task(2)
+    def job_invocations_index(self):
+        _get(self.client, "/job_invocations", "<title>Job invocations</title>")
+
+    @task(2)
+    def hosts_index(self):
+        _get(self.client, "/hosts", "<title>Hosts</title>")
+
+    @task(1)
+    def hosts_index_new(self):
+        _get(self.client, "/new/hosts", "Hosts")
+
+    @task(1)
+    def foreman_tasks_index(self):
+        _get(self.client, "/foreman_tasks/tasks", "<foreman-react-component name=\"ForemanTasks\"")
+
+    # ── Job invocation detail: React (new) vs Legacy (old) ───────────────
+
+    @task(3)
+    def job_detail_small(self):
+        _get(self.client, f"/job_invocations/{self.job_ids['small']}?page=1&per_page=20", "Job invocation")
+
+    @task(3)
+    def job_detail_small_legacy(self):
+        _get(self.client, f"/legacy/job_invocations/{self.job_ids['small']}?page=1&per_page=20", "Job invocation")
+
+    @task(3)
+    def job_detail_medium(self):
+        _get(self.client, f"/job_invocations/{self.job_ids['medium']}?page=1&per_page=20", "Job invocation")
+
+    @task(3)
+    def job_detail_medium_legacy(self):
+        _get(self.client, f"/legacy/job_invocations/{self.job_ids['medium']}?page=1&per_page=20", "Job invocation")
+
+    @task(3)
+    def job_detail_large(self):
+        _get(self.client, f"/job_invocations/{self.job_ids['large']}?page=1&per_page=20", "Job invocation")
+
+    @task(3)
+    def job_detail_large_legacy(self):
+        _get(self.client, f"/legacy/job_invocations/{self.job_ids['large']}?page=1&per_page=20", "Job invocation")
+
+    # ── API endpoints ────────────────────────────────────────────────────
+
+    @task(2)
+    def job_invocations_api(self):
+        _get(self.client, "/api/job_invocations?per_page=20&page=1", "\"results\":")
+
+    @task(2)
+    def hosts_api(self):
+        _get(self.client, "/api/hosts?per_page=20&page=1&thin=true", "\"results\":")
+
+    @task(1)
+    def foreman_tasks_api(self):
+        _get(self.client, "/foreman_tasks/api/tasks?include_permissions=true", "\"total\"")
+
+
 def doit(args, status_data):
     test_set = getattr(sys.modules[__name__], args.test_set)
     test_set.host_base = f"{args.host}{args.test_url_suffix}"
@@ -230,7 +344,7 @@ def doit(args, status_data):
     status_data.set('parameters.test.satellite_username', args.satellite_username)
     status_data.set('parameters.test.satellite_max_static_size', args.satellite_max_static_size)
 
-    return opl.locust.run_locust(args, status_data, test_set, new_stats=True, summary_only=True)
+    return opl.locust.run_locust(args, status_data, test_set, new_stats=True, summary_only=args.summary_only)
 
 
 def main():
@@ -245,8 +359,14 @@ def main():
     parser.add_argument(
         '--test-set',
         default='SatelliteWebUIPerf',
-        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth', 'SatelliteWebUIPerfStaticAssets'],
+        choices=['SatelliteWebUIPerf', 'SatelliteWebUIPerfNoAuth', 'SatelliteWebUIPerfStaticAssets', 'SatelliteWebUIPerfAtScale'],
         help='What test set to use?',
+    )
+    parser.add_argument(
+        '--summary-only',
+        action=argparse.BooleanOptionalAction,
+        default=True,
+        help='Only store SUMMARY stats in status data (use --no-summary-only for per-endpoint p50/p90/p99)',
     )
     parser.add_argument(
         '--satellite-version',
