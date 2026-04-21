@@ -6,7 +6,7 @@ import itertools
 import logging
 import re
 import sys
-import time
+import threading
 
 from locust import HttpUser, FastHttpUser
 from locust import constant
@@ -25,34 +25,51 @@ import urllib3
 urllib3.disable_warnings()
 
 
-def _authenticate(client, username, password, retries=3):
+_auth_lock = threading.Lock()
+_auth_barrier_lock = threading.Lock()
+_auth_barrier_count = 0
+_auth_barrier_event = threading.Event()
+
+
+def _authenticate(client, username, password):
     """
     Authenticate via CSRF token extraction and login form POST.
 
-    Populates the session cookie so subsequent requests are authenticated.
-    Retries on CSRF extraction failure (concurrent startup race).
-    Raises on final failure so Locust stops the user.
+    Serialized with a lock to prevent concurrent CSRF token races
+    when multiple Locust users start simultaneously.
     """
-    for attempt in range(retries):
+    with _auth_lock:
         response = client.get("/users/login", verify=False, name="users_login_get", catch_response=True)
-        match = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text)
-        if match:
-            break
-        logging.warning(f"CSRF token not found (attempt {attempt + 1}/{retries}), retrying...")
-        time.sleep(1 + attempt)
-    else:
-        logging.fatal("Unable to gather CSRF token after %d attempts", retries)
-        raise RuntimeError("Unable to gather CSRF token")
+        try:
+            csrf_token = re.search("<meta name=\"csrf-token\" content=\"([0-9a-zA-Z+-/=]+?)\" />", response.text).group(1)
+        except AttributeError:
+            logging.fatal("Unable to gather CSRF token")
+            raise
+        payload = {
+            "authenticity_token": csrf_token,
+            "login[login]": username,
+            "login[password]": password,
+        }
+        response = client.post("/users/login", data=payload, verify=False, name="users_login_post", catch_response=True)
+        if "<title>Login</title>" in response.text:
+            logging.fatal("Login failed")
+            raise RuntimeError("Login failed")
 
-    payload = {
-        "authenticity_token": match.group(1),
-        "login[login]": username,
-        "login[password]": password,
-    }
-    response = client.post("/users/login", data=payload, verify=False, name="users_login_post", catch_response=True)
-    if "<title>Login</title>" in response.text:
-        logging.fatal("Login failed")
-        raise RuntimeError("Login failed")
+
+def _wait_for_all_users(environment, timeout=60):
+    """
+    Barrier: block until all Locust users have called this function.
+
+    Call after _authenticate() in on_start() so all users begin
+    running tasks at the same time from an authenticated state.
+    """
+    global _auth_barrier_count
+    target = environment.runner.target_users_count
+    with _auth_barrier_lock:
+        _auth_barrier_count += 1
+        if _auth_barrier_count >= target:
+            _auth_barrier_event.set()
+    _auth_barrier_event.wait(timeout=timeout)
 
 
 def _get(client, uri, pattern, headers={}):
@@ -137,6 +154,7 @@ class SatelliteWebUIPerf(HttpUser):
 
     def on_start(self):
         _authenticate(self.client, self.satellite_username, self.satellite_password)
+        _wait_for_all_users(self.environment)
 
     @task
     def overview(self):
@@ -234,6 +252,7 @@ class SatelliteWebUIPerfAtScale(HttpUser):
 
     def on_start(self):
         _authenticate(self.client, self.satellite_username, self.satellite_password)
+        _wait_for_all_users(self.environment)
 
         # Discover job invocations of different sizes
         self.job_ids = {"small": None, "medium": None, "large": None}
@@ -333,6 +352,7 @@ class SatelliteWebUIPerfMenu(HttpUser):
 
     def on_start(self):
         _authenticate(self.client, self.satellite_username, self.satellite_password)
+        _wait_for_all_users(self.environment)
 
         # Discover pages from /menu
         self.pages = []
@@ -374,6 +394,7 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
 
     def on_start(self):
         _authenticate(self.client, self.satellite_username, self.satellite_password)
+        _wait_for_all_users(self.environment)
 
         # Run inventory once across all Locust users
         if not SatelliteWebUIPerfAssetInventory._inventory_done:
