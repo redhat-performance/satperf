@@ -107,9 +107,9 @@ concurrent_execution() {
         tasks_list="${PARAM_tasks_list:-$_base_tasks}"
     fi
 
-    # if [[ "$tasks_list" == *registration* ]]; then
-    #     prepare_registrations_fam
-    # fi
+    if [[ "$tasks_list" == *registration* ]]; then
+        prepare_registrations_fam
+    fi
 
     section 'Incremental concurrent execution'
     initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
