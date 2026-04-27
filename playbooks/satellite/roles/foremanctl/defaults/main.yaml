@@ -1,5 +1,0 @@
----
-foremanctl_features:
-  - foreman-proxy
-  - hammer
-  - remote-execution

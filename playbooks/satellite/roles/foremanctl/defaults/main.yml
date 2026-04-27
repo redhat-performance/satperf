@@ -2,3 +2,8 @@
 foremanctl_forge: https://github.com
 foremanctl_organization: theforeman
 foremanctl_repo: foremanctl
+
+foremanctl_features:
+  - foreman-proxy
+  - hammer
+  - remote-execution
