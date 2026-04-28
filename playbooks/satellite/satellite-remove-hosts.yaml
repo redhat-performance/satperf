@@ -7,44 +7,59 @@
     search: "{{ search_query | default('container') }}"
 
   tasks:
-    - name: Delete hosts in bulk
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/hosts/bulk/destroy"
-        method: PUT
-        user: "{{ sat_user }}"
-        password: "{{ sat_pass }}"
-        force_basic_auth: true
-        validate_certs: false
-        headers:
-          Content-Type: application/json
-          Accept: application/json
-        body:
-          organization_id: "{{ organization_id | int }}"
-          included:
-            search: "{{ search }}"
-        body_format: json
-        # If host list is empty katello will return 403 :S
-        # https://github.com/Katello/katello/blob/master/app/controllers/katello/concerns/api/v2/bulk_hosts_extensions.rb
-        status_code:
-          - 202
-          - 403
+    - name: "Check for hosts matching '{{ search }}'"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer --csv --no-headers host list --search 'name ~ {{ search }}' --fields name | grep -c '{{ search }}'
+      register: host_count_check
+      changed_when: false
+      failed_when: false
 
-    - name: "Wait for the hosts to be deleted"
-      ansible.builtin.shell: |
-        content_host_num="$(hammer --csv --no-headers host list --search '{{ search }}' --fields name | wc -l )"
-        # We expect to delete around 250 hosts / min -> 125 hosts / 30 sec
-        expected_iterations=$(( content_host_num / 125 < 2 ? 2 : content_host_num / 125 ))
-        iter=0
+    - name: "Show host count"
+      ansible.builtin.debug:
+        msg: "Found {{ host_count_check.stdout | int }} hosts matching '{{ search }}'"
 
-        while (( content_host_num != 0 )); do
-          sleep 30
+    - name: "Delete and wait"
+      when: host_count_check.stdout | int > 0
+      block:
+        - name: Delete hosts in bulk
+          ansible.builtin.uri:
+            url: "https://{{ groups['satellite6'] | first }}/api/hosts/bulk/destroy"
+            method: PUT
+            user: "{{ sat_user }}"
+            password: "{{ sat_pass }}"
+            force_basic_auth: true
+            validate_certs: false
+            headers:
+              Content-Type: application/json
+              Accept: application/json
+            body:
+              organization_id: "{{ organization_id | int }}"
+              included:
+                search: "{{ search }}"
+            body_format: json
+            # Katello returns 403 when matched hosts can't be deleted
+            status_code:
+              - 202
+              - 403
 
-          content_host_num="$(hammer --csv --no-headers host list --search '{{ search }}' --fields name | wc -l )"
-          (( iter++ ))
+        - name: "Wait for the hosts to be deleted"
+          ansible.builtin.shell: |
+            content_host_num="$(hammer --csv --no-headers host list --search '{{ search }}' --fields name | grep -c '{{ search }}')"
 
-          # We iterate up to 5 times (conservative number) more than expected before giving up
-          if (( iter > ( expected_iterations * 5 ) && content_host_num != 0 )); then
-            exit
-          fi
-        done
+            # We expect to delete around 250 hosts / min -> 125 hosts / 30 sec
+            expected_iterations=$(( content_host_num / 125 < 2 ? 2 : content_host_num / 125 ))
+            iter=0
+
+            while (( content_host_num != 0 )); do
+              sleep 30
+
+              content_host_num="$(hammer --csv --no-headers host list --search '{{ search }}' --fields name | grep -c '{{ search }}')"
+              (( iter++ ))
+
+              # We iterate up to 5 times (conservative number) more than expected before giving up
+              if (( iter > ( expected_iterations * 5 ) && content_host_num != 0 )); then
+                exit
+              fi
+            done
 ...
