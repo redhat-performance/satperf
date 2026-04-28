@@ -468,13 +468,13 @@ function status_data_create() {
     sd_sat_ver="$sd_sat_ver_short"
     set -x
     jq -n \
-      --arg release $sd_sat_release \
-      --arg version $sd_sat_ver \
-      --arg date $sd_start \
+      --arg release "$sd_sat_release" \
+      --arg version "$sd_sat_ver" \
+      --arg date "$sd_start" \
       --arg link "$sd_link" \
-      --arg result_id $sd_run \
+      --arg result_id "$sd_run" \
       --arg test "$sd_name" \
-      --arg result $sd_result \
+      --arg result "$sd_result" \
       '{
         "group": "Core Platforms",
         "product": "Red Hat Satellite",
