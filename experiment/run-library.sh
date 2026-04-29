@@ -456,7 +456,8 @@ function status_data_create() {
       -H 'Content-Type: application/json' \
       --data "@$sd_file" \
       $url |
-      python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
+      python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj" \
+      || echo "WARNING: Failed to upload status data to ElasticSearch"
     ###status_data.py --status-data-file $sd_file --info
 
     # Create "results-dashboard-data" data file
@@ -496,7 +497,8 @@ function status_data_create() {
       -H 'Content-Type: application/json' \
       --data "@$rdd_file" \
       $url |
-      python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj"
+      python3 -c "import sys, json; obj, pos = json.JSONDecoder().raw_decode(sys.stdin.read()); assert '_shards' in obj and  obj['_shards']['successful'] >= 1 and obj['_shards']['failed'] == 0, 'Failed to upload status data: %s' % obj" \
+      || echo "WARNING: Failed to upload results data to ElasticSearch"
 
     # Enhance log file
     tmp="$( mktemp )"
