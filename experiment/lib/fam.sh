@@ -893,7 +893,7 @@ prepare_registrations_fam() {
 		done
 	done
 
-	test=44f-registratio-command-generate
+	test=44f-registration-command-generate
 	apj $test \
 		-e "aks='$aks'" \
 		-e "sat_version='$sat_version'" \
