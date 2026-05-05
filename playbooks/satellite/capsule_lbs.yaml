@@ -1,7 +1,6 @@
 ---
 - name: "Configure capsule(s) load-balancer"
   hosts: capsule_lbs
-  gather_facts: false
 
   roles:
     - role: linux-system-roles.firewall

@@ -1,7 +1,6 @@
 ---
 - name: "Configure capsule(s)"
   hosts: capsules
-  gather_facts: false
 
   pre_tasks:
     - name: Convert storage_pools to native type

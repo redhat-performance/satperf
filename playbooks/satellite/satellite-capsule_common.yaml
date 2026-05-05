@@ -1,7 +1,6 @@
 ---
 - name: "Common configuration steps for Satellite and capsule(s) servers"
   hosts: satellite6:capsules
-  gather_facts: false
 
   pre_tasks:
     - name: Convert storage_pools to native type
