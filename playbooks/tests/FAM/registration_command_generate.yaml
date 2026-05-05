@@ -3,6 +3,7 @@
   hosts: satellite6:capsules
   gather_facts: false
   vars:
+    ansible_python_interpreter: /usr/bin/python3
     aks_list: "{{ aks | default('AK') | split }}"
     location_groupname: "location_{{ location | lower }}"
 
