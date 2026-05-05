@@ -88,13 +88,15 @@ sync_extra_content() {
         e PublishContentViews "${logs}/${test}.log"
         e PromoteContentViews "${logs}/${test}.log"
 
-        section "Push $content content to capsules"
-        test="${index}-capsules-sync-${content}"
-        ap "${test}.log" \
-            -e "organization='{{ sat_org }}'" \
-            -e "lces='$test_le_value'" \
-            playbooks/tests/capsules-sync.yaml
-        e CapsuleSync "${logs}/${test}.log"
+        if ((num_capsules > 0)); then
+            section "Push $content content to capsules"
+            test="${index}-capsules-sync-${content}"
+            ap "${test}.log" \
+                -e "organization='{{ sat_org }}'" \
+                -e "lces='$test_le_value'" \
+                playbooks/tests/capsules-sync.yaml
+            e CapsuleSync "${logs}/${test}.log"
+        fi # num_capsules > 0
     done # for content in $contents
 
 } # sync_extra_content
@@ -489,13 +491,15 @@ get_sat_client_content() {
     done
     unset skip_measurement
 
-    section "Push $sat_client_product content to capsules"
-    test=38-capsules-sync-sat-client
-    skip_measurement=true ap ${test}.log \
-        -e "organization='{{ sat_org }}'" \
-        -e "lces='$lces'" \
-        playbooks/tests/capsules-sync.yaml
-    e CapsuleSync "${logs}/${test}.log"
+    if ((num_capsules > 0)); then
+        section "Push $sat_client_product content to capsules"
+        test=38-capsules-sync-sat-client
+        skip_measurement=true ap ${test}.log \
+            -e "organization='{{ sat_org }}'" \
+            -e "lces='$lces'" \
+            playbooks/tests/capsules-sync.yaml
+        e CapsuleSync "${logs}/${test}.log"
+    fi # num_capsules > 0
 
     export skip_measurement=true
 
@@ -569,13 +573,15 @@ get_rhosp_content() {
         esac
     done
 
-    section "Push $product content to capsules"
-    test="40-capsules-sync-${product}"
-    skip_measurement=true ap ${test}.log \
-        -e "organization='{{ sat_org }}'" \
-        -e "lces='$lces'" \
-        playbooks/tests/capsules-sync.yaml
-    e CapsuleSync "${logs}/${test}.log"
+    if ((num_capsules > 0)); then
+        section "Push $product content to capsules"
+        test="40-capsules-sync-${product}"
+        skip_measurement=true ap ${test}.log \
+            -e "organization='{{ sat_org }}'" \
+            -e "lces='$lces'" \
+            playbooks/tests/capsules-sync.yaml
+        e CapsuleSync "${logs}/${test}.log"
+    fi # num_capsules > 0
 
     if vercmp_ge "$sat_version" '6.17.0'; then
         export skip_measurement=true
@@ -653,13 +659,15 @@ get_rhosp_content() {
             esac
         done
 
-        section "Push $product content to capsules"
-        test="45-capsules-sync-${product}"
-        skip_measurement=true ap ${test}.log \
-            -e "organization='{{ sat_org }}'" \
-            -e "lces='$lces'" \
-            playbooks/tests/capsules-sync.yaml
-        e CapsuleSync "${logs}/${test}.log"
+        if ((num_capsules > 0)); then
+            section "Push $product content to capsules"
+            test="45-capsules-sync-${product}"
+            skip_measurement=true ap ${test}.log \
+                -e "organization='{{ sat_org }}'" \
+                -e "lces='$lces'" \
+                playbooks/tests/capsules-sync.yaml
+            e CapsuleSync "${logs}/${test}.log"
+        fi # num_capsules > 0
     fi
 
     # Sync several types of content
@@ -730,13 +738,15 @@ get_rhosp_content() {
         e PublishContentViews "${logs}/${test}.log"
         e PromoteContentViews "${logs}/${test}.log"
 
-        section "Push $content content to capsules"
-        test="${index}-capsules-sync-${content}"
-        ap "${test}.log" \
-            -e "organization='{{ sat_org }}'" \
-            -e "lces='$test_le_value'" \
-            playbooks/tests/capsules-sync.yaml
-        e CapsuleSync "${logs}/${test}.log"
+        if ((num_capsules > 0)); then
+            section "Push $content content to capsules"
+            test="${index}-capsules-sync-${content}"
+            ap "${test}.log" \
+                -e "organization='{{ sat_org }}'" \
+                -e "lces='$test_le_value'" \
+                playbooks/tests/capsules-sync.yaml
+            e CapsuleSync "${logs}/${test}.log"
+        fi # num_capsules > 0
     done # for content in $contents
 
     export skip_measurement=true
@@ -1022,13 +1032,15 @@ get_os_content() {
         done
     done
 
-    section 'Push OS content to capsules'
-    test=13-capsules-sync-os
-    skip_measurement=true ap ${test}.log \
-        -e "organization='{{ sat_org }}'" \
-        -e "lces='$lces'" \
-        playbooks/tests/capsules-sync.yaml
-    e CapsuleSync "${logs}/${test}.log"
+    if ((num_capsules > 0)); then
+        section 'Push OS content to capsules'
+        test=13-capsules-sync-os
+        skip_measurement=true ap ${test}.log \
+            -e "organization='{{ sat_org }}'" \
+            -e "lces='$lces'" \
+            playbooks/tests/capsules-sync.yaml
+        e CapsuleSync "${logs}/${test}.log"
+    fi # num_capsules > 0
 
 } # get_os_content
 
