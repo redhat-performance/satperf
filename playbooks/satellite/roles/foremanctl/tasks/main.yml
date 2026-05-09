@@ -165,7 +165,7 @@
       ansible.builtin.set_fact:
         _foremanctl_initial_deploy_cmd: >-
           {{ _foremanctl_deploy_cmd }}
-          --foreman-initial-admin-password {{ password | default(foreman_password) }}
+          --initial-admin-password {{ password | default(foreman_password) }}
 
     - name: Show deployment command line
       ansible.builtin.debug:
