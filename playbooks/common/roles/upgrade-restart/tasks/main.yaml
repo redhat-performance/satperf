@@ -18,9 +18,9 @@
       ansible.builtin.package_facts:
         manager: rpm
 
-    - name: Update redhat-release if version is below 10.1-17
+    - name: Update redhat-release within current minor version if version is below 10.1-17
       ansible.builtin.dnf:
-        name: redhat-release
+        name: "redhat-release-{{ ansible_distribution_version }}"
         state: latest
       when:
         - ansible_facts.packages['redhat-release'][0].release.split('.')[0] | int < 17
