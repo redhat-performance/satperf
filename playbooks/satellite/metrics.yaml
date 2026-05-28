@@ -1,5 +1,5 @@
 ---
-- name: Setup Performance Co-Pilot to gather metrics of a Satellite installation
+- name: Setup Performance Co-Pilot on Satellite
   hosts: satellite6
 
   tasks:
@@ -25,4 +25,98 @@
       when:
         - product is defined
         - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
+
+
+- name: Setup Performance Co-Pilot on Capsules
+  hosts: capsules
+
+  tasks:
+    - name: Setup Foreman repositories to have access to `foreman-pcp`
+      ansible.builtin.include_role:
+        name: theforeman.operations.foreman_repositories
+      vars:
+        foreman_repositories_version: nightly
+      when:
+        - product is defined
+        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
+
+    - name: Install PCP and relevant PMDAs
+      ansible.builtin.package:
+        name:
+          - pcp
+          - pcp-system-tools
+          - foreman-pcp
+          - pcp-pmda-apache
+          - pcp-pmda-postgresql
+          - pcp-pmda-redis
+        state: present
+        disable_plugin: "{{ 'foreman-protector' if ansible_os_family | default('RedHat') == 'RedHat' else omit }}"
+
+    - name: Configure hotproc PMDA to monitor Foreman processes
+      ansible.builtin.file:
+        path: /var/lib/pcp/pmdas/proc/hotproc.conf
+        src: /etc/pcp/proc/foreman-hotproc.conf
+        state: link
+      notify: Restart PCP services
+
+    - name: Ensure optional PMDAs are enabled
+      ansible.builtin.file:
+        path: "/var/lib/pcp/pmdas/{{ item }}/.NeedInstall"
+        mode: u=rw,g=r,o=r
+        state: touch
+      loop:
+        - apache
+        - postgresql
+        - redis
+      notify: Restart PCP services
+
+    - name: Enable PCP services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - pmcd
+        - pmproxy
+        - pmlogger
+
+    - name: Disable the Foreman repositories
+      ansible.builtin.dnf:
+        name: foreman-release
+        state: absent
+      when:
+        - product is defined
+        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
+
+  handlers:
+    - name: Restart PCP services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: restarted
+      loop:
+        - pmcd
+        - pmproxy
+        - pmlogger
+
+
+- name: Setup Performance Co-Pilot on Capsule Load Balancers
+  hosts: capsule_lbs
+
+  tasks:
+    - name: Install PCP
+      ansible.builtin.package:
+        name:
+          - pcp
+          - pcp-system-tools
+        state: present
+
+    - name: Enable PCP services
+      ansible.builtin.service:
+        name: "{{ item }}"
+        state: started
+        enabled: true
+      loop:
+        - pmcd
+        - pmproxy
+        - pmlogger
 ...
