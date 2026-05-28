@@ -1,0 +1,101 @@
+---
+- name: Check capsule availability
+  hosts: localhost
+  gather_facts: false
+  pre_tasks:
+    - name: End play when there are no capsules to sync to
+      ansible.builtin.meta: end_play
+      when: groups['capsules'] | length == 0
+
+- name: Sync capsules
+  hosts: capsules
+  gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      # organization: "{{ foreman_organization }}"
+
+  vars_files:
+    - includes/fam_common_vars.yaml
+
+  vars:
+    _task_name: "CapsuleSync"
+    _organization: "{{ organization | default(sat_org | default('Default Organization')) }}"
+    _sync_max_time: "{{ sync_max_time | default(3600) }}"
+    _content_views: >-
+      {{ (content_views | from_yaml if content_views is string else content_views)
+         if content_views is defined else [] }}
+
+  tasks:
+    - name: Get capsule details
+      theforeman.foreman.resource_info:
+        resource: capsules
+        search: "name = {{ inventory_hostname }}"
+        full_details: true
+      register: _capsule_info
+      until: _capsule_info is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+      delegate_to: localhost
+
+    - name: Set capsule ID
+      ansible.builtin.set_fact:
+        _capsule_id: "{{ _capsule_info.resources[0].id }}"
+
+    - name: Resolve content view sync targets
+      when: _content_views | length > 0
+      block:
+        - name: Get content view IDs
+          theforeman.foreman.resource_info:
+            resource: content_views
+            search: 'name = "{{ _cv.name | default(_cv) }}"'
+          loop: "{{ _content_views }}"
+          loop_control:
+            loop_var: _cv
+            label: "{{ _cv.name | default(_cv) }}"
+          register: _cv_infos
+          until: _cv_infos is succeeded
+          retries: "{{ _api_call_retries }}"
+          delay: "{{ _api_call_delay }}"
+          delegate_to: localhost
+
+        - name: Build sync targets
+          ansible.builtin.set_fact:
+            _sync_targets: >-
+              {{ _cv_infos.results
+                 | map(attribute='resources')
+                 | map('first')
+                 | map(attribute='id')
+                 | map('community.general.dict_kv', 'content_view_id')
+                 | list }}
+
+    - name: Set full sync target when no content views specified
+      ansible.builtin.set_fact:
+        _sync_targets:
+          - {}
+      when: _content_views | length == 0
+
+    - name: Configure capsule (LCEs and download policy)
+      theforeman.foreman.smart_proxy:
+        name: "{{ inventory_hostname }}"
+        url: "https://{{ inventory_hostname }}:9090"
+        download_policy: "{{ download_policy | default(omit) }}"
+        lifecycle_environments: "{{ lces.split(',') if lces is defined else omit }}"
+      until: _capsule_config is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+      register: _capsule_config
+      delegate_to: localhost
+      when: download_policy is defined or lces is defined
+
+    - name: "Sync content view {{ _sync_target.content_view_id | default('(all)') }}"
+      include_tasks: includes/capsule_sync_one.yaml
+      loop: "{{ _sync_targets }}"
+      loop_control:
+        loop_var: _sync_target
+        label: "{{ _sync_target.content_view_id | default('full sync') }}"
+...

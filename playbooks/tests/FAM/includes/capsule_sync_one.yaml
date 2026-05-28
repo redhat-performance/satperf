@@ -1,0 +1,51 @@
+---
+- name: Initial sync
+  block:
+    - name: "{{ _task_name }}"
+      ansible.builtin.uri:
+        url: "{{ _server_url }}/katello/api/capsules/{{ _capsule_id }}/content/sync"
+        method: POST
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        body_format: json
+        body: >-
+          {{ {'skip_metadata_check': true if mode | default('') == 'complete' else false,
+              'validate_contents': true if mode | default('') == 'validate_contents' else false}
+             | combine(_sync_target) }}
+        status_code: [200, 202]
+        timeout: 60
+      register: __fire_result
+      delegate_to: localhost
+
+    - ansible.builtin.include_tasks: fam_wait_and_print.yaml
+      vars:
+        _foreman_task_id: "{{ __fire_result.json.id }}"
+        _task_timeout: "{{ _sync_max_time }}"
+        _delegate_to: localhost
+
+  rescue:
+    - name: "Retry {{ _task_name }}"
+      ansible.builtin.uri:
+        url: "{{ _server_url }}/katello/api/capsules/{{ _capsule_id }}/content/sync"
+        method: POST
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        body_format: json
+        body: >-
+          {{ {'skip_metadata_check': true if mode | default('') == 'complete' else false,
+              'validate_contents': true if mode | default('') == 'validate_contents' else false}
+             | combine(_sync_target) }}
+        status_code: [200, 202]
+        timeout: 60
+      register: __fire_result_retry
+      delegate_to: localhost
+
+    - ansible.builtin.include_tasks: fam_wait_and_print.yaml
+      vars:
+        _foreman_task_id: "{{ __fire_result_retry.json.id }}"
+        _task_timeout: "{{ _sync_max_time }}"
+        _delegate_to: localhost
