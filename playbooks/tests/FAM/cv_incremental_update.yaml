@@ -1,0 +1,109 @@
+---
+# Perform an incremental content view update via Katello API.
+#
+# Required variables:
+#   cv                    - content view name
+#   lifecycle_environments - comma-separated or list of LCE names to update
+#
+# Optional variables:
+#   errata_ids            - list of errata IDs to add (default: [])
+#   description           - description for the incremental update
+#   task_timeout          - seconds to wait for Foreman task (default: 3600)
+- name: "Incremental content view update"
+  hosts: localhost
+  gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      # organization: "{{ foreman_organization }}"
+
+  vars_files:
+    - includes/fam_common_vars.yaml
+
+  vars:
+    _task_name: "IncrementalContentViewUpdate"
+    _errata_ids: "{{ errata_ids | from_yaml if errata_ids is string else errata_ids | default([]) }}"
+    _description: "{{ description | default('Incremental update via satperf') }}"
+    _resolve_dependencies: "{{ resolve_dependencies | default(false) }}"
+    _timeout: "{{ task_timeout | default(3600) }}"
+    _lces: >-
+      {{ lifecycle_environments.split(',') if lifecycle_environments is string
+         else lifecycle_environments }}
+
+  tasks:
+    - name: Get content view ID
+      theforeman.foreman.resource_info:
+        resource: content_views
+        search: 'name = "{{ cv }}"'
+      register: cv_info
+      until: cv_info is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Get content view versions
+      theforeman.foreman.resource_info:
+        resource: content_view_versions
+        params:
+          content_view_id: "{{ (cv_info.resources | first).id }}"
+      register: cv_version_info
+      until: cv_version_info is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Set latest CV version ID
+      ansible.builtin.set_fact:
+        cv_version_id: "{{ (cv_version_info.resources | sort(attribute='id') | last).id }}"
+
+    - name: Get lifecycle environment IDs
+      theforeman.foreman.resource_info:
+        resource: lifecycle_environments
+        search: 'name = "{{ item }}"'
+      register: lce_info_results
+      until: lce_info_results is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+      loop: "{{ _lces }}"
+
+    - name: Build environment IDs list
+      ansible.builtin.set_fact:
+        env_ids: >-
+          {{ lce_info_results.results
+             | map(attribute='resources')
+             | map('first')
+             | map(attribute='id')
+             | list }}
+
+    - name: "{{ _task_name }}"
+      ansible.builtin.uri:
+        url: "{{ _server_url }}/katello/api/content_view_versions/incremental_update"
+        method: POST
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        body_format: json
+        body:
+          content_view_version_environments:
+            - content_view_version_id: "{{ cv_version_id }}"
+              environment_ids: "{{ env_ids }}"
+          add_content:
+            errata_ids: "{{ _errata_ids }}"
+          resolve_dependencies: "{{ _resolve_dependencies }}"
+          description: "{{ _description }}"
+        status_code: [200, 202]
+        timeout: 60
+      register: __fire_result
+      failed_when: >-
+        __fire_result is failed and
+        (_transient_errors | select('in', __fire_result.msg | default('')) | list | length == 0)
+
+    - ansible.builtin.include_tasks: includes/fam_wait_and_print.yaml
+      vars:
+        _foreman_task_id: "{{ __fire_result.json.id }}"
+        _task_timeout: "{{ _timeout }}"
+      when: __fire_result.json is defined
+...

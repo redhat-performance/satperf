@@ -1089,3 +1089,130 @@ cleanup_fam() {
         -e "products='$products'"
 
 } # cleanup_fam
+
+incremental_cv_updates_fam() {
+    # SAT-31208: Baseline timing for incremental CV updates with ~8 repos,
+    # filters enabled, no dependency solving.
+    #
+    # Creates CV_IncrementalBench with BaseOS+AppStream for each release in
+    # $rels, plus an erratum inclusion filter. Publishes, promotes, then
+    # runs one incremental update per erratum to measure each independently.
+    #
+    # Default errata (one per RHEL release):
+    #   RHEL 7:  RHSA-2024:2002  (grub2, pre-EOS, Server repo)
+    #   RHEL 8:  RHSA-2025:1372  (podman/buildah, ~20 packages, AppStream)
+    #   RHEL 9:  RHSA-2025:17742 (vim, ~6 packages, BaseOS)
+    #   RHEL 10: RHSA-2025:20126 (openssh, ~7 packages, BaseOS)
+    rels="${PARAM_rels:-rhel7 rhel8 rhel9 rhel10}"
+    basearch="${PARAM_basearch:-x86_64}"
+    local cv_name="${PARAM_cv_incremental:-CV_IncrementalBench}"
+    local cv_lce="${PARAM_cv_incremental_lces:-IncrementalBenchLifeEnv}"
+
+    section 'Create LCE for incremental CV'
+    local lifecycle_environments
+    lifecycle_environments="$(jq -cn \
+       --arg name "$cv_lce" \
+       --arg prior 'Library' \
+       '[{"name": $name, "prior": $prior}]')"
+
+    test=90fr-lce-create-incremental
+    apj $test \
+      -e "lifecycle_environments='$lifecycle_environments'" \
+      playbooks/tests/FAM/lifecycle_environments.yaml
+
+    section 'Create incremental CV with filters (RHEL repos for configured releases)'
+    local repositories='[]'
+
+    for rel in $rels; do
+        rel_num="${rel##rhel}"
+
+        case "$rel_num" in
+        7)
+            product_name='Red Hat Enterprise Linux Server'
+
+            repo_name="Red Hat Enterprise Linux $rel_num Server RPMs $basearch ${rel_num}Server"
+            repositories="$(echo "$repositories" |
+              jq -c \
+                --arg name "$repo_name" \
+                --arg product "$product_name" \
+                '. + [{"product": $product, "name": $name}]')"
+
+            # Extras
+            repo_name="Red Hat Enterprise Linux $rel_num Server - Extras RPMs $basearch"
+            repositories="$(echo "$repositories" |
+              jq -c \
+                --arg name "$repo_name" \
+                --arg product "$product_name" \
+                '. + [{"product": $product, "name": $name}]')"
+            ;;
+        *)
+            product_name="Red Hat Enterprise Linux for $basearch"
+
+            # BaseOS
+            repo_name="Red Hat Enterprise Linux $rel_num for $basearch - BaseOS RPMs $rel_num"
+            repositories="$(echo "$repositories" |
+              jq -c \
+                --arg name "$repo_name" \
+                --arg product "$product_name" \
+                '. + [{"product": $product, "name": $name}]')"
+
+            # AppStream
+            repo_name="Red Hat Enterprise Linux $rel_num for $basearch - AppStream RPMs $rel_num"
+            repositories="$(echo "$repositories" |
+              jq -c \
+                --arg name "$repo_name" \
+                --arg product "$product_name" \
+                '. + [{"product": $product, "name": $name}]')"
+            ;;
+        esac
+    done
+
+    local cv_content_views
+    cv_content_views="$(jq -cn \
+       --arg name "$cv_name" \
+       --argjson repositories "$repositories" \
+       '[{"name": $name, "repositories": $repositories,
+          "filters": [{"name": "IncrementalBenchFilter", "filter_type": "erratum",
+                       "inclusion": "true"}]}]')"
+
+    test=91fr-cv-create-incremental
+    apj $test \
+      -e "content_views='$cv_content_views'" \
+      playbooks/tests/FAM/content_views.yaml
+
+    local cv_publish_list
+    cv_publish_list="$(jq -cn --arg name "$cv_name" '[{"name": $name}]')"
+
+    test=92fr-cv-publish-incremental
+    apj $test \
+      -e "content_views='$cv_publish_list'" \
+      playbooks/tests/FAM/cv_publish.yaml
+
+    test=93f-cv-version-promote-incremental
+    apj $test \
+      -e "content_views='$cv_publish_list'" \
+      -e "lifecycle_environments='$cv_lce'" \
+      playbooks/tests/FAM/cv_version_promote.yaml
+
+    section 'Incremental content view updates (one erratum per release)'
+    for rel in $rels; do
+        rel_num="${rel##rhel}"
+
+        case "$rel_num" in
+        7)  erratum="${PARAM_cv_incremental_erratum_7:-RHSA-2024:2002}" ;;
+        8)  erratum="${PARAM_cv_incremental_erratum_8:-RHSA-2025:1372}" ;;
+        9)  erratum="${PARAM_cv_incremental_erratum_9:-RHSA-2025:17742}" ;;
+        10) erratum="${PARAM_cv_incremental_erratum_10:-RHSA-2025:20126}" ;;
+        *)  continue ;;
+        esac
+
+        test="94f-cv-incremental-update-${cv_name}-${erratum}"
+        ap "${test}.log" \
+          -e "cv='$cv_name'" \
+          -e "lifecycle_environments='$cv_lce'" \
+          -e "errata_ids='[\"$erratum\"]'" \
+          -e "description='Incremental update $rel: $erratum'" \
+          playbooks/tests/FAM/cv_incremental_update.yaml
+        e IncrementalContentViewUpdate "${logs}/${test}.log"
+    done
+} # incremental_cv_updates_fam
