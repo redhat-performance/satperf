@@ -116,6 +116,7 @@ concurrent_execution() {
     fi
 
     section 'Incremental concurrent execution'
+    num_container_hosts="${num_container_hosts:-$(get_num_hosts container_hosts)}"
     initial_expected_concurrent_registrations="${PARAM_initial_expected_concurrent_registrations:-32}"
 
     # Clean up logs from previous runs
