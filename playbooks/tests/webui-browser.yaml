@@ -1,0 +1,222 @@
+---
+- name: Ensure browser viewer user exists
+  hosts: localhost
+  gather_facts: false
+
+  vars_files:
+    - FAM/includes/fam_common_vars.yaml
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+
+  tasks:
+    - name: Prepare UI browser viewer account
+      ansible.builtin.import_tasks: FAM/includes/ui_viewer_setup_tasks.yaml
+
+- name: Select UI browser driver host
+  hosts: localhost
+  gather_facts: false
+  vars:
+    ui_browser_satellite_host: "{{ groups['satellite6'] | first }}"
+    ui_browser_location_groupname: >-
+      {{ hostvars[ui_browser_satellite_host].group_names
+         | select('match', '^location_')
+         | first }}
+    ui_browser_driver_host: >-
+      {{ groups['container_hosts']
+         | intersect(groups[ui_browser_location_groupname])
+         | sort
+         | first }}
+  tasks:
+    - name: Create temporary driver group
+      ansible.builtin.add_host:
+        name: "{{ ui_browser_driver_host }}"
+        groups: ui_browser_driver
+
+- name: Run browser-based UI checks
+  hosts: ui_browser_driver
+  gather_facts: false
+  vars:
+    ui_browser_base_url: "{{ foreman_server_url | default('https://' + (groups['satellite6'] | first)) }}"
+    ui_browser_browsers:
+      - chromium
+      - firefox
+    ui_browser_dataset_profile: medium
+    ui_browser_roles:
+      - admin
+      - viewer
+    ui_browser_workflows:
+      - login_to_dashboard
+      - hosts_list_to_details
+      - hosts_new_list_to_details
+      - job_invocations_list_to_details
+      # Temporarily disabled until the legacy route is confirmed in the UI.
+      # - job_invocations_legacy_list_to_details
+      # Temporarily disabled until content_hosts is confirmed in /menu.
+      # - content_hosts_list_to_details
+      - activation_keys_list_to_details
+      - products_list_to_details
+      - repositories_list_to_details
+      - content_views_list_to_details
+    ui_browser_required_pages_admin:
+      - dashboard
+      - hosts
+      - job_invocations
+      - content_views
+      - tasks
+    ui_browser_required_pages_viewer:
+      - hosts
+      - job_invocations
+      - tasks
+    ui_browser_browser_source: playwright-bundled
+    ui_browser_verbose: false
+    ui_browser_headless: true
+    ui_browser_timeout_seconds: 60
+    ui_browser_artifacts_dir: /root/ui-browser-artifacts
+    ui_browser_progress_log_file: /tmp/ui-browser-progress.log
+    ui_browser_venv_path: /root/ui-browser-venv
+    ui_browser_remote_root: /root/ui-browser
+    ui_browser_status_data_file: /tmp/status-data-ui-browser.json
+    ui_browser_dependency_packages:
+      - alsa-lib
+      - atk
+      - at-spi2-atk
+      - at-spi2-core
+      - cairo
+      - ca-certificates
+      - cups-libs
+      - gtk3
+      - liberation-fonts
+      - libdrm
+      - libX11
+      - libXcomposite
+      - libXdamage
+      - libXext
+      - libXfixes
+      - libXrandr
+      - libxcb
+      - libxkbcommon
+      - mesa-libgbm
+      - nspr
+      - nss
+      - pango
+      - xdg-utils
+    ui_viewer_user: ui-perf-viewer
+    ui_viewer_password: changeme
+  tasks:
+    - name: Show settings
+      ansible.builtin.debug:
+        msg:
+          - "ui_browser_driver_host = {{ inventory_hostname }}"
+          - "ui_browser_base_url = {{ ui_browser_base_url }}"
+          - "ui_browser_browsers = {{ ui_browser_browsers | join(', ') }}"
+          - "ui_browser_roles = {{ ui_browser_roles | join(', ') }}"
+          - "ui_browser_dataset_profile = {{ ui_browser_dataset_profile }}"
+          - "ui_browser_browser_source = {{ ui_browser_browser_source }}"
+          - "ui_browser_verbose = {{ ui_browser_verbose }}"
+          - "ui_browser_progress_log_file = {{ ui_browser_progress_log_file }}"
+
+    - name: Install browser OS dependencies
+      ansible.builtin.package:
+        name: "{{ ui_browser_dependency_packages }}"
+        state: present
+
+    - name: Create browser virtualenv
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          python3 -m venv "{{ ui_browser_venv_path }}"
+          source "{{ ui_browser_venv_path }}/bin/activate"
+          python3 -m pip install -U pip
+          python3 -m pip install playwright
+        creates: "{{ ui_browser_venv_path }}"
+
+    - name: Ensure playwright package is up to date
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          source "{{ ui_browser_venv_path }}/bin/activate"
+          python3 -m pip install -U playwright
+
+    - name: Install playwright browser runtimes
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          source "{{ ui_browser_venv_path }}/bin/activate"
+          python3 -m playwright install {{ ui_browser_browsers | join(' ') }}
+
+    - name: Deploy browser runner package
+      ansible.builtin.copy:
+        src: ui-browser/
+        dest: "{{ ui_browser_remote_root }}/"
+        mode: preserve
+        force: true
+
+    - name: Ensure artifacts directory exists
+      ansible.builtin.file:
+        path: "{{ ui_browser_artifacts_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: Reset progress log file
+      ansible.builtin.copy:
+        dest: "{{ ui_browser_progress_log_file }}"
+        content: ""
+        mode: "0644"
+
+    - name: Run browser test harness
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
+          export STATUS_DATA_FILE="{{ ui_browser_status_data_file }}"
+          rm -f "$STATUS_DATA_FILE"
+          export PYTHONWARNINGS="ignore:Unverified HTTPS request"
+          source "{{ ui_browser_venv_path }}/bin/activate"
+          python3 "{{ ui_browser_remote_root }}/runner.py" \
+            --base-url "{{ ui_browser_base_url }}" \
+            --status-data-file "$STATUS_DATA_FILE" \
+            --dataset-profile "{{ ui_browser_dataset_profile }}" \
+            --browsers "{{ ui_browser_browsers | join(',') }}" \
+            --browser-source "{{ ui_browser_browser_source }}" \
+            --roles "{{ ui_browser_roles | join(',') }}" \
+            --admin-username "{{ sat_user }}" \
+            --admin-password "{{ sat_pass }}" \
+            --viewer-username "{{ ui_viewer_user }}" \
+            --viewer-password "{{ ui_viewer_password }}" \
+            --required-pages-admin "{{ ui_browser_required_pages_admin | join(',') }}" \
+            --required-pages-viewer "{{ ui_browser_required_pages_viewer | join(',') }}" \
+            --workflows "{{ ui_browser_workflows | join(',') }}" \
+            --visit-all-left-nav \
+            {{ '--verbose' if ui_browser_verbose else '--no-verbose' }} \
+            --progress-log-file "{{ ui_browser_progress_log_file }}" \
+            {{ '--headless' if ui_browser_headless else '--no-headless' }} \
+            --timeout-seconds "{{ ui_browser_timeout_seconds }}" \
+            --artifacts-dir "{{ ui_browser_artifacts_dir }}"
+      environment:
+        TZ: UTC
+      register: test_cmd
+      ignore_errors: true
+
+    - name: Show output
+      ansible.builtin.debug:
+        msg: "{{ ['========== Standard output =========='] + test_cmd.stdout_lines + ['', '========== Standard error output =========='] + test_cmd.stderr_lines }}"
+      run_once: true
+
+    - name: Fetch status data file
+      ansible.builtin.fetch:
+        src: "{{ ui_browser_status_data_file }}"
+        dest: "/tmp/status-data-ui-browser.json"
+        flat: true
+
+    - name: Calculate run duration
+      ansible.builtin.set_fact:
+        test_cmd_duration: "{{ (test_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (test_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
+
+    - name: Print results
+      ansible.builtin.debug:
+        msg: "UIBrowserNavigation_browsers_{{ ui_browser_browsers | join('_') }}_roles_{{ ui_browser_roles | join('_') }} {{ test_cmd.start }} to {{ test_cmd.end }} taking {{ test_cmd_duration }} seconds"
+...
