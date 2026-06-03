@@ -54,8 +54,6 @@
       - hosts_list_to_details
       - hosts_new_list_to_details
       - job_invocations_list_to_details
-      # Temporarily disabled until the legacy route is confirmed in the UI.
-      # - job_invocations_legacy_list_to_details
       # Temporarily disabled until content_hosts is confirmed in /menu.
       # - content_hosts_list_to_details
       - activation_keys_list_to_details
@@ -74,6 +72,29 @@
       - tasks
     ui_browser_browser_source: playwright-bundled
     ui_browser_verbose: false
+    ui_browser_capture_trace: false
+    ui_browser_capture_workflow_traces: false
+    ui_browser_verbose_bool: >-
+      {{ ui_browser_verbose
+         if ui_browser_verbose is not string
+         else (ui_browser_verbose | lower in ['1', 'true', 'yes', 'on']) }}
+    ui_browser_capture_trace_bool: >-
+      {{ ui_browser_capture_trace
+         if ui_browser_capture_trace is not string
+         else (ui_browser_capture_trace | lower in ['1', 'true', 'yes', 'on']) }}
+    ui_browser_capture_workflow_traces_bool: >-
+      {{ ui_browser_capture_workflow_traces
+         if ui_browser_capture_workflow_traces is not string
+         else (ui_browser_capture_workflow_traces | lower in ['1', 'true', 'yes', 'on']) }}
+    ui_browser_browsers_list: >-
+      {{ ui_browser_browsers
+         if ui_browser_browsers is not string
+         else (ui_browser_browsers.split(',') | map('trim') | reject('equalto', '') | list) }}
+    ui_browser_diagnostic_workflows: []
+    ui_browser_diagnostic_workflows_csv: >-
+      {{ ui_browser_diagnostic_workflows
+         if ui_browser_diagnostic_workflows is string
+         else (ui_browser_diagnostic_workflows | join(',')) }}
     ui_browser_headless: true
     ui_browser_timeout_seconds: 60
     ui_browser_artifacts_dir: /root/ui-browser-artifacts
@@ -113,11 +134,14 @@
         msg:
           - "ui_browser_driver_host = {{ inventory_hostname }}"
           - "ui_browser_base_url = {{ ui_browser_base_url }}"
-          - "ui_browser_browsers = {{ ui_browser_browsers | join(', ') }}"
+          - "ui_browser_browsers = {{ ui_browser_browsers_list | join(', ') }}"
           - "ui_browser_roles = {{ ui_browser_roles | join(', ') }}"
           - "ui_browser_dataset_profile = {{ ui_browser_dataset_profile }}"
           - "ui_browser_browser_source = {{ ui_browser_browser_source }}"
-          - "ui_browser_verbose = {{ ui_browser_verbose }}"
+          - "ui_browser_verbose = {{ ui_browser_verbose_bool }}"
+          - "ui_browser_capture_trace = {{ ui_browser_capture_trace_bool }}"
+          - "ui_browser_capture_workflow_traces = {{ ui_browser_capture_workflow_traces_bool }}"
+          - "ui_browser_diagnostic_workflows = {{ ui_browser_diagnostic_workflows_csv }}"
           - "ui_browser_progress_log_file = {{ ui_browser_progress_log_file }}"
 
     - name: Install browser OS dependencies
@@ -147,7 +171,7 @@
         cmd: |
           set -o pipefail
           source "{{ ui_browser_venv_path }}/bin/activate"
-          python3 -m playwright install {{ ui_browser_browsers | join(' ') }}
+          python3 -m playwright install {{ ui_browser_browsers_list | join(' ') }}
 
     - name: Deploy browser runner package
       ansible.builtin.copy:
@@ -180,7 +204,7 @@
             --base-url "{{ ui_browser_base_url }}" \
             --status-data-file "$STATUS_DATA_FILE" \
             --dataset-profile "{{ ui_browser_dataset_profile }}" \
-            --browsers "{{ ui_browser_browsers | join(',') }}" \
+            --browsers "{{ ui_browser_browsers_list | join(',') }}" \
             --browser-source "{{ ui_browser_browser_source }}" \
             --roles "{{ ui_browser_roles | join(',') }}" \
             --admin-username "{{ sat_user }}" \
@@ -191,7 +215,10 @@
             --required-pages-viewer "{{ ui_browser_required_pages_viewer | join(',') }}" \
             --workflows "{{ ui_browser_workflows | join(',') }}" \
             --visit-all-left-nav \
-            {{ '--verbose' if ui_browser_verbose else '--no-verbose' }} \
+            {{ '--verbose' if ui_browser_verbose_bool else '--no-verbose' }} \
+            {{ '--capture-trace' if ui_browser_capture_trace_bool else '--no-capture-trace' }} \
+            {{ '--capture-workflow-traces' if ui_browser_capture_workflow_traces_bool else '--no-capture-workflow-traces' }} \
+            --diagnostic-workflows "{{ ui_browser_diagnostic_workflows_csv }}" \
             --progress-log-file "{{ ui_browser_progress_log_file }}" \
             {{ '--headless' if ui_browser_headless else '--no-headless' }} \
             --timeout-seconds "{{ ui_browser_timeout_seconds }}" \
@@ -212,11 +239,29 @@
         dest: "/tmp/status-data-ui-browser.json"
         flat: true
 
+    - name: Find diagnostic artifacts
+      ansible.builtin.find:
+        paths: "{{ ui_browser_artifacts_dir }}"
+        patterns:
+          - "trace-*.zip"
+          - "diagnostic-*.json"
+        file_type: file
+      register: ui_browser_diagnostic_artifacts
+      when: ui_browser_capture_trace_bool or ui_browser_capture_workflow_traces_bool or (ui_browser_diagnostic_workflows_csv | length > 0)
+
+    - name: Fetch diagnostic artifacts
+      ansible.builtin.fetch:
+        src: "{{ item.path }}"
+        dest: "/tmp/ui-browser-artifacts/"
+        flat: false
+      loop: "{{ ui_browser_diagnostic_artifacts.files | default([]) }}"
+      when: ui_browser_capture_trace_bool or ui_browser_capture_workflow_traces_bool or (ui_browser_diagnostic_workflows_csv | length > 0)
+
     - name: Calculate run duration
       ansible.builtin.set_fact:
         test_cmd_duration: "{{ (test_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() - (test_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}"
 
     - name: Print results
       ansible.builtin.debug:
-        msg: "UIBrowserNavigation_browsers_{{ ui_browser_browsers | join('_') }}_roles_{{ ui_browser_roles | join('_') }} {{ test_cmd.start }} to {{ test_cmd.end }} taking {{ test_cmd_duration }} seconds"
+        msg: "UIBrowserNavigation_browsers_{{ ui_browser_browsers_list | join('_') }}_roles_{{ ui_browser_roles | join('_') }} {{ test_cmd.start }} to {{ test_cmd.end }} taking {{ test_cmd_duration }} seconds"
 ...

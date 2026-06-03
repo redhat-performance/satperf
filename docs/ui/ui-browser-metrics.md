@@ -414,3 +414,46 @@ For those, compare:
 
 Prefer medians from repeated runs over a single sample before defining hard
 thresholds.
+
+## Historical regression contract
+
+The runner also emits a flattened historical comparison contract under
+`results.browser.contract` for the fixed Chromium/Firefox page and workflow
+subset used by Investigator.
+
+### Aggregate lanes
+
+Per `browser -> role`, `results.browser.contract.lanes` includes:
+
+- required page/workflow pass, fail, and skipped counts
+- `fail_ratio`
+- `console_errors`
+- `network_errors`
+- page medians for:
+  - `navigation_total_ms`
+  - `largest_contentful_paint_ms`
+  - `total_blocking_time_ms`
+  - `last_request_end_offset_ms`
+- workflow medians for:
+  - `content_ready_ms`
+  - `total_workflow_ms`
+
+### Fixed item set
+
+Per `browser -> role`, `results.browser.contract.items` includes item-level
+metrics for these tracked pages:
+
+- `dashboard`
+- `hosts`
+- `job_invocations`
+- `tasks`
+- `content_views`
+
+and these tracked workflows:
+
+- `hosts_list_to_details`
+- `job_invocations_list_to_details`
+- `repositories_list_to_details`
+
+Each item includes a human-readable `status`, numeric `status_ok`, and the
+main scalar timing fields used for release-over-release comparison.

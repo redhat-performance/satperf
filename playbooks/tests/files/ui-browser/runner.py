@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import argparse
 import json
+from statistics import median
 import sys
 import traceback
 from dataclasses import dataclass
@@ -12,6 +13,7 @@ from typing import Any
 
 from auth import inject_metric_observers, login
 from navigation import (
+    activation_diagnostic_prefix,
     activate_drilldown_target,
     RequestTracker,
     collect_navigation_metrics,
@@ -21,6 +23,8 @@ from navigation import (
     find_drilldown_target,
     perform_search_interaction,
     screenshot_path,
+    start_activation_diagnostics,
+    stop_activation_diagnostics,
     visit_route,
     wait_for_dynamic_content,
 )
@@ -28,6 +32,13 @@ from output import compact, pct_delta, platform_metadata, utc_now
 from scenarios import PAGE_SCENARIOS, WORKFLOW_SCENARIOS, page_ids_for_role
 
 HOST_PAGE_IDS = ("hosts", "hosts_new")
+CONTRACT_VERSION = 1
+CONTRACT_PAGE_IDS = ("dashboard", "hosts", "job_invocations", "tasks", "content_views")
+CONTRACT_WORKFLOW_IDS = (
+    "hosts_list_to_details",
+    "job_invocations_list_to_details",
+    "repositories_list_to_details",
+)
 
 
 @dataclass(frozen=True)
@@ -88,6 +99,266 @@ def required_page_missing(required_page_id: str, visited_pages: set[str]) -> boo
     return required_page_id not in visited_pages
 
 
+def metric_median(values: list[Any]) -> float | None:
+    numeric_values = [float(value) for value in values if isinstance(value, (int, float))]
+    if not numeric_values:
+        return None
+    return round(float(median(numeric_values)), 2)
+
+
+def contract_page_aliases(page_id: str) -> tuple[str, ...]:
+    if page_id == "hosts":
+        return HOST_PAGE_IDS
+    return (page_id,)
+
+
+def resolve_contract_page(role_result: dict[str, Any], page_id: str) -> tuple[str | None, dict[str, Any] | None]:
+    pages = role_result.get("pages", {})
+    for alias in contract_page_aliases(page_id):
+        page_data = pages.get(alias)
+        if page_data is not None:
+            return alias, page_data
+    return None, None
+
+
+def build_contract_page_item(role_result: dict[str, Any], page_id: str) -> dict[str, Any]:
+    coverage = role_result.get("coverage", {})
+    visited_pages = set(coverage.get("visited", []))
+    failed_pages = set(coverage.get("failed", []))
+    skipped_pages = set(coverage.get("skipped", []))
+    missing_required = set(coverage.get("missing_required", []))
+    source_page_id, page_data = resolve_contract_page(role_result, page_id)
+    aliases = set(contract_page_aliases(page_id))
+    navigation = page_data.get("navigation", {}) if isinstance(page_data, dict) else {}
+    requests = page_data.get("requests", {}) if isinstance(page_data, dict) else {}
+
+    status = "SKIPPED"
+    if isinstance(navigation, dict) and navigation:
+        status = "PASS"
+    elif aliases & failed_pages or (isinstance(page_data, dict) and page_data.get("error")):
+        status = "FAIL"
+    elif page_id in missing_required or required_page_missing(page_id, visited_pages) or aliases & skipped_pages:
+        status = "SKIPPED"
+    elif isinstance(page_data, dict) and page_data.get("probe_errors"):
+        status = "FAIL"
+
+    item = {
+        "status": status,
+        "status_ok": 1 if status == "PASS" else 0,
+        "navigation_total_ms": navigation.get("total") if isinstance(navigation, dict) else None,
+        "largest_contentful_paint_ms": (
+            navigation.get("largest_contentful_paint") if isinstance(navigation, dict) else None
+        ),
+        "total_blocking_time_ms": (
+            navigation.get("long_tasks", {}).get("total_blocking_time") if isinstance(navigation, dict) else None
+        ),
+        "last_request_end_offset_ms": (
+            requests.get("sequencing", {}).get("last_request_end_offset_ms") if isinstance(requests, dict) else None
+        ),
+    }
+    if source_page_id is not None and source_page_id != page_id:
+        item["source_page_id"] = source_page_id
+    return item
+
+
+def workflow_content_ready_ms(workflow_data: dict[str, Any]) -> float | int | None:
+    steps = workflow_data.get("steps", {})
+    detail_ready = steps.get("detail_page", {}).get("readiness", {}).get("content_ready_ms")
+    if isinstance(detail_ready, (int, float)):
+        return detail_ready
+    interaction_ready = steps.get("interaction_page", {}).get("readiness", {}).get("content_ready_ms")
+    if isinstance(interaction_ready, (int, float)):
+        return interaction_ready
+    fallback_ready = steps.get("detail_ready_ms")
+    if isinstance(fallback_ready, (int, float)):
+        return fallback_ready
+    fallback_interaction = steps.get("interaction_ready_ms")
+    if isinstance(fallback_interaction, (int, float)):
+        return fallback_interaction
+    return None
+
+
+def build_contract_workflow_item(role_result: dict[str, Any], workflow_id: str) -> dict[str, Any]:
+    workflow_data = role_result.get("workflows", {}).get(workflow_id, {})
+    status = workflow_data.get("status", "SKIPPED")
+    return {
+        "status": status,
+        "status_ok": 1 if status == "PASS" else 0,
+        "content_ready_ms": workflow_content_ready_ms(workflow_data) if status == "PASS" else None,
+        "total_workflow_ms": (
+            workflow_data.get("steps", {}).get("total_workflow_ms") if status == "PASS" else None
+        ),
+    }
+
+
+def build_lane_contract(
+    role_name: str,
+    role_result: dict[str, Any],
+    required_page_ids: list[str],
+    requested_workflow_ids: list[str],
+) -> tuple[dict[str, Any], dict[str, Any]]:
+    page_ids = [page_id for page_id in CONTRACT_PAGE_IDS if page_id in required_page_ids]
+    workflow_ids = [
+        workflow_id
+        for workflow_id in CONTRACT_WORKFLOW_IDS
+        if workflow_id in requested_workflow_ids
+        and (workflow := WORKFLOW_SCENARIOS.get(workflow_id)) is not None
+        and role_name in workflow.roles
+    ]
+
+    page_items = {page_id: build_contract_page_item(role_result, page_id) for page_id in page_ids}
+    workflow_items = {workflow_id: build_contract_workflow_item(role_result, workflow_id) for workflow_id in workflow_ids}
+
+    page_statuses = [item["status"] for item in page_items.values()]
+    workflow_statuses = [item["status"] for item in workflow_items.values()]
+    total_items = len(page_statuses) + len(workflow_statuses)
+    non_pass_items = sum(1 for status in page_statuses + workflow_statuses if status != "PASS")
+
+    page_navigation_totals = [item["navigation_total_ms"] for item in page_items.values() if item["status"] == "PASS"]
+    page_lcps = [item["largest_contentful_paint_ms"] for item in page_items.values() if item["status"] == "PASS"]
+    page_tbt = [item["total_blocking_time_ms"] for item in page_items.values() if item["status"] == "PASS"]
+    page_last_request = [item["last_request_end_offset_ms"] for item in page_items.values() if item["status"] == "PASS"]
+    workflow_content_ready = [item["content_ready_ms"] for item in workflow_items.values() if item["status"] == "PASS"]
+    workflow_total = [item["total_workflow_ms"] for item in workflow_items.values() if item["status"] == "PASS"]
+
+    lane_summary = {
+        "page_ids": page_ids,
+        "workflow_ids": workflow_ids,
+        "required_pages_total": len(page_statuses),
+        "required_pages_passed": sum(1 for status in page_statuses if status == "PASS"),
+        "required_pages_failed": sum(1 for status in page_statuses if status == "FAIL"),
+        "required_pages_skipped": sum(1 for status in page_statuses if status == "SKIPPED"),
+        "required_workflows_total": len(workflow_statuses),
+        "required_workflows_passed": sum(1 for status in workflow_statuses if status == "PASS"),
+        "required_workflows_failed": sum(1 for status in workflow_statuses if status == "FAIL"),
+        "required_workflows_skipped": sum(1 for status in workflow_statuses if status == "SKIPPED"),
+        "fail_ratio": round(non_pass_items / total_items, 4) if total_items else 0.0,
+        "console_errors": role_result.get("errors", {}).get("console", 0),
+        "network_errors": role_result.get("errors", {}).get("network", 0),
+        "pages": {
+            "sample_count": sum(1 for item in page_items.values() if item["status"] == "PASS"),
+            "median_navigation_total_ms": metric_median(page_navigation_totals),
+            "median_lcp_ms": metric_median(page_lcps),
+            "median_total_blocking_time_ms": metric_median(page_tbt),
+            "median_last_request_end_offset_ms": metric_median(page_last_request),
+        },
+        "workflows": {
+            "sample_count": sum(1 for item in workflow_items.values() if item["status"] == "PASS"),
+            "median_content_ready_ms": metric_median(workflow_content_ready),
+            "median_total_workflow_ms": metric_median(workflow_total),
+        },
+    }
+    lane_items = {
+        "pages": page_items,
+        "workflows": workflow_items,
+    }
+    return lane_summary, lane_items
+
+
+def build_browser_contract(
+    browser_results: dict[str, Any],
+    role_configs: list[RoleConfig],
+    requested_workflow_ids: list[str],
+) -> dict[str, Any]:
+    role_config_by_name = {role.name: role for role in role_configs}
+    contract = {
+        "contract_version": CONTRACT_VERSION,
+        "required_defaults": {
+            "page_ids": list(CONTRACT_PAGE_IDS),
+            "workflow_ids": list(CONTRACT_WORKFLOW_IDS),
+        },
+        "lanes": {},
+        "items": {},
+    }
+
+    for browser_name, browser_result in browser_results.items():
+        contract["lanes"][browser_name] = {}
+        contract["items"][browser_name] = {}
+        for role_name, role_result in browser_result.get("roles", {}).items():
+            role_config = role_config_by_name.get(role_name)
+            if role_config is None:
+                continue
+            lane_summary, lane_items = build_lane_contract(
+                role_name,
+                role_result,
+                role_config.required_pages,
+                requested_workflow_ids,
+            )
+            contract["lanes"][browser_name][role_name] = lane_summary
+            contract["items"][browser_name][role_name] = lane_items
+
+    return contract
+
+
+def store_page_result(
+    role_result: dict[str, Any],
+    page_id: str,
+    page_data: dict[str, Any],
+    source_label: str,
+) -> bool:
+    page_data["source"] = source_label
+    existing = role_result["pages"].get(page_id)
+    if existing is None:
+        role_result["pages"][page_id] = page_data
+        return True
+
+    existing.setdefault("probes", {})[source_label] = page_data
+    return False
+
+
+def tracing_enabled(args: argparse.Namespace) -> bool:
+    return args.capture_trace or args.capture_workflow_traces
+
+
+def diagnostic_workflow_ids(args: argparse.Namespace) -> set[str]:
+    return set(parse_csv(args.diagnostic_workflows))
+
+
+def workflow_trace_path(args: argparse.Namespace, browser_name: str, role_name: str, workflow_id: str) -> Path:
+    return Path(args.artifacts_dir or ".") / f"trace-{browser_name}-{role_name}-{workflow_id}.zip"
+
+
+def workflow_diagnostic_path(args: argparse.Namespace, browser_name: str, role_name: str, workflow_id: str) -> Path:
+    return Path(args.artifacts_dir or ".") / f"diagnostic-{browser_name}-{role_name}-{workflow_id}.json"
+
+
+def start_workflow_trace_chunk(context: Any, args: argparse.Namespace, browser_name: str, role_name: str, workflow_id: str) -> bool:
+    if not args.capture_workflow_traces or not hasattr(context.tracing, "start_chunk"):
+        return False
+    context.tracing.start_chunk(title=f"{browser_name}:{role_name}:{workflow_id}")
+    return True
+
+
+def stop_workflow_trace_chunk(context: Any, trace_started: bool, args: argparse.Namespace, browser_name: str, role_name: str, workflow_id: str) -> str | None:
+    if not trace_started or not hasattr(context.tracing, "stop_chunk"):
+        return None
+    path = workflow_trace_path(args, browser_name, role_name, workflow_id)
+    context.tracing.stop_chunk(path=str(path))
+    return str(path)
+
+
+def summarize_diagnostic_events(events: list[dict[str, Any]]) -> dict[str, int]:
+    summary: dict[str, int] = {}
+    for event in events:
+        kind = event.get("kind", "unknown")
+        summary[kind] = summary.get(kind, 0) + 1
+    return summary
+
+
+def persist_workflow_diagnostic(
+    args: argparse.Namespace,
+    browser_name: str,
+    role_name: str,
+    workflow_id: str,
+    payload: dict[str, Any],
+) -> str | None:
+    if not args.artifacts_dir:
+        return None
+    path = workflow_diagnostic_path(args, browser_name, role_name, workflow_id)
+    path.write_text(json.dumps(payload, indent=2, sort_keys=True))
+    return str(path)
+
+
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
         description="Run satperf UI browser performance checks with Playwright.",
@@ -113,10 +384,11 @@ def build_parser() -> argparse.ArgumentParser:
     parser.add_argument("--skip-pages", default="")
     parser.add_argument("--headless", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--timeout-seconds", type=int, default=60)
-    parser.add_argument("--iterations", type=int, default=1)
     parser.add_argument("--verbose", action=argparse.BooleanOptionalAction, default=False)
     parser.add_argument("--progress-log-file", default="")
     parser.add_argument("--capture-trace", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--capture-workflow-traces", action=argparse.BooleanOptionalAction, default=False)
+    parser.add_argument("--diagnostic-workflows", default="")
     parser.add_argument("--capture-screenshot-on-failure", action=argparse.BooleanOptionalAction, default=True)
     parser.add_argument("--artifacts-dir", default="")
     return parser
@@ -155,7 +427,7 @@ def launch_browser(playwright: Any, browser_name: str, args: argparse.Namespace)
 def make_context(browser, args: argparse.Namespace):
     context = browser.new_context(ignore_https_errors=True)
     inject_metric_observers(context)
-    if args.capture_trace:
+    if tracing_enabled(args):
         context.tracing.start(screenshots=True, snapshots=True, sources=False)
     return context
 
@@ -178,17 +450,42 @@ def evaluate_role(
     timeout_ms = args.timeout_seconds * 1000
     counts = {"console": 0, "network": 0}
     skip_page_ids = set(parse_csv(args.skip_pages))
+    targeted_diagnostics = diagnostic_workflow_ids(args)
+    diagnostic_prefix = activation_diagnostic_prefix()
+    active_activation_diagnostics: dict[str, Any] | None = None
     verbose_log(args, f"[{browser_name}][{role.name}] login start")
 
     def on_console(message):
         if message.type == "error":
             counts["console"] += 1
+        if active_activation_diagnostics is None:
+            return
+        text = message.text or ""
+        if text.startswith(diagnostic_prefix):
+            try:
+                payload = json.loads(text[len(diagnostic_prefix) :])
+            except json.JSONDecodeError:
+                payload = {"kind": "unparsed-console", "raw": text}
+            active_activation_diagnostics["events"].append(payload)
 
     def on_request_failed(_request):
         counts["network"] += 1
 
+    def on_frame_navigated(frame):
+        if active_activation_diagnostics is None or frame != page.main_frame:
+            return
+        active_activation_diagnostics["events"].append(
+            {
+                "kind": "frame-navigated",
+                "t": round((monotonic() - active_activation_diagnostics["clock_started"]) * 1000.0, 2),
+                "url": frame.url,
+                "route": current_path(page),
+            }
+        )
+
     page.on("console", on_console)
     page.on("requestfailed", on_request_failed)
+    page.on("framenavigated", on_frame_navigated)
 
     role_result: dict[str, Any] = {
         "coverage": {
@@ -249,8 +546,10 @@ def evaluate_role(
                     verbose_log(args, f"[{browser_name}][{role.name}] page {page_id} start {entry['url']}")
                     visit = visit_route(page, args.base_url, entry["url"], timeout_ms, request_tracker=request_tracker)
                     role_result["coverage"]["visited"].append(page_id)
-                    if page_id not in role_result["pages"]:
-                        role_result["pages"][page_id] = {
+                    store_page_result(
+                        role_result,
+                        page_id,
+                        {
                             "route": entry["url"],
                             "effective_route": visit["effective_route"],
                             "navigation": visit["navigation"],
@@ -262,7 +561,9 @@ def evaluate_role(
                             },
                             "readiness": visit["readiness"],
                             "errors": role_error_delta(before_counts, counts),
-                        }
+                        },
+                        "menu",
+                    )
                     verbose_log(
                         args,
                         f"[{browser_name}][{role.name}] page {page_id} pass total={visit['navigation'].get('total')}",
@@ -310,7 +611,7 @@ def evaluate_role(
                     ready_selector=scenario.ready_selector,
                     request_tracker=request_tracker,
                 )
-                role_result["pages"][page_id] = {
+                page_data = {
                     "route": scenario_route,
                     "effective_route": visit["effective_route"],
                     "variant": scenario_mode,
@@ -324,27 +625,41 @@ def evaluate_role(
                     "readiness": visit["readiness"],
                     "errors": role_error_delta(before_counts, counts),
                 }
-                if visit["navigation"].get("largest_contentful_paint") is not None:
+                is_primary_page = store_page_result(role_result, page_id, page_data, f"scenario:{scenario_mode}")
+                if is_primary_page and visit["navigation"].get("largest_contentful_paint") is not None:
                     role_result["vitals"][f"{page_id}.largest_contentful_paint"] = visit["navigation"]["largest_contentful_paint"]
-                if page_id not in role_result["coverage"]["visited"]:
+                if is_primary_page and page_id not in role_result["coverage"]["visited"]:
                     role_result["coverage"]["visited"].append(page_id)
                 verbose_log(
                     args,
                     f"[{browser_name}][{role.name}] scenario {page_id} pass total={visit['navigation'].get('total')}",
                 )
             except Exception as exc:  # pragma: no cover - depends on live UI
-                role_result["pages"].setdefault(page_id, {})
-                role_result["pages"][page_id]["error"] = str(exc)
-                role_result["pages"][page_id]["route"] = scenario_route
-                role_result["pages"][page_id]["variant"] = scenario_mode
-                if page_id in required_pages or scenario_required:
-                    role_result["coverage"]["failed"].append(page_id)
-                elif page_id not in role_result["coverage"]["skipped"]:
-                    role_result["coverage"]["skipped"].append(page_id)
+                existing_page = role_result["pages"].get(page_id)
+                if existing_page is not None:
+                    existing_page.setdefault("probe_errors", {})[f"scenario:{scenario_mode}"] = {
+                        "error": str(exc),
+                        "route": scenario_route,
+                        "variant": scenario_mode,
+                    }
+                else:
+                    role_result["pages"].setdefault(page_id, {})
+                    role_result["pages"][page_id]["error"] = str(exc)
+                    role_result["pages"][page_id]["route"] = scenario_route
+                    role_result["pages"][page_id]["variant"] = scenario_mode
+                    if page_id in required_pages or scenario_required:
+                        role_result["coverage"]["failed"].append(page_id)
+                    elif page_id not in role_result["coverage"]["skipped"]:
+                        role_result["coverage"]["skipped"].append(page_id)
                 verbose_log(args, f"[{browser_name}][{role.name}] scenario {page_id} fail {exc}")
                 screenshot_error = capture_failure_screenshot(page, args, browser_name, role.name, page_id)
                 if screenshot_error:
-                    role_result["pages"][page_id]["screenshot_error"] = screenshot_error
+                    if existing_page is not None:
+                        existing_page.setdefault("probe_errors", {}).setdefault(f"scenario:{scenario_mode}", {})[
+                            "screenshot_error"
+                        ] = screenshot_error
+                    else:
+                        role_result["pages"][page_id]["screenshot_error"] = screenshot_error
                     verbose_log(args, f"[{browser_name}][{role.name}] scenario {page_id} screenshot failed {screenshot_error}")
 
         requested_workflows = parse_csv(args.workflows)
@@ -358,6 +673,9 @@ def evaluate_role(
             before_counts = counts.copy()
             list_step = None
             workflow_result = {"status": "SKIPPED"}
+            workflow_trace_started = False
+            workflow_trace_path = None
+            workflow_diagnostic_payload = None
             workflow_route = workflow.list_route or "/"
             workflow_required = workflow.required
             workflow_mode = workflow.variant
@@ -452,6 +770,10 @@ def evaluate_role(
                         workflow.disallowed_detail_href_contains,
                         timeout_ms=min(timeout_ms, 5000),
                     )
+                    if workflow_id in targeted_diagnostics:
+                        workflow_trace_started = start_workflow_trace_chunk(
+                            context, args, browser_name, role.name, workflow_id
+                        )
                     if link is None:
                         list_state = classify_list_state(page, route=workflow_route)
                         workflow_result = {
@@ -469,6 +791,14 @@ def evaluate_role(
                                 }
                             },
                         }
+                        workflow_trace_path = stop_workflow_trace_chunk(
+                            context, workflow_trace_started, args, browser_name, role.name, workflow_id
+                        )
+                        workflow_trace_started = False
+                        if workflow_trace_path:
+                            workflow_result.setdefault("diagnostics", {})["activation"] = {
+                                "trace_path": workflow_trace_path
+                            }
                         verbose_log(
                             args,
                             f"[{browser_name}][{role.name}] workflow {workflow_id} skipped no matching drilldown target ({list_state['classification']})",
@@ -477,41 +807,76 @@ def evaluate_role(
                         started = utc_now()
                         duration_started = monotonic()
                         detail_request_snapshot = request_tracker.snapshot()
-                        drilldown_activation_mode = activate_drilldown_target(page, link, detail_href, timeout_ms)
-                        page.wait_for_load_state("networkidle", timeout=timeout_ms)
-                        detail_readiness = wait_for_dynamic_content(page, timeout_ms)
-                        ended = utc_now()
-                        detail_duration = round((monotonic() - duration_started) * 1000.0, 2)
-                        workflow_result = {
-                            "duration": detail_duration,
-                            "status": "PASS",
-                            "started": started,
-                            "ended": ended,
-                            "detail_href": detail_href,
-                            "effective_route": current_path(page),
-                            "list_route": workflow_route,
-                            "variant": workflow_mode,
-                            "drilldown_mode": drilldown_mode,
-                            "drilldown_activation_mode": drilldown_activation_mode,
-                            "errors": role_error_delta(before_counts, counts),
-                            "steps": {
-                                "list_ready_ms": list_step["step_duration_ms"],
-                                "detail_ready_ms": detail_duration,
-                                "total_workflow_ms": round(list_step["step_duration_ms"] + detail_duration, 2),
-                                "list_page": {
-                                    "effective_route": list_step["effective_route"],
-                                    "navigation": list_step["navigation"],
-                                    "requests": list_step["requests"],
-                                    "readiness": list_step["readiness"],
+                        try:
+                            if workflow_id in targeted_diagnostics:
+                                active_activation_diagnostics = {
+                                    "clock_started": monotonic(),
+                                    "events": [],
+                                    "target": start_activation_diagnostics(page, detail_href),
+                                }
+                            drilldown_activation_mode = activate_drilldown_target(page, link, detail_href, timeout_ms)
+                            page.wait_for_load_state("networkidle", timeout=timeout_ms)
+                            detail_readiness = wait_for_dynamic_content(page, timeout_ms)
+                            ended = utc_now()
+                            detail_duration = round((monotonic() - duration_started) * 1000.0, 2)
+                            workflow_result = {
+                                "duration": detail_duration,
+                                "status": "PASS",
+                                "started": started,
+                                "ended": ended,
+                                "detail_href": detail_href,
+                                "effective_route": current_path(page),
+                                "list_route": workflow_route,
+                                "variant": workflow_mode,
+                                "drilldown_mode": drilldown_mode,
+                                "drilldown_activation_mode": drilldown_activation_mode,
+                                "errors": role_error_delta(before_counts, counts),
+                                "steps": {
+                                    "list_ready_ms": list_step["step_duration_ms"],
+                                    "detail_ready_ms": detail_duration,
+                                    "total_workflow_ms": round(list_step["step_duration_ms"] + detail_duration, 2),
+                                    "list_page": {
+                                        "effective_route": list_step["effective_route"],
+                                        "navigation": list_step["navigation"],
+                                        "requests": list_step["requests"],
+                                        "readiness": list_step["readiness"],
+                                    },
+                                    "detail_page": {
+                                        "effective_route": current_path(page),
+                                        "navigation": collect_navigation_metrics(page),
+                                        "requests": request_tracker.summary_since(detail_request_snapshot),
+                                        "readiness": detail_readiness,
+                                    },
                                 },
-                                "detail_page": {
-                                    "effective_route": current_path(page),
-                                    "navigation": collect_navigation_metrics(page),
-                                    "requests": request_tracker.summary_since(detail_request_snapshot),
-                                    "readiness": detail_readiness,
-                                },
-                            },
-                        }
+                            }
+                        finally:
+                            if active_activation_diagnostics is not None:
+                                try:
+                                    active_activation_diagnostics["cleanup_called"] = stop_activation_diagnostics(page)
+                                except Exception:
+                                    active_activation_diagnostics["cleanup_called"] = False
+                                active_activation_diagnostics["duration_ms"] = round(
+                                    (monotonic() - active_activation_diagnostics["clock_started"]) * 1000.0, 2
+                                )
+                                workflow_diagnostic_payload = {
+                                    "target": active_activation_diagnostics.get("target"),
+                                    "duration_ms": active_activation_diagnostics["duration_ms"],
+                                    "cleanup_called": active_activation_diagnostics.get("cleanup_called"),
+                                    "event_summary": summarize_diagnostic_events(active_activation_diagnostics["events"]),
+                                    "events": active_activation_diagnostics["events"],
+                                }
+                                active_activation_diagnostics = None
+                            workflow_trace_path = stop_workflow_trace_chunk(
+                                context, workflow_trace_started, args, browser_name, role.name, workflow_id
+                            )
+                            workflow_trace_started = False
+                            if workflow_diagnostic_payload is not None and workflow_trace_path is not None:
+                                workflow_diagnostic_payload["trace_path"] = workflow_trace_path
+                            if workflow_diagnostic_payload is not None:
+                                workflow_diagnostic_payload["artifact_path"] = persist_workflow_diagnostic(
+                                    args, browser_name, role.name, workflow_id, workflow_diagnostic_payload
+                                )
+                                workflow_result.setdefault("diagnostics", {})["activation"] = workflow_diagnostic_payload
                         verbose_log(
                             args,
                             f"[{browser_name}][{role.name}] workflow {workflow_id} pass {workflow_result['duration']}ms",
@@ -527,6 +892,20 @@ def evaluate_role(
                         "list_page": list_step,
                     },
                 }
+                workflow_trace_path = stop_workflow_trace_chunk(
+                    context, workflow_trace_started, args, browser_name, role.name, workflow_id
+                )
+                workflow_trace_started = False
+                if workflow_diagnostic_payload is not None or workflow_trace_path is not None:
+                    activation_diagnostics = workflow_result.setdefault("diagnostics", {}).setdefault("activation", {})
+                    if workflow_diagnostic_payload is not None:
+                        if "artifact_path" not in workflow_diagnostic_payload:
+                            workflow_diagnostic_payload["artifact_path"] = persist_workflow_diagnostic(
+                                args, browser_name, role.name, workflow_id, workflow_diagnostic_payload
+                            )
+                        activation_diagnostics.update(workflow_diagnostic_payload)
+                    if workflow_trace_path is not None:
+                        activation_diagnostics["trace_path"] = workflow_trace_path
                 if workflow_result["status"] == "SKIPPED" and list_step is not None:
                     list_state = classify_list_state(page, route=workflow_route)
                     workflow_result["list_state"] = list_state
@@ -610,6 +989,7 @@ def build_browser_comparison(browser_result: dict[str, Any]) -> dict[str, Any]:
 
 def run(args: argparse.Namespace) -> dict[str, Any]:
     started = utc_now()
+    requested_workflows = parse_csv(args.workflows)
     result = {
         "id": f"ui-browser-{started}",
         "name": "UIBrowserNavigation",
@@ -655,9 +1035,12 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                             if role_result["status"] != "PASS":
                                 result["result"] = "FAIL"
                         finally:
-                            if args.capture_trace:
-                                trace_path = Path(args.artifacts_dir or ".") / f"trace-{browser_name}-{role.name}.zip"
-                                context.tracing.stop(path=str(trace_path))
+                            if tracing_enabled(args):
+                                if args.capture_trace:
+                                    trace_path = Path(args.artifacts_dir or ".") / f"trace-{browser_name}-{role.name}.zip"
+                                    context.tracing.stop(path=str(trace_path))
+                                else:
+                                    context.tracing.stop()
                             context.close()
                     browser_result["comparison"] = build_browser_comparison(browser_result)
                     browser_status = "PASS"
@@ -667,6 +1050,11 @@ def run(args: argparse.Namespace) -> dict[str, Any]:
                 finally:
                     browser.close()
                 result["results"]["browser"]["browsers"][browser_name] = browser_result
+            result["results"]["browser"]["contract"] = build_browser_contract(
+                result["results"]["browser"]["browsers"],
+                roles,
+                requested_workflows,
+            )
     except Exception as exc:  # pragma: no cover - failure path
         fatal_error = exc
         result["result"] = "ERROR"

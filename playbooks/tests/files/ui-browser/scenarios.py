@@ -60,15 +60,6 @@ PAGE_SCENARIOS: Dict[str, PageScenario] = {
         roles=("admin", "viewer"),
         ready_text="Job invocations",
     ),
-    # Temporarily disabled until the legacy route is confirmed in the UI.
-    # "job_invocations_legacy": PageScenario(
-    #     id="job_invocations_legacy",
-    #     route="/legacy/job_invocations",
-    #     roles=("admin", "viewer"),
-    #     ready_text="Job invocations",
-    #     required_by_default=False,
-    #     variant="legacy",
-    # ),
     "tasks": PageScenario(
         id="tasks",
         route="/foreman_tasks/tasks",
@@ -115,19 +106,12 @@ WORKFLOW_SCENARIOS: Dict[str, WorkflowScenario] = {
         id="job_invocations_list_to_details",
         roles=("admin", "viewer"),
         menu_page_id="job_invocations",
+        # Route history supports /legacy/job_invocations/:id as a detail fallback,
+        # not /legacy/job_invocations as a list page.
         list_route="/job_invocations",
         detail_href_contains="/job_invocations/",
         ready_text="Job invocations",
         required=True,
-    ),
-    "job_invocations_legacy_list_to_details": WorkflowScenario(
-        id="job_invocations_legacy_list_to_details",
-        roles=("admin", "viewer"),
-        menu_page_id="job_invocations_legacy",
-        list_route="/legacy/job_invocations",
-        detail_href_contains="/job_invocations/",
-        ready_text="Job invocations",
-        variant="legacy",
     ),
     "content_views_list_to_details": WorkflowScenario(
         id="content_views_list_to_details",
@@ -182,7 +166,6 @@ ROUTE_TO_PAGE_ID = {
     "/hosts": "hosts",
     "/new/hosts": "hosts_new",
     "/job_invocations": "job_invocations",
-    "/legacy/job_invocations": "job_invocations_legacy",
     "/foreman_tasks/tasks": "tasks",
     "/content_views": "content_views",
     "/redhat_repositories": "red_hat_repositories",

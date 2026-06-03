@@ -247,8 +247,9 @@ class SatelliteWebUIPerfAtScale(HttpUser):
     """Focused test for pages known to degrade at scale (many hosts/jobs).
 
     Discovers job invocations of different sizes (small/medium/large) at
-    startup and tests both React and legacy detail pages for each, plus
-    index pages and API endpoints.
+    startup and tests both React detail pages and the legacy detail fallback
+    at `/legacy/job_invocations/:id` for each, plus index pages and API
+    endpoints.
     """
     wait_time = constant(0)
 
@@ -298,7 +299,7 @@ class SatelliteWebUIPerfAtScale(HttpUser):
     def foreman_tasks_index(self):
         _get(self.client, "/foreman_tasks/tasks", "ReactApp")
 
-    # ── Job invocation detail: React (new) vs Legacy (old) ───────────────
+    # ── Job invocation detail routes: React canonical vs legacy fallback ──
 
     @task(3)
     def job_detail_small(self):
