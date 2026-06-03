@@ -11,6 +11,7 @@ phases=(
     get_base_content_fam
     create_bench_cvs_fam
     sync_extra_content
+    incremental_cv_updates_fam
     concurrent_execution
     remote_execution_fam
     misc
