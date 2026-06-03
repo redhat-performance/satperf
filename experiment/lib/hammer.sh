@@ -172,17 +172,21 @@ concurrent_execution() {
 
 } # concurrent_execution
 
-misc() {
+ui() {
     ui_concurrency="${PARAM_ui_concurrency:-10}"
     ui_duration="${PARAM_ui_duration:-300}"
     ui_max_static_size="${PARAM_ui_max_static_size:-40960}"
+    ui_browser_browsers="${PARAM_ui_browser_browsers:-chromium,firefox}"
+    ui_browser_dataset_profile="${PARAM_ui_browser_dataset_profile:-medium}"
+    ui_browser_timeout_seconds="${PARAM_ui_browser_timeout_seconds:-60}"
+    ui_browser_verbose="${PARAM_ui_browser_verbose:-false}"
+    ui_browser_progress_log_file="${PARAM_ui_browser_progress_log_file:-/tmp/ui-browser-progress.log}"
+    ui_browser_capture_trace="${PARAM_ui_browser_capture_trace:-false}"
+    ui_browser_capture_workflow_traces="${PARAM_ui_browser_capture_workflow_traces:-false}"
+    ui_browser_diagnostic_workflows="${PARAM_ui_browser_diagnostic_workflows:-}"
+    ui_browser_browser_source="playwright-bundled"
 
-    section 'Misc simple tests'
-    test=50-hammer-list
-    ap "${test}.log" \
-        -e "organization='{{ sat_org }}'" \
-        playbooks/tests/hammer-list.yaml
-    e HammerHostList "${logs}/${test}.log"
+    section 'UI tests'
 
     rm -f /tmp/status-data-webui-pages.json
     test=51-webui-pages
@@ -229,6 +233,33 @@ misc() {
         -e "ui_duration='${PARAM_ui_asset_inventory_duration:-300}'" \
         playbooks/tests/webui-pages-asset-inventory.yaml
     STATUS_DATA_FILE=/tmp/status-data-webui-pages-asset-inventory.json e "WebUIPagesAssetInventoryTest_c${PARAM_ui_asset_inventory_concurrency:-5}_d${PARAM_ui_asset_inventory_duration:-300}" "${logs}/${test}.log"
+
+    rm -f /tmp/status-data-ui-browser.json
+    test=56-webui-browser
+    skip_measurement='true' ap "${test}.log" \
+        -e "ui_browser_browsers='$ui_browser_browsers'" \
+        -e "ui_browser_dataset_profile='$ui_browser_dataset_profile'" \
+        -e "ui_browser_timeout_seconds='$ui_browser_timeout_seconds'" \
+        -e "ui_browser_verbose='$ui_browser_verbose'" \
+        -e "ui_browser_capture_trace='$ui_browser_capture_trace'" \
+        -e "ui_browser_capture_workflow_traces='$ui_browser_capture_workflow_traces'" \
+        -e "ui_browser_diagnostic_workflows='$ui_browser_diagnostic_workflows'" \
+        -e "ui_browser_progress_log_file='$ui_browser_progress_log_file'" \
+        -e "ui_browser_browser_source='$ui_browser_browser_source'" \
+        playbooks/tests/webui-browser.yaml
+    STATUS_DATA_FILE=/tmp/status-data-ui-browser.json \
+        e "UIBrowserNavigation_browsers_${ui_browser_browsers//,/_}_roles_admin_viewer" "${logs}/${test}.log"
+
+} # ui
+
+misc() {
+
+    section 'Misc simple tests'
+    test=50-hammer-list
+    ap "${test}.log" \
+        -e "organization='{{ sat_org }}'" \
+        playbooks/tests/hammer-list.yaml
+    e HammerHostList "${logs}/${test}.log"
 
     if vercmp_ge "$sat_version" '6.17.0'; then
         if $enable_iop; then

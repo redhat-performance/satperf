@@ -15,6 +15,7 @@ phases=(
     concurrent_execution
     remote_execution_fam
     misc
+    ui
     backup
     cleanup_fam
     sosreport
