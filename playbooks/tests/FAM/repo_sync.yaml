@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Sync repository"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:
@@ -14,20 +15,18 @@
     - name: Product
       when:
         - product is defined and product | length > 0
+      vars:
+        _task_name: "ProductSync"
       block:
-        - name: ProductSync
+        - name: "{{ _task_name }}"
           theforeman.foreman.repository_sync:
             product: "{{ product }}"
             repository: "{{ repository | default(omit) }}"
           async: 14400
           poll: 0
-          register: __product_sync
+          register: __fire_result
 
-        - name: Wait4ProductSync
-          ansible.builtin.async_status:
-            jid: "{{ __product_sync.ansible_job_id }}"
-          register: __product_sync_job_result
-          until: __product_sync_job_result is finished
-          retries: 99999
-          delay: 10
+        - ansible.builtin.include_tasks: includes/fam_wait_and_print.yaml
+          vars:
+            _async_jid: "{{ __fire_result.ansible_job_id }}"
 ...
