@@ -1,5 +1,5 @@
 ---
-- name: "Promote content view version"
+- name: "Promote content view version(s)"
   hosts: localhost
   gather_facts: false
 
@@ -9,28 +9,90 @@
       username: "{{ foreman_username | default(omit) }}"
       password: "{{ foreman_password | default(omit) }}"
       validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-      organization: "{{ foreman_organization }}"
+      # organization: "{{ foreman_organization }}"
+
+  vars_files:
+    - includes/fam_common_vars.yaml
+
+  vars:
+    _task_name: "{{ task_name | default('ContentViewVersionPromote') }}"
+    _lces: >-
+      {{ lifecycle_environments.split(',') if lifecycle_environments is string
+         else lifecycle_environments }}
+    _content_views: "{{ content_views | from_yaml if content_views is string else content_views }}"
 
   tasks:
-    - name: ContentViewVersionPromote
-      theforeman.foreman.content_view_version:
-        content_view: "{{ cv }}"
-        version: "{{ version | default(omit) }}"
-        lifecycle_environments: "{{ lifecycle_environments | default(omit) }}"
-        current_lifecycle_environment: "{{ current_lifecycle_environment | default(omit) }}"
-      when:
-        - cv is defined and cv | length > 0
+    - name: Get lifecycle environment IDs
+      theforeman.foreman.resource_info:
+        resource: lifecycle_environments
+        search: 'name = "{{ item }}"'
+      loop: "{{ _lces }}"
+      register: _lce_info
+      until: _lce_info is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 
-    - name: CompositeContentViewVersionPromote
-      theforeman.foreman.content_view_version:
-        content_view: "{{ content_view.name | default(content_view.content_view) | default(content_view) }}"
-        version: "{{ content_view.version | default(omit) }}"
-        lifecycle_environments: "{{ lifecycle_environments | default(omit) }}"
-        current_lifecycle_environment: "{{ current_lifecycle_environment | default(omit) }}"
-      # XXX: We want to promote only CCVs, not CVs
-      loop: "{{ (content_views | from_yaml if content_views is string else content_views) | selectattr('components', 'defined') | list }}"
+    - name: Build environment IDs list
+      ansible.builtin.set_fact:
+        _env_ids: >-
+          {{ _lce_info.results
+             | map(attribute='resources')
+             | map('first')
+             | map(attribute='id')
+             | list }}
+
+    - name: "Get CV info for {{ _task_name }}"
+      theforeman.foreman.resource_info:
+        resource: content_views
+        search: 'name = "{{ _cv.name | default(_cv.content_view) | default(_cv) }}"'
+      loop: "{{ _content_views }}"
       loop_control:
-        loop_var: content_view
-      when:
-        - content_views is defined and content_views | length > 0
+        loop_var: _cv
+        label: "{{ _cv.name | default(_cv.content_view) | default(_cv) }}"
+      register: _cv_infos
+      until: _cv_infos is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: "Get CV versions for {{ _task_name }}"
+      theforeman.foreman.resource_info:
+        resource: content_view_versions
+        params:
+          content_view_id: "{{ (item.resources | first).id }}"
+      loop: "{{ _cv_infos.results }}"
+      loop_control:
+        label: "{{ (item.resources | first).name }}"
+      register: _cv_versions
+      until: _cv_versions is succeeded
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: "{{ _task_name }}"
+      ansible.builtin.uri:
+        url: "{{ _server_url }}/katello/api/content_view_versions/{{ (item.resources | sort(attribute='id') | last).id }}/promote"
+        method: POST
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        body_format: json
+        body:
+          environment_ids: "{{ _env_ids }}"
+        status_code: [200, 202]
+        timeout: 60
+      loop: "{{ _cv_versions.results }}"
+      loop_control:
+        label: "{{ (item.resources | first).content_view.name }}"
+      register: __fire_results
+      failed_when: >-
+        __fire_results is failed and
+        (_transient_errors | select('in', __fire_results.msg | default('')) | list | length == 0)
+
+    - ansible.builtin.include_tasks: includes/fam_wait_and_print.yaml
+      vars:
+        _foreman_task_id: "{{ item.json.id }}"
+      loop: "{{ __fire_results.results }}"
+      when: item.json is defined
+      loop_control:
+        label: "{{ item.item.resources[0].content_view.name | default('CV') }}"
 ...
