@@ -11,6 +11,9 @@
       validate_certs: "{{ foreman_validate_certs | default(omit) }}"
       organization: "{{ foreman_organization }}"
 
+  vars_files:
+    - includes/fam_common_vars.yaml
+
   vars:
     # Operation mode: 'cancel' (default) or 'stop'
     operation: "{{ task_operation | default('cancel') }}"
@@ -64,12 +67,12 @@
 
         - name: Execute bulk operation via API
           ansible.builtin.uri:
-            url: "{{ foreman_server_url }}/foreman_tasks/api/tasks/{{ api_endpoint }}"
+            url: "{{ _server_url }}/foreman_tasks/api/tasks/{{ api_endpoint }}"
             method: POST
-            user: "{{ foreman_username }}"
-            password: "{{ foreman_password }}"
+            user: "{{ _username }}"
+            password: "{{ _password }}"
             force_basic_auth: true
-            validate_certs: "{{ foreman_validate_certs | default(false) }}"
+            validate_certs: "{{ _validate_certs }}"
             body_format: json
             body:
               search: "{{ task_search_query }}"
@@ -123,7 +126,7 @@
 
             - name: Force stop via bulk_stop
               ansible.builtin.uri:
-                url: "{{ foreman_server_url }}/foreman_tasks/api/tasks/bulk_stop"
+                url: "{{ _server_url }}/foreman_tasks/api/tasks/bulk_stop"
                 method: POST
                 user: "{{ foreman_username }}"
                 password: "{{ foreman_password }}"
@@ -162,12 +165,12 @@
 
         - name: Stop orphaned per-host sub-tasks
           ansible.builtin.uri:
-            url: "{{ foreman_server_url }}/foreman_tasks/api/tasks/bulk_stop"
+            url: "{{ _server_url }}/foreman_tasks/api/tasks/bulk_stop"
             method: POST
-            user: "{{ foreman_username }}"
-            password: "{{ foreman_password }}"
+            user: "{{ _username }}"
+            password: "{{ _password }}"
             force_basic_auth: true
-            validate_certs: "{{ foreman_validate_certs | default(false) }}"
+            validate_certs: "{{ _validate_certs }}"
             body_format: json
             body:
               search: "state = running and result = pending and label = \"Actions::RemoteExecution::RunHostJob\""
