@@ -1,0 +1,19 @@
+---
+- name: Wait4Task
+  theforeman.foreman.wait_for_task:
+    # server_url: "{{ foreman_server_url | default(omit) }}"
+    # username: "{{ foreman_username | default(omit) }}"
+    # password: "{{ foreman_password | default(omit) }}"
+    # validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+    task: "{{ task }}"
+    timeout: "{{ timeout | default(omit) }}"
+  register: __wait_for_task
+  ignore_errors: true
+
+- debug:
+    var: __wait_for_task
+  # failed_when:
+  #   - __wait_for_task is failed
+  #   - "'A sub task failed' in __wait_for_task.msg"
+
+...
