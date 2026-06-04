@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Override activation key content"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:

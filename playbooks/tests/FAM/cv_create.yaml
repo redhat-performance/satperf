@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Create content view"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:
@@ -15,6 +16,7 @@
       theforeman.foreman.content_view:
         name: "{{ cv }}"
         repositories: "{{ repositories | default(omit) }}"
+        rolling: "{{ rolling | default(omit) }}"
         composite: "{{ components | default(composite) | default(false) | ternary(true, false) }}"
         components: "{{ components | default(omit) }}"
         auto_publish: "{{ auto_publish | default(omit) }}"

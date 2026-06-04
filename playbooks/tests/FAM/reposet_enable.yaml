@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Enable repository set"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:

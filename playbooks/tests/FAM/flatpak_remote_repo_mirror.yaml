@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Mirror Flatpak remote repository"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:

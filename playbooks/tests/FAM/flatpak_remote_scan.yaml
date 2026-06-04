@@ -1,5 +1,6 @@
 ---
-- hosts: localhost
+- name: "Scan Flatpak remote"
+  hosts: localhost
   gather_facts: false
 
   module_defaults:
