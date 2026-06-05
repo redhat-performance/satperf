@@ -83,12 +83,12 @@ push_product_fam() {
         index_ten=4
         ;;
     esac
+
     if ((num_capsules > 0)); then
         local test="${index_ten}9-capsules-sync-${product_code}"
         ap "${test}.log" \
-            -e "organization='{{ sat_org }}'" \
             -e "lces='$lces'" \
-            playbooks/tests/capsules-sync.yaml
+            playbooks/tests/FAM/capsule_sync.yaml
         e CapsuleSync "${logs}/${test}.log"
     fi # num_capsules > 0
 } # push_product_fam
@@ -314,11 +314,13 @@ fetch_product_fam() {
         --argjson product_products "$product_products" \
         '. + $product_products')"
 
-    # Set $product repositories
-    test="${index_ten}0fr-product-create-${product_code}"
-    apj $test \
-        -e "products='$product_products'" \
-        playbooks/tests/FAM/repositories.yaml
+    # Set $product repositories (skip for flatpak — already created above)
+    if [[ "$product" != "$flatpak_product" ]]; then
+        test="${index_ten}0fr-product-create-${product_code}"
+        apj $test \
+            -e "products='$product_products'" \
+            playbooks/tests/FAM/repositories.yaml
+    fi
 
     # Sync $product products
     echo "$product_products" | jq -r '.[].name' | while read product; do
@@ -541,43 +543,20 @@ fetch_product_fam() {
     product_content_views="$(echo "$content_views" |
         jq -c \
             --arg product_code "CV_${product_code}" \
-            'map(select(.components or (.repositories and (.name | startswith($product_code)))))')"
+            'map(select(.repositories and (.name | startswith($product_code))))')"
 
-    # Create $product CVs/CCVs
+    # Create $product CVs
     test="${index_ten}5fr-cv-create-${product_code}"
     apj $test \
         -e "content_views='$product_content_views'" \
         playbooks/tests/FAM/content_views.yaml
 
-    # Publish $product CVs/CCVs
+    # Publish $product CVs
     test="${index_ten}5fr-cv-publish-${product_code}"
-    # XXX: Publication + promotion can be done in one pass with the
-    #      content_view_publish role, but we prefer to split it to
-    #      measure both independently
-    apj $test \
+    ap "${test}.log" \
         -e "content_views='$product_content_views'" \
-        playbooks/tests/FAM/content_view_publish.yaml
-
-    # Promote $product CCVs to LCEs
-    test="${index_ten}6f-ccv-version-promote-${product_code}"
-    # XXX: Publication + promotion can be done in one pass with the
-    #      content_view_publish role, but we prefer to split it to
-    #      measure both independently
-    # apj $test \
-    #   -e "content_views='$product_content_views'" \
-    #   -e "current_lifecycle_environment=Library" \
-    #   -e "lifecycle_environments='$lces_comma'" \
-    #   playbooks/tests/FAM/cv_version_promote.yaml
-    apj $test \
-        -e "content_views='$product_content_views'" \
-        -e "lifecycle_environments='$lces_comma'" \
-        playbooks/tests/FAM/cv_version_promote.yaml
-
-    # Create/update AKs
-    test="${index_ten}7fr-ak-create_update-${product_code}"
-    apj $test \
-        -e "activation_keys='$activation_keys'" \
-        playbooks/tests/FAM/activation_keys.yaml
+        playbooks/tests/FAM/cv_publish.yaml
+    e ContentViewPublish "${logs}/${test}.log"
 
 } # fetch_product_fam
 
@@ -615,22 +594,46 @@ get_base_content_fam() {
     [[ -n "${PARAM_tested_products:-}" ]] && read -ra tested_products <<<"$PARAM_tested_products"
 
     num_capsules="$(get_num_hosts capsules)"
-    _pending_push_pid=''
-    _wait_push() {
-        [[ -n "$_pending_push_pid" ]] || return 0
-        wait "$_pending_push_pid"
-        _pending_push_pid=''
-    }
 
+    # 1. Fetch and publish per-product CVs
     for product in "${tested_products[@]}"; do
         fetch_product_fam "$product"
-        if ((num_capsules > 0)); then
-            _wait_push
-            push_product_fam "$product" &
-            _pending_push_pid=$!
-        fi # num_capsules > 0
     done
-    _wait_push
+
+    # 2. Create, publish, promote CCVs (once, with all product components)
+    section 'Create, publish and promote CCVs'
+    composite_content_views="$(echo "$content_views" | jq -c 'map(select(.components))')"
+
+    test=55fr-ccv-create
+    apj $test \
+        -e "content_views='$composite_content_views'" \
+        playbooks/tests/FAM/content_views.yaml
+
+    test=55fr-ccv-publish
+    ap "${test}.log" \
+        -e "content_views='$composite_content_views'" \
+        playbooks/tests/FAM/cv_publish.yaml
+    e ContentViewPublish "${logs}/${test}.log"
+
+    test=56f-ccv-version-promote
+    ap "${test}.log" \
+        -e "content_views='$composite_content_views'" \
+        -e "lifecycle_environments='$lces_comma'" \
+        playbooks/tests/FAM/cv_version_promote.yaml
+    e ContentViewVersionPromote "${logs}/${test}.log"
+
+    # 3. Create/update AKs (all CCVs now promoted to LCEs)
+    test=57fr-ak-create_update
+    apj $test \
+        -e "activation_keys='$activation_keys'" \
+        playbooks/tests/FAM/activation_keys.yaml
+
+    # 4. Push all content to capsules (CVs + CCVs, once)
+    if ((num_capsules > 0)); then
+        for product in "${tested_products[@]}"; do
+            push_product_fam "$product"
+        done
+    fi
 
 } # get_base_content_fam
 
@@ -723,7 +726,7 @@ create_bench_cvs_fam() {
     product_content_views="$(echo "$content_views" |
         jq -c \
             --arg product_code "CV_${product_code}" \
-            'map(select(.components or (.repositories and (.name | test($product_code)))))')"
+            'map(select(.repositories and (.name | test($product_code))))')"
 
     # Create $product_code CV
     test="${index_ten}5fr-cv-create-big-${product_code}"
@@ -733,27 +736,23 @@ create_bench_cvs_fam() {
 
     # Publish $product_code CV
     test="${index_ten}5fr-cv-publish-big-${product_code}"
-    # XXX: Publication + promotion can be done in one pass with the
-    #      content_view_publish role, but we prefer to split it to
-    #      measure both independently
-    apj $test \
+    ap "${test}.log" \
         -e "content_views='$product_content_views'" \
-        playbooks/tests/FAM/content_view_publish.yaml
+        playbooks/tests/FAM/cv_publish.yaml
+    e ContentViewPublish "${logs}/${test}.log"
 
     # Promote $product_code CV
     test="${index_ten}6f-cv-version-promote-big-${cv}"
-    # XXX: Publication + promotion can be done in one pass with the
-    #      content_view_publish role, but we prefer to split it to
-    #      measure both independently
     # apj $test \
     #   -e "cv='$cv'" \
     #   -e "current_lifecycle_environment=Library" \
     #   -e "lifecycle_environments='$lces_comma'" \
     #   playbooks/tests/FAM/cv_version_promote.yaml
-    apj $test \
-        -e "cv='$cv'" \
+    ap "${test}.log" \
+        -e "content_views='$product_content_views'" \
         -e "lifecycle_environments='$lces_comma'" \
         playbooks/tests/FAM/cv_version_promote.yaml
+    e ContentViewVersionPromote "${logs}/${test}.log"
 
     section 'Create, publish and promote filtered CV'
     product_code=BenchFiltered
@@ -846,7 +845,7 @@ create_bench_cvs_fam() {
     product_content_views="$(echo "$content_views" |
         jq -c \
             --arg product_code "CV_${product_code}" \
-            'map(select(.components or (.repositories and (.name | test($product_code)))))')"
+            'map(select(.repositories and (.name | test($product_code))))')"
 
     # Create $product_code CV
     test="${index_ten}6fr-cv-create-filtered-${product_code}"
@@ -856,27 +855,23 @@ create_bench_cvs_fam() {
 
     # Publish $product_code CV
     test="${index_ten}5fr-cv-publish-filtered-${product_code}"
-    # XXX: Publication + promotion can be done in one pass with the
-    #      content_view_publish role, but we prefer to split it to
-    #      measure both independently
-    apj $test \
+    ap "${test}.log" \
         -e "content_views='$product_content_views'" \
-        playbooks/tests/FAM/content_view_publish.yaml
+        playbooks/tests/FAM/cv_publish.yaml
+    e ContentViewPublish "${logs}/${test}.log"
 
     # Promote $product_code CV
     test="${index_ten}6f-cv-version-promote-filtered-${cv}"
-    # XXX: Publication + promotion can be done in one pass with the
-    #      content_view_publish role, but we prefer to split it to
-    #      measure both independently
     # apj $test \
     #   -e "cv='$cv'" \
     #   -e "current_lifecycle_environment=Library" \
     #   -e "lifecycle_environments='$lces_comma'" \
     #   playbooks/tests/FAM/cv_version_promote.yaml
-    apj $test \
-        -e "cv='$cv'" \
+    ap "${test}.log" \
+        -e "content_views='$product_content_views'" \
         -e "lifecycle_environments='$lces_comma'" \
         playbooks/tests/FAM/cv_version_promote.yaml
+    e ContentViewVersionPromote "${logs}/${test}.log"
 
 } # create_bench_cvs_fam
 
@@ -1090,6 +1085,93 @@ cleanup_fam() {
         playbooks/tests/FAM/repositories.yaml
 
 } # cleanup_fam
+
+setup_rolling_repos_fam() {
+    local cv_rolling_product="${PARAM_cv_rolling_product:-BenchRollingProduct}"
+    local cv_rolling_repo_count="${PARAM_cv_rolling_repo_count:-2}"
+    local cv_rolling_repo_url_template="${PARAM_test_sync_repositories_url_template:-http://repos.example.com/repo*}"
+
+    section 'Create product with custom yum repos for rolling CV test'
+    product_repositories='[]'
+    for i in $(seq 1 "$cv_rolling_repo_count"); do
+        repo_name="bench_rolling_repo${i}"
+        repo_url="$(echo "$cv_rolling_repo_url_template" | sed "s/\*/$i/")"
+        product_repositories="$(echo "$product_repositories" |
+          jq -c \
+           --arg name "$repo_name" \
+           --arg url "$repo_url" \
+           --arg content_type "yum" \
+           '. += [{"name": $name, "url": $url, "content_type": $content_type}]')"
+    done
+
+    products="$(jq -cn \
+       --arg name "$cv_rolling_product" \
+       --argjson repositories "$product_repositories" \
+       '[{"name": $name, "repositories": $repositories}]')"
+
+    test=10fr-product-create-rolling
+    skip_measurement=true apj $test \
+      -e "products='$products'" \
+      playbooks/tests/FAM/repositories.yaml
+
+    section 'Initial repo sync'
+    test=14fr-repo-sync-rolling-initial
+    apj $test \
+      -e "product='$cv_rolling_product'" \
+      playbooks/tests/FAM/repo_sync.yaml
+
+    # Build repo references for rolling CVs (global for rolling_cv_scaling_fam)
+    cv_rolling_repos='[]'
+    for i in $(seq 1 "$cv_rolling_repo_count"); do
+        repo_name="bench_rolling_repo${i}"
+        cv_rolling_repos="$(echo "$cv_rolling_repos" |
+            jq -c \
+                --arg name "$repo_name" \
+                --arg product "$cv_rolling_product" \
+                '. += [{"name": $name, "product": $product}]')"
+    done
+} # setup_rolling_repos_fam
+
+rolling_cv_scaling_fam() {
+    if ! vercmp_ge "$sat_version" '6.18.0'; then
+        echo "Skipping rolling CV tests: requires Satellite >= 6.18.0 (got $sat_version)"
+        return 0
+    fi
+
+    local cv_rolling_product="${PARAM_cv_rolling_product:-BenchRollingProduct}"
+    local cv_rolling_count="${PARAM_cv_rolling_count:-100}"
+    local cv_rolling_batch_size="${PARAM_cv_rolling_batch_size:-10}"
+    local cv_rolling_prefix="${PARAM_cv_rolling_prefix:-BenchRollingCV}"
+
+    section 'Baseline sync (0 rolling CVs)'
+    test=20fr-sync-baseline-0-rolling-cvs
+    apj $test \
+      -e "product='$cv_rolling_product'" \
+      playbooks/tests/FAM/repo_sync.yaml
+
+    section 'Create rolling CVs in batches and measure sync after each'
+    for (( batch_start=1; batch_start<=cv_rolling_count; batch_start+=cv_rolling_batch_size )); do
+        batch_end=$((batch_start + cv_rolling_batch_size - 1))
+        if (( batch_end > cv_rolling_count )); then
+            batch_end=$cv_rolling_count
+        fi
+
+        for (( i=batch_start; i<=batch_end; i++ )); do
+            cv="${cv_rolling_prefix}${i}"
+            test="30fr-cv-create-rolling-${cv}"
+            apj $test \
+              -e "cv='$cv'" \
+              -e "repositories='$cv_rolling_repos'" \
+              -e "lifecycle_environments='Library'" \
+              playbooks/tests/FAM/cv_rolling_create.yaml
+        done
+
+        test="40fr-sync-with-${batch_end}-rolling-cvs"
+        apj $test \
+          -e "product='$cv_rolling_product'" \
+          playbooks/tests/FAM/repo_sync.yaml
+    done
+} # rolling_cv_scaling_fam
 
 incremental_cv_updates_fam() {
     # SAT-31208: Baseline timing for incremental CV updates with ~8 repos,
