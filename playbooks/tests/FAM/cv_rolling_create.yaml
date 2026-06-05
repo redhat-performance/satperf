@@ -1,0 +1,23 @@
+---
+- name: "Create rolling content view"
+  hosts: localhost
+  gather_facts: false
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ foreman_server_url | default(omit) }}"
+      username: "{{ foreman_username | default(omit) }}"
+      password: "{{ foreman_password | default(omit) }}"
+      validate_certs: "{{ foreman_validate_certs | default(omit) }}"
+      organization: "{{ foreman_organization }}"
+
+  tasks:
+    - name: RollingContentViewCreate
+      theforeman.foreman.content_view:
+        name: "{{ cv }}"
+        repositories: "{{ repositories | from_yaml if repositories is string else repositories | default(omit) }}"
+        rolling: true
+        lifecycle_environments: >-
+          {{ lifecycle_environments.split(',') if lifecycle_environments is string
+             else lifecycle_environments | default(omit) }}
+...
