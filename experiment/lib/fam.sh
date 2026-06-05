@@ -87,7 +87,7 @@ push_product_fam() {
     if ((num_capsules > 0)); then
         local test="${index_ten}9-capsules-sync-${product_code}"
         ap "${test}.log" \
-            -e "lces='$lces'" \
+            -e "lces='$lces_comma'" \
             playbooks/tests/FAM/capsule_sync.yaml
         e CapsuleSync "${logs}/${test}.log"
     fi # num_capsules > 0
