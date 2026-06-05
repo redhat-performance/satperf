@@ -595,45 +595,52 @@ get_base_content_fam() {
 
     num_capsules="$(get_num_hosts capsules)"
 
-    # 1. Fetch and publish per-product CVs
+    _pending_push_pid=''
+    _wait_push() {
+        [[ -n "$_pending_push_pid" ]] || return 0
+        wait "$_pending_push_pid"
+        _pending_push_pid=''
+    }
+
     for product in "${tested_products[@]}"; do
         fetch_product_fam "$product"
+
+        # Create/update CCVs with components added so far
+        composite_content_views="$(echo "$content_views" | jq -c 'map(select(.components))')"
+
+        section "Create, publish and promote CCVs (after $product)"
+        test="${index_ten}5fr-ccv-create-${product_code}"
+        apj $test \
+            -e "content_views='$composite_content_views'" \
+            playbooks/tests/FAM/content_views.yaml
+
+        test="${index_ten}5fr-ccv-publish-${product_code}"
+        ap "${test}.log" \
+            -e "content_views='$composite_content_views'" \
+            playbooks/tests/FAM/cv_publish.yaml
+        e ContentViewPublish "${logs}/${test}.log"
+
+        test="${index_ten}6f-ccv-version-promote-${product_code}"
+        ap "${test}.log" \
+            -e "content_views='$composite_content_views'" \
+            -e "lifecycle_environments='$lces_comma'" \
+            playbooks/tests/FAM/cv_version_promote.yaml
+        e ContentViewVersionPromote "${logs}/${test}.log"
+
+        # Push to capsules in background while next product fetches
+        if ((num_capsules > 0)); then
+            _wait_push
+            push_product_fam "$product" &
+            _pending_push_pid=$!
+        fi
     done
+    _wait_push
 
-    # 2. Create, publish, promote CCVs (once, with all product components)
-    section 'Create, publish and promote CCVs'
-    composite_content_views="$(echo "$content_views" | jq -c 'map(select(.components))')"
-
-    test=55fr-ccv-create
-    apj $test \
-        -e "content_views='$composite_content_views'" \
-        playbooks/tests/FAM/content_views.yaml
-
-    test=55fr-ccv-publish
-    ap "${test}.log" \
-        -e "content_views='$composite_content_views'" \
-        playbooks/tests/FAM/cv_publish.yaml
-    e ContentViewPublish "${logs}/${test}.log"
-
-    test=56f-ccv-version-promote
-    ap "${test}.log" \
-        -e "content_views='$composite_content_views'" \
-        -e "lifecycle_environments='$lces_comma'" \
-        playbooks/tests/FAM/cv_version_promote.yaml
-    e ContentViewVersionPromote "${logs}/${test}.log"
-
-    # 3. Create/update AKs (all CCVs now promoted to LCEs)
+    # Create/update AKs (all CCVs now fully assembled and promoted)
     test=57fr-ak-create_update
     apj $test \
         -e "activation_keys='$activation_keys'" \
         playbooks/tests/FAM/activation_keys.yaml
-
-    # 4. Push all content to capsules (CVs + CCVs, once)
-    if ((num_capsules > 0)); then
-        for product in "${tested_products[@]}"; do
-            push_product_fam "$product"
-        done
-    fi
 
 } # get_base_content_fam
 
