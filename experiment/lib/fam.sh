@@ -1086,7 +1086,8 @@ cleanup_fam() {
 
     test="${index_ten}4fr-product-delete"
     apj $test \
-        -e "products='$products'"
+        -e "products='$products'" \
+        playbooks/tests/FAM/repositories.yaml
 
 } # cleanup_fam
 
