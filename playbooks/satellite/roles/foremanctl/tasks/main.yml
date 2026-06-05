@@ -11,6 +11,15 @@
               - foreman_version is defined and foreman_version | length > 0
               - katello_version is defined and katello_version | length > 0
 
+        - name: EL 9
+          when:
+            - ansible_facts['distribution_major_version'] | int == 9
+          block:
+            - name: Enable foremanctl COPR
+              community.general.copr:
+                name: "@theforeman/foremanctl"
+                chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
+
     - name: Satellite
       when:
         - product is not defined or product == 'satellite'
@@ -20,15 +29,6 @@
             name: repo_setup
           vars:
             sat_version: 'stream'
-
-- name: EL 9
-  when:
-    - ansible_facts['distribution_major_version'] | int == 9
-  block:
-    - name: Enable foremanctl COPR
-      community.general.copr:
-        name: "@theforeman/foremanctl"
-        chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
 
 - name: EL 10
   when:
@@ -43,8 +43,6 @@
   ansible.builtin.dnf:
     name: foremanctl
     state: latest
-    # # XXX:
-    # disable_gpg_check: true
 
 - name: Use code from git
   when:
@@ -127,6 +125,15 @@
   when:
     - override_images_content_file is defined and override_images_content_file | length > 0
 
+- name: Show images.yml content
+  ansible.builtin.slurp:
+    src: /usr/share/foremanctl/src/vars/images.yml
+  register: _foremanctl_images_yml
+
+- name: Display images.yml
+  ansible.builtin.debug:
+    msg: "{{ (_foremanctl_images_yml.content | b64decode).split('\n') }}"
+
 - name: Set deployer command
   ansible.builtin.set_fact:
     _foremanctl_deployer: foremanctl
@@ -152,6 +159,12 @@
     - name: Show pull images output
       ansible.builtin.debug:
         var: _foremanctl_pull_images_cmd_out.stdout_lines
+      failed_when:
+        - _foremanctl_pull_images_cmd_out is failed
+
+    - name: Show pull images error output
+      ansible.builtin.debug:
+        var: _foremanctl_pull_images_cmd_out.stderr_lines
       failed_when:
         - _foremanctl_pull_images_cmd_out is failed
 
@@ -182,6 +195,12 @@
     - name: Show deployment output
       ansible.builtin.debug:
         var: _foremanctl_initial_deploy_cmd_out.stdout_lines
+      failed_when:
+        - _foremanctl_initial_deploy_cmd_out is failed
+
+    - name: Show deployment error output
+      ansible.builtin.debug:
+        var: _foremanctl_initial_deploy_cmd_out.stderr_lines
       failed_when:
         - _foremanctl_initial_deploy_cmd_out is failed
 
@@ -239,6 +258,12 @@
     - name: Show features deployment output
       ansible.builtin.debug:
         var: _foremanctl_add_features_cmd_out.stdout_lines
+      failed_when:
+        - _foremanctl_add_features_cmd_out is failed
+
+    - name: Show features deployment error output
+      ansible.builtin.debug:
+        var: _foremanctl_add_features_cmd_out.stderr_lines
       failed_when:
         - _foremanctl_add_features_cmd_out is failed
 

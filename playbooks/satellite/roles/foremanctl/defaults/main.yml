@@ -4,6 +4,6 @@ foremanctl_organization: theforeman
 foremanctl_repo: foremanctl
 
 foremanctl_features:
-  - foreman-proxy
   - hammer
+  - foreman-proxy
   - remote-execution
