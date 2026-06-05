@@ -1145,9 +1145,10 @@ rolling_cv_scaling_fam() {
 
     section 'Baseline sync (0 rolling CVs)'
     test=20fr-sync-baseline-0-rolling-cvs
-    apj $test \
+    ap "${test}.log" \
       -e "product='$cv_rolling_product'" \
       playbooks/tests/FAM/repo_sync.yaml
+    e ProductSync "${logs}/${test}.log"
 
     section 'Create rolling CVs in batches and measure sync after each'
     for (( batch_start=1; batch_start<=cv_rolling_count; batch_start+=cv_rolling_batch_size )); do
@@ -1167,9 +1168,10 @@ rolling_cv_scaling_fam() {
         done
 
         test="40fr-sync-with-${batch_end}-rolling-cvs"
-        apj $test \
+        ap "${test}.log" \
           -e "product='$cv_rolling_product'" \
           playbooks/tests/FAM/repo_sync.yaml
+        e ProductSync "${logs}/${test}.log"
     done
 } # rolling_cv_scaling_fam
 
