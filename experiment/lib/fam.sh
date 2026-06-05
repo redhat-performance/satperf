@@ -1037,12 +1037,12 @@ remote_execution_fam() {
 cleanup_fam() {
 
     section 'Delete all content hosts'
-    test=99-remove-hosts-if-any
+    test=999-remove-hosts-if-any
     ap "${test}.log" \
         playbooks/satellite/satellite-remove-hosts.yaml
 
     section 'Delete base LCE(s), CCV(s) and AK(s)'
-    index_ten=10
+    index_ten=100
 
     # Delete AKs
     activation_keys="$(echo "$activation_keys" |
@@ -1109,13 +1109,13 @@ setup_rolling_repos_fam() {
        --argjson repositories "$product_repositories" \
        '[{"name": $name, "repositories": $repositories}]')"
 
-    test=10fr-product-create-rolling
+    test=95fr-product-create-rolling
     skip_measurement=true apj $test \
       -e "products='$products'" \
       playbooks/tests/FAM/repositories.yaml
 
     section 'Initial repo sync'
-    test=14fr-repo-sync-rolling-initial
+    test=96fr-repo-sync-rolling-initial
     apj $test \
       -e "product='$cv_rolling_product'" \
       playbooks/tests/FAM/repo_sync.yaml
@@ -1144,7 +1144,7 @@ rolling_cv_scaling_fam() {
     local cv_rolling_prefix="${PARAM_cv_rolling_prefix:-BenchRollingCV}"
 
     section 'Baseline sync (0 rolling CVs)'
-    test=20fr-sync-baseline-0-rolling-cvs
+    test=97fr-sync-baseline-0-rolling-cvs
     ap "${test}.log" \
       -e "product='$cv_rolling_product'" \
       playbooks/tests/FAM/repo_sync.yaml
@@ -1159,7 +1159,7 @@ rolling_cv_scaling_fam() {
 
         for (( i=batch_start; i<=batch_end; i++ )); do
             cv="${cv_rolling_prefix}${i}"
-            test="30fr-cv-create-rolling-${cv}"
+            test="98fr-cv-create-rolling-${cv}"
             apj $test \
               -e "cv='$cv'" \
               -e "repositories='$cv_rolling_repos'" \
@@ -1167,7 +1167,7 @@ rolling_cv_scaling_fam() {
               playbooks/tests/FAM/cv_rolling_create.yaml
         done
 
-        test="40fr-sync-with-${batch_end}-rolling-cvs"
+        test="99fr-sync-with-${batch_end}-rolling-cvs"
         ap "${test}.log" \
           -e "product='$cv_rolling_product'" \
           playbooks/tests/FAM/repo_sync.yaml
