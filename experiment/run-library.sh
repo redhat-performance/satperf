@@ -294,8 +294,11 @@ function status_data_create() {
         return 1
     fi
 
-    # Activate tools virtualenv
-    source venv/bin/activate
+    # Activate tools virtualenv (once per process)
+    if [[ -z "$_sdc_venv_active" ]]; then
+        source venv/bin/activate
+        _sdc_venv_active=1
+    fi
 
     # Load variables
     sd_section="${SECTION:-default}"
@@ -320,22 +323,28 @@ function status_data_create() {
         sd_duration="$(( $( date -d @$sd_end_seconds +%s ) - $( date -d @$sd_start_seconds +%s ) ))"
     fi
     sd_kat_rpm=$1; shift
-    [[ -n $sd_kat_rpm ]] ||
+    [[ -n $sd_kat_rpm ]] || sd_kat_rpm="${_sdc_cached_kat_rpm:-}"
+    if [[ -z $sd_kat_rpm ]]; then
         sd_kat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
           -a 'rpm -q katello' \
           satellite6 2>/dev/null |
           tail -n 1 )"
-    sd_kat_ver_short="$( echo "$sd_kat_rpm" | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"   # "katello-3.16.0-0.2.master.el7.noarch" -> "3.16.0"
+        _sdc_cached_kat_rpm="$sd_kat_rpm"
+    fi
+    sd_kat_ver_short="$( echo "$sd_kat_rpm" | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"
     sd_kat_ver_y="$( echo "$sd_kat_ver_short" | awk -F'.' '{print $1"."$2}' )"
     sd_sat_rpm=$1; shift
-    [[ -n $sd_sat_rpm ]] ||
+    [[ -n $sd_sat_rpm ]] || sd_sat_rpm="${_sdc_cached_sat_rpm:-}"
+    if [[ -z $sd_sat_rpm ]]; then
         sd_sat_rpm="$( ansible $opts_adhoc \
           -m ansible.builtin.shell \
           -a 'rpm -q satellite' \
           satellite6 2>/dev/null |
           tail -n 1 )"
-    sd_sat_ver_short="$( echo "$sd_sat_rpm" | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"   # "satellite-6.15.1-1.el8.noarch" -> "6.15.1"
+        _sdc_cached_sat_rpm="$sd_sat_rpm"
+    fi
+    sd_sat_ver_short="$( echo "$sd_sat_rpm" | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"
     sd_sat_ver_y="$( echo "$sd_sat_ver_short" | awk -F'.' '{print $1"."$2}' )"
     sd_run=$1; shift
     sd_additional=$1
@@ -358,12 +367,13 @@ function status_data_create() {
         rdd_file="$sd_log.rdd.json"
         rm -f "$rdd_file"
     fi
-    if [[ -n $inventory ]]; then
-        sd_hostname="$( ansible $opts_adhoc \
+    if [[ -z "$_sdc_cached_hostname" ]] && [[ -n $inventory ]]; then
+        _sdc_cached_hostname="$( ansible $opts_adhoc \
           --list-hosts \
           satellite6 2>/dev/null |
           tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
     fi
+    sd_hostname="${_sdc_cached_hostname:-}"
     workdir_url="${workdir_url:-https://workdir-exporter.example.com/workspace}"
     sd_link="${workdir_url}/${JOB_NAME:-NA}/${sd_log}"
 
@@ -392,11 +402,14 @@ function status_data_create() {
 
     # Add monitoring data to the status data file (*.log.json)
     if [[ -n $grafana_host ]] && [[ -n $cluster_read_config ]]; then
-        local grafana_nodes="$( ansible $opts_adhoc \
-          --list-hosts \
-          satellite6,capsules 2>/dev/null | \
-          grep -v '^  hosts' | \
-          sed -e 's/^\s\+//' -e 's/\s\+$//' | sed 's/\./_/g' )"
+        if [[ -z "$_sdc_cached_grafana_nodes" ]]; then
+            _sdc_cached_grafana_nodes="$( ansible $opts_adhoc \
+              --list-hosts \
+              satellite6,capsules 2>/dev/null | \
+              grep -v '^  hosts' | \
+              sed -e 's/^\s\+//' -e 's/\s\+$//' | sed 's/\./_/g' )"
+        fi
+        local grafana_nodes="$_sdc_cached_grafana_nodes"
 
         # Collect monitoring data from all nodes in parallel.
         # Each node writes under measurements.<node_short>.* — separate
