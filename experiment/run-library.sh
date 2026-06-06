@@ -1003,6 +1003,27 @@ function ej() {
     return $rc
 }
 
+function _resolve_satellite_host() {
+    if [[ -z "$_cached_satellite_host" ]]; then
+        _cached_satellite_host="$( ansible $opts_adhoc \
+          --list-hosts \
+          satellite6 2>/dev/null |
+          tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    fi
+    echo "$_cached_satellite_host"
+}
+
+function _resolve_satellite_creds() {
+    if [[ -z "$_cached_satellite_creds" ]]; then
+        _cached_satellite_creds="$( ansible $opts_adhoc \
+          -m ansible.builtin.debug \
+          -a "msg={{ sat_user }}:{{ sat_pass }}" \
+          satellite6 2>/dev/null |
+          grep '"msg":' | cut -d '"' -f 4)"
+    fi
+    echo "$_cached_satellite_creds"
+}
+
 # Examine JSON role
 function ejr() {
     if $run_lib_dryrun; then
@@ -1090,10 +1111,7 @@ function task_examine() {
     [[ -n $task_id ]] || return 1
     local command="${3:-N/A}"
     local timeout="${4:-30}"
-    local satellite_host="$( ansible $opts_adhoc \
-      --list-hosts \
-      satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    local satellite_host="$( _resolve_satellite_host )"
     [[ -n $satellite_host ]] || return 2
     local log_report="$( echo "$log" | sed 's/\.log$/-duration.log/' )"
 
@@ -1146,16 +1164,9 @@ function j() {
     local log=$1
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [[ -n $job_invocation_id ]] || return 1
-    local satellite_host="$( ansible $opts_adhoc \
-      --list-hosts \
-      satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    local satellite_host="$( _resolve_satellite_host )"
     [[ -n $satellite_host ]] || return 2
-    local satellite_creds="$( ansible $opts_adhoc \
-      -m ansible.builtin.debug \
-      -a "msg={{ sat_user }}:{{ sat_pass }}" \
-      satellite6 2>/dev/null |
-      grep '"msg":' | cut -d '"' -f 4)"
+    local satellite_creds="$( _resolve_satellite_creds )"
     [[ -n $satellite_creds ]] || return 2
     local task_id="$( curl --silent --insecure \
       -u "$satellite_creds" \
@@ -1163,7 +1174,7 @@ function j() {
       -H 'Accept: application/json' \
       -H 'Content-Type: application/json' \
       --max-time 30 \
-      https://$satellite_host/api/job_invocations?search=id=$job_invocation_id |
+      "https://$satellite_host/api/job_invocations?search=id=$job_invocation_id" |
       python3 -c 'import json, sys; print(json.load(sys.stdin)["results"][0]["dynflow_task"]["id"])' )"
 
     task_examine "$log" "$task_id" "Investigating job invocation $job_invocation_id (task $task_id)"
@@ -1175,16 +1186,9 @@ function jsr() {
     local timeout="${2:-30}"
     local job_invocation_id="$( extract_job_invocation "$log" )"
     [[ -n $job_invocation_id ]] || return 1
-    local satellite_host="$( ansible $opts_adhoc \
-      --list-hosts \
-      satellite6 2>/dev/null |
-      tail -n 1 | sed -e 's/^\s\+//' -e 's/\s\+$//' -e 's/^ *//' )"
+    local satellite_host="$( _resolve_satellite_host )"
     [[ -n $satellite_host ]] || return 2
-    local satellite_creds="$( ansible $opts_adhoc \
-      -m ansible.builtin.debug \
-      -a "msg={{ sat_user }}:{{ sat_pass }}" \
-      satellite6 2>/dev/null |
-      grep '"msg":' | cut -d '"' -f 4 )"
+    local satellite_creds="$( _resolve_satellite_creds )"
     [[ -n $satellite_creds ]] || return 2
     local satellite_user="$( echo "$satellite_creds" | cut -d':' -f1 )"
     local satellite_pass="$( echo "$satellite_creds" | cut -d':' -f2 )"
