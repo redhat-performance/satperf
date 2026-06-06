@@ -61,10 +61,14 @@ class RequestTracker:
     def _on_request_failed(self, request) -> None:
         self._finalize(request, "failed")
 
-    def snapshot(self) -> int:
+    def snapshot(self) -> dict[str, float | int]:
         snapshot = len(self._records)
-        self._snapshot_baselines[snapshot] = monotonic() * 1000.0
-        return snapshot
+        baseline_ms = monotonic() * 1000.0
+        self._snapshot_baselines[snapshot] = baseline_ms
+        return {
+            "index": snapshot,
+            "baseline_ms": baseline_ms,
+        }
 
     @staticmethod
     def _relative_offsets(record: dict, baseline_ms: float) -> tuple[float | None, float | None]:
@@ -115,14 +119,27 @@ class RequestTracker:
             "finished_requests": len(intervals),
         }
 
-    def summary_since(self, snapshot: int, top_limit: int = 5, timeline_limit: int = 8) -> dict:
-        records = self._records[snapshot:]
-        baseline_ms = self._snapshot_baselines.get(snapshot)
+    def summary_since(self, snapshot: int | dict[str, float | int], top_limit: int = 5, timeline_limit: int = 8) -> dict:
+        if isinstance(snapshot, dict):
+            snapshot_index = int(snapshot.get("index", 0))
+            baseline_ms = snapshot.get("baseline_ms")
+            baseline_ms = float(baseline_ms) if isinstance(baseline_ms, (int, float)) else None
+        else:
+            snapshot_index = snapshot
+            baseline_ms = self._snapshot_baselines.get(snapshot_index)
+
+        records = self._records[snapshot_index:]
         if baseline_ms is None and records:
             first_start = records[0].get("start_ms")
             baseline_ms = first_start if isinstance(first_start, (int, float)) else monotonic() * 1000.0
         elif baseline_ms is None:
             baseline_ms = monotonic() * 1000.0
+
+        records = [
+            record
+            for record in records
+            if isinstance(record.get("start_ms"), (int, float)) and record["start_ms"] >= baseline_ms
+        ]
 
         by_resource_type: dict[str, int] = {}
         for record in records:
@@ -629,11 +646,16 @@ def perform_search_interaction(page, search_term: str, timeout_ms: int) -> dict:
     raise RuntimeError(f"Search results did not stabilize for query '{search_term}'")
 
 
+def _resolve_href_target(page, detail_href: str):
+    return page.locator(f"a[href={json.dumps(detail_href)}]").first
+
+
 def _activation_targets(page, target, detail_href: str | None):
     targets = []
     if detail_href:
-        targets.append(("href", page.locator(f"a[href={json.dumps(detail_href)}]").first))
-    targets.append(("selected", target))
+        targets.append(("href", lambda: _resolve_href_target(page, detail_href)))
+    else:
+        targets.append(("selected", lambda: target))
     return targets
 
 
@@ -678,7 +700,6 @@ def _js_click_href(page, detail_href: str) -> bool:
             detail_href,
         )
     )
-
 
 
 def activation_diagnostic_prefix() -> str:
@@ -878,40 +899,209 @@ def stop_activation_diagnostics(page) -> bool:
     )
 
 
+def _start_activation_signal_probe(page, detail_href: str | None) -> bool:
+    if not detail_href:
+        return False
+    return bool(
+        page.evaluate(
+            """
+            (href) => {
+              const visible = (element) => {
+                if (!element) return false;
+                const style = window.getComputedStyle(element);
+                const rect = element.getBoundingClientRect();
+                return style &&
+                  style.visibility !== 'hidden' &&
+                  style.display !== 'none' &&
+                  rect.width > 0 &&
+                  rect.height > 0;
+              };
+              const findAnchor = () =>
+                [...document.querySelectorAll('a[href]')].find(
+                  (element) => element.getAttribute('href') === href && visible(element)
+                ) || null;
+
+              if (window.__satperfActivationSignalCleanup) {
+                try {
+                  window.__satperfActivationSignalCleanup();
+                } catch (error) {
+                  console.warn('satperf activation signal cleanup failed', error);
+                }
+              }
+
+              const anchor = findAnchor();
+              const row = anchor ? anchor.closest('tr,[role="row"],.pf-v5-c-card,.pf-v6-c-card') : null;
+              const observeRoot = row?.parentElement || row || anchor?.parentElement || anchor || document.body;
+              const state = {
+                anchor_found: !!anchor,
+                row_found: !!row,
+                mutation_count: 0,
+                trusted_anchor_clicks: 0,
+                trusted_row_clicks: 0,
+                trusted_non_anchor_row_clicks: 0,
+                untrusted_anchor_clicks: 0,
+                beforeunload_count: 0,
+                pagehide_count: 0,
+              };
+
+              const documentListener = (event) => {
+                const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+                const pathAnchor =
+                  path.find(
+                    (node) =>
+                      node &&
+                      node.nodeType === Node.ELEMENT_NODE &&
+                      node.tagName &&
+                      node.tagName.toLowerCase() === 'a' &&
+                      node.getAttribute('href') === href
+                  ) || null;
+                const inRow = !!(
+                  row &&
+                  path.some((node) => node === row || (node?.nodeType === Node.ELEMENT_NODE && row.contains(node)))
+                );
+                if (!pathAnchor && !inRow) return;
+                if (event.isTrusted && inRow) {
+                  state.trusted_row_clicks += 1;
+                  if (!pathAnchor) {
+                    state.trusted_non_anchor_row_clicks += 1;
+                  }
+                }
+                if (pathAnchor) {
+                  if (event.isTrusted) {
+                    state.trusted_anchor_clicks += 1;
+                  } else {
+                    state.untrusted_anchor_clicks += 1;
+                  }
+                }
+              };
+
+              for (const type of ['mousedown', 'mouseup', 'click']) {
+                document.addEventListener(type, documentListener, true);
+              }
+
+              const observer = new MutationObserver((records) => {
+                state.mutation_count += records.length;
+              });
+              observer.observe(observeRoot, { subtree: true, childList: true, attributes: true });
+
+              const onBeforeUnload = () => {
+                state.beforeunload_count += 1;
+              };
+              const onPageHide = () => {
+                state.pagehide_count += 1;
+              };
+              window.addEventListener('beforeunload', onBeforeUnload);
+              window.addEventListener('pagehide', onPageHide);
+
+              window.__satperfActivationSignalCleanup = () => {
+                observer.disconnect();
+                window.removeEventListener('beforeunload', onBeforeUnload);
+                window.removeEventListener('pagehide', onPageHide);
+                for (const type of ['mousedown', 'mouseup', 'click']) {
+                  document.removeEventListener(type, documentListener, true);
+                }
+                delete window.__satperfActivationSignalCleanup;
+                return state;
+              };
+              return true;
+            }
+            """,
+            detail_href,
+        )
+    )
+
+
+def _stop_activation_signal_probe(page) -> dict:
+    return page.evaluate(
+        """
+        () => {
+          if (window.__satperfActivationSignalCleanup) {
+            return window.__satperfActivationSignalCleanup();
+          }
+          return {};
+        }
+        """
+    )
+
+
+def _should_prefer_direct_anchor_activation(signal_summary: dict) -> bool:
+    trusted_non_anchor_row_clicks = signal_summary.get("trusted_non_anchor_row_clicks", 0)
+    trusted_anchor_clicks = signal_summary.get("trusted_anchor_clicks", 0)
+    mutation_count = signal_summary.get("mutation_count", 0)
+    return (trusted_non_anchor_row_clicks > 0 and trusted_anchor_clicks == 0) or (
+        mutation_count > 0 and trusted_non_anchor_row_clicks > 0
+    )
+
+
+def _activation_actions(page, detail_href: str | None, prefer_direct_anchor_activation: bool = False):
+    if detail_href and prefer_direct_anchor_activation:
+        return [
+            ("js-click", lambda _locator, _timeout_ms: _js_click_href(page, detail_href)),
+            ("click", lambda locator, timeout_ms: locator.click(timeout=timeout_ms)),
+            ("force-click", lambda locator, timeout_ms: locator.click(timeout=timeout_ms, force=True)),
+        ]
+    actions = [
+        ("click", lambda locator, timeout_ms: locator.click(timeout=timeout_ms)),
+        ("force-click", lambda locator, timeout_ms: locator.click(timeout=timeout_ms, force=True)),
+    ]
+    if detail_href:
+        actions.append(("js-click", lambda _locator, _timeout_ms: _js_click_href(page, detail_href)))
+    return actions
+
+
 def activate_drilldown_target(page, target, detail_href: str | None, timeout_ms: int) -> str:
-    click_timeout = min(timeout_ms, 5000)
-    route_wait_timeout = min(timeout_ms, 2000)
+    click_timeout = min(timeout_ms, 1500)
+    route_wait_timeout = min(timeout_ms, 1000)
     initial_route = current_path(page)
     expected_route = normalize_path(detail_href) if detail_href else None
+    deadline = monotonic() + (timeout_ms / 1000.0)
     last_error = None
-    for target_name, activation_target in _activation_targets(page, target, detail_href):
-        try:
-            activation_target.scroll_into_view_if_needed(timeout=click_timeout)
-        except Exception:
-            pass
-
-        try:
-            activation_target.click(timeout=click_timeout)
-            if _wait_for_detail_route(page, expected_route, initial_route, route_wait_timeout):
-                return f"{target_name}-click"
-        except Exception as exc:
-            last_error = exc
-
-        try:
-            activation_target.click(timeout=click_timeout, force=True)
-            if _wait_for_detail_route(page, expected_route, initial_route, route_wait_timeout):
-                return f"{target_name}-force-click"
-        except Exception as exc:
-            last_error = exc
-
-        if target_name == "href" and detail_href:
+    prefer_direct_anchor_activation = False
+    while monotonic() < deadline:
+        for target_name, activation_target_factory in _activation_targets(page, target, detail_href):
+            activation_target = activation_target_factory()
             try:
-                if _js_click_href(page, detail_href) and _wait_for_detail_route(
-                    page, expected_route, initial_route, route_wait_timeout
+                activation_target.scroll_into_view_if_needed(timeout=click_timeout)
+            except Exception:
+                pass
+
+            for action_name, action in _activation_actions(
+                page,
+                detail_href if target_name == "href" else None,
+                prefer_direct_anchor_activation=prefer_direct_anchor_activation,
+            ):
+                signal_probe_started = False
+                signal_summary = {}
+                try:
+                    signal_probe_started = _start_activation_signal_probe(page, detail_href if target_name == "href" else None)
+                    action(activation_target, click_timeout)
+                except Exception as exc:
+                    last_error = exc
+                    if signal_probe_started:
+                        signal_summary = _stop_activation_signal_probe(page)
+                        prefer_direct_anchor_activation = (
+                            prefer_direct_anchor_activation or _should_prefer_direct_anchor_activation(signal_summary)
+                        )
+                    continue
+                if signal_probe_started:
+                    signal_summary = _stop_activation_signal_probe(page)
+                    prefer_direct_anchor_activation = (
+                        prefer_direct_anchor_activation or _should_prefer_direct_anchor_activation(signal_summary)
+                    )
+
+                if _wait_for_detail_route(page, expected_route, initial_route, route_wait_timeout):
+                    return f"{target_name}-{action_name}"
+
+                if (
+                    action_name != "js-click"
+                    and detail_href
+                    and _should_prefer_direct_anchor_activation(signal_summary)
                 ):
-                    return f"{target_name}-js-click"
-            except Exception as exc:
-                last_error = exc
+                    break
+
+            if current_path(page) != initial_route:
+                return f"{target_name}-route-change"
+        page.wait_for_timeout(100)
 
     if last_error is not None:
         raise last_error
