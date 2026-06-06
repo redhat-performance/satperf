@@ -11,6 +11,7 @@ CONTENT_SETTLE_MS = 750
 CONTENT_POLL_MS = 250
 GENERIC_DRILLDOWN_WAIT_MS = 5000
 LINK_INSPECTION_TIMEOUT_MS = 250
+ACTIVATION_DIAGNOSTIC_PREFIX = "SATPERF_ACTIVATION_DIAG "
 
 
 class RequestTracker:
@@ -675,6 +676,204 @@ def _js_click_href(page, detail_href: str) -> bool:
             }
             """,
             detail_href,
+        )
+    )
+
+
+
+def activation_diagnostic_prefix() -> str:
+    return ACTIVATION_DIAGNOSTIC_PREFIX
+
+
+def start_activation_diagnostics(page, detail_href: str | None) -> dict:
+    return page.evaluate(
+        """
+        ({ href, prefix }) => {
+          const visible = (element) => {
+            if (!element) return false;
+            const style = window.getComputedStyle(element);
+            const rect = element.getBoundingClientRect();
+            return style &&
+              style.visibility !== 'hidden' &&
+              style.display !== 'none' &&
+              rect.width > 0 &&
+              rect.height > 0;
+          };
+          const summarize = (element) => {
+            if (!element || !element.tagName) return null;
+            const className =
+              typeof element.className === 'string'
+                ? element.className
+                : (element.getAttribute && element.getAttribute('class')) || '';
+            return {
+              tag: element.tagName.toLowerCase(),
+              id: element.id || null,
+              classes: className.split(/\\s+/).filter(Boolean).slice(0, 6),
+              href: element.getAttribute ? element.getAttribute('href') : null,
+              text: ((element.innerText || element.textContent || '').replace(/\\s+/g, ' ').trim()).slice(0, 160),
+            };
+          };
+          const emit = (kind, payload = {}) => {
+            console.log(
+              prefix +
+                JSON.stringify({
+                  kind,
+                  t: Number((performance.now() - startedAt).toFixed(2)),
+                  route: location.pathname + location.search + location.hash,
+                  ...payload,
+                })
+            );
+          };
+          const findAnchor = () => {
+            if (!href) return null;
+            return [...document.querySelectorAll('a[href]')].find(
+              (element) => element.getAttribute('href') === href && visible(element)
+            ) || null;
+          };
+
+          if (window.__satperfActivationCleanup) {
+            try {
+              window.__satperfActivationCleanup();
+            } catch (error) {
+              console.warn('satperf activation cleanup failed', error);
+            }
+          }
+
+          const anchor = findAnchor();
+          const row = anchor ? anchor.closest('tr,[role="row"],.pf-v5-c-card,.pf-v6-c-card') : null;
+          const observeRoot = row?.parentElement || row || anchor?.parentElement || anchor || document.body;
+          const startedAt = performance.now();
+          let mutationCount = 0;
+          let routeState = location.pathname + location.search + location.hash;
+
+          emit('start', {
+            detail_href: href,
+            anchor: summarize(anchor),
+            row: summarize(row),
+            observe_root: summarize(observeRoot),
+          });
+
+          const documentListener = (event) => {
+            const path = typeof event.composedPath === 'function' ? event.composedPath() : [];
+            const pathAnchor =
+              path.find(
+                (node) =>
+                  node &&
+                  node.nodeType === Node.ELEMENT_NODE &&
+                  node.tagName &&
+                  node.tagName.toLowerCase() === 'a' &&
+                  (!href || node.getAttribute('href') === href)
+              ) || null;
+            const inRow = !!(row && path.some((node) => node === row || (node?.nodeType === Node.ELEMENT_NODE && row.contains(node))));
+            if (!pathAnchor && !inRow) return;
+            emit('dom-event', {
+              event: event.type,
+              button: event.button,
+              detail: event.detail,
+              is_trusted: !!event.isTrusted,
+              target: summarize(event.target),
+              matched_anchor: summarize(pathAnchor),
+              in_row: inRow,
+            });
+          };
+
+          for (const type of ['mousedown', 'mouseup', 'click']) {
+            document.addEventListener(type, documentListener, true);
+          }
+
+          const onPopState = () => emit('popstate');
+          const onHashChange = () => emit('hashchange');
+          const onPageHide = () => emit('pagehide');
+          const onBeforeUnload = () => emit('beforeunload');
+          window.addEventListener('popstate', onPopState);
+          window.addEventListener('hashchange', onHashChange);
+          window.addEventListener('pagehide', onPageHide);
+          window.addEventListener('beforeunload', onBeforeUnload);
+
+          const originalPushState = history.pushState.bind(history);
+          history.pushState = function (...args) {
+            const before = location.pathname + location.search + location.hash;
+            const result = originalPushState(...args);
+            const after = location.pathname + location.search + location.hash;
+            routeState = after;
+            emit('pushState', { from: before, to: after });
+            return result;
+          };
+
+          const originalReplaceState = history.replaceState.bind(history);
+          history.replaceState = function (...args) {
+            const before = location.pathname + location.search + location.hash;
+            const result = originalReplaceState(...args);
+            const after = location.pathname + location.search + location.hash;
+            routeState = after;
+            emit('replaceState', { from: before, to: after });
+            return result;
+          };
+
+          const routePoll = window.setInterval(() => {
+            const current = location.pathname + location.search + location.hash;
+            if (current !== routeState) {
+              emit('route-poll-change', { from: routeState, to: current });
+              routeState = current;
+            }
+          }, 50);
+
+          const observer = new MutationObserver((records) => {
+            for (const record of records) {
+              if (mutationCount >= 80) return;
+              mutationCount += 1;
+              emit('mutation', {
+                mutation_type: record.type,
+                target: summarize(record.target),
+                attribute_name: record.attributeName || null,
+                added_nodes: record.addedNodes.length,
+                removed_nodes: record.removedNodes.length,
+              });
+            }
+          });
+          observer.observe(observeRoot, { subtree: true, childList: true, attributes: true });
+
+          window.__satperfActivationCleanup = () => {
+            observer.disconnect();
+            window.clearInterval(routePoll);
+            history.pushState = originalPushState;
+            history.replaceState = originalReplaceState;
+            window.removeEventListener('popstate', onPopState);
+            window.removeEventListener('hashchange', onHashChange);
+            window.removeEventListener('pagehide', onPageHide);
+            window.removeEventListener('beforeunload', onBeforeUnload);
+            for (const type of ['mousedown', 'mouseup', 'click']) {
+              document.removeEventListener(type, documentListener, true);
+            }
+            emit('cleanup');
+            delete window.__satperfActivationCleanup;
+            return true;
+          };
+
+          return {
+            enabled: true,
+            detail_href: href,
+            anchor: summarize(anchor),
+            row: summarize(row),
+            observe_root: summarize(observeRoot),
+          };
+        }
+        """,
+        {"href": detail_href, "prefix": ACTIVATION_DIAGNOSTIC_PREFIX},
+    )
+
+
+def stop_activation_diagnostics(page) -> bool:
+    return bool(
+        page.evaluate(
+            """
+            () => {
+              if (window.__satperfActivationCleanup) {
+                return window.__satperfActivationCleanup();
+              }
+              return false;
+            }
+            """
         )
     )
 
