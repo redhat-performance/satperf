@@ -398,11 +398,17 @@ function status_data_create() {
           grep -v '^  hosts' | \
           sed -e 's/^\s\+//' -e 's/\s\+$//' | sed 's/\./_/g' )"
 
+        # Collect monitoring data from all nodes in parallel.
+        # Each node writes under measurements.<node_short>.* — separate
+        # subtrees, no conflicts — so we merge with jq afterwards.
+        local node_pids=()
+        local node_files=()
         for grafana_node in $grafana_nodes; do
+            local node_sd_file="$( mktemp )"
+            cp "$sd_file" "$node_sd_file"
             set -x
-            # `node_short` will be used as Jinja2 variable in `$cluster_read_config`
             node_short="$( echo $grafana_node | cut -d'_' -f1 )" status_data.py -d \
-              --status-data-file "$sd_file" \
+              --status-data-file "$node_sd_file" \
               --additional $cluster_read_config \
               --monitoring-start $sd_start \
               --monitoring-end $sd_end \
@@ -412,9 +418,21 @@ function status_data_create() {
               --grafana-datasource $grafana_datasource \
               --grafana-interface $grafana_interface \
               --grafana-token $grafana_token \
-              --grafana-node $grafana_node
+              --grafana-node $grafana_node &
             set +x
+            node_pids+=($!)
+            node_files+=("$node_sd_file")
         done
+        for pid in "${node_pids[@]}"; do
+            wait "$pid"
+        done
+
+        for node_file in "${node_files[@]}"; do
+            jq -s '.[0] * .[1]' "$sd_file" "$node_file" > "${sd_file}.tmp" \
+              && mv "${sd_file}.tmp" "$sd_file"
+            rm -f "$node_file"
+        done
+        [[ -f "${sd_file}.tmp" ]] && rm -f "${sd_file}.tmp"
     fi
 
     # Only continue uploading results to ES and RP if `GOLDEN`
