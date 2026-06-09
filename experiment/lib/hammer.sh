@@ -102,18 +102,16 @@ sync_extra_content() {
 } # sync_extra_content
 
 concurrent_execution() {
-    local _base_tasks='registration'
-    $enable_iop && _base_tasks+=' insights-client'
-    _base_tasks+=' subscription-manager_refresh container_pull'
+    local _base_tasks='registration subscription-manager_refresh'
     if vercmp_ge "$sat_version" '6.17.0'; then
-        tasks_list="${PARAM_tasks_list:-$_base_tasks flatpak_install}"
-    else
-        tasks_list="${PARAM_tasks_list:-$_base_tasks}"
+        $enable_iop && _base_tasks+=' insights-client'
+        _base_tasks+=' container_pull flatpak_install'
     fi
+    tasks_list="${PARAM_tasks_list:-$_base_tasks}"
 
-    if [[ "$tasks_list" == *registration* ]]; then
-        prepare_registrations_fam
-    fi
+    # if [[ "$tasks_list" == *registration* ]]; then
+    #     prepare_registrations_fam
+    # fi
 
     section 'Incremental concurrent execution'
     num_container_hosts="${num_container_hosts:-$(get_num_hosts container_hosts)}"
