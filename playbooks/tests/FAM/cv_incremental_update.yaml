@@ -105,5 +105,5 @@
       vars:
         _foreman_task_id: "{{ __fire_result.json.id }}"
         _task_timeout: "{{ _timeout }}"
-      when: __fire_result.json is defined
+      when: __fire_result.json is defined and __fire_result.status == 202
 ...

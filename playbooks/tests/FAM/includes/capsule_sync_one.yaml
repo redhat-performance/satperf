@@ -24,6 +24,7 @@
         _foreman_task_id: "{{ __fire_result.json.id }}"
         _task_timeout: "{{ _sync_max_time }}"
         _delegate_to: localhost
+      when: __fire_result.status == 202
 
   rescue:
     - name: "Retry {{ _task_name }}"
@@ -49,3 +50,4 @@
         _foreman_task_id: "{{ __fire_result_retry.json.id }}"
         _task_timeout: "{{ _sync_max_time }}"
         _delegate_to: localhost
+      when: __fire_result_retry.status == 202

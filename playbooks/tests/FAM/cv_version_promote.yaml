@@ -92,7 +92,7 @@
       vars:
         _foreman_task_id: "{{ item.json.id }}"
       loop: "{{ __fire_results.results }}"
-      when: item.json is defined
+      when: item.json is defined and item.status == 202
       loop_control:
         label: "{{ item.item.resources[0].content_view.name | default('CV') }}"
 ...
