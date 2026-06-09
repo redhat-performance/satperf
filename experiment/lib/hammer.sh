@@ -109,9 +109,9 @@ concurrent_execution() {
     fi
     tasks_list="${PARAM_tasks_list:-$_base_tasks}"
 
-    # if [[ "$tasks_list" == *registration* ]]; then
-    #     prepare_registrations_fam
-    # fi
+    if [[ "$tasks_list" == *registration* ]]; then
+        prepare_registrations_fam
+    fi
 
     section 'Incremental concurrent execution'
     num_container_hosts="${num_container_hosts:-$(get_num_hosts container_hosts)}"
