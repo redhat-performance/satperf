@@ -67,32 +67,14 @@
       retries: "{{ _api_call_retries }}"
       delay: "{{ _api_call_delay }}"
 
-    - name: "{{ _task_name }}"
-      ansible.builtin.uri:
-        url: "{{ _server_url }}/katello/api/content_view_versions/{{ (item.resources | sort(attribute='id') | last).id }}/promote"
-        method: POST
-        user: "{{ _username }}"
-        password: "{{ _password }}"
-        force_basic_auth: true
-        validate_certs: "{{ _validate_certs }}"
-        body_format: json
-        body:
+    - name: "Promote {{ (_cv_ver.resources | first).content_view.name | default('CV') }}"
+      ansible.builtin.include_tasks: includes/fire_and_wait_one.yaml
+      vars:
+        _url: "{{ _server_url }}/katello/api/content_view_versions/{{ (_cv_ver.resources | sort(attribute='id') | last).id }}/promote"
+        _body:
           environment_ids: "{{ _env_ids }}"
-        status_code: [200, 202]
-        timeout: 60
       loop: "{{ _cv_versions.results }}"
       loop_control:
-        label: "{{ (item.resources | first).content_view.name }}"
-      register: __fire_results
-      failed_when: >-
-        __fire_results is failed and
-        (_transient_errors | select('in', __fire_results.msg | default('')) | list | length == 0)
-
-    - ansible.builtin.include_tasks: includes/fam_wait_and_print.yaml
-      vars:
-        _foreman_task_id: "{{ item.json.id }}"
-      loop: "{{ __fire_results.results }}"
-      when: item.json is defined and item.status == 202
-      loop_control:
-        label: "{{ item.item.resources[0].content_view.name | default('CV') }}"
+        loop_var: _cv_ver
+        label: "{{ (_cv_ver.resources | first).content_view.name | default('CV') }}"
 ...

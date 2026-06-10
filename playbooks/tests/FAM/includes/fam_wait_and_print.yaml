@@ -90,5 +90,7 @@
       seconds
   vars:
     _foreman_task: "{{ __wait_result.task | default(__wait_result.entity | default({})) }}"
-  when: not (_no_print | default(false)) and __wait_result is defined and __wait_result is not skipped and __wait_result is succeeded
+  when:
+    - not (_no_print | default(false))
+    - __wait_result is defined and __wait_result is not skipped and __wait_result is succeeded
 ...
