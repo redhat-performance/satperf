@@ -1,14 +1,14 @@
 ---
 # Generic fire-and-wait for a Katello API POST that returns a Foreman task.
 #
-# Fires the POST, waits for the task via fam_wait_and_print, and on
+# Fires the POST, waits for the task via wait_and_print, and on
 # failure retries once (without printing, since the retry timing isn't
 # meaningful for measurement).
 #
 # Required variables:
 #   _url          — Katello API endpoint to POST to
 #   _body         — POST body (JSON)
-#   _task_name    — label for fam_wait_and_print (matched by e())
+#   _task_name    — label for wait_and_print (matched by e())
 #
 # Optional variables:
 #   _task_timeout — timeout in seconds (default: 14400)
@@ -31,11 +31,9 @@
       register: __fire_result
       delegate_to: "{{ _delegate_to | default(omit) }}"
 
-    - ansible.builtin.include_tasks: fam_wait_and_print.yaml
+    - ansible.builtin.include_tasks: wait_and_print.yaml
       vars:
         _foreman_task_id: "{{ __fire_result.json.id }}"
-        _task_timeout: "{{ _task_timeout | default(14400) }}"
-        _delegate_to: "{{ _delegate_to | default(omit) }}"
       when: __fire_result.status == 202
 
   rescue:
@@ -54,10 +52,8 @@
       register: __fire_result_retry
       delegate_to: "{{ _delegate_to | default(omit) }}"
 
-    - ansible.builtin.include_tasks: fam_wait_and_print.yaml
+    - ansible.builtin.include_tasks: wait_and_print.yaml
       vars:
         _foreman_task_id: "{{ __fire_result_retry.json.id }}"
-        _task_timeout: "{{ _task_timeout | default(14400) }}"
-        _delegate_to: "{{ _delegate_to | default(omit) }}"
         _no_print: true
       when: __fire_result_retry.status == 202

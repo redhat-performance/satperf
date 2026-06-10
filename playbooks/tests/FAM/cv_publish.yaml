@@ -32,14 +32,36 @@
       retries: "{{ _api_call_retries }}"
       delay: "{{ _api_call_delay }}"
 
-    - name: "Publish {{ (_cv_info.resources | first).name | default('CV') }}"
-      ansible.builtin.include_tasks: includes/fire_and_wait_one.yaml
-      vars:
-        _url: "{{ _server_url }}/katello/api/content_views/{{ (_cv_info.resources | first).id }}/publish"
-        _body:
+    - name: "{{ _task_name }}"
+      ansible.builtin.uri:
+        url: "{{ _server_url }}/katello/api/content_views/{{ (_cv_info.resources | first).id }}/publish"
+        method: POST
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        body_format: json
+        body:
           description: "{{ description | default(omit) }}"
+        status_code: [200, 202]
+        timeout: 60
       loop: "{{ _cv_infos.results }}"
       loop_control:
         loop_var: _cv_info
         label: "{{ (_cv_info.resources | first).name | default('CV') }}"
+      register: __fire_results
+      failed_when: >-
+        __fire_results is failed and
+        (_transient_errors | select('in', __fire_results.msg | default('')) | list | length == 0)
+
+    - name: "Wait for {{ _task_name }}"
+      ansible.builtin.include_tasks: ../includes/wait_or_retry_one.yaml
+      vars:
+        _foreman_task_id: "{{ item.json.id }}"
+        _url: "{{ _server_url }}/katello/api/content_views/{{ item.item.resources[0].id }}/publish"
+        _body:
+          description: "{{ description | default(omit) }}"
+      loop: "{{ __fire_results.results | selectattr('status', 'equalto', 202) | list }}"
+      loop_control:
+        label: "{{ item.item.resources[0].name | default('CV') }}"
 ...

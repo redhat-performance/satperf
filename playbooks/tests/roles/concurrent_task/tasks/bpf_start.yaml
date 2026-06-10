@@ -1,4 +1,8 @@
 ---
+- name: Gather memory facts
+  ansible.builtin.setup:
+    filter: ansible_memtotal_mb
+
 - name: Create profiling directory
   ansible.builtin.file:
     path: "{{ profile_base_dir }}"
@@ -6,11 +10,13 @@
     mode: '0700'
 
 - name: Start gathering BPF profile
+  vars:
+    _bpf_stack_storage_size: "{{ (ansible_memtotal_mb * 1024 * (bpf_stack_pct | default(0.01))) | int }}"
   ansible.builtin.shell:
     cmd: |
       /usr/share/bcc/tools/profile \
         -adf \
-        --stack-storage-size 1638400 \
+        --stack-storage-size {{ _bpf_stack_storage_size }} \
         >{{ profile_base_dir }}/{{ task_name | replace('-', '_') }}_profile-{{ size }}-{{ inventory_hostname }}.profile-folded
   async: 1800
   poll: 0

@@ -1,5 +1,5 @@
 ---
-# Shared wait-and-print logic for FAM playbooks.
+# Shared wait-and-print logic for Katello API playbooks.
 #
 # Waits for a Foreman task to complete, then prints its server-side
 # duration in a format parseable by e() + reg-average.py:
@@ -9,8 +9,8 @@
 #   _task_name       — label for the print line, matched by e()
 #
 # Caller must pass exactly one of:
-#   _async_jid       — Ansible async job ID (Pattern A: FAM module async)
-#   _foreman_task_id — Foreman task UUID (Pattern B: API call + wait_for_task)
+#   _async_jid       — Ansible async job ID (Pattern A: async module)
+#   _foreman_task_id — Foreman task UUID (Pattern B: API POST + poll)
 #
 # Optional variables:
 #   _task_timeout    — timeout in seconds (default: 14400)
@@ -23,7 +23,7 @@
   ansible.builtin.assert:
     that:
       - _async_jid is defined or _foreman_task_id is defined
-    msg: "fam_wait_and_print requires either _async_jid or _foreman_task_id"
+    msg: "wait_and_print requires either _async_jid or _foreman_task_id"
 
 - name: Define transient error patterns
   ansible.builtin.set_fact:
@@ -37,7 +37,7 @@
       - 'Service Unavailable'
       - 'Bad Gateway'
 
-# Pattern A: async FAM module
+# Pattern A: async module
 - when: _async_jid is defined
   block:
     - name: "Wait4{{ _task_name }}"
@@ -54,23 +54,28 @@
       failed_when: >-
         __wait_async_jid is finished and __wait_async_jid is failed
 
-# Pattern B: API call with Foreman task ID
+# Pattern B: poll Foreman task API
 - when: _foreman_task_id is defined
   block:
     - name: "Wait4{{ _task_name }}"
-      theforeman.foreman.wait_for_task:
-        task: "{{ _foreman_task_id }}"
-        timeout: "{{ _task_timeout | default(14400) }}"
+      ansible.builtin.uri:
+        url: "{{ _server_url }}/foreman_tasks/api/tasks/{{ _foreman_task_id }}"
+        method: GET
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
       delegate_to: "{{ _delegate_to | default(omit) }}"
       register: __wait_foreman_task_id
       until: >-
-        __wait_foreman_task_id is succeeded or
-        (__wait_foreman_task_id is failed and
-         (transient_errors | select('in', __wait_foreman_task_id.msg | default('')) | list | length == 0))
-      retries: "{{ _num_retries | default(999) }}"
+        __wait_foreman_task_id is succeeded and
+        __wait_foreman_task_id.json.state in ['paused', 'stopped']
+      retries: "{{ (_task_timeout | default(14400) | int / _retry_delay | default(60) | int) | int }}"
       delay: "{{ _retry_delay | default(60) }}"
       failed_when: >-
-        __wait_foreman_task_id is failed
+        __wait_foreman_task_id is succeeded and
+        __wait_foreman_task_id.json.state in ['paused', 'stopped'] and
+        __wait_foreman_task_id.json.result != 'success'
 
 - name: "Unify {{ _task_name }} result"
   ansible.builtin.set_fact:
@@ -89,7 +94,7 @@
       {{ _foreman_task.duration }}
       seconds
   vars:
-    _foreman_task: "{{ __wait_result.task | default(__wait_result.entity | default({})) }}"
+    _foreman_task: "{{ __wait_result.json | default(__wait_result.task | default(__wait_result.entity | default({}))) }}"
   when:
     - not (_no_print | default(false))
     - __wait_result is defined and __wait_result is not skipped and __wait_result is succeeded

@@ -101,9 +101,9 @@
         __fire_result is failed and
         (_transient_errors | select('in', __fire_result.msg | default('')) | list | length == 0)
 
-    - ansible.builtin.include_tasks: includes/fam_wait_and_print.yaml
+    - ansible.builtin.include_tasks: ../includes/wait_and_print.yaml
       vars:
         _foreman_task_id: "{{ __fire_result.json.id }}"
         _task_timeout: "{{ _timeout }}"
-      when: __fire_result.json is defined and __fire_result.status == 202
+      when: __fire_result.status == 202
 ...

@@ -1,0 +1,20 @@
+---
+# Wait for a Foreman task. On failure, retry the operation via
+# fire_and_wait_one.yaml (without printing, since the retry timing
+# isn't meaningful for measurement).
+#
+# Required variables:
+#   _foreman_task_id — Foreman task UUID to wait for
+#   _url             — API endpoint for retry fire
+#   _body            — POST body for retry fire
+#   _task_name       — label for wait_and_print
+
+- block:
+    - ansible.builtin.include_tasks: wait_and_print.yaml
+      vars:
+        _foreman_task_id: "{{ _foreman_task_id }}"
+
+  rescue:
+    - ansible.builtin.include_tasks: fire_and_wait_one.yaml
+      vars:
+        _no_print: true

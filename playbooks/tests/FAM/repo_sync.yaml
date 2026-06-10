@@ -11,6 +11,9 @@
       validate_certs: "{{ foreman_validate_certs | default(omit) }}"
       organization: "{{ foreman_organization }}"
 
+  vars_files:
+    - includes/fam_common_vars.yaml
+
   tasks:
     - name: Product
       when:
@@ -18,15 +21,92 @@
       vars:
         _task_name: "ProductSync"
       block:
-        - name: "{{ _task_name }}"
-          theforeman.foreman.repository_sync:
-            product: "{{ product }}"
-            repository: "{{ repository | default(omit) }}"
-          async: 14400
-          poll: 0
-          register: __fire_result
+        - name: Get product ID
+          theforeman.foreman.resource_info:
+            resource: products
+            search: 'name = "{{ product }}"'
+          register: _product_info
+          until: _product_info is succeeded
+          retries: "{{ _api_call_retries }}"
+          delay: "{{ _api_call_delay }}"
 
-        - ansible.builtin.include_tasks: includes/fam_wait_and_print.yaml
+        - name: "{{ _task_name }}"
+          ansible.builtin.uri:
+            url: "{{ _server_url }}/katello/api/products/{{ (_product_info.resources | first).id }}/sync"
+            method: POST
+            user: "{{ _username }}"
+            password: "{{ _password }}"
+            force_basic_auth: true
+            validate_certs: "{{ _validate_certs }}"
+            body_format: json
+            body: {}
+            status_code: [200, 202]
+            timeout: 60
+          register: __fire_result
+          failed_when: >-
+            __fire_result is failed and
+            (_transient_errors | select('in', __fire_result.msg | default('')) | list | length == 0)
+
+        - name: Wait for product sync
+          block:
+            - ansible.builtin.include_tasks: ../includes/wait_and_print.yaml
+              vars:
+                _foreman_task_id: "{{ __fire_result.json.id }}"
+              when: __fire_result.status == 202
+
+          rescue:
+            - name: Fetch failed sub-tasks
+              ansible.builtin.uri:
+                url: "{{ _server_url }}/foreman_tasks/api/tasks"
+                method: GET
+                user: "{{ _username }}"
+                password: "{{ _password }}"
+                force_basic_auth: true
+                validate_certs: "{{ _validate_certs }}"
+                body_format: json
+                body:
+                  search: "parent_task_id = {{ __fire_result.json.id }} AND result != success"
+                  per_page: 100
+              register: __failed_sub_tasks
+
+            - name: Extract failed repository IDs
+              ansible.builtin.set_fact:
+                _failed_repo_ids: >-
+                  {{ __failed_sub_tasks.json.results
+                     | map(attribute='input')
+                     | map(attribute='repository')
+                     | map(attribute='id')
+                     | list }}
+
+            - name: "Retry failed repos ({{ _failed_repo_ids | length }} of {{ __fire_result.json.input.target_ids | length }})"
+              ansible.builtin.include_tasks: ../includes/fire_and_wait_one.yaml
+              vars:
+                _url: "{{ _server_url }}/katello/api/repositories/{{ item }}/sync"
+                _body: {}
+                _task_name: "RepositorySync"
+                _no_print: true
+              loop: "{{ _failed_repo_ids }}"
+              loop_control:
+                label: "repo {{ item }}"
+
+    - name: Repository
+      when:
+        - repository is defined and repository | length > 0
+        - product is not defined or product | length == 0
+      vars:
+        _task_name: "RepositorySync"
+      block:
+        - name: Get repository ID
+          theforeman.foreman.resource_info:
+            resource: repositories
+            search: 'name = "{{ repository }}"'
+          register: _repo_info
+          until: _repo_info is succeeded
+          retries: "{{ _api_call_retries }}"
+          delay: "{{ _api_call_delay }}"
+
+        - ansible.builtin.include_tasks: ../includes/fire_and_wait_one.yaml
           vars:
-            _async_jid: "{{ __fire_result.ansible_job_id }}"
+            _url: "{{ _server_url }}/katello/api/repositories/{{ (_repo_info.resources | first).id }}/sync"
+            _body: {}
 ...

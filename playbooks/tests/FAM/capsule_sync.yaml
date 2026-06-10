@@ -29,6 +29,11 @@
     _content_views: >-
       {{ (content_views | from_yaml if content_views is string else content_views)
          if content_views is defined else [] }}
+    _delegate_to: localhost
+    _task_timeout: "{{ _sync_max_time }}"
+    _body_base: >-
+      {{ {'skip_metadata_check': true if mode | default('') == 'complete' else false,
+          'validate_contents': true if mode | default('') == 'validate_contents' else false} }}
 
   tasks:
     - name: Get capsule details
@@ -92,8 +97,14 @@
       delegate_to: localhost
       when: download_policy is defined or lces is defined
 
+    - name: Set fire_and_wait parameters
+      ansible.builtin.set_fact:
+        _url: "{{ _server_url }}/katello/api/capsules/{{ _capsule_id }}/content/sync"
+
     - name: "Sync content view {{ _sync_target.content_view_id | default('(all)') }}"
-      include_tasks: includes/capsule_sync_one.yaml
+      include_tasks: ../includes/fire_and_wait_one.yaml
+      vars:
+        _body: "{{ _body_base | combine(_sync_target) }}"
       loop: "{{ _sync_targets }}"
       loop_control:
         loop_var: _sync_target
