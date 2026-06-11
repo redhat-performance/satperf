@@ -92,11 +92,12 @@
     - name: "Wait for {{ _task_name }}"
       ansible.builtin.include_tasks: ../includes/wait_or_retry_one.yaml
       vars:
-        _foreman_task_id: "{{ item.json.id }}"
-        _url: "{{ _server_url }}/katello/api/content_view_versions/{{ (item.item.resources | sort(attribute='id') | last).id }}/promote"
+        _foreman_task_id: "{{ _wait_item.json.id }}"
+        _url: "{{ _server_url }}/katello/api/content_view_versions/{{ (_wait_item._cv_ver.resources | sort(attribute='id') | last).id }}/promote"
         _body:
           environment_ids: "{{ _env_ids }}"
       loop: "{{ __fire_results.results | selectattr('status', 'equalto', 202) | list }}"
       loop_control:
-        label: "{{ item.item.resources[0].content_view.name | default('CV') }}"
+        loop_var: _wait_item
+        label: "{{ (_wait_item._cv_ver.resources | first).content_view.name | default('CV') }}"
 ...

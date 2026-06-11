@@ -9,12 +9,20 @@
 #   _body            — POST body for retry fire
 #   _task_name       — label for wait_and_print
 
+- name: "Capture {{ _task_name }} retry parameters"
+  ansible.builtin.set_fact:
+    _retry_url: "{{ _url }}"
+    _retry_body: "{{ _body }}"
+    _retry_task_id: "{{ _foreman_task_id }}"
+
 - block:
     - ansible.builtin.include_tasks: wait_and_print.yaml
       vars:
-        _foreman_task_id: "{{ _foreman_task_id }}"
+        _foreman_task_id: "{{ _retry_task_id }}"
 
   rescue:
     - ansible.builtin.include_tasks: fire_and_wait_one.yaml
       vars:
+        _url: "{{ _retry_url }}"
+        _body: "{{ _retry_body }}"
         _no_print: true

@@ -69,11 +69,13 @@
       register: __wait_foreman_task_id
       until: >-
         __wait_foreman_task_id is succeeded and
+        __wait_foreman_task_id.json is defined and
         __wait_foreman_task_id.json.state in ['paused', 'stopped']
       retries: "{{ (_task_timeout | default(14400) | int / _retry_delay | default(60) | int) | int }}"
       delay: "{{ _retry_delay | default(60) }}"
       failed_when: >-
         __wait_foreman_task_id is succeeded and
+        __wait_foreman_task_id.json is defined and
         __wait_foreman_task_id.json.state in ['paused', 'stopped'] and
         __wait_foreman_task_id.json.result != 'success'
 
