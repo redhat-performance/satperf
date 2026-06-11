@@ -15,9 +15,9 @@
           when:
             - ansible_facts['distribution_major_version'] | int == 9
           block:
-            - name: Enable foremanctl COPR
+            - name: Enable Foreman develop COPR
               community.general.copr:
-                name: "@theforeman/foremanctl"
+                name: "@theforeman/develop"
                 chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
 
     - name: Satellite
