@@ -3,6 +3,20 @@
 # Functions using theforeman.foreman collection (apj + playbooks/tests/FAM/).
 # Suffixed with _fam so callers can switch from hammer to FAM per-section.
 
+# Build an AK JSON object with the right CV/LCE format for the Satellite version.
+# Satellite 6.17+ uses content_view_environments; older uses content_view + lifecycle_environment.
+# Katello PR #11753 (Redmine #39330) removed the old params from the API in 7.0/stream.
+_ak_json() {
+    local name="$1" lce="$2" cv="$3"
+    if vercmp_ge "$sat_version" '6.17.0'; then
+        jq -nc --arg name "$name" --arg cve "${lce}/${cv}" \
+            '{"name": $name, "content_view_environments": [$cve]}'
+    else
+        jq -nc --arg name "$name" --arg lce "$lce" --arg cv "$cv" \
+            '{"name": $name, "lifecycle_environment": $lce, "content_view": $cv}'
+    fi
+}
+
 create_lces_fam() {
     lces="${PARAM_lces:-Test QA Pre Prod}"
     lces_comma="$(echo "$lces" | tr ' ' ',')"
@@ -502,15 +516,8 @@ fetch_product_fam() {
                 ak="AK_${rel_num}_${lce}"
 
                 activation_keys="$(echo "$activation_keys" |
-                    jq -c \
-                        --arg name "$ak" \
-                        --arg lifecycle_environment "$lce" \
-                        --arg content_view "$ccv" \
-                        'if any(. | .name == $name) then
-                    .
-                  else
-                    . + [{"name": $name, "lifecycle_environment": $lifecycle_environment, "content_view": $content_view}]
-                  end')"
+                    jq -c --argjson new "$(_ak_json "$ak" "$lce" "$ccv")" \
+                        'if any(.name == $new.name) then . else . + [$new] end')"
             done # for lce in $lces
         else  # "$product" == "$sat_client_product"
             content_overrides="$(echo "$content_overrides" |
@@ -522,19 +529,14 @@ fetch_product_fam() {
                 ak="AK_${rel_num}_${lce}"
 
                 activation_keys="$(echo "$activation_keys" |
-                    jq -c \
-                        --arg name "$ak" \
-                        --arg lifecycle_environment "$lce" \
-                        --arg content_view "$ccv" \
+                    jq -c --argjson new "$(_ak_json "$ak" "$lce" "$ccv")" \
                         --argjson content_overrides "$content_overrides" \
-                        'if any(. | .name == $name) then
-                    map(if .name == $name then
+                        'if any(.name == $new.name) then
+                    map(if .name == $new.name then
                       .content_overrides += $content_overrides
-                    else
-                      .
-                    end)
+                    else . end)
                   else
-                    . + [{"name": $name, "lifecycle_environment": $lifecycle_environment, "content_view": $content_view, "content_overrides": $content_overrides}]
+                    . + [$new + {"content_overrides": $content_overrides}]
                   end')"
             done # for lce in $lces
         fi    # "$product" != "$sat_client_product"
