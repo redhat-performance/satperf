@@ -52,24 +52,11 @@
       ansible.builtin.set_fact:
         foremanctl_organization: "{{ organization | default('theforeman') }}"
 
-    - name: Vanilla git
-      when:
-        - version is not defined or version | length == 0
-      block:
-        - name: Clone foremanctl git repo # noqa: latest[git]
-          ansible.builtin.git:
-            repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
-            dest: /tmp/foremanctl
-
-    - name: Version
-      when:
-        - version is defined and version | length > 0
-      block:
-        - name: Clone foremanctl git repo
-          ansible.builtin.git:
-            repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
-            dest: /tmp/foremanctl
-            version: "{{ version }}"
+    - name: Clone foremanctl git repo # noqa: latest[git]
+      ansible.builtin.git:
+        repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
+        dest: /tmp/foremanctl
+        version: "{{ version | default(omit) }}"
 
     - name: Apply PRs
       when:
