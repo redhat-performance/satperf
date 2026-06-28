@@ -12,3 +12,16 @@
 # consecutive failures at the default 30s check interval):
 #   haproxy_registration_fall: 3
 haproxy_registration_fall: 9999
+
+# Timeouts for the host_registration frontend/backend (port 9090).
+# Registration requests can take minutes under high concurrency because
+# the capsule waits for Satellite to render the registration template.
+# The default `timeout client/server` of 1m/150s is too short — hosts
+# disconnect before the capsule can respond, producing SSL_read errors.
+haproxy_registration_timeout_client: 5m
+haproxy_registration_timeout_server: 5m
+
+# Maximum concurrent connections per capsule backend in the
+# host_registration backend. Queues excess connections at the LB instead
+# of flooding capsules. Set to 0 to disable (no per-server limit).
+haproxy_registration_maxconn: 500

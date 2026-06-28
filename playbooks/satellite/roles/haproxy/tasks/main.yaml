@@ -31,15 +31,31 @@
     state: true
     persistent: true
 
+- name: "Create HAProxy systemd override directory"
+  ansible.builtin.file:
+    path: /etc/systemd/system/haproxy.service.d
+    state: directory
+    mode: '0755'
+
+- name: "Raise file descriptor limit for HAProxy"
+  ansible.builtin.copy:
+    dest: /etc/systemd/system/haproxy.service.d/limits.conf
+    content: |
+      [Service]
+      LimitNOFILE=65536
+    mode: '0644'
+  notify: restart haproxy
+
 - name: "Configure HAproxy"
   ansible.builtin.template:
     src: haproxy.cfg.j2
     dest: /etc/haproxy/haproxy.cfg
     mode: '0644'
+  notify: restart haproxy
 
 - name: "Start and enable HAProxy systemd service unit"
   ansible.builtin.systemd_service:
     name: haproxy
-    state: restarted
+    state: started
     enabled: true
 ...

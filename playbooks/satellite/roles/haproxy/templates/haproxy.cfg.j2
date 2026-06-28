@@ -141,6 +141,7 @@ frontend host_registration
     bind *:9090
     mode tcp
     option                  tcplog
+    timeout client          {{ haproxy_registration_timeout_client }}
 
     default_backend         host_registration-backend
 
@@ -153,8 +154,10 @@ backend host_registration-backend
     option httpchk
     http-check send meth GET uri /features ver HTTP/1.1 hdr Host localhost
     http-check expect status 200
+    timeout server          {{ haproxy_registration_timeout_server }}
     balance roundrobin
 
 {% for capsule in lb_capsules %}
-    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check check-ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s
+    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check check-ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s{% if haproxy_registration_maxconn | int > 0 %} maxconn {{ haproxy_registration_maxconn }}{% endif %}
+
 {% endfor %}
