@@ -94,7 +94,7 @@ backend https-backend
     balance source
 
 {% for capsule in lb_capsules %}
-    server https-backend-{{loop.index}} {{ capsule }}:443 check
+    server https-backend-{{loop.index}} {{ capsule }}:443 check fall {{ haproxy_registration_fall }} rise 2 inter 30s
 {% endfor %}
 
 #---------------------------------------------------------------------
