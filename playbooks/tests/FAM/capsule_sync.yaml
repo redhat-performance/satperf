@@ -20,7 +20,7 @@
       # organization: "{{ foreman_organization }}"
 
   vars_files:
-    - includes/fam_common_vars.yaml
+    - ../includes/common_vars.yaml
 
   vars:
     _task_name: "CapsuleSync"
@@ -39,7 +39,7 @@
     - name: Get capsule details
       theforeman.foreman.resource_info:
         resource: capsules
-        search: "name = {{ inventory_hostname }}"
+        search: "name ~ {{ inventory_hostname }}"
         full_details: true
       register: _capsule_info
       until: _capsule_info is succeeded
@@ -47,9 +47,11 @@
       delay: "{{ _api_call_delay }}"
       delegate_to: localhost
 
-    - name: Set capsule ID
+    - name: Set capsule ID, name and URL
       ansible.builtin.set_fact:
         _capsule_id: "{{ _capsule_info.resources[0].id }}"
+        _capsule_name: "{{ _capsule_info.resources[0].name }}"
+        _capsule_url: "{{ _capsule_info.resources[0].url }}"
 
     - name: Resolve content view sync targets
       when: _content_views | length > 0
@@ -86,8 +88,8 @@
 
     - name: Configure capsule (LCEs and download policy)
       theforeman.foreman.smart_proxy:
-        name: "{{ inventory_hostname }}"
-        url: "https://{{ inventory_hostname }}:9090"
+        name: "{{ _capsule_name }}"
+        url: "{{ _capsule_url }}"
         download_policy: "{{ download_policy | default(omit) }}"
         lifecycle_environments: "{{ lces.split(',') if lces is defined else omit }}"
       until: _capsule_config is succeeded
