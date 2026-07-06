@@ -192,7 +192,7 @@
 
         - name: Calculate deployment duration
           ansible.builtin.set_fact:
-            _foremanctl_duration: >-
+            _foremanctl_deploy_duration: >-
               {{ (_foremanctl_initial_deploy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
                  - (_foremanctl_initial_deploy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
 
@@ -201,7 +201,7 @@
             msg: >-
               ForemanctlDeploy {{ _foremanctl_initial_deploy_cmd_out.start }}
               to {{ _foremanctl_initial_deploy_cmd_out.end }}
-              taking {{ _foremanctl_duration }} seconds
+              taking {{ _foremanctl_deploy_duration }} seconds
 
     - name: Add features
       block:
@@ -386,7 +386,7 @@
     - name: Set proxy deployment command line
       no_log: true
       ansible.builtin.set_fact:
-        _foremanctl_initial_deploy_cmd: >-
+        _foremanctl_initial_deploy_proxy_cmd: >-
           {{ _foremanctl_deploy_proxy_cmd }}
           --flavor {{ foremanctl_proxy_flavor }}
           --certificate-bundle {{ foremanctl_proxy_certificate_bundle_dest_path }}
@@ -397,7 +397,7 @@
 
     - name: Set redacted proxy deployment command line
       ansible.builtin.set_fact:
-        _foremanctl_initial_deploy_cmd_redacted: >-
+        _foremanctl_deploy_proxy_cmd_redacted: >-
           {{ _foremanctl_deploy_proxy_cmd }}
           --flavor {{ foremanctl_proxy_flavor }}
           --certificate-bundle {{ foremanctl_proxy_certificate_bundle_dest_path }}
@@ -408,36 +408,36 @@
 
     - name: Show redacted proxy deployment command line
       ansible.builtin.debug:
-        msg: "{{ _foremanctl_initial_deploy_cmd_redacted }}"
+        msg: "{{ _foremanctl_deploy_proxy_cmd_redacted }}"
 
     - name: Run proxy deployment
       ansible.builtin.command:
-        cmd: "{{ _foremanctl_initial_deploy_cmd }}"
-      register: _foremanctl_initial_deploy_cmd_out
+        cmd: "{{ _foremanctl_deploy_proxy_cmd }}"
+      register: _foremanctl_deploy_proxy_cmd_out
       ignore_errors: true
       changed_when: true
 
     - name: Show proxy deployment output
       ansible.builtin.debug:
-        var: _foremanctl_initial_deploy_cmd_out.stdout_lines
+        var: _foremanctl_deploy_proxy_cmd_out.stdout_lines
       failed_when:
-        - _foremanctl_initial_deploy_cmd_out is failed
+        - _foremanctl_deploy_proxy_cmd_out is failed
 
     - name: Show proxy deployment error output
       ansible.builtin.debug:
-        var: _foremanctl_initial_deploy_cmd_out.stderr_lines
+        var: _foremanctl_deploy_proxy_cmd_out.stderr_lines
       failed_when:
-        - _foremanctl_initial_deploy_cmd_out is failed
+        - _foremanctl_deploy_proxy_cmd_out is failed
 
     - name: Calculate proxy deployment duration
       ansible.builtin.set_fact:
-        _foremanctl_duration: >-
-          {{ (_foremanctl_initial_deploy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
-             - (_foremanctl_initial_deploy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
+        _foremanctl_deploy_proxy_duration: >-
+          {{ (_foremanctl_deploy_proxy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+             - (_foremanctl_deploy_proxy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
 
     - name: Show proxy deployment duration
       ansible.builtin.debug:
         msg: >-
-          ForemanctlDeploy {{ _foremanctl_initial_deploy_cmd_out.start }}
-          to {{ _foremanctl_initial_deploy_cmd_out.end }}
-          taking {{ _foremanctl_duration }} seconds
+          ForemanctlDeployProxy {{ _foremanctl_deploy_proxy_cmd_out.start }}
+          to {{ _foremanctl_deploy_proxy_cmd_out.end }}
+          taking {{ _foremanctl_deploy_proxy_duration }} seconds
