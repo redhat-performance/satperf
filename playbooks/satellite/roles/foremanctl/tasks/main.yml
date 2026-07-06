@@ -1,24 +1,25 @@
 ---
 - name: Requirements
   block:
-    - name: Foreman
+    - name: EL 9 COPR
       when:
-        - product is defined and product == 'foreman'
+        - ansible_facts['distribution_major_version'] | int == 9
+        - (product is defined and product == 'foreman') or foremanctl_deployment_type == 'proxy'
       block:
-        - name: Assert required Foreman facts
-          ansible.builtin.assert:
-            that:
-              - foreman_version is defined and foreman_version | length > 0
-              - katello_version is defined and katello_version | length > 0
 
-        - name: EL 9
-          when:
-            - ansible_facts['distribution_major_version'] | int == 9
-          block:
-            - name: Enable Foreman develop COPR
-              community.general.copr:
-                name: "@theforeman/develop"
-                chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
+        - name: Enable Foreman develop COPR
+          community.general.copr:
+            name: "@theforeman/develop"
+            chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
+
+    - name: EL 10 COPR
+      when:
+        - ansible_facts['distribution_major_version'] | int == 10
+      block:
+        - name: Enable foremanctl COPR
+          community.general.copr:
+            name: "ekohl/foreman-nightly-staging"
+            chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
 
     - name: Satellite
       when:
@@ -29,15 +30,6 @@
             name: repo_setup
           vars:
             sat_version: 'stream'
-
-- name: EL 10
-  when:
-    - ansible_facts['distribution_major_version'] | int == 10
-  block:
-    - name: Enable foremanctl COPR
-      community.general.copr:
-        name: "ekohl/foreman-nightly-staging"
-        chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
 
 - name: Install foremanctl package
   ansible.builtin.dnf:
@@ -57,6 +49,7 @@
         repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
         dest: /tmp/foremanctl
         version: "{{ version | default(omit) }}"
+        force: true
 
     - name: Apply PRs
       when:
