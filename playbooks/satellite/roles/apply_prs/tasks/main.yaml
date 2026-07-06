@@ -25,6 +25,7 @@
       - '*/spec/*'
 
 - name: Validate _apply_prs.targets
+  run_once: true
   ansible.builtin.assert:
     that:
       - _apply_prs.targets is sequence and _apply_prs.targets is not string
@@ -43,7 +44,20 @@
     state: present
     disable_plugin:
       - foreman-protector
-  when: _apply_prs.method | default('diff') == 'diff'
+  when: >-
+    _apply_prs.targets
+    | selectattr('exclude_patterns', 'defined')
+    | map(attribute='exclude_patterns')
+    | select()
+    | list
+    | length > 0
+    or (
+      _apply_prs.targets
+      | rejectattr('exclude_patterns', 'defined')
+      | list
+      | length > 0
+      and _apply_prs_default_exclude_patterns | length > 0
+    )
 
 - name: Apply PR
   ansible.builtin.shell:
@@ -66,3 +80,4 @@
   failed_when:
     - _apply_pr_result.rc != 0
     - "'Reversed (or previously applied) patch detected' not in _apply_pr_result.stdout"
+    - "'which already exists' not in _apply_pr_result.stdout"
