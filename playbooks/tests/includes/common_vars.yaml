@@ -1,0 +1,16 @@
+---
+_server_url: "{{ foreman_server_url | default('https://' + (groups['satellite6'] | first)) }}"
+_username: "{{ foreman_username | default(sat_user | default('admin')) }}"
+_password: "{{ foreman_password | default(sat_pass) }}"
+_validate_certs: "{{ foreman_validate_certs | default(false) }}"
+_organization: "{{ foreman_organization | default(sat_org | default('Default Organization')) }}"
+_api_call_retries: 10
+_api_call_delay: 30
+_transient_errors:
+  - 'Remote end closed connection without response'
+  - 'Internal Server Error'
+  - 'Connection timeout'
+  - 'Read timed out'
+  - 'Service Unavailable'
+  - 'Bad Gateway'
+  - 'The read operation timed out'
