@@ -410,7 +410,13 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
         # Run inventory once across all Locust users
         if not SatelliteWebUIPerfAssetInventory._inventory_done:
             SatelliteWebUIPerfAssetInventory._inventory_done = True
-            self._run_inventory()
+            try:
+                self._run_inventory()
+            except Exception:
+                logging.exception("Asset inventory failed")
+
+        if not SatelliteWebUIPerfAssetInventory._assets:
+            logging.error("No assets discovered — cold/warm tasks will be skipped")
 
         self.index = 0
 
@@ -419,9 +425,10 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
         assets = []
 
         # Crawl key pages for asset references (using requests, not Locust client)
+        host = self.environment.host
         for page in ["/users/login", "/", "/hosts"]:
-            with requests.get(f"{self.host_base}{page}", verify=False,
-                              cookies={c.name: c.value for c in self.client.cookiejar}) as resp:
+            with requests.get(f"{host}{page}", verify=False,
+                              cookies=dict(self.client.cookies)) as resp:
                 find_links = re.finditer(r'<link[^>]* href="(/[^"]+\.css[^"]*)"', resp.text)
                 find_scripts = re.finditer(r'<script[^>]* src="(/[^"]+\.js[^"]*)"', resp.text)
                 for match in itertools.chain(find_links, find_scripts):
@@ -435,7 +442,7 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
         total_js = 0
         total_css = 0
         for asset in assets:
-            with requests.get(f"{self.host_base}{asset['url']}", verify=False) as resp:
+            with requests.get(f"{host}{asset['url']}", verify=False) as resp:
                 size = len(resp.content)
                 asset["size"] = size
                 asset["etag"] = resp.headers.get("ETag")
@@ -455,6 +462,8 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
     @task(1)
     def cold_request(self):
         """Request asset without cache headers (simulates first visit)."""
+        if not SatelliteWebUIPerfAssetInventory._assets:
+            return
         asset = SatelliteWebUIPerfAssetInventory._assets[self.index]
         name = f"cold_{asset['type']}"
         self.client.get(asset["url"], verify=False, name=name)
@@ -463,6 +472,8 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
     @task(1)
     def warm_request(self):
         """Request asset with cache headers (simulates return visit)."""
+        if not SatelliteWebUIPerfAssetInventory._assets:
+            return
         asset = SatelliteWebUIPerfAssetInventory._assets[self.index]
         headers = {}
         if asset.get("etag"):
