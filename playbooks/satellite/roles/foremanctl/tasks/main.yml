@@ -118,12 +118,14 @@
   ansible.builtin.set_fact:
     _foremanctl_deployer: foremanctl
 
-- name: Set command line to pull images
-  ansible.builtin.set_fact:
-    _foremanctl_pull_images_cmd: "{{ _foremanctl_deployer }} pull-images"
-
 - name: Pull images
+  when:
+    - foremanctl_deployment_type == 'server'
   block:
+    - name: Set command line to pull images
+      ansible.builtin.set_fact:
+        _foremanctl_pull_images_cmd: "{{ _foremanctl_deployer }} pull-images"
+
     - name: Show command line to pull images
       ansible.builtin.debug:
         msg: "{{ _foremanctl_pull_images_cmd }}"
@@ -152,107 +154,290 @@
   ansible.builtin.set_fact:
     _foremanctl_deploy_cmd: "{{ _foremanctl_deployer }} deploy"
 
-- name: Initial deployment
+- name: Foreman server deployment
+  when:
+    - foremanctl_deployment_type == 'server'
   block:
-    - name: Set basic deployment command line
+    - name: Initial deployment
+      block:
+        - name: Set basic deployment command line
+          ansible.builtin.set_fact:
+            _foremanctl_initial_deploy_cmd: >-
+              {{ _foremanctl_deploy_cmd }}
+              --initial-admin-password {{ password | default(foreman_password) }}
+
+        - name: Show deployment command line
+          ansible.builtin.debug:
+            msg: "{{ _foremanctl_initial_deploy_cmd }}"
+
+        - name: Run deployment
+          ansible.builtin.command:
+            cmd: "{{ _foremanctl_initial_deploy_cmd }}"
+          register: _foremanctl_initial_deploy_cmd_out
+          # XXX: Ignore errors in order to be able to show `_foremanctl_initial_deploy_cmd_out.stdout_lines`
+          ignore_errors: true
+          changed_when: true
+
+        - name: Show deployment output
+          ansible.builtin.debug:
+            var: _foremanctl_initial_deploy_cmd_out.stdout_lines
+          failed_when:
+            - _foremanctl_initial_deploy_cmd_out is failed
+
+        - name: Show deployment error output
+          ansible.builtin.debug:
+            var: _foremanctl_initial_deploy_cmd_out.stderr_lines
+          failed_when:
+            - _foremanctl_initial_deploy_cmd_out is failed
+
+        - name: Calculate deployment duration
+          ansible.builtin.set_fact:
+            _foremanctl_duration: >-
+              {{ (_foremanctl_initial_deploy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+                 - (_foremanctl_initial_deploy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
+
+        - name: Show deployment duration
+          ansible.builtin.debug:
+            msg: >-
+              ForemanctlDeploy {{ _foremanctl_initial_deploy_cmd_out.start }}
+              to {{ _foremanctl_initial_deploy_cmd_out.end }}
+              taking {{ _foremanctl_duration }} seconds
+
+    - name: Add features
+      block:
+        - name: Add iop to features if enabled
+          ansible.builtin.set_fact:
+            foremanctl_features: "{{ foremanctl_features + ['iop'] }}"
+          when: enable_iop | default(false) | bool
+
+        - name: Foreman
+          when:
+            - product is defined and product == 'foreman'
+          block:
+            - name: Setup Foreman repositories for hammer
+              ansible.builtin.include_role:
+                name: theforeman.operations.foreman_repositories
+              vars:
+                foreman_repositories_version: nightly
+                foreman_repositories_katello_version: nightly
+              when: "'hammer' in foremanctl_features"
+
+        - name: Set features deployment command line
+          ansible.builtin.set_fact:
+            _foremanctl_add_features_cmd: >-
+              {{ _foremanctl_deploy_cmd }}
+              {{ foremanctl_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ') }}
+
+        - name: Show features deployment command line
+          ansible.builtin.debug:
+            msg: "{{ _foremanctl_add_features_cmd }}"
+
+        - name: Run features deployment
+          ansible.builtin.command:
+            cmd: "{{ _foremanctl_add_features_cmd }}"
+          register: _foremanctl_add_features_cmd_out
+          # XXX: Ignore errors in order to be able to show `_foremanctl_add_features_cmd_out.stdout_lines`
+          ignore_errors: true
+          changed_when: true
+
+        - name: Show features deployment output
+          ansible.builtin.debug:
+            var: _foremanctl_add_features_cmd_out.stdout_lines
+          failed_when:
+            - _foremanctl_add_features_cmd_out is failed
+
+        - name: Show features deployment error output
+          ansible.builtin.debug:
+            var: _foremanctl_add_features_cmd_out.stderr_lines
+          failed_when:
+            - _foremanctl_add_features_cmd_out is failed
+
+        - name: Foreman
+          when:
+            - product is defined and product == 'foreman'
+          block:
+            - name: Disable Foreman repositories
+              ansible.builtin.dnf:
+                name: foreman-release
+                state: absent
+              when: "'hammer' in foremanctl_features"
+
+- name: Foreman smart proxy deployment
+  when:
+    - foremanctl_deployment_type == 'proxy'
+  block:
+    - name: Assert required proxy deployment facts
+      ansible.builtin.assert:
+        that:
+          - groups['satellite6'] is defined and groups['satellite6'] | length > 0
+
+    - name: Set command line to deploy proxy
+      ansible.builtin.set_fact:
+        _foremanctl_deploy_proxy_cmd: "{{ _foremanctl_deployer }} deploy-proxy"
+
+    - name: Generate proxy certificate bundle on the Foreman server
+      throttle: 1
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      block:
+        - name: Set certificate bundle command line
+          ansible.builtin.set_fact:
+            _foremanctl_certificate_bundle_cmd: >-
+              {{ _foremanctl_deployer }} certificate-bundle {{ inventory_hostname }}
+
+        - name: Show certificate bundle command line
+          ansible.builtin.debug:
+            msg: "{{ _foremanctl_certificate_bundle_cmd }}"
+
+        - name: Generate certificate bundle
+          ansible.builtin.command:
+            cmd: "{{ _foremanctl_certificate_bundle_cmd }}"
+          register: _foremanctl_certificate_bundle_cmd_out
+          ignore_errors: true
+          changed_when: true
+
+        - name: Show certificate bundle output
+          ansible.builtin.debug:
+            var: _foremanctl_certificate_bundle_cmd_out.stdout_lines
+          failed_when:
+            - _foremanctl_certificate_bundle_cmd_out is failed
+
+        - name: Show certificate bundle error output
+          ansible.builtin.debug:
+            var: _foremanctl_certificate_bundle_cmd_out.stderr_lines
+          failed_when:
+            - _foremanctl_certificate_bundle_cmd_out is failed
+
+        - name: Read generated certificate bundle
+          ansible.builtin.slurp:
+            src: "{{ foremanctl_proxy_certificate_bundle_source_path }}"
+          register: _foremanctl_proxy_certificate_bundle
+
+    - name: Copy certificate bundle to proxy host
+      ansible.builtin.copy:
+        content: "{{ _foremanctl_proxy_certificate_bundle.content | b64decode }}"
+        dest: "{{ foremanctl_proxy_certificate_bundle_dest_path }}"
+        mode: '0600'
+
+    # XXX: Hack
+    - name: Ensure proxy inventory target exists
+      ansible.builtin.blockinfile:
+        path: /etc/foremanctl/inventory
+        marker: "# {mark} foremanctl proxy target"
+        block: |
+          [proxy]
+          localhost ansible_connection=local
+
+    # XXX: Hack
+    - name: Resolve Foreman OAuth credentials for proxy deployment
+      no_log: true
+      block:
+        - name: Read Foreman OAuth consumer key from server
+          delegate_to: "{{ groups['satellite6'] | first }}"
+          ansible.builtin.slurp:
+            src: "{{ foremanctl_oauth_consumer_key_file }}"
+          register: _foremanctl_proxy_oauth_consumer_key_file
+          when:
+            - foremanctl_proxy_oauth_consumer_key is not defined
+
+        - name: Read Foreman OAuth consumer secret from server
+          delegate_to: "{{ groups['satellite6'] | first }}"
+          ansible.builtin.slurp:
+            src: "{{ foremanctl_oauth_consumer_secret_file }}"
+          register: _foremanctl_proxy_oauth_consumer_secret_file
+          when:
+            - foremanctl_proxy_oauth_consumer_secret is not defined
+
+        - name: Set proxy OAuth values
+          ansible.builtin.set_fact:
+            foremanctl_proxy_oauth_consumer_key: >-
+              {{ foremanctl_proxy_oauth_consumer_key | default(_foremanctl_proxy_oauth_consumer_key_file.content | b64decode | trim) }}
+            foremanctl_proxy_oauth_consumer_secret: >-
+              {{ foremanctl_proxy_oauth_consumer_secret | default(_foremanctl_proxy_oauth_consumer_secret_file.content | b64decode | trim) }}
+
+    # XXX: Hack
+    - name: Transfer Foreman OAuth credentials to proxy host
+      no_log: true
+      block:
+        - name: Ensure foremanctl state directories exist for proxy OAuth files
+          ansible.builtin.file:
+            path: "{{ item }}"
+            state: directory
+            mode: '0700'
+          loop: >-
+            {{
+              [
+                foremanctl_proxy_oauth_consumer_key_dest_file | dirname,
+                foremanctl_proxy_oauth_consumer_secret_dest_file | dirname
+              ] | unique
+            }}
+
+        - name: Copy Foreman OAuth consumer key to proxy host
+          ansible.builtin.copy:
+            content: "{{ foremanctl_proxy_oauth_consumer_key }}"
+            dest: "{{ foremanctl_proxy_oauth_consumer_key_dest_file }}"
+            mode: '0600'
+
+        - name: Copy Foreman OAuth consumer secret to proxy host
+          ansible.builtin.copy:
+            content: "{{ foremanctl_proxy_oauth_consumer_secret }}"
+            dest: "{{ foremanctl_proxy_oauth_consumer_secret_dest_file }}"
+            mode: '0600'
+
+    - name: Set proxy deployment command line
+      no_log: true
       ansible.builtin.set_fact:
         _foremanctl_initial_deploy_cmd: >-
-          {{ _foremanctl_deploy_cmd }}
-          --initial-admin-password {{ password | default(foreman_password) }}
+          {{ _foremanctl_deploy_proxy_cmd }}
+          --flavor {{ foremanctl_proxy_flavor }}
+          --certificate-bundle {{ foremanctl_proxy_certificate_bundle_dest_path }}
+          --foreman-fqdn {{ groups['satellite6'] | first }}
+          {{ ('--oauth-consumer-key ' ~ foremanctl_proxy_oauth_consumer_key) if (foremanctl_proxy_oauth_consumer_key is defined and foremanctl_proxy_oauth_consumer_key | length > 0) else '' }}
+          {{ ('--oauth-consumer-secret ' ~ foremanctl_proxy_oauth_consumer_secret) if (foremanctl_proxy_oauth_consumer_secret is defined and foremanctl_proxy_oauth_consumer_secret | length > 0) else '' }}
+          {{ foremanctl_proxy_extra_args }}
 
-    - name: Show deployment command line
+    - name: Set redacted proxy deployment command line
+      ansible.builtin.set_fact:
+        _foremanctl_initial_deploy_cmd_redacted: >-
+          {{ _foremanctl_deploy_proxy_cmd }}
+          --flavor {{ foremanctl_proxy_flavor }}
+          --certificate-bundle {{ foremanctl_proxy_certificate_bundle_dest_path }}
+          --foreman-fqdn {{ groups['satellite6'] | first }}
+          {{ '--oauth-consumer-key [redacted]' if (foremanctl_proxy_oauth_consumer_key is defined and foremanctl_proxy_oauth_consumer_key | length > 0) else '' }}
+          {{ '--oauth-consumer-secret [redacted]' if (foremanctl_proxy_oauth_consumer_secret is defined and foremanctl_proxy_oauth_consumer_secret | length > 0) else '' }}
+          {{ foremanctl_proxy_extra_args }}
+
+    - name: Show redacted proxy deployment command line
       ansible.builtin.debug:
-        msg: "{{ _foremanctl_initial_deploy_cmd }}"
+        msg: "{{ _foremanctl_initial_deploy_cmd_redacted }}"
 
-    - name: Run deployment
+    - name: Run proxy deployment
       ansible.builtin.command:
         cmd: "{{ _foremanctl_initial_deploy_cmd }}"
       register: _foremanctl_initial_deploy_cmd_out
-      # XXX: Ignore errors in order to be able to show `_foremanctl_initial_deploy_cmd_out.stdout_lines`
       ignore_errors: true
       changed_when: true
 
-    - name: Show deployment output
+    - name: Show proxy deployment output
       ansible.builtin.debug:
         var: _foremanctl_initial_deploy_cmd_out.stdout_lines
       failed_when:
         - _foremanctl_initial_deploy_cmd_out is failed
 
-    - name: Show deployment error output
+    - name: Show proxy deployment error output
       ansible.builtin.debug:
         var: _foremanctl_initial_deploy_cmd_out.stderr_lines
       failed_when:
         - _foremanctl_initial_deploy_cmd_out is failed
 
-    - name: Calculate deployment duration
+    - name: Calculate proxy deployment duration
       ansible.builtin.set_fact:
         _foremanctl_duration: >-
           {{ (_foremanctl_initial_deploy_cmd_out.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
              - (_foremanctl_initial_deploy_cmd_out.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp() }}
 
-    - name: Show deployment duration
+    - name: Show proxy deployment duration
       ansible.builtin.debug:
         msg: >-
           ForemanctlDeploy {{ _foremanctl_initial_deploy_cmd_out.start }}
           to {{ _foremanctl_initial_deploy_cmd_out.end }}
           taking {{ _foremanctl_duration }} seconds
-
-- name: Add features
-  block:
-    - name: Add iop to features if enabled
-      ansible.builtin.set_fact:
-        foremanctl_features: "{{ foremanctl_features + ['iop'] }}"
-      when: enable_iop | default(false) | bool
-
-    - name: Foreman
-      when:
-        - product is defined and product == 'foreman'
-      block:
-        - name: Setup Foreman repositories for hammer
-          ansible.builtin.include_role:
-            name: theforeman.operations.foreman_repositories
-          vars:
-            foreman_repositories_version: nightly
-            foreman_repositories_katello_version: nightly
-          when: "'hammer' in foremanctl_features"
-
-    - name: Set features deployment command line
-      ansible.builtin.set_fact:
-        _foremanctl_add_features_cmd: >-
-          {{ _foremanctl_deploy_cmd }}
-          {{ foremanctl_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ') }}
-
-    - name: Show features deployment command line
-      ansible.builtin.debug:
-        msg: "{{ _foremanctl_add_features_cmd }}"
-
-    - name: Run features deployment
-      ansible.builtin.command:
-        cmd: "{{ _foremanctl_add_features_cmd }}"
-      register: _foremanctl_add_features_cmd_out
-      # XXX: Ignore errors in order to be able to show
-      # `_foremanctl_add_features_cmd_out.stdout_lines`
-      ignore_errors: true
-      changed_when: true
-
-    - name: Show features deployment output
-      ansible.builtin.debug:
-        var: _foremanctl_add_features_cmd_out.stdout_lines
-      failed_when:
-        - _foremanctl_add_features_cmd_out is failed
-
-    - name: Show features deployment error output
-      ansible.builtin.debug:
-        var: _foremanctl_add_features_cmd_out.stderr_lines
-      failed_when:
-        - _foremanctl_add_features_cmd_out is failed
-
-    - name: Foreman
-      when:
-        - product is defined and product == 'foreman'
-      block:
-        - name: Disable Foreman repositories
-          ansible.builtin.dnf:
-            name: foreman-release
-            state: absent
-          when: "'hammer' in foremanctl_features"

@@ -3,6 +3,18 @@ foremanctl_forge: https://github.com
 foremanctl_organization: theforeman
 foremanctl_repo: foremanctl
 
+foremanctl_deployment_type: server
+
+foremanctl_proxy_flavor: foreman-proxy-content
+foremanctl_proxy_certificate_bundle_dir: /var/lib/foremanctl/certs/bundles
+foremanctl_proxy_certificate_bundle_source_path: "{{ foremanctl_proxy_certificate_bundle_dir }}/{{ inventory_hostname }}.tar.gz"
+foremanctl_proxy_certificate_bundle_dest_path: "/root/{{ inventory_hostname }}.tar.gz"
+foremanctl_oauth_consumer_key_file: /var/lib/foremanctl/foreman-oauth-consumer-key
+foremanctl_oauth_consumer_secret_file: /var/lib/foremanctl/foreman-oauth-consumer-secret
+foremanctl_proxy_oauth_consumer_key_dest_file: /var/lib/foremanctl/foreman-oauth-consumer-key
+foremanctl_proxy_oauth_consumer_secret_dest_file: /var/lib/foremanctl/foreman-oauth-consumer-secret
+foremanctl_proxy_extra_args: ""
+
 foremanctl_features:
   - hammer
   - foreman-proxy
