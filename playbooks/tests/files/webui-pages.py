@@ -436,7 +436,10 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
                     if url not in seen:
                         seen.add(url)
                         asset_type = "js" if ".js" in url else "css"
-                        assets.append({"url": url, "type": asset_type})
+                        fname = url.split("/")[-1]
+                        parts = fname.rsplit("-", 1)
+                        short = parts[0] if len(parts) == 2 and "." in parts[1] else fname.split(".")[0]
+                        assets.append({"url": url, "type": asset_type, "short": short})
 
         # Download each asset to measure size and capture cache headers
         total_js = 0
@@ -465,8 +468,13 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
         if not SatelliteWebUIPerfAssetInventory._assets:
             return
         asset = SatelliteWebUIPerfAssetInventory._assets[self.index]
-        name = f"cold_{asset['type']}"
-        self.client.get(asset["url"], verify=False, name=name)
+        name = f"cold_{asset['type']}_{asset['short']}"
+        agg_name = f"cold_{asset['type']}"
+        with self.client.get(asset["url"], verify=False, name=name, catch_response=True) as resp:
+            resp.success()
+            self.environment.events.request.fire(
+                request_type="GET", name=agg_name, response_time=resp.elapsed.total_seconds() * 1000,
+                response_length=len(resp.content), exception=None, context={})
         self.index = (self.index + 1) % len(SatelliteWebUIPerfAssetInventory._assets)
 
     @task(1)
@@ -480,8 +488,13 @@ class SatelliteWebUIPerfAssetInventory(HttpUser):
             headers["If-None-Match"] = asset["etag"]
         if asset.get("last_modified"):
             headers["If-Modified-Since"] = asset["last_modified"]
-        name = f"warm_{asset['type']}"
-        self.client.get(asset["url"], headers=headers, verify=False, name=name)
+        name = f"warm_{asset['type']}_{asset['short']}"
+        agg_name = f"warm_{asset['type']}"
+        with self.client.get(asset["url"], headers=headers, verify=False, name=name, catch_response=True) as resp:
+            resp.success()
+            self.environment.events.request.fire(
+                request_type="GET", name=agg_name, response_time=resp.elapsed.total_seconds() * 1000,
+                response_length=len(resp.content), exception=None, context={})
         self.index = (self.index + 1) % len(SatelliteWebUIPerfAssetInventory._assets)
 
 
