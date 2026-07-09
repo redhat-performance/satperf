@@ -11,7 +11,7 @@
 
 - name: Start gathering BPF profile
   vars:
-    _bpf_stack_storage_size: "{{ (ansible_memtotal_mb * 1024 * (bpf_stack_pct | default(0.01))) | int }}"
+    _bpf_stack_storage_size: "{{ bpf_stack_storage_size | default(65536) }}"
   ansible.builtin.shell:
     cmd: |
       /usr/share/bcc/tools/profile \
