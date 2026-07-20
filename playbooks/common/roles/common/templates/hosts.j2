@@ -1,0 +1,64 @@
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1   localhost localhost.localdomain localhost6 localhost6.localdomain6
+{% macro _entry(peer, ip_kind) %}
+{#- Emit "IP hostname" if an IP exists for the peer (private if same subnet, else public).
+    ip_kind is 'ip' for IPv4 or 'ip6' for IPv6. Emits nothing when neither exists.
+-#}
+{%   set pv = hostvars[peer] %}
+{%   set priv_ip_attr = 'private_' ~ ip_kind %}
+{%   set priv_mask_attr = 'private_' ~ ('netmask' if ip_kind == 'ip' else 'netmask6') %}
+{%   set pub_ip_attr = 'public_' ~ ip_kind %}
+{%   set peer_priv = pv[priv_ip_attr] | default('') %}
+{%   set peer_mask = pv[priv_mask_attr] | default('') | string %}
+{%   set self_priv = vars[priv_ip_attr] | default('') %}
+{%   set self_mask = vars[priv_mask_attr] | default('') | string %}
+{%   if self_priv and self_mask and peer_priv and peer_mask
+       and (self_priv ~ '/' ~ self_mask) | ansible.utils.ipaddr('network/prefix')
+          == (peer_priv ~ '/' ~ peer_mask) | ansible.utils.ipaddr('network/prefix') %}
+{{ peer_priv }} {{ peer }}
+{%   elif pv[pub_ip_attr] is defined %}
+{{ pv[pub_ip_attr] }} {{ peer }}
+{%   endif %}
+{% endmacro %}
+{#- Own entries -#}
+{% if public_ip is defined %}
+{{ public_ip }} {{ inventory_hostname }}
+{% elif private_ip is defined %}
+{{ private_ip }} {{ inventory_hostname }}
+{% endif %}
+{% if public_ip6 is defined %}
+{{ public_ip6 }} {{ inventory_hostname }}
+{% elif private_ip6 is defined %}
+{{ private_ip6 }} {{ inventory_hostname }}
+{% endif %}
+{#- Satellite: all capsules -#}
+{% if 'satellite6' in group_names %}
+{%   for peer in groups.get('capsules', []) %}
+{{ _entry(peer, 'ip') -}}
+{{ _entry(peer, 'ip6') -}}
+{%   endfor %}
+{% endif %}
+{#- Capsules: satellite -#}
+{% if 'capsules' in group_names %}
+{%   for peer in groups.get('satellite6', []) %}
+{{ _entry(peer, 'ip') -}}
+{{ _entry(peer, 'ip6') -}}
+{%   endfor %}
+{% endif %}
+{#- Container hosts: registration targets in same location -#}
+{% if 'container_hosts' in group_names %}
+{%   set loc_group = 'location_' ~ (location | lower) %}
+{%   set peers = groups.get('capsule_lbs', []) | union(groups.get('capsules', []) | union(groups.get('satellite6', []))) | intersect(groups.get(loc_group, [])) %}
+{%   for peer in peers %}
+{{ _entry(peer, 'ip') -}}
+{{ _entry(peer, 'ip6') -}}
+{%   endfor %}
+{% endif %}
+{#- Load balancers: capsules in same location -#}
+{% if 'capsule_lbs' in group_names %}
+{%   set loc_group = 'location_' ~ (location | lower) %}
+{%   for peer in groups.get('capsules', []) | intersect(groups.get(loc_group, [])) %}
+{{ _entry(peer, 'ip') -}}
+{{ _entry(peer, 'ip6') -}}
+{%   endfor %}
+{% endif %}
