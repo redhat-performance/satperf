@@ -112,6 +112,12 @@
     content: |
       PermitRootLogin yes
 
+- name: Increase sshd MaxStartups for delegate_to concurrency
+  ansible.builtin.copy:
+    dest: /etc/ssh/sshd_config.d/MaxStartups.conf
+    content: |
+      MaxStartups 100:30:250
+
 - name: Reload sshd
   ansible.builtin.systemd_service:
     name: sshd
