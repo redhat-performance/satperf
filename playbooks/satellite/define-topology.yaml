@@ -1,159 +1,83 @@
 ---
-- name: "Create organization(s)"
+- name: Define topology
   hosts: satellite6:capsules
-  strategy: linear
+  connection: local
   gather_facts: false
 
+  vars_files:
+    - ../tests/FAM/includes/fam_common_vars.yaml
+
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+
   tasks:
-    - name: "Set default variable(s) values"
+    - name: Set default variable values
       ansible.builtin.set_fact:
-        user: "{{ user | default(sat_user) | default('admin') }}"
-        password: "{{ password | default(sat_pass) }}"
         organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
         location: "{{ location | default(sat_loc) | default('Default Location') }}"
 
-    - name: "Get host information"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/hosts?search=name+%3D+{{ inventory_hostname }}"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-      register: get_host_json
-
-    - when: get_host_json.json.results | length > 0
-      block:
-        - name: "Get host id"
-          ansible.builtin.set_fact:
-            host_id: "{{ get_host_json.json | community.general.json_query(_query) }}"
-          vars:
-            _query: "results[?name=='{{ inventory_hostname }}'].id | [0]"
-
-        - name: "Get host smart_proxy_id"
-          ansible.builtin.set_fact:
-            smart_proxy_id: "{{ get_host_json.json | community.general.json_query(_query) }}"
-          vars:
-            _query: "results[?name=='{{ inventory_hostname }}'].infrastructure_facet.smart_proxy_id | [0]"
-
-    - name: "Get smart proxies by name (fallback when host record does not exist)"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies?search=name+~+{{ inventory_hostname }}&per_page=50"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-      register: get_proxy_json
-      when: smart_proxy_id is not defined
-
-    - name: "Set smart_proxy_ids from smart proxies API"
-      ansible.builtin.set_fact:
-        smart_proxy_ids: "{{ get_proxy_json.json.results | default([]) | map(attribute='id') | list }}"
-      when:
-        - smart_proxy_id is not defined
-        - get_proxy_json.json.results | default([]) | length > 0
-
-    - name: "Use host-derived smart_proxy_id if available"
-      ansible.builtin.set_fact:
-        smart_proxy_ids: "{{ [smart_proxy_id] }}"
-      when: smart_proxy_id is defined
-
-
-    ### Organizations
-    - name: "Create organization(s)"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/katello/api/organizations"
-        method: POST
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization': {'name': organization}} }}"
-        status_code:
-          - 201
-          - 422   # "Name has already been taken"
+    ### Organization
+    - name: Create organization
       run_once: true
-
-    - name: "Get organizations information"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/organizations"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-      register: organizations_json
-      failed_when: organizations_json.json.results | length == 0
-
-    - name: "Get organization_id(s)"
-      ansible.builtin.set_fact:
-        organization_id: "{{ organizations_json.json | community.general.json_query(_query) }}"
-      vars:
-        _query: "results[?name=='{{ organization }}'].id | [0]"
-
+      theforeman.foreman.organization:
+        name: "{{ organization }}"
+      register: __create_org
+      until: __create_org is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 
     ### Locations
-    - name: "Create location(s)"
-      # XXX: Submit PR
-      throttle: 1
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/locations"
-        method: POST
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'location': {'name': location}} }}"
-        status_code:
-          - 201
-          - 422   # "Name has already been taken"
+    - name: Create location
+      theforeman.foreman.location:
+        name: "{{ item }}"
+        organizations:
+          - "{{ organization }}"
+      loop: "{{ [location] if location is string else location }}"
+      register: __create_location
+      until: __create_location is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 
-    - name: "Get locations information"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/locations"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-      register: locations_json
-      failed_when: locations_json.json.results | length == 0
+    ### Host location
+    - name: Set host location
+      theforeman.foreman.host:
+        name: "{{ inventory_hostname }}"
+        location: "{{ location if location is string else location[0] }}"
+        organization: "{{ organization }}"
+      register: __set_host_location
+      until: __set_host_location is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 
-    - name: "Get location_id(s)"
-      ansible.builtin.set_fact:
-        location_id: "{{ locations_json.json | community.general.json_query(_query) }}"
-      vars:
-        _query: "results[?name=='{{ location }}'].id | [0]"
+    ### Smart-proxy location
+    - name: Get smart-proxy information
+      theforeman.foreman.resource_info:
+        resource: smart_proxies
+        search: "name ~ {{ inventory_hostname }}"
+      register: __proxy_info
+      until: __proxy_info is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 
-    - name: "Set host location"
-      when: host_id is defined
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/hosts/{{ host_id }}"
-        method: PUT
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'host': {'location_id': location_id}} }}"
-
-    - name: "Set smart-proxy location"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/smart_proxies/{{ item }}"
-        method: PUT
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'smart_proxy': {'location_ids': [location_id]}} }}"
-      loop: "{{ smart_proxy_ids | default([]) }}"
+    - name: Set smart-proxy location
+      theforeman.foreman.smart_proxy:
+        name: "{{ item.name }}"
+        url: "{{ item.url }}"
+        locations: "{{ [location] if location is string else location }}"
+        organizations:
+          - "{{ organization }}"
+      loop: "{{ __proxy_info.resources }}"
       loop_control:
-        label: "smart_proxy {{ item }}"
-
+        label: "{{ item.name }}"
+      when: __proxy_info.resources | length > 0
+      register: __set_proxy_location
+      until: __set_proxy_location is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 
     ### Subnets
     - name: "Get subnet from inventory (using private network IPs)"
@@ -176,58 +100,18 @@
         - public_ip is defined
         - public_netmask is defined
 
-    - name: "Create subnets(s)"
-      # XXX: Submit PR
-      throttle: 1
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/subnets"
-        method: POST
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'subnet': {'name': subnet, 'network': network, 'mask': netmask, 'ipam': 'None'}} }}"
-        status_code:
-          - 201
-          - 422   # "Name has already been taken"
-      when:
-        - subnet is defined
-        - network is defined
-        - netmask is defined
-
-    - name: "Get subnets information"
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/subnets"
-        method: GET
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-      register: subnets_json
-      failed_when: subnets_json.json.results | length == 0
-
-    - name: "Get subnet_id(s)"
-      ansible.builtin.set_fact:
-        subnet_id: "{{ subnets_json.json | community.general.json_query(_query) }}"
-      vars:
-        _query: "results[?name=='{{ subnet }}'].id | [0]"
-      when:
-        - subnet is defined
-
-    - name: "Set subnet location"
-      # XXX: Submit PR
-      throttle: 1
-      ansible.builtin.uri:
-        url: "https://{{ groups['satellite6'] | first }}/api/subnets/{{ subnet_id }}"
-        method: PUT
-        validate_certs: false
-        force_basic_auth: true
-        user: "{{ user }}"
-        password: "{{ password }}"
-        body_format: json
-        body: "{{ {'organization_id': organization_id, 'subnet': {'location_ids': [location_id]}} }}"
-      when:
-        - subnet is defined
-        - subnet_id is defined
+    - name: Create subnet and assign location
+      theforeman.foreman.subnet:
+        name: "{{ subnet }}"
+        network: "{{ network }}"
+        mask: "{{ netmask }}"
+        ipam: "None"
+        organizations:
+          - "{{ organization }}"
+        locations: "{{ [location] if location is string else location }}"
+      when: subnet is defined
+      register: __set_subnet
+      until: __set_subnet is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
 ...
