@@ -43,11 +43,21 @@
       delay: "{{ _api_call_delay }}"
 
     ### Host location
+    - name: Get host information
+      theforeman.foreman.resource_info:
+        resource: hosts
+        search: "name = {{ inventory_hostname }}"
+      register: __host_info
+      until: __host_info is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
     - name: Set host location
       theforeman.foreman.host:
         name: "{{ inventory_hostname }}"
         location: "{{ location if location is string else location[0] }}"
         organization: "{{ organization }}"
+      when: __host_info.resources | length > 0
       register: __set_host_location
       until: __set_host_location is not failed
       retries: "{{ _api_call_retries }}"
