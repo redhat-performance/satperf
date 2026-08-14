@@ -5,7 +5,7 @@
   gather_facts: false
 
   vars_files:
-    - ../tests/FAM/includes/fam_common_vars.yaml
+    - ../tests/includes/common_vars.yaml
 
   module_defaults:
     group/theforeman.foreman.foreman:
@@ -32,6 +32,11 @@
 
     ### Locations
     - name: Create location
+      # XXX: Submit PR - concurrent theforeman.foreman.location calls for
+      # the same name race at the Foreman/DB layer and create duplicate
+      # Location rows, which later breaks any by-title lookup (e.g. "Set
+      # host location").
+      throttle: 1
       theforeman.foreman.location:
         name: "{{ item }}"
         organizations:
