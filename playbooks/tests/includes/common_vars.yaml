@@ -4,6 +4,7 @@ _username: "{{ foreman_username | default(sat_user | default('admin')) }}"
 _password: "{{ foreman_password | default(sat_pass) }}"
 _validate_certs: "{{ foreman_validate_certs | default(false) }}"
 _organization: "{{ foreman_organization | default(sat_org | default('Default Organization')) }}"
+_tasks_api: "{{ _server_url }}/foreman_tasks/api/tasks"
 _api_call_retries: 10
 _api_call_delay: 30
 _transient_errors:
