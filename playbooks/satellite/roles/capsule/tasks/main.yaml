@@ -20,10 +20,6 @@
               - foreman_version is defined and foreman_version | length > 0
               - katello_version is defined and katello_version | length > 0
 
-        - name: Set Foreman facts
-          ansible.builtin.set_fact:
-            certs_generate_command: 'foreman-proxy-certs-generate'
-
         - name: Setup Foreman repositories
           ansible.builtin.include_role:
             name: theforeman.operations.foreman_repositories
@@ -45,10 +41,6 @@
       when:
         - product is not defined or product == 'satellite'
       block:
-        - name: Set Satellite facts
-          ansible.builtin.set_fact:
-            certs_generate_command: 'capsule-certs-generate'
-
         - name: Setup Satellite repositories
           ansible.builtin.include_role:
             name: repo_setup
@@ -118,8 +110,24 @@
       ansible.builtin.shell:
         cmd: "{{ run_before_installer }}"
 
-- name: certs-generate parameters
+- name: certs-generate
   block:
+    - name: Foreman
+      when:
+        - product is defined and product == 'foreman'
+      block:
+        - name: Set Foreman facts
+          ansible.builtin.set_fact:
+            certs_generate_command: 'foreman-proxy-certs-generate'
+
+    - name: Satellite
+      when:
+        - product is not defined or product == 'satellite'
+      block:
+        - name: Set Satellite facts
+          ansible.builtin.set_fact:
+            certs_generate_command: 'capsule-certs-generate'
+
     - name: Set certs-generate base options
       ansible.builtin.set_fact:
         certs_generate_options: "--certs-tar /var/www/html/pub/{{ inventory_hostname }}-certs.tar --foreman-proxy-fqdn {{ inventory_hostname }}"
@@ -137,18 +145,18 @@
           ansible.builtin.set_fact:
             certs_generate_options: "{{ certs_generate_options }} --foreman-proxy-cname {{ capsule_lb }}"
 
-- name: certs-generate
-  block:
-    # - name: "Run certs-generate (concurrently)"
-    #   ansible.builtin.shell:
-    #     cmd: |
-    #       set -o pipefail
+    - name: Run certs-generate
+      ansible.builtin.shell:
+        cmd: |
+          set -o pipefail
 
-    #       {{ certs_generate_command }} {{ certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
-    #   register: certs_generate_cmd
-    #   delegate_to: "{{ groups['satellite6'] | first }}"
-    #   # XXX: Ignore errors in order to be able to show `certs_generate_cmd.stdout_lines`
-    #   ignore_errors: true
+          {{ certs_generate_command }} {{ certs_generate_options }} 2>&1 | tee /var/www/html/pub/{{ inventory_hostname }}-out.raw
+      register: certs_generate_cmd
+      delegate_to: "{{ groups['satellite6'] | first }}"
+      # XXX: Ignore errors in order to be able to show `certs_generate_cmd.stdout_lines`
+      ignore_errors: true
+      when:
+        - sat_version is defined and sat_version == 'stream'
 
     - name: "Run certs-generate (sequentially)"
       # XXX: Bug 2265385 - `capsule-certs-generate` cannot be run concurrently for different capsules
@@ -162,6 +170,8 @@
       delegate_to: "{{ groups['satellite6'] | first }}"
       # XXX: Ignore errors in order to be able to show `certs_generate_cmd.stdout_lines`
       ignore_errors: true
+      when:
+        - sat_version is defined and sat_version != 'stream'
 
     - name: Show certs-generate output
       ansible.builtin.debug:
@@ -292,8 +302,6 @@
         msg: "bash /root/{{ inventory_hostname }}-script.sh"
 
     - name: Run installer script
-      # XXX: Submit PR
-      throttle: 1
       ansible.builtin.command:
         cmd: |
           bash /root/{{ inventory_hostname }}-script.sh
@@ -377,8 +385,8 @@
         id: "{{ capsule_id_cmd.stdout }}"
 
     - name: Refresh capsule features
-      # XXX: Submit PR
-      throttle: 1
+      # # XXX: Submit PR
+      # throttle: 1
       ansible.builtin.command:
         cmd: |
           hammer -u {{ user }} -p {{ password }} capsule refresh-features --organization '{{ organization }}' --id {{ id }}

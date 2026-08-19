@@ -4,4 +4,6 @@
 
   roles:
     - role: foremanctl
+      vars:
+        foremanctl_deployment_type: server
 ...

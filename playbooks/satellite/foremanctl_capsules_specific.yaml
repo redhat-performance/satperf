@@ -1,0 +1,8 @@
+---
+- name: Specific configuration steps for capsule(s)/smart proxies deployed with `foremanctl`
+  hosts: capsules
+
+  roles:
+    - role: foremanctl
+      vars:
+        foremanctl_deployment_type: proxy
