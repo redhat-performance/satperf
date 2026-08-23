@@ -92,21 +92,21 @@
       changed_when: true
 
 - name: Log in to the registry
+  when:
+    - registry is defined and registry != "quay.io"
+    - registry_username is defined and registry_username | length > 0
+    - registry_password is defined and registry_password | length > 0
   containers.podman.podman_login:
     registry: "{{ registry }}"
     username: "{{ registry_username }}"
     password: "{{ registry_password }}"
     authfile: /etc/foreman/registry-auth.json
-  when:
-    - registry is defined and registry != "quay.io"
-    - registry_username is defined and registry_username | length > 0
-    - registry_password is defined and registry_password | length > 0
 
 - name: Override images vars file
-  ansible.builtin.include_role:
-    name: override_images
   when:
     - override_images_content_file is defined and override_images_content_file | length > 0
+  ansible.builtin.include_role:
+    name: override_images
 
 - name: Show images.yml content
   ansible.builtin.slurp:
@@ -231,18 +231,18 @@
             - product is defined and product == 'foreman'
           block:
             - name: Setup Foreman repositories for hammer
+              when: "'hammer' in foremanctl_add_features"
               ansible.builtin.include_role:
                 name: theforeman.operations.foreman_repositories
               vars:
                 foreman_repositories_version: nightly
                 foreman_repositories_katello_version: nightly
-              when: "'hammer' in foremanctl_add_features"
 
         - name: Add iop to features if enabled
+          when: enable_iop | d(false) | bool
           ansible.builtin.set_fact:
             foremanctl_add_features: "{{ (foremanctl_add_features | d([])) + ['iop'] }}"
             # foremanctl_remove_features: "{{ (foremanctl_remove_features | d([])) + ['cloud-connector'] }}"
-          when: enable_iop | d(false) | bool
 
         - name: Add/remove features deployment
           when:
@@ -287,10 +287,10 @@
             - product is defined and product == 'foreman'
           block:
             - name: Disable Foreman repositories
+              when: "'hammer' in foremanctl_add_features"
               ansible.builtin.dnf:
                 name: foreman-release
                 state: absent
-              when: "'hammer' in foremanctl_add_features"
 
 - name: Foreman smart proxy deployment
   when:
@@ -301,23 +301,40 @@
         that:
           - groups['satellite6'] is defined and groups['satellite6'] | length > 0
 
+    - name: Set default variable(s) values
+      ansible.builtin.set_fact:
+        location_groupname: "location_{{ location | lower }}"
+
+    - name: Load balanced capsule
+      when:
+        - "'capsule_lbs' in groups"
+        - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+      ansible.builtin.set_fact:
+        capsule_lb: "{{ groups['capsule_lbs'] | intersect(groups[location_groupname]) | first }}"
+
+    - name: Load balanced capsule URL
+      when:
+        - capsule_lb is defined
+      ansible.builtin.set_fact:
+        # capsule_lb's smart-proxy consolidates registration/templates/etc.
+        # onto its single https_port (8443) - see haproxy role for the
+        # matching RPM-vs-foremanctl port logic.
+        capsule_lb_url: "https://{{ capsule_lb }}:8443"
+
     - name: Set command line to deploy proxy
       ansible.builtin.set_fact:
         _foremanctl_deploy_proxy_cmd: "{{ _foremanctl_deployer }} deploy-proxy"
 
     - name: Generate proxy auth bundle on the Foreman server
-      # XXX: Concurrent capsules all delegate here and share the same obsah
-      # log path; rotate_log()'s TOCTOU race (theforeman/obsah#136) crashes
-      # until that fix ships in a packaged foremanctl. Remove this throttle
-      # once it does.
-      throttle: 1
       delegate_to: "{{ groups['satellite6'] | first }}"
       block:
         - name: Set auth bundle command line
           ansible.builtin.set_fact:
             _foremanctl_auth_bundle_cmd: >-
               {{ _foremanctl_deployer }}
-              auth-bundle {{ inventory_hostname }}
+              auth-bundle
+              {{ ('--server-alias ' ~ capsule_lb ~ ' --certificate-renew') if capsule_lb is defined else '' }}
+              {{ inventory_hostname }}
 
         - name: Show auth bundle command line
           ansible.builtin.debug:
@@ -381,6 +398,8 @@
           --flavor {{ _foremanctl_proxy_flavor }}
           --auth-bundle {{ foremanctl_proxy_auth_bundle_dest_path }}
           --foreman-fqdn {{ groups['satellite6'] | first }}
+          {{ ('--registration-url ' ~ capsule_lb_url) if capsule_lb is defined else '' }}
+          {{ ('--templates-url ' ~ capsule_lb_url) if capsule_lb is defined else '' }}
 
     - name: Show proxy deployment command line
       ansible.builtin.debug:
