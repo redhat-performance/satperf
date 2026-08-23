@@ -115,11 +115,17 @@ backend mosquitto-backend
     server mosquitto-backend-{{loop.index}} {{ capsule }}:1883 check
 {% endfor %}
 
+{% if haproxy_templates_port != haproxy_registration_port %}
 #---------------------------------------------------------------------
 # Anaconda for template retrievas frontend which proxys to the backends
+#
+# Skipped when haproxy_templates_port == haproxy_registration_port
+# (foremanctl): templates and registration are the same smart-proxy
+# endpoint there, already served by the host_registration frontend, so a
+# second frontend bound to the same port would conflict.
 #---------------------------------------------------------------------
 frontend anaconda
-    bind *:8000
+    bind *:{{ haproxy_templates_port }}
     mode tcp
     option                  tcplog
 
@@ -130,15 +136,19 @@ backend anaconda-backend
     balance roundrobin
 
 {% for capsule in lb_capsules %}
-    server anaconda-backend-{{loop.index}} {{ capsule }}:8000 check
+    server anaconda-backend-{{loop.index}} {{ capsule }}:{{ haproxy_templates_port }} check
 {% endfor %}
 
+{% endif %}
 #--------------------------------------------------------------------
 # Capsule HTTPS for Host Registration and optionally
 # OpenSCAP frontend which proxys to the backends
+{%- if haproxy_templates_port == haproxy_registration_port %}
+# Anaconda for template retrievas frontend which proxys to the backends
+{%- endif %}
 #---------------------------------------------------------------------
 frontend host_registration
-    bind *:9090
+    bind *:{{ haproxy_registration_port }}
     mode tcp
     option                  tcplog
     timeout client          {{ haproxy_registration_timeout_client }}
@@ -158,6 +168,6 @@ backend host_registration-backend
     balance roundrobin
 
 {% for capsule in lb_capsules %}
-    server host_registration-backend-{{loop.index}} {{ capsule }}:9090 check check-ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s{% if haproxy_registration_maxconn | int > 0 %} maxconn {{ haproxy_registration_maxconn }}{% endif %}
+    server host_registration-backend-{{loop.index}} {{ capsule }}:{{ haproxy_registration_port }} check check-ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s{% if haproxy_registration_maxconn | int > 0 %} maxconn {{ haproxy_registration_maxconn }}{% endif %}
 
 {% endfor %}

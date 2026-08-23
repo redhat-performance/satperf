@@ -7,6 +7,36 @@
   ansible.builtin.set_fact:
     lb_capsules: "{{ groups['capsules'] | intersect(groups[location_groupname]) | sort }}"
 
+# Registration/templates ports: RPM Satellite/Capsule serves them on the
+# smart-proxy's dedicated 9090/8000 ports; foremanctl consolidates all
+# smart-proxy features (registration and templates included) onto the
+# single https_port, 8443. When both facts land on the same port, the
+# template skips the separate anaconda frontend/backend rather than
+# emitting two frontends bound to the same port.
+- name: "Registration/templates ports (RPM)"
+  when:
+    - product is not defined or
+      (product == 'satellite' and
+       sat_version is defined and
+       sat_version != 'foremanctl')
+  block:
+    - name: "Set registration/templates port facts"
+      ansible.builtin.set_fact:
+        haproxy_registration_port: 9090
+        haproxy_templates_port: 8000
+
+- name: "Registration/templates ports (foremanctl)"
+  when:
+    - product is defined
+    - product == 'satellite'
+    - sat_version is defined
+    - sat_version == 'foremanctl'
+  block:
+    - name: "Set registration/templates port facts"
+      ansible.builtin.set_fact:
+        haproxy_registration_port: 8443
+        haproxy_templates_port: 8443
+
 - name: "Tune sysctl"
   ansible.posix.sysctl:
     sysctl_file: "/etc/sysctl.d/30-hapee-2.8.conf"

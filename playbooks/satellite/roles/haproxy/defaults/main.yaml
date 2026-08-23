@@ -13,7 +13,8 @@
 #   haproxy_registration_fall: 3
 haproxy_registration_fall: 9999
 
-# Timeouts for the host_registration frontend/backend (port 9090).
+# Timeouts for the host_registration frontend/backend (see tasks/main.yaml
+# for the deployment-dependent port: 9090 for RPM, 8443 for foremanctl).
 # Registration requests can take minutes under high concurrency because
 # the capsule waits for Satellite to render the registration template.
 # The default `timeout client/server` of 1m/150s is too short — hosts
