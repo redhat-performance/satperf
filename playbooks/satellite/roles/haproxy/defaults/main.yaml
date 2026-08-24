@@ -1,4 +1,10 @@
 ---
+# RPM serves registration/templates on the smart-proxy's dedicated 9090/8000
+# ports; foremanctl consolidates everything onto 8443. The template skips
+# the separate anaconda frontend when both land on the same port.
+haproxy_registration_port: "{{ 8443 if version == 'foremanctl' else 9090 }}"
+haproxy_templates_port: "{{ 8443 if version == 'foremanctl' else 8000 }}"
+
 # Number of consecutive health check failures before a capsule is removed
 # from rotation in the host_registration backend.
 #
@@ -13,9 +19,8 @@
 #   haproxy_registration_fall: 3
 haproxy_registration_fall: 9999
 
-# Timeouts for the host_registration frontend/backend (see tasks/main.yaml
-# for the deployment-dependent port: 9090 for RPM, 8443 for foremanctl).
-# Registration requests can take minutes under high concurrency because
+# Timeouts for the host_registration frontend/backend (haproxy_registration_port
+# above). Registration requests can take minutes under high concurrency because
 # the capsule waits for Satellite to render the registration template.
 # The default `timeout client/server` of 1m/150s is too short — hosts
 # disconnect before the capsule can respond, producing SSL_read errors.
