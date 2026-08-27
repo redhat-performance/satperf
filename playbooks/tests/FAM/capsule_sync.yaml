@@ -25,7 +25,7 @@
   vars:
     _task_name: "CapsuleSync"
     _organization: "{{ organization | default(sat_org | default('Default Organization')) }}"
-    _sync_max_time: "{{ sync_max_time | default(3600) }}"
+    _sync_max_time: "{{ sync_max_time | default(14400) }}"
     _content_views: >-
       {{ (content_views | from_yaml if content_views is string else content_views)
          if content_views is defined else [] }}
@@ -39,13 +39,21 @@
     - name: Get capsule details
       theforeman.foreman.resource_info:
         resource: capsules
-        search: "name ~ {{ inventory_hostname }}"
+        search: "name ~ {{ inventory_hostname }} and feature = Pulpcore"
         full_details: true
       register: _capsule_info
       until: _capsule_info is succeeded
       retries: "{{ _api_call_retries }}"
       delay: "{{ _api_call_delay }}"
       delegate_to: localhost
+
+    - name: Assert exactly one Pulp-capable capsule was found
+      ansible.builtin.assert:
+        that: _capsule_info.resources | length == 1
+        fail_msg: >-
+          Expected exactly one Pulpcore-capable capsule matching
+          '{{ inventory_hostname }}', found {{ _capsule_info.resources | length }}.
+        quiet: true
 
     - name: Set capsule ID, name and URL
       ansible.builtin.set_fact:

@@ -26,13 +26,24 @@
       # XXX: Submit PR
       throttle: 1
       ansible.builtin.command:
-        cmd: "hammer --no-headers -u {{ user }} -p {{ password }} capsule list --search 'name = {{ inventory_hostname }}' --fields id"
+        cmd: >-
+          hammer --no-headers -u {{ user }} -p {{ password }}
+          capsule list --search 'name ~ {{ inventory_hostname }} and feature = Pulpcore'
+          --fields id
       register: capsule_id_cmd
       delegate_to: "{{ satellite }}"
 
+    - name: "Assert exactly one Pulp-capable capsule was found"
+      ansible.builtin.assert:
+        that: capsule_id_cmd.stdout_lines | length == 1
+        fail_msg: >-
+          Expected exactly one Pulpcore-capable capsule matching
+          '{{ inventory_hostname }}', found {{ capsule_id_cmd.stdout_lines | length }}.
+        quiet: true
+
     - name: "Set capsule ID"
       ansible.builtin.set_fact:
-        id: "{{ capsule_id_cmd.stdout }}"
+        id: "{{ capsule_id_cmd.stdout | trim }}"
 
     - name: "Set capsule download policy"
       # XXX: Submit PR
