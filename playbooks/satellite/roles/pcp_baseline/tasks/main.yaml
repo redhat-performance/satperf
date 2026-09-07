@@ -1,0 +1,12 @@
+---
+- name: Install PCP
+  ansible.builtin.package:
+    name: "{{ pcp_baseline_packages }}"
+    state: present
+
+- name: Enable PCP services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: "{{ pcp_baseline_pcp_services }}"

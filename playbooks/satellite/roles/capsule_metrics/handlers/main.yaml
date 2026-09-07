@@ -1,0 +1,6 @@
+---
+- name: Restart PCP services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ capsule_metrics_pcp_services }}"

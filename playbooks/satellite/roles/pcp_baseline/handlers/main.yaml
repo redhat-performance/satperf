@@ -1,0 +1,6 @@
+---
+- name: Restart PCP services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: restarted
+  loop: "{{ pcp_baseline_pcp_services }}"

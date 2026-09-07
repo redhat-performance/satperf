@@ -1,122 +1,26 @@
 ---
-- name: Setup Performance Co-Pilot on Satellite
-  hosts: satellite6
-
+- name: Detect deployer
+  hosts: satellite6,capsules
   tasks:
-    - name: Setup Foreman repositories to have access to `foreman-pcp`
-      ansible.builtin.include_role:
-        name: theforeman.operations.foreman_repositories
-      vars:
-        foreman_repositories_version: nightly
-      when:
-        - product is defined
-        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
+    - ansible.builtin.include_role:
+        name: detect_deployer
 
-    - name: Metrics role (without Grafana)
-      include_role:
-        name: theforeman.operations.metrics
+- name: Setup PCP on Satellite
+  hosts: satellite6
+  tasks:
+    - ansible.builtin.include_tasks: tasks/foreman_pcp_with_repos.yaml
       vars:
+        foreman_pcp_setup_role: theforeman.operations.metrics
         foreman_metrics_grafana_enabled: false
 
-    - name: Disable the Foreman repositories
-      ansible.builtin.dnf:
-        name: foreman-release
-        state: absent
-      when:
-        - product is defined
-        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
-
-
-- name: Setup Performance Co-Pilot on Capsules
+- name: Setup PCP on Capsules
   hosts: capsules
-
   tasks:
-    - name: Setup Foreman repositories to have access to `foreman-pcp`
-      ansible.builtin.include_role:
-        name: theforeman.operations.foreman_repositories
+    - ansible.builtin.include_tasks: tasks/foreman_pcp_with_repos.yaml
       vars:
-        foreman_repositories_version: nightly
-      when:
-        - product is defined
-        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
+        foreman_pcp_setup_role: capsule_metrics
 
-    - name: Install PCP and relevant PMDAs
-      ansible.builtin.package:
-        name:
-          - pcp
-          - pcp-system-tools
-          - foreman-pcp
-          - pcp-pmda-apache
-          - pcp-pmda-postgresql
-          - pcp-pmda-redis
-        state: present
-        disable_plugin: "{{ 'foreman-protector' if ansible_os_family | default('RedHat') == 'RedHat' else omit }}"
-
-    - name: Configure hotproc PMDA to monitor Foreman processes
-      ansible.builtin.file:
-        path: /var/lib/pcp/pmdas/proc/hotproc.conf
-        src: /etc/pcp/proc/foreman-hotproc.conf
-        state: link
-      notify: Restart PCP services
-
-    - name: Ensure optional PMDAs are enabled
-      ansible.builtin.file:
-        path: "/var/lib/pcp/pmdas/{{ item }}/.NeedInstall"
-        mode: u=rw,g=r,o=r
-        state: touch
-      loop:
-        - apache
-        - postgresql
-        - redis
-      notify: Restart PCP services
-
-    - name: Enable PCP services
-      ansible.builtin.service:
-        name: "{{ item }}"
-        state: started
-        enabled: true
-      loop:
-        - pmcd
-        - pmproxy
-        - pmlogger
-
-    - name: Disable the Foreman repositories
-      ansible.builtin.dnf:
-        name: foreman-release
-        state: absent
-      when:
-        - product is defined
-        - product == 'foreman' or ( product == 'satellite' and sat_version is defined and sat_version == 'foremanctl' )
-
-  handlers:
-    - name: Restart PCP services
-      ansible.builtin.service:
-        name: "{{ item }}"
-        state: restarted
-      loop:
-        - pmcd
-        - pmproxy
-        - pmlogger
-
-
-- name: Setup Performance Co-Pilot on Capsule Load Balancers
+- name: Setup PCP on Capsule Load Balancers
   hosts: capsule_lbs
-
-  tasks:
-    - name: Install PCP
-      ansible.builtin.package:
-        name:
-          - pcp
-          - pcp-system-tools
-        state: present
-
-    - name: Enable PCP services
-      ansible.builtin.service:
-        name: "{{ item }}"
-        state: started
-        enabled: true
-      loop:
-        - pmcd
-        - pmproxy
-        - pmlogger
-...
+  roles:
+    - role: pcp_baseline

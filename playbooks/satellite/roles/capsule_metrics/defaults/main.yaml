@@ -1,0 +1,18 @@
+---
+capsule_metrics_packages:
+  - pcp
+  - pcp-system-tools
+  - foreman-pcp
+  - pcp-pmda-apache
+  - pcp-pmda-postgresql
+  - pcp-pmda-redis
+
+capsule_metrics_pmdas:
+  - apache
+  - postgresql
+  - redis
+
+capsule_metrics_pcp_services:
+  - pmcd
+  - pmproxy
+  - pmlogger

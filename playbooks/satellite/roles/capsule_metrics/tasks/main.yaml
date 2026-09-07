@@ -1,0 +1,30 @@
+---
+# Capsule PCP setup is satperf-owned: theforeman.operations.metrics targets Foreman
+# servers (OpenMetrics /metrics, Grafana). See foreman-operations-collection#174.
+- name: Install PCP and relevant PMDAs
+  ansible.builtin.package:
+    name: "{{ capsule_metrics_packages }}"
+    state: present
+    disable_plugin: "{{ 'foreman-protector' if _deployer == 'satellite-installer' else omit }}"
+
+- name: Configure hotproc PMDA to monitor Foreman processes
+  ansible.builtin.file:
+    path: /var/lib/pcp/pmdas/proc/hotproc.conf
+    src: /etc/pcp/proc/foreman-hotproc.conf
+    state: link
+  notify: Restart PCP services
+
+- name: Ensure optional PMDAs are enabled
+  ansible.builtin.file:
+    path: "/var/lib/pcp/pmdas/{{ item }}/.NeedInstall"
+    mode: u=rw,g=r,o=r
+    state: touch
+  loop: "{{ capsule_metrics_pmdas }}"
+  notify: Restart PCP services
+
+- name: Enable PCP services
+  ansible.builtin.service:
+    name: "{{ item }}"
+    state: started
+    enabled: true
+  loop: "{{ capsule_metrics_pcp_services }}"

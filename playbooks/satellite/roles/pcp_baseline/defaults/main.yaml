@@ -1,0 +1,9 @@
+---
+pcp_baseline_packages:
+  - pcp
+  - pcp-system-tools
+
+pcp_baseline_pcp_services:
+  - pmcd
+  - pmproxy
+  - pmlogger
