@@ -1,13 +1,13 @@
----
+# Install with:
+#   ansible-galaxy role install -r requirements.yml -p .ansible/roles
+#   ansible-galaxy collection install -r requirements.yml -p .ansible/collections
+#
+# Requires ansible-core >= 2.14.
 roles:
   - name: linux-system-roles.firewall
-
   - name: linux-system-roles.network
-
   - name: linux-system-roles.rhc
-
   - name: linux-system-roles.storage
-
   - name: linux-system-roles.timesync
 
   - name: repo_setup
@@ -19,14 +19,22 @@ roles:
     version: origin/main
 
 collections:
+  # Used by common/, satellite roles (firewalld, selinux, sysctl, authorized_key)
   - name: ansible.posix
+    version: ">=2.0.0"
 
+  # Used by plain-network, define-topology (ipaddr filter)
   - name: ansible.utils
+    version: ">=2.0.0"
 
+  # Used by foremanctl (copr), upgrade-restart (timezone), FAM tests (dict_kv)
   - name: community.general
+    version: ">=8.0.0"
 
+  # FAM modules, topology, flatpak tests, resource_info, etc.
   - name: theforeman.foreman
     version: ">=5.7.0"
 
+  # metrics + foreman_repositories (needs >=4.0.0 for play_hosts fix)
   - name: theforeman.operations
-...
+    version: ">=4.0.0"
