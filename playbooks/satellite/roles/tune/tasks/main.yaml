@@ -58,31 +58,15 @@
     - tuning_profile is not defined or tuning_profile | length == 0
     - rex_mode is not defined or rex_mode != 'mqtt'
 
-- name: Foreman
-  when:
-    - product is defined and product == 'foreman'
+- name: Discover installer/deployer command
   block:
-    - name: Set Foreman facts
-      ansible.builtin.set_fact:
-        installer_cmd_line: 'foreman-installer'
+    - ansible.builtin.include_role:
+        name: detect_deployer
 
-- name: Satellite
-  when:
-    - product is not defined or
-      ( product == 'satellite' and sat_version is defined and sat_version != 'foremanctl' )
-  block:
-    - name: Set Satellite facts
+    - name: Set installer/deployer command line
       ansible.builtin.set_fact:
-        installer_cmd_line: 'satellite-installer'
-
-- name: foremanctl
-  when:
-    - product is defined
-    - product == 'satellite' and sat_version is defined and sat_version == 'foremanctl'
-  block:
-    - name: Set Satellite facts
-      ansible.builtin.set_fact:
-        installer_cmd_line: 'foremanctl deploy'
+        installer_cmd_line: >-
+          {{ _deployer ~ (' deploy' if _deployment_method == 'container' else '') }}
 
 - name: Parameters
   block:
@@ -99,11 +83,21 @@
       when:
         - installer_additional_opts is defined and installer_additional_opts | length > 0
 
-- name: MQTT
+- name: RPM installer-only configuration
   when:
-    - rex_mode is defined and rex_mode == 'mqtt'
+    - _deployment_method == 'rpm'
   block:
-    - name: 'Workaround for: SAT-18217 - On its default configuration mosquitto cannot accept more than 1014 clients'
+    - name: Populate /etc/foreman-installer/custom-hiera.yaml
+      when:
+        - custom_hiera_content_file is defined and custom_hiera_content_file | length > 0
+      include_role:
+        name: apply_custom-hiera
+      vars:
+        content_file: "{{ custom_hiera_content_file }}"
+
+    - name: 'SAT-18217: default mosquitto config cannot accept more than 1014 clients'
+      when:
+        - rex_mode is defined and rex_mode == 'mqtt'
       ansible.builtin.blockinfile:
         block: |
           systemd::dropin_files:
@@ -115,16 +109,6 @@
         prepend_newline: true
         append_newline: true
         backup: yes
-
-- name: custom_hiera
-  when:
-    - custom_hiera_content_file is defined and custom_hiera_content_file | length > 0
-  block:
-    - name: Populate /etc/foreman-installer/custom-hiera.yaml
-      include_role:
-        name: apply_custom-hiera
-      vars:
-        content_file: "{{ custom_hiera_content_file }}"
 
 - name: Installer tuning
   block:
