@@ -1,10 +1,4 @@
 ---
-- name: Detect deployer
-  hosts: satellite6,capsules
-  tasks:
-    - ansible.builtin.include_role:
-        name: detect_deployer
-
 - name: Setup PCP on Satellite
   hosts: satellite6
   tasks:

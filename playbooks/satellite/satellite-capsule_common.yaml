@@ -3,6 +3,15 @@
   hosts: satellite6:capsules
 
   pre_tasks:
+    # - name: "Workaround RHEL-178642: downgrade openssl if 3.5.5-5 is installed"
+    #   ansible.builtin.dnf:
+    #     name:
+    #       - openssl-3.5.5-4.el9_8
+    #       - openssl-libs-3.5.5-4.el9_8
+    #     allow_downgrade: true
+    #   when: ansible_distribution_major_version == '9'
+    #   failed_when: false
+
     - name: Convert storage_pools to native type
       ansible.builtin.set_fact:
         storage_pools: "{{ storage_pools | from_yaml }}"

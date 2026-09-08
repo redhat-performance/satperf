@@ -1,10 +1,9 @@
 ---
-- name: "Configure capsule(s) load-balancer"
+- name: Configure capsule(s) load-balancer
   hosts: capsule_lbs
 
   roles:
     - role: linux-system-roles.firewall
     - role: ../common/roles/enlarge-arp-table
-    - role: registration_cache
+    # - role: registration_cache
     - role: haproxy
-...
