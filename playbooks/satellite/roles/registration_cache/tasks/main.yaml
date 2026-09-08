@@ -56,3 +56,4 @@
     name: "{{ registration_cache_service }}"
     state: started
     enabled: true
+...

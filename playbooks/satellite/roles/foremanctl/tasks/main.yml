@@ -1,125 +1,142 @@
 ---
+- ansible.builtin.include_tasks: ../../tasks/deployment_method/inherit.yaml
+  when: foremanctl_deployment_type == 'proxy'
+
+- name: Set deployment facts for server install
+  when: foremanctl_deployment_type == 'server'
+  block:
+    - ansible.builtin.set_fact:
+        _deployer: "{{ foremanctl_deployer }}"
+        _deployment_method: container
+
+    - ansible.builtin.include_tasks: ../../tasks/deployment_method/set_derived_facts.yaml
+
 - name: Requirements
   block:
-    - name: Enable Foreman develop COPR
-      community.general.copr:
-        name: "@theforeman/develop"
-        chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
-
-    - name: Enable hammer nightly COPRs (EL10)
+    - name: Foreman
       when:
-        - ansible_facts['distribution_major_version'] | int == 10
-      community.general.copr:
-        name: "@theforeman/{{ item }}"
-        chroot: "rhel-{{ ansible_facts['distribution_major_version'] }}-x86_64"
-      loop:
-        - foreman-nightly-staging
-        - katello-nightly-staging
-        - plugins-nightly-staging
+        - _is_foreman_product | bool
+      block:
+        - name: Assert required Foreman facts
+          ansible.builtin.assert:
+            that:
+              - foreman_version is defined and foreman_version | length > 0
+              - katello_version is defined and katello_version | length > 0
+              - foreman_version == 'nightly' or foreman_version is ansible.builtin.version('5.0', '>=')
+              - katello_version == 'nightly' or katello_version is ansible.builtin.version('5.0', '>=')
+            fail_msg: >-
+              foreman_version and katello_version must be set to nightly or >= 5.0
+
+        - name: Setup Foreman repositories
+          ansible.builtin.include_role:
+            name: theforeman.operations.foreman_repositories
+          vars:
+            foreman_repositories_version: "{{ foreman_version }}"
+            foreman_repositories_katello_version: "{{ katello_version }}"
 
     - name: Satellite
       when:
-        - product is not defined or product == 'satellite'
+        - _is_satellite_product | bool
       block:
+        # XXX: HACK! satellitectl (containerized) only ships in the "satellite"
+        # repo, so force proxies onto satellite6's additional_repos too.
+        - name: Use satellite6's additional_repos for containerized proxies
+          # lookup('ansible.builtin.vars', ..., host=...) still resolves in the
+          # current host's context; hostvars templates in the source host's pantry.
+          ansible.builtin.set_fact:
+            additional_repos: "{{ hostvars[groups['satellite6'][0]].additional_repos }}"
+          when:
+            - foremanctl_deployment_type is defined and foremanctl_deployment_type == 'proxy'
+
         - name: Setup Satellite repositories
           ansible.builtin.include_role:
             name: repo_setup
-          vars:
-            sat_version: 'stream'
 
-- name: Install foremanctl package
+- name: Install deployer package
   ansible.builtin.dnf:
-    name: foremanctl
+    name: "{{ _deployer }}"
     state: latest
 
-- name: Use code from git
+- name: Apply PRs
   when:
-    - use_git is defined and use_git | bool
-  block:
-    - name: Set required variable(s) values
-      ansible.builtin.set_fact:
-        foremanctl_organization: "{{ organization | default('theforeman') }}"
+    - apply_prs is defined
+    - apply_prs is string or apply_prs.targets | default([]) | length > 0
+  ansible.builtin.include_role:
+    name: apply_prs
 
-    - name: Clone foremanctl git repo # noqa: latest[git]
-      ansible.builtin.git:
-        repo: "{{ foremanctl_forge }}/{{ foremanctl_organization }}/{{ foremanctl_repo }}.git"
-        dest: /tmp/foremanctl
-        version: "{{ version | default(omit) }}"
-        force: true
-
-    - name: Apply PRs
-      when:
-        - apply_prs is defined
-        - apply_prs is string or apply_prs.targets | default([]) | length > 0
-      ansible.builtin.include_role:
-        name: apply_prs
-
-    - name: Move the original src directory
-      ansible.builtin.copy:
-        src: /usr/share/foremanctl/src/
-        dest: /usr/share/foremanctl/src.orig/
-        mode: 'preserve'
-        remote_src: true
-
-    - name: Remove original src directory
-      ansible.builtin.file:
-        path: /usr/share/foremanctl/src/
-        state: absent
-
-    - name: Copy the src directory from the git clone
-      ansible.builtin.copy:
-        src: /tmp/foremanctl/src/
-        dest: /usr/share/foremanctl/src/
-        mode: 'preserve'
-        remote_src: true
-
-    - name: Apply satellite vendor overrides
-      when:
-        - product is not defined or product == 'satellite'
-      ansible.builtin.copy:
-        src: /tmp/foremanctl/vendor_overrides/satellite/
-        dest: /usr/share/foremanctl/src/playbooks/_vendor_overrides/
-        mode: 'preserve'
-        remote_src: true
-
-    # XXX: Hack!!!
-    - name: Install foremanctl Ansible collections from src
-      ansible.builtin.command:
-        cmd: >-
-          ansible-galaxy collection install
-          -r /usr/share/foremanctl/src/requirements.yml
-          -p /usr/share/foremanctl/collections/ansible_collections
-      changed_when: true
-
-- name: Log in to the registry
+- name: Red Hat registry
   when:
     - registry is defined and registry != "quay.io"
     - registry_username is defined and registry_username | length > 0
     - registry_password is defined and registry_password | length > 0
-  containers.podman.podman_login:
-    registry: "{{ registry }}"
-    username: "{{ registry_username }}"
-    password: "{{ registry_password }}"
-    authfile: /etc/foreman/registry-auth.json
+  block:
+    - name: Log in to the registry
+      containers.podman.podman_login:
+        registry: "{{ registry }}"
+        username: "{{ registry_username }}"
+        password: "{{ registry_password }}"
+        authfile: /etc/foreman/registry-auth.json
 
-- name: Override images vars file
-  when:
-    - override_images_content_file is defined and override_images_content_file | length > 0
-  ansible.builtin.include_role:
-    name: override_images
+    - name: Redirect pulls to a different registry
+      when: registry != "registry.redhat.io"
+      block:
+        - name: Redirect registry.redhat.io pulls to the configured registry
+          ansible.builtin.copy:
+            dest: /etc/containers/registries.conf.d/registry-mirror.conf
+            mode: '0644'
+            content: |
+              [[registry]]
+              prefix = "registry.redhat.io"
+              location = "{{ registry }}"
 
-- name: Show images.yml content
-  ansible.builtin.slurp:
-    src: /usr/share/foremanctl/src/vars/images.yml
-  register: _foremanctl_images_yml
+        - name: Check for an existing local container signature policy
+          ansible.builtin.stat:
+            path: /etc/containers/policy.json
+          register: _foremanctl_local_policy_json
 
-- name: Display images.yml
-  ansible.builtin.debug:
-    msg: "{{ (_foremanctl_images_yml.content | b64decode).split('\n') }}"
+        - name: Relax signature policy for registry.redhat.io
+          vars:
+            _foremanctl_policy_json_src: >-
+              {{ '/etc/containers/policy.json' if _foremanctl_local_policy_json.stat.exists
+                 else '/usr/share/containers/policy.json' }}
+          block:
+            - name: Read active container signature policy
+              ansible.builtin.slurp:
+                src: "{{ _foremanctl_policy_json_src }}"
+              register: _foremanctl_active_policy_json
 
-- name: Set deployer command
-  ansible.builtin.set_fact:
-    _foremanctl_deployer: foremanctl
+            - name: Write /etc/containers/policy.json with registry.redhat.io relaxed
+              ansible.builtin.copy:
+                dest: /etc/containers/policy.json
+                mode: '0644'
+                content: >-
+                  {{ (_foremanctl_active_policy_json.content | b64decode | from_json)
+                     | combine({'transports': {'docker': {
+                         'registry.redhat.io': [{'type': 'insecureAcceptAnything'}]}}},
+                               recursive=true)
+                     | to_nice_json }}
+
+    - name: Set IOP engine extra packages
+      when:
+        - enable_iop | d(false) | bool
+        - iop_engine_extra_packages is defined and iop_engine_extra_packages | length > 0
+      ansible.builtin.blockinfile:
+        path: /usr/share/foremanctl/src/vars/images.yml
+        marker: "# {mark} SATPERF iop_engine_extra_packages"
+        block: |
+          iop_engine_extra_packages:
+          {% for package in iop_engine_extra_packages.split(',') %}
+            - "{{ package }}"
+          {% endfor %}
+
+# - name: Show images.yml content
+#   ansible.builtin.slurp:
+#     src: /usr/share/foremanctl/src/vars/images.yml
+#   register: _foremanctl_images_yml
+
+# - name: Display images.yml
+#   ansible.builtin.debug:
+#     msg: "{{ (_foremanctl_images_yml.content | b64decode).split('\n') }}"
 
 - name: Pull images
   when:
@@ -127,7 +144,7 @@
   block:
     - name: Set command line to pull images
       ansible.builtin.set_fact:
-        _foremanctl_pull_images_cmd: "{{ _foremanctl_deployer }} pull-images"
+        _foremanctl_pull_images_cmd: "{{ _deployer }} pull-images"
 
     - name: Show command line to pull images
       ansible.builtin.debug:
@@ -159,23 +176,25 @@
   block:
     - name: Set command line to deploy
       ansible.builtin.set_fact:
-        _foremanctl_deploy_cmd: "{{ _foremanctl_deployer }} deploy"
+        _foremanctl_deploy_cmd: "{{ _deployer }} deploy"
 
     - name: Initial deployment
       block:
         - name: Set basic deployment command line
           ansible.builtin.set_fact:
             _foremanctl_initial_deploy_cmd: >-
-              {{ _foremanctl_deploy_cmd }}
-              --initial-admin-password {{ password | default(foreman_password) }}
-              {{ '--flavor satellite' if (product is not defined or product == 'satellite') else '' }}
+              {{ [_foremanctl_deploy_cmd,
+                  '--initial-admin-password ' ~ (password | default(foreman_password)),
+                  '--flavor satellite' if _is_satellite_product | bool else '']
+                 | reject('equalto', '') | join(' ') }}
 
         - name: Set redacted basic deployment command line
           ansible.builtin.set_fact:
             _foremanctl_initial_deploy_cmd_redacted: >-
-              {{ _foremanctl_deploy_cmd }}
-              --initial-admin-password [redacted]
-              {{ '--flavor satellite' if (product is not defined or product == 'satellite') else '' }}
+              {{ [_foremanctl_deploy_cmd,
+                  '--initial-admin-password [redacted]',
+                  '--flavor satellite' if _is_satellite_product | bool else '']
+                 | reject('equalto', '') | join(' ') }}
 
         - name: Show redacted deployment command line
           ansible.builtin.debug:
@@ -226,18 +245,6 @@
 
     - name: Add/remove features
       block:
-        - name: Foreman
-          when:
-            - product is defined and product == 'foreman'
-          block:
-            - name: Setup Foreman repositories for hammer
-              when: "'hammer' in foremanctl_add_features"
-              ansible.builtin.include_role:
-                name: theforeman.operations.foreman_repositories
-              vars:
-                foreman_repositories_version: nightly
-                foreman_repositories_katello_version: nightly
-
         - name: Add iop to features if enabled
           when: enable_iop | d(false) | bool
           ansible.builtin.set_fact:
@@ -251,9 +258,10 @@
             - name: Set features deployment command line
               ansible.builtin.set_fact:
                 _foremanctl_add_features_cmd: >-
-                  {{ _foremanctl_deploy_cmd }}
-                  {{ foremanctl_remove_features | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' ') }}
-                  {{ foremanctl_add_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ') }}
+                  {{ [_foremanctl_deploy_cmd,
+                      foremanctl_remove_features | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' '),
+                      foremanctl_add_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ')]
+                     | reject('equalto', '') | join(' ') }}
 
             - name: Show features deployment command line
               ansible.builtin.debug:
@@ -282,16 +290,6 @@
                 fail_msg: "foremanctl add/remove features failed (rc={{ _foremanctl_add_features_cmd_out.rc }}); see output above"
                 success_msg: foremanctl add/remove features succeeded
 
-        - name: Foreman
-          when:
-            - product is defined and product == 'foreman'
-          block:
-            - name: Disable Foreman repositories
-              when: "'hammer' in foremanctl_add_features"
-              ansible.builtin.dnf:
-                name: foreman-release
-                state: absent
-
 - name: Foreman smart proxy deployment
   when:
     - foremanctl_deployment_type == 'proxy'
@@ -303,27 +301,27 @@
 
     - name: Set default variable(s) values
       ansible.builtin.set_fact:
-        location_groupname: "location_{{ location | lower }}"
+        _foremanctl_location_groupname: "location_{{ location | lower }}"
 
     - name: Load balanced capsule
       when:
         - "'capsule_lbs' in groups"
-        - groups['capsule_lbs'] | intersect(groups[location_groupname]) | length > 0
+        - groups['capsule_lbs'] | intersect(groups[_foremanctl_location_groupname]) | length > 0
       ansible.builtin.set_fact:
-        capsule_lb: "{{ groups['capsule_lbs'] | intersect(groups[location_groupname]) | first }}"
+        _foremanctl_capsule_lb: >-
+          {{ groups['capsule_lbs'] | intersect(groups[_foremanctl_location_groupname]) | first }}
 
     - name: Load balanced capsule URL
       when:
-        - capsule_lb is defined
+        - _foremanctl_capsule_lb is defined
       ansible.builtin.set_fact:
-        # capsule_lb's smart-proxy consolidates registration/templates/etc.
-        # onto its single https_port (8443) - see haproxy role for the
-        # matching RPM-vs-foremanctl port logic.
-        capsule_lb_url: "https://{{ capsule_lb }}:8443"
+        # _foremanctl_capsule_lb's smart-proxy consolidates registration/templates/etc.
+        # onto its single https_port - see haproxy role and _registration_proxy_port.
+        _foremanctl_capsule_lb_url: "https://{{ _foremanctl_capsule_lb }}:{{ _registration_proxy_port }}"
 
     - name: Set command line to deploy proxy
       ansible.builtin.set_fact:
-        _foremanctl_deploy_proxy_cmd: "{{ _foremanctl_deployer }} deploy-proxy"
+        _foremanctl_deploy_proxy_cmd: "{{ _deployer }} deploy-proxy"
 
     - name: Generate proxy auth bundle on the Foreman server
       delegate_to: "{{ groups['satellite6'] | first }}"
@@ -331,10 +329,11 @@
         - name: Set auth bundle command line
           ansible.builtin.set_fact:
             _foremanctl_auth_bundle_cmd: >-
-              {{ _foremanctl_deployer }}
-              auth-bundle
-              {{ ('--server-alias ' ~ capsule_lb ~ ' --certificate-renew') if capsule_lb is defined else '' }}
-              {{ inventory_hostname }}
+              {{ [_deployer,
+                  'auth-bundle',
+                  ('--server-alias ' ~ _foremanctl_capsule_lb ~ ' --certificate-renew') if _foremanctl_capsule_lb is defined else '',
+                  inventory_hostname]
+                 | reject('equalto', '') | join(' ') }}
 
         - name: Show auth bundle command line
           ansible.builtin.debug:
@@ -381,25 +380,26 @@
 
     - name: Set foreman-proxy-content flavor
       when:
-        - product is defined and product == 'foreman'
+        - _is_foreman_product | bool
       ansible.builtin.set_fact:
         _foremanctl_proxy_flavor: foreman-proxy-content
 
     - name: Set capsule flavor
       when:
-        - product is not defined or product == 'satellite'
+        - _is_satellite_product | bool
       ansible.builtin.set_fact:
         _foremanctl_proxy_flavor: capsule
 
     - name: Set proxy deployment command line
       ansible.builtin.set_fact:
         _foremanctl_initial_deploy_proxy_cmd: >-
-          {{ _foremanctl_deploy_proxy_cmd }}
-          --flavor {{ _foremanctl_proxy_flavor }}
-          --auth-bundle {{ foremanctl_proxy_auth_bundle_dest_path }}
-          --foreman-fqdn {{ groups['satellite6'] | first }}
-          {{ ('--registration-url ' ~ capsule_lb_url) if capsule_lb is defined else '' }}
-          {{ ('--templates-url ' ~ capsule_lb_url) if capsule_lb is defined else '' }}
+          {{ ([_foremanctl_deploy_proxy_cmd,
+               '--flavor ' ~ _foremanctl_proxy_flavor,
+               '--auth-bundle ' ~ foremanctl_proxy_auth_bundle_dest_path,
+               '--foreman-fqdn ' ~ (groups['satellite6'] | first)]
+              + (['--registration-url ' ~ _foremanctl_capsule_lb_url,
+                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else []))
+             | join(' ') }}
 
     - name: Show proxy deployment command line
       ansible.builtin.debug:

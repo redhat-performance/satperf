@@ -5,9 +5,7 @@ foremanctl_repo: foremanctl
 
 # foremanctl_deployment_type: server
 
-foremanctl_proxy_auth_bundle_dir: /var/lib/foremanctl/certs/bundles
-foremanctl_proxy_auth_bundle_source_path: "{{ foremanctl_proxy_auth_bundle_dir }}/{{ inventory_hostname }}.tar.gz"
-foremanctl_proxy_auth_bundle_dest_path: "/root/{{ inventory_hostname }}.tar.gz"
+foremanctl_deployer: satellitectl
 
 foremanctl_add_features: []
 foremanctl_remove_features: []
