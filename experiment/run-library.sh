@@ -24,11 +24,7 @@ fi
 opts="${opts:-"-i $inventory --forks 25"}"
 opts_adhoc="${opts_adhoc:-$opts}"
 
-if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
-    enable_iop="${PARAM_enable_iop:-true}"
-else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
-    enable_iop="${PARAM_enable_iop:-false}"
-fi
+enable_iop="${PARAM_enable_iop:-true}"
 
 content_host_base_image="${PARAM_content_host_base_image:-ubi-init-smallest-satellite_client}"
 
@@ -126,6 +122,24 @@ function vercmp_le() {
     (( rc == 12 || rc == 0 )) && return 0 || return 1
 }
 
+# Derive deployment method when not set by the caller.
+if [[ -z "${deployment_method:-}" ]]; then
+    deployment_method=rpm
+    if [[ "$product" == 'satellite' ]]; then
+        if vercmp_lt "$sat_version" '6.20.0'; then
+            deployment_method=rpm
+        else
+            deployment_method=container
+        fi
+    elif [[ "$product" == 'foreman' ]]; then
+        if vercmp_le "$foreman_version" '3.19'; then
+            deployment_method=rpm
+        else
+            deployment_method=container
+        fi
+    fi
+fi
+
 function get_inventory_var() {
     local inventory_var=$1
     local group="${2:-satellite6}"
@@ -146,10 +160,14 @@ function get_num_hosts() {
       { grep -vc '^  hosts ' || test $? = 1; }
 }
 
-function measurement_add() {
+function measurement_row() {
     python3 -c "import csv; import sys; fp=open('$logs/measurement.log','a'); writer=csv.writer(fp); writer.writerow(sys.argv[1:]); fp.close()" "$@"
+}
+
+function measurement_add() {
+    measurement_row "$@"
     if [[ -z "$skip_measurement" ]] || ! $skip_measurement; then
-        status_data_create "$@"
+        status_data_create "$@" &
     fi
 }
 
@@ -201,7 +219,7 @@ function generic_environment_check() {
     fi
 
     if $restarted; then
-        if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
+        if [[ "$deployment_method" == 'rpm' ]]; then
             as 00-satellite-stop.log \
             'foreman-maintain service stop'
 
@@ -210,7 +228,7 @@ function generic_environment_check() {
 
             as 00-satellite-start.log \
             'foreman-maintain service start'
-        else    # "$sat_version" == 'foremanctl' || "$foreman_version" == 'foremanctl'
+        else    # $deployment_method == 'container'
             as 00-foremanctl-stop.log \
             'systemctl stop foreman.target'
 
@@ -219,10 +237,10 @@ function generic_environment_check() {
 
             as 00-foremanctl-start.log \
             'systemctl start foreman.target'
-        fi
+        fi  # $deployment_method
     fi
 
-    if [[ "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl' ]]; then
+    if [[ "$deployment_method" == 'rpm' ]]; then
         as 00-info-rpm-q-katello.log \
           'rpm -q katello'
         katello_rpm="$( tail -n 1 $logs/00-info-rpm-q-katello.log )"
@@ -234,7 +252,7 @@ function generic_environment_check() {
 
         log "katello_version = $katello_rpm"
         log "satellite_version = $satellite_rpm"
-    fi  # "$sat_version" != 'foremanctl' && "$foreman_version" != 'foremanctl'
+    fi  # $deployment_method
 
     $extended && (( num_container_hosts > 0 )) && wait $tierup_pid
 
@@ -309,18 +327,20 @@ function status_data_create() {
         sd_start=$1; shift
     else
         sd_start_seconds=$1; shift
-        sd_start="$( date -u -Iseconds -d @$sd_start_seconds )"
+        sd_start="$( python3 -c "from datetime import datetime, timezone; print(datetime.fromtimestamp(float('$sd_start_seconds'), tz=timezone.utc).isoformat())" )"
     fi
     if [[ "$1" =~ [[:digit:]]{4}-[[:digit:]]{2}-[[:digit:]]{2}T[[:digit:]]{2}:[[:digit:]]{2}:[[:digit:]]{2}.*\+[[:digit:]]{2}:[[:digit:]]{2} ]]; then
         sd_end=$1; shift
     else
         sd_end_seconds=$1; shift
-        sd_end="$( date -u -Iseconds -d @$sd_end_seconds )"
+        sd_end="$( python3 -c "from datetime import datetime, timezone; print(datetime.fromtimestamp(float('$sd_end_seconds'), tz=timezone.utc).isoformat())" )"
     fi
-    if [[ "$1" =~ [[:digit:]]+\.[[:digit:]]{6} ]]; then
+    if [[ "$1" =~ [[:digit:]]+(\.[[:digit:]]+)? ]] && [[ ! "$1" =~ [a-zA-Z] ]]; then
         sd_duration=$1; shift
+    elif [[ -n "${sd_end_seconds:-}" ]] && [[ -n "${sd_start_seconds:-}" ]]; then
+        sd_duration="$( python3 -c "print(int(float('$sd_end_seconds') - float('$sd_start_seconds')))" )"
     else
-        sd_duration="$(( $( date -d @$sd_end_seconds +%s ) - $( date -d @$sd_start_seconds +%s ) ))"
+        sd_duration="$( python3 -c "from datetime import datetime; s = datetime.fromisoformat('$sd_start'); e = datetime.fromisoformat('$sd_end'); print(int((e - s).total_seconds()))" )"
     fi
     sd_kat_rpm=$1; shift
     [[ -n $sd_kat_rpm ]] || sd_kat_rpm="${_sdc_cached_kat_rpm:-}"
@@ -329,7 +349,7 @@ function status_data_create() {
           -m ansible.builtin.shell \
           -a 'rpm -q katello' \
           satellite6 2>/dev/null |
-          tail -n 1 )"
+          tail -n 1 )" || sd_kat_rpm="unknown"
         _sdc_cached_kat_rpm="$sd_kat_rpm"
     fi
     sd_kat_ver_short="$( echo "$sd_kat_rpm" | sed 's#^\(katello-\)\(.*\)\(-.*$\)#\2#g' )"
@@ -341,7 +361,7 @@ function status_data_create() {
           -m ansible.builtin.shell \
           -a 'rpm -q satellite' \
           satellite6 2>/dev/null |
-          tail -n 1 )"
+          tail -n 1 )" || sd_sat_rpm="unknown"
         _sdc_cached_sat_rpm="$sd_sat_rpm"
     fi
     sd_sat_ver_short="$( echo "$sd_sat_rpm" | sed 's#^\(satellite-\)\(.*\)\(-.*$\)#\2#g' )"
@@ -655,6 +675,7 @@ function c() {
       "$rc" \
       "$start" \
       "$end" \
+      "$(( end - start )).000000" \
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker"
@@ -697,6 +718,7 @@ function a() {
       "$rc" \
       "$start" \
       "$end" \
+      "$(( end - start )).000000" \
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker"
@@ -730,17 +752,17 @@ function ap() {
     local end="$( date -u +%s )"
     log "Finish after $(( end - start )) seconds with log in $out and exit code $rc"
 
-    # Retry the execution until it succeeds
-    if (( rc != 0)); then
-        local max_retries=5
-        local retry_counter=1
-        local retry_rc=$rc
-        until (( retry_rc == 0 || retry_counter > max_retries )); do
-            ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc "$@" &>$out.retry_$retry_counter
-            retry_rc=$?
-            (( retry_counter++ ))
-        done
-    fi
+    # # Retry the execution until it succeeds
+    # if (( rc != 0)); then
+    #     local max_retries=5
+    #     local retry_counter=1
+    #     local retry_rc=$rc
+    #     until (( retry_rc == 0 || retry_counter > max_retries )); do
+    #         ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc "$@" &>$out.retry_$retry_counter
+    #         retry_rc=$?
+    #         (( retry_counter++ ))
+    #     done
+    # fi
 
     measurement_add \
       "ANSIBLE_CALLBACKS_ENABLED='ansible.posix.profile_tasks' ansible-playbook $opts_adhoc $( _format_opts "$@" )" \
@@ -748,6 +770,7 @@ function ap() {
       "$rc" \
       "$start" \
       "$end" \
+      "$(( end - start )).000000" \
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker"
@@ -798,28 +821,30 @@ function apj() {
           satellite6,capsules >"${logs}/profile/${test}-kill-profiling.log"
     fi
 
-    local play_num_tasks="$( jq '.plays[0].tasks | length' $play_out_json )"
+    local play_num_tasks="$( jq '.plays[0].tasks | length // 0' $play_out_json 2>/dev/null )" || play_num_tasks=0
+    local start end duration
     if (( play_num_tasks == 1 )); then
-        local task_name="$( jq '.plays[0].tasks[0].task.name' $play_out_json )"
-        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
-        local task_start_z="$( jq '.plays[0].tasks[0].task.duration.start' $play_out_json )"
-        local task_end_z="$( jq '.plays[0].tasks[0].task.duration.end' $play_out_json )"
-        local task_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-        local task_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-        local task_duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
-        local start=$task_start
-        local end=$task_end
-        local duration=$task_duration
-    else
-        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
-        local play_start_z="$( jq '.plays[0].play.duration.start' $play_out_json )"
-        local play_end_z="$( jq '.plays[0].play.duration.end' $play_out_json )"
-        local play_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-        local play_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-        local play_duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime($play_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($play_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
-        local start=$play_start
-        local end=$play_end
-        local duration=$play_duration
+        local task_start_z="$( jq -r '.plays[0].tasks[0].task.duration.start // empty' $play_out_json 2>/dev/null )"
+        local task_end_z="$( jq -r '.plays[0].tasks[0].task.duration.end // empty' $play_out_json 2>/dev/null )"
+        if [[ -n "$task_start_z" && -n "$task_end_z" ]]; then
+            start="$( python3 -c "from datetime import datetime; print(datetime.strptime('$task_start_z', '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+            end="$( python3 -c "from datetime import datetime; print(datetime.strptime('$task_end_z', '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+            duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime('$task_end_z', '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime('$task_start_z', '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
+        fi
+    fi
+    if [[ -z "${start:-}" ]]; then
+        local play_start_z="$( jq -r '.plays[-1].play.duration.start // empty' $play_out_json 2>/dev/null )"
+        local play_end_z="$( jq -r '.plays[-1].play.duration.end // empty' $play_out_json 2>/dev/null )"
+        if [[ -n "$play_start_z" && -n "$play_end_z" ]]; then
+            start="$( python3 -c "from datetime import datetime; print(datetime.strptime('$play_start_z', '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+            end="$( python3 -c "from datetime import datetime; print(datetime.strptime('$play_end_z', '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
+            duration="$( python3 -c "from datetime import datetime; print('{:.6f}'.format((datetime.strptime('$play_end_z', '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime('$play_start_z', '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds()))" )"
+        fi
+    fi
+    if [[ -z "${start:-}" ]]; then
+        start="$( date -u +%s )"
+        end="$start"
+        duration="0.000000"
     fi
     # local rc="$( jq '.stats.localhost.failures' $play_out_json )"
     log "Finish after $duration seconds with JSON log in $play_out_json and exit code $rc"
@@ -848,7 +873,7 @@ function apj() {
       "$duration" \
       "$katello_rpm" \
       "$satellite_rpm" \
-      "$marker" &
+      "$marker"
 
     if $profile; then
         # Convert BPF profile output to image
@@ -922,10 +947,15 @@ function e() {
     # Examine log for specific measure using reg-average.py
     local grepper=$1
     local log=$2
+    [[ -n "$grepper" && -n "$log" ]] || return 0
     local log_report="$( echo "$log" | sed "s/\.log$/-$grepper.log/" )"
     local hardened_grepper="$( echo "$grepper" | sed -e 's#\(\[\)#\\\1#' -e 's#\(\]\)#\\\1#' -e 's#\((\)#\\\1#' -e 's#\()\)#\\\1#' )"
     experiment/reg-average.py "$hardened_grepper" "$log" | sed -e 's#\\\(\[\)#\1#' -e 's#\\\(\]\)#\1#' -e 's#\\\((\)#\1#' -e 's#\\\()\)#\1#' &>"$log_report"
     local rc=$?
+    if (( rc != 0 )); then
+        log "WARNING: No timing data for '$grepper' in $log (reg-average.py rc=$rc)"
+        return $rc
+    fi
     local started_ts="$( grep '^min in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
     local ended_ts="$( grep '^max in' "$log_report" | tail -n 1 | cut -d ' ' -f 4 )"
     local duration="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $(NF-4)}' )"
@@ -933,12 +963,13 @@ function e() {
     local avg_duration="$( grep "^$hardened_grepper" "$log_report" | tail -n 1 | awk '{print $NF}' )"
     log "Examined $log for $grepper: $duration / $passed = $avg_duration (ranging from $started_ts to $ended_ts) and has taken $avg_duration seconds"
 
-    measurement_add \
+    measurement_row \
       "experiment/reg-average.py '$grepper' '$log'" \
       "$log_report" \
       "$rc" \
       "$started_ts" \
       "$ended_ts" \
+      "$duration" \
       "$katello_rpm" \
       "$satellite_rpm" \
       "$marker" \
@@ -962,29 +993,41 @@ function ej() {
       '.plays[0].tasks[] | select(.task.name==$TASK_NAME and (.hosts.localhost.skipped != null and .hosts.localhost.skipped | not)) | .task' \
       $play_out_json >$tasks_out_json
 
-    task_ids="$( jq -r '.id' $tasks_out_json )"
+    local aggr_num_tasks="$( jq -s 'length' $tasks_out_json )"
 
-    local aggr_num_tasks=0
-    local aggregated_task_duration=0
-    for task_id in $task_ids; do
-        # 'ansible.posix.json' returns datetimes by default ending in 'Z' and without timezone information, so we need to transform it for OPL consumption
-        local task_start_z="$( jq --arg TASK_ID "$task_id" \
-          'select(.id==$TASK_ID) | .duration.start' \
-          $tasks_out_json )"
-        local task_end_z="$( jq --arg TASK_ID "$task_id" \
-          'select(.id==$TASK_ID) | .duration.end' \
-          $tasks_out_json )"
-        local task_start="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-        local task_end="$( python3 -c "from datetime import datetime; print(datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ').astimezone().isoformat())" )"
-        local task_duration="$( python3 -c "from datetime import datetime; print((datetime.strptime($task_end_z, '%Y-%m-%dT%H:%M:%S.%fZ') - datetime.strptime($task_start_z, '%Y-%m-%dT%H:%M:%S.%fZ')).total_seconds())" )"
-        if (( aggr_num_tasks == 0 )); then
-            local first_task_start=$task_start
-        fi
-        local last_task_end=$task_end
-        local aggregated_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration + $task_duration))" )"
-        (( aggr_num_tasks++ ))
-    done
-    local average_task_duration="$( python3 -c "print('{:.6f}'.format($aggregated_task_duration / $aggr_num_tasks))" )"
+    if (( aggr_num_tasks == 0 )); then
+        log "WARNING: No matching tasks found for '$task_name' in $play_out_json"
+        return 1
+    fi
+
+    # Single python3 call: compute total duration from all start/end pairs + timezone conversion
+    local ej_times
+    ej_times="$( jq -s '[.[] | select(.duration.start != null and .duration.end != null) | .duration.start + "|" + .duration.end] | join("\n")' -r $tasks_out_json | \
+      python3 -c "
+import sys
+from datetime import datetime
+
+def parse(s):
+    for fmt in ('%Y-%m-%dT%H:%M:%S.%f%z', '%Y-%m-%dT%H:%M:%S.%fZ', '%Y-%m-%dT%H:%M:%S%z', '%Y-%m-%dT%H:%M:%SZ'):
+        try: return datetime.strptime(s, fmt)
+        except ValueError: pass
+    raise ValueError(f'Cannot parse: {s}')
+
+pairs = [(parse(s), parse(e)) for line in sys.stdin if line.strip() for s, e in [line.strip().split('|')]]
+if not pairs:
+    print('0.000000|0.000000||')
+    sys.exit(0)
+total = sum((e - s).total_seconds() for s, e in pairs)
+n = len(pairs)
+first_local = min(s for s, _ in pairs).astimezone().isoformat()
+last_local = max(e for _, e in pairs).astimezone().isoformat()
+print(f'{total:.6f}|{total/n:.6f}|{first_local}|{last_local}')
+" )"
+
+    local aggregated_task_duration="$( echo "$ej_times" | cut -d'|' -f1 )"
+    local average_task_duration="$( echo "$ej_times" | cut -d'|' -f2 )"
+    local first_task_start="$( echo "$ej_times" | cut -d'|' -f3 )"
+    local last_task_end="$( echo "$ej_times" | cut -d'|' -f4 )"
     local rc=0
     log "Examined $tasks_out_json for $task_name: $aggregated_task_duration / $aggr_num_tasks = $average_task_duration (ranging from $first_task_start to $last_task_end) and has taken $average_task_duration seconds"
 
@@ -1022,6 +1065,94 @@ function _resolve_satellite_creds() {
           grep '"msg":' | cut -d '"' -f 4)"
     fi
     echo "$_cached_satellite_creds"
+}
+
+function _foreman_task_api() {
+    # Query Foreman Tasks API for a task by ID.  Returns the JSON object.
+    local task_id=$1
+    local satellite_host="$( _resolve_satellite_host )"
+    [[ -n $satellite_host ]] || return 2
+    local satellite_creds="$( _resolve_satellite_creds )"
+    [[ -n $satellite_creds ]] || return 2
+
+    curl --silent --insecure \
+      -u "$satellite_creds" \
+      -X GET \
+      -H 'Accept: application/json' \
+      --max-time 30 \
+      "https://${satellite_host}/foreman_tasks/api/tasks/${task_id}"
+}
+
+function ejt() {
+    # Query the Foreman Tasks API for definitive server-side duration.
+    # Extracts the task ID from the launch task response, then queries
+    # GET /foreman_tasks/api/tasks/{id} directly.
+    # Usage: ejt <launch_task_name> <wait_task_name> <test>
+    local launch_task=$1; shift
+    local wait_task=$1; shift
+    local test=$1; shift
+    local play_out_json="${logs}/${test}.json"
+
+    # Extract the Foreman task ID from the launch task (uri POST → json.id)
+    local task_id
+    task_id="$( jq -r --arg TASK_NAME "$launch_task" \
+      '.plays[0].tasks[] | select(.task.name==$TASK_NAME) | .hosts.localhost.json.id // empty' \
+      "$play_out_json" )"
+
+    # Fallback: try wait_for_task output if launch task didn't embed json.id
+    if [[ -z $task_id || $task_id == "null" ]]; then
+        task_id="$( jq -r --arg TASK_NAME "$wait_task" \
+          '.plays[0].tasks[] | select(.task.name==$TASK_NAME) | .hosts.localhost.task.id // .hosts.localhost.id // empty' \
+          "$play_out_json" )"
+    fi
+
+    if [[ -z $task_id || $task_id == "null" ]]; then
+        log "WARNING: Could not extract Foreman task ID from '$launch_task' or '$wait_task' in $play_out_json"
+        return 1
+    fi
+
+    # Query Foreman Tasks API for the definitive server-side timing
+    local task_json
+    task_json="$( _foreman_task_api "$task_id" )"
+
+    if [[ -z $task_json || $task_json == "null" ]]; then
+        log "WARNING: Foreman Tasks API returned empty for task $task_id"
+        return 1
+    fi
+
+    local started ended duration result
+    started="$( echo "$task_json" | jq -r '.started_at // empty' )"
+    ended="$( echo "$task_json" | jq -r '.ended_at // empty' )"
+    result="$( echo "$task_json" | jq -r '.result // empty' )"
+    duration="$( python3 -c "
+from datetime import datetime
+s = datetime.fromisoformat('$started')
+e = datetime.fromisoformat('$ended')
+print(f'{(e - s).total_seconds():.3f}')
+" 2>/dev/null )"
+
+    if [[ -z $duration ]]; then
+        log "WARNING: Could not compute duration for task $task_id (started=$started ended=$ended)"
+        return 1
+    fi
+
+    log "Examined task $task_id ($launch_task): duration=${duration}s result=$result (from $started to $ended)"
+
+    local started_ts ended_ts
+    started_ts="$( python3 -c "from datetime import datetime; print(datetime.fromisoformat('$started').astimezone().isoformat())" 2>/dev/null || echo "$started" )"
+    ended_ts="$( python3 -c "from datetime import datetime; print(datetime.fromisoformat('$ended').astimezone().isoformat())" 2>/dev/null || echo "$ended" )"
+
+    measurement_add \
+      "ejt '$launch_task' '$wait_task' '$test'" \
+      "$play_out_json" \
+      "0" \
+      "$started_ts" \
+      "$ended_ts" \
+      "$duration" \
+      "$katello_rpm" \
+      "$satellite_rpm" \
+      "$marker" \
+      "results.items.duration=$duration results.items.task_id=$task_id results.items.result=$result"
 }
 
 # Examine JSON role
@@ -1126,9 +1257,9 @@ function task_examine() {
 
     if (( rc == 0 )); then
         started="$( awk -F'"' '/^results.tasks.start=/ {printf ("%s", $2)}' $log_report )"
-        started_ts="$( date -d $started +%s )"
+        started_ts="$( python3 -c "from datetime import datetime; print(int(datetime.fromisoformat('$started').timestamp()))" )"
         ended="$( awk -F'"' '/^results.tasks.end=/ {printf ("%s", $2)}' $log_report )"
-        ended_ts="$( date -d $ended +%s )"
+        ended_ts="$( python3 -c "from datetime import datetime; print(int(datetime.fromisoformat('$ended').timestamp()))" )"
         duration="$( awk -F'"' '/^results.tasks.duration=/ {printf ("%.0f", $2)}' $log_report )"
         head_tail_perc="$( awk -F'"' '/^results.tasks.percentage_removed=/ {printf ("%.2f", $2)}' $log_report )"
         log "Examined task $task_id and it has $head_tail_perc % of head/tail (ranging from $started_ts to $ended_ts) and has taken $duration seconds"
@@ -1139,6 +1270,7 @@ function task_examine() {
           "$rc" \
           "$started_ts" \
           "$ended_ts" \
+          "$duration" \
           "$katello_version" \
           "$satellite_version" \
           "$marker" \
@@ -1287,10 +1419,6 @@ unset _run_library_dir
 
 check_env() {
     section 'Checking environment'
-    generic_environment_check
-    # unset skip_measurement
-    # set +e
-
     # Initial version sanity check
     for rel in $rels; do
         case "$rel" in
@@ -1303,4 +1431,7 @@ check_env() {
         esac
     done # for rel in $rels
 
+    generic_environment_check "$@"
+    # unset skip_measurement
+    # set +e
 } # check_env
