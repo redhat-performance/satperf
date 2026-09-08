@@ -12,7 +12,7 @@
 #       prs           - list of PR/MR numbers
 #       forge         - VCS forge base URL (default: https://github.com)
 #       exclude_patterns - optional list of filterdiff --exclude patterns
-#                          (e.g. ['*/test/*', '*/spec/*']) requires patchutils
+#                          (e.g. ['*/test/*', '*/tests/*', '*/spec/*']) requires patchutils
 
 - name: Parse apply_prs into _apply_prs (extra_vars cannot be overwritten by set_fact)
   ansible.builtin.set_fact:
@@ -22,6 +22,8 @@
   ansible.builtin.set_fact:
     _apply_prs_default_exclude_patterns:
       - '*/test/*'
+      - '*/tests/*'
+      - 'tests/*'
       - '*/spec/*'
 
 - name: Validate _apply_prs.targets
