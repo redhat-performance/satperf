@@ -1,17 +1,13 @@
 ---
+- ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir | default(playbook_dir ~ '/tasks/deployment_method') }}/detect.yaml"
+
 - name: Enable Foreman repositories for foreman-pcp
   ansible.builtin.include_role:
     name: theforeman.operations.foreman_repositories
-  when: _deployer in ['foreman-installer', 'foremanctl']
+  when: _needs_foreman_repos | bool
   vars:
     foreman_repositories_version: "{{ foreman_pcp_repositories_version | default('nightly') }}"
 
 - name: Install and configure PCP metrics
   ansible.builtin.include_role:
     name: "{{ foreman_pcp_setup_role }}"
-
-- name: Disable Foreman repositories
-  ansible.builtin.dnf:
-    name: foreman-release
-    state: absent
-  when: _deployer in ['foreman-installer', 'foremanctl']

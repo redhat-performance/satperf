@@ -1,4 +1,6 @@
 ---
+- ansible.builtin.include_tasks: ../../tasks/deployment_method/detect.yaml
+
 - name: Increase maximum number of opened files for root
   ansible.builtin.copy:
     content: |
@@ -58,15 +60,7 @@
     - tuning_profile is not defined or tuning_profile | length == 0
     - rex_mode is not defined or rex_mode != 'mqtt'
 
-- name: Discover installer/deployer command
-  block:
-    - ansible.builtin.include_role:
-        name: detect_deployer
-
-    - name: Set installer/deployer command line
-      ansible.builtin.set_fact:
-        installer_cmd_line: >-
-          {{ _deployer ~ (' deploy' if _deployment_method == 'container' else '') }}
+- ansible.builtin.include_tasks: ../../tasks/deployment_method/installer_cmd_line.yaml
 
 - name: Parameters
   block:
@@ -137,4 +131,3 @@
     - name: Show installer tuning duration
       ansible.builtin.debug:
         msg: "SatelliteInstallerTuneScenarioSatellite {{ installer_tune_cmd.start }} to {{ installer_tune_cmd.end }} taking {{ installer_tune_cmd_duration }} seconds"
-...
