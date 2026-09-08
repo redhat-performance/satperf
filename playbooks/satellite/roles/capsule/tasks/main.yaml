@@ -1,4 +1,6 @@
 ---
+- ansible.builtin.include_tasks: ../../tasks/deployment_method/inherit.yaml
+
 - name: Set default variable(s) values
   ansible.builtin.set_fact:
     location_groupname: "location_{{ location | lower }}"
@@ -12,7 +14,7 @@
   block:
     - name: Foreman
       when:
-        - product is defined and product == 'foreman'
+        - _is_foreman_product | bool
       block:
         - name: Assert required Foreman facts
           ansible.builtin.assert:
@@ -39,7 +41,7 @@
 
     - name: Satellite
       when:
-        - product is not defined or product == 'satellite'
+        - _is_satellite_product | bool
       block:
         - name: Setup Satellite repositories
           ansible.builtin.include_role:
@@ -114,7 +116,7 @@
   block:
     - name: Foreman
       when:
-        - product is defined and product == 'foreman'
+        - _is_foreman_product | bool
       block:
         - name: Set Foreman facts
           ansible.builtin.set_fact:
@@ -122,7 +124,7 @@
 
     - name: Satellite
       when:
-        - product is not defined or product == 'satellite'
+        - _is_satellite_product | bool
       block:
         - name: Set Satellite facts
           ansible.builtin.set_fact:
@@ -251,13 +253,13 @@
         - name: Add load balanced capsule host registration URL parameter
           ansible.builtin.lineinfile:
             dest: "/root/{{ inventory_hostname }}-script.sh"
-            line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:9090"\'
+            line: '                    --foreman-proxy-registration-url              "https://{{ capsule_lb }}:{{ _registration_proxy_port }}"\'
             insertafter: '.*--certs-cname.*'
 
         - name: Add load balanced capsule proxy template URL parameter
           ansible.builtin.lineinfile:
             dest: "/root/{{ inventory_hostname }}-script.sh"
-            line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:8000"\'
+            line: '                    --foreman-proxy-template-url                  "https://{{ capsule_lb }}:{{ _templates_proxy_port }}"\'
             insertafter: '.*--foreman-proxy-registration-url.*'
 
     - name: Make sure remote execution plugin is enabled
@@ -273,7 +275,7 @@
         insertafter: '.*--certs-tar-file.*'
       # XXX: Submit Bug???
       when:
-        - product is not defined or product == 'satellite'
+        - _is_satellite_product | bool
 
     - name: MQTT
       when:
