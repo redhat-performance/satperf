@@ -1,0 +1,7 @@
+---
+- ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir | default(playbook_dir ~ '/tasks/deployment_method') }}/assert_facts.yaml"
+
+- name: Set installer/deployer command line
+  ansible.builtin.set_fact:
+    installer_cmd_line: >-
+      {{ _deployer ~ (' deploy' if _deployment_method == 'container' else '') }}

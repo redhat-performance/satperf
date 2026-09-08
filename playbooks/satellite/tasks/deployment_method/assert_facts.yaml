@@ -1,0 +1,10 @@
+---
+- name: Assert deployment facts are available
+  ansible.builtin.assert:
+    that:
+      - _deployer is defined
+      - _deployment_method is defined
+    fail_msg: >-
+      _deployer and _deployment_method must be set (run tasks/deployment_method/detect
+      on the host, or tasks/deployment_method/inherit from satellite6, capsules,
+      or capsule_lbs first)

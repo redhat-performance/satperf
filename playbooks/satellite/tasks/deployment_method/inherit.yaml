@@ -1,0 +1,32 @@
+---
+# Copy deployment facts from another host that already runs Satellite/Foreman.
+# Override _deployment_method_inherit_from to change the source host; defaults
+# to the first satellite6 host.
+- name: Default inherit source to Satellite
+  ansible.builtin.set_fact:
+    _deployment_method_inherit_from: "{{ groups['satellite6'][0] }}"
+  when:
+    - _deployment_method_inherit_from is not defined
+
+- name: Assert inherit source host is set
+  ansible.builtin.assert:
+    that:
+      - _deployment_method_inherit_from is defined
+      - _deployment_method_inherit_from | length > 0
+    fail_msg: >-
+      _deployment_method_inherit_from must name a host with an installed
+      deployer/installer package
+
+- name: Detect deployment method on inherit source
+  ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir | default(playbook_dir ~ '/tasks/deployment_method') }}/detect.yaml"
+  vars:
+    _deployment_method_detect_on: "{{ _deployment_method_inherit_from }}"
+
+- name: Inherit deployment facts
+  ansible.builtin.set_fact:
+    _deployer: "{{ hostvars[_deployment_method_inherit_from]._deployer }}"
+    _deployment_method: "{{ hostvars[_deployment_method_inherit_from]._deployment_method }}"
+
+- ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir | default(playbook_dir ~ '/tasks/deployment_method') }}/assert_facts.yaml"
+
+- ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir | default(playbook_dir ~ '/tasks/deployment_method') }}/set_derived_facts.yaml"

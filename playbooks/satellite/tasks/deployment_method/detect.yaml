@@ -1,0 +1,49 @@
+---
+# Detect _deployer and _deployment_method from installed packages on this host
+# or on _deployment_method_detect_on when set (remote detect for inherit).
+- name: Gather installed package facts
+  ansible.builtin.package_facts:
+  delegate_to: "{{ _deployment_method_detect_on | default(inventory_hostname) }}"
+  delegate_facts: "{{ (_deployment_method_detect_on | default(inventory_hostname)) != inventory_hostname }}"
+
+- name: Determine installed deployer/installer package
+  # satellitectl depends on (and installs alongside) foremanctl, and
+  # satellite-installer likewise wraps foreman-installer, so a Satellite
+  # host has both of its pair installed at once - list from most to least
+  # product-specific and take the first match, rather than requiring
+  # exactly one to be present.  RPM proxies ship satellite-capsule or
+  # foreman-proxy-content instead of the server installer packages; map
+  # those to their server-side equivalents for derived facts.
+  vars:
+    _deployment_method_fact_host: "{{ _deployment_method_detect_on | default(inventory_hostname) }}"
+    _deployment_method_packages: "{{ hostvars[_deployment_method_fact_host].ansible_facts.packages }}"
+  ansible.builtin.set_fact:
+    _deployer: >-
+      {{ 'satellitectl' if 'satellitectl' in _deployment_method_packages
+         else 'satellite-installer' if 'satellite-installer' in _deployment_method_packages
+         else 'foremanctl' if 'foremanctl' in _deployment_method_packages
+         else 'foreman-installer' if 'foreman-installer' in _deployment_method_packages
+         else 'satellite-installer' if 'satellite-capsule' in _deployment_method_packages
+         else 'foreman-installer' if 'foreman-proxy-content' in _deployment_method_packages
+         else none }}
+    _deployment_method: >-
+      {{ 'container'
+         if ('satellitectl' in _deployment_method_packages
+             or 'foremanctl' in _deployment_method_packages)
+         else 'rpm' }}
+  delegate_to: "{{ _deployment_method_fact_host }}"
+  delegate_facts: "{{ _deployment_method_fact_host != inventory_hostname }}"
+
+- name: Assert a known deployer/installer package is installed
+  vars:
+    _deployment_method_fact_host: "{{ _deployment_method_detect_on | default(inventory_hostname) }}"
+  ansible.builtin.assert:
+    that:
+      - hostvars[_deployment_method_fact_host]._deployer is not none
+    fail_msg: >-
+      Expected one of satellitectl/satellite-installer/foremanctl/foreman-installer/
+      satellite-capsule/foreman-proxy-content to be installed on
+      {{ _deployment_method_fact_host }}, found none of those among installed packages.
+
+- ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir | default(playbook_dir ~ '/tasks/deployment_method') }}/set_derived_facts.yaml"
+  when: _deployment_method_detect_on is not defined
