@@ -75,7 +75,7 @@ backend http-backend
     option tcp-check
     balance roundrobin
 
-{% for capsule in lb_capsules %}
+{% for capsule in _haproxy_lb_capsules %}
     server http-backend-{{loop.index}} {{ capsule }}:80 check
 {% endfor %}
 
@@ -93,8 +93,8 @@ backend https-backend
     option tcp-check
     balance source
 
-{% for capsule in lb_capsules %}
-    server https-backend-{{loop.index}} {{ capsule }}:443 check fall {{ haproxy_registration_fall }} rise 2 inter 30s
+{% for capsule in _haproxy_lb_capsules %}
+    server https-backend-{{loop.index}} {{ capsule }}:443 check fall {{ _haproxy_registration_fall }} rise 2 inter 30s
 {% endfor %}
 
 #---------------------------------------------------------------------
@@ -111,21 +111,20 @@ backend mosquitto-backend
     option tcp-check
     balance source
 
-{% for capsule in lb_capsules %}
+{% for capsule in _haproxy_lb_capsules %}
     server mosquitto-backend-{{loop.index}} {{ capsule }}:1883 check
 {% endfor %}
 
-{% if haproxy_templates_port != haproxy_registration_port %}
+{% if _haproxy_templates_port != _haproxy_registration_port %}
 #---------------------------------------------------------------------
 # Anaconda for template retrievas frontend which proxys to the backends
 #
-# Skipped when haproxy_templates_port == haproxy_registration_port
-# (foremanctl): templates and registration are the same smart-proxy
-# endpoint there, already served by the host_registration frontend, so a
-# second frontend bound to the same port would conflict.
+# Skipped when _haproxy_templates_port == _haproxy_registration_port
+# (container deployment): templates and registration share the same
+# smart-proxy endpoint, already served by host_registration.
 #---------------------------------------------------------------------
 frontend anaconda
-    bind *:{{ haproxy_templates_port }}
+    bind *:{{ _haproxy_templates_port }}
     mode tcp
     option                  tcplog
 
@@ -135,23 +134,23 @@ backend anaconda-backend
     option tcp-check
     balance roundrobin
 
-{% for capsule in lb_capsules %}
-    server anaconda-backend-{{loop.index}} {{ capsule }}:{{ haproxy_templates_port }} check
+{% for capsule in _haproxy_lb_capsules %}
+    server anaconda-backend-{{loop.index}} {{ capsule }}:{{ _haproxy_templates_port }} check
 {% endfor %}
 
 {% endif %}
 #--------------------------------------------------------------------
 # Capsule HTTPS for Host Registration and optionally
 # OpenSCAP frontend which proxys to the backends
-{%- if haproxy_templates_port == haproxy_registration_port %}
+{%- if _haproxy_templates_port == _haproxy_registration_port %}
 # Anaconda for template retrievas frontend which proxys to the backends
 {%- endif %}
 #---------------------------------------------------------------------
 frontend host_registration
-    bind *:{{ haproxy_registration_port }}
+    bind *:{{ _haproxy_registration_port }}
     mode tcp
     option                  tcplog
-    timeout client          {{ haproxy_registration_timeout_client }}
+    timeout client          {{ _haproxy_registration_timeout_client }}
 
     default_backend         host_registration-backend
 
@@ -160,14 +159,14 @@ backend host_registration-backend
     # Returns 200 with the list of enabled features when the capsule is healthy.
     # 'fall' defaults to 9999 (see defaults/main.yaml) to prevent
     # load-induced false failover during stress tests. Set
-    # haproxy_registration_fall: 3 for production-grade automatic failover.
+    # _haproxy_registration_fall to 3 for production-grade automatic failover.
     option httpchk
     http-check send meth GET uri /features ver HTTP/1.1 hdr Host localhost
     http-check expect status 200
-    timeout server          {{ haproxy_registration_timeout_server }}
+    timeout server          {{ _haproxy_registration_timeout_server }}
     balance roundrobin
 
-{% for capsule in lb_capsules %}
-    server host_registration-backend-{{loop.index}} {{ capsule }}:{{ haproxy_registration_port }} check check-ssl verify none fall {{ haproxy_registration_fall }} rise 2 inter 30s{% if haproxy_registration_maxconn | int > 0 %} maxconn {{ haproxy_registration_maxconn }}{% endif %}
+{% for capsule in _haproxy_lb_capsules %}
+    server host_registration-backend-{{loop.index}} {{ capsule }}:{{ _haproxy_registration_port }} check check-ssl verify none fall {{ _haproxy_registration_fall }} rise 2 inter 30s{% if _haproxy_registration_maxconn | int > 0 %} maxconn {{ _haproxy_registration_maxconn }}{% endif %}
 
 {% endfor %}

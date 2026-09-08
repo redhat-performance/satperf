@@ -2,18 +2,27 @@
 - name: "Assert required facts"
   ansible.builtin.assert:
     that:
-      - version is defined
-    fail_msg: >-
-      'version' must be set ('foremanctl', or any RPM sat_version) to
-      determine the registration/templates port layout
+      - location is defined
+    fail_msg: "'location' must be set on capsule LB hosts"
 
 - name: "Get group name of our location"
   ansible.builtin.set_fact:
-    location_groupname: "location_{{ location | lower }}"
+    _haproxy_location_groupname: "location_{{ location | lower }}"
 
 - name: "Get capsule names"
   ansible.builtin.set_fact:
-    lb_capsules: "{{ groups['capsules'] | intersect(groups[location_groupname]) | sort }}"
+    _haproxy_lb_capsules: "{{ groups['capsules'] | intersect(groups[_haproxy_location_groupname]) | sort }}"
+
+- name: Assert location capsules are known
+  ansible.builtin.assert:
+    that:
+      - _haproxy_lb_capsules | length > 0
+    fail_msg: >-
+      No capsules found for location {{ location }} (group {{ _haproxy_location_groupname }})
+
+- ansible.builtin.include_tasks: ../../tasks/deployment_method/inherit.yaml
+  vars:
+    _deployment_method_inherit_from: "{{ _haproxy_lb_capsules[0] }}"
 
 - name: "Tune sysctl"
   ansible.posix.sysctl:
@@ -21,7 +30,7 @@
     name: "{{ item.key }}"
     value: "{{ item.value }}"
     reload: True
-  loop: "{{ capsule_lbs_sysctl_config_default | dict2items }}"
+  loop: "{{ _haproxy_sysctl_config | dict2items }}"
 
 - name: "Install HAProxy"
   ansible.builtin.dnf:
@@ -66,4 +75,3 @@
     name: haproxy
     state: started
     enabled: true
-...

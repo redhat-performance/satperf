@@ -1,33 +1,28 @@
 ---
-# RPM serves registration/templates on the smart-proxy's dedicated 9090/8000
-# ports; foremanctl consolidates everything onto 8443. The template skips
-# the separate anaconda frontend when both land on the same port.
-haproxy_registration_port: "{{ 8443 if version == 'foremanctl' else 9090 }}"
-haproxy_templates_port: "{{ 8443 if version == 'foremanctl' else 8000 }}"
+# Aliases for deployment facts (set by tasks/deployment_method/inherit).
+_haproxy_registration_port: "{{ _registration_proxy_port }}"
+_haproxy_templates_port: "{{ _templates_proxy_port }}"
 
-# Number of consecutive health check failures before a capsule is removed
-# from rotation in the host_registration backend.
+# Registration frontend/backend tuning (see haproxy.cfg.j2).
 #
-# Default is 9999 (effectively never) to prevent load-induced false failover
+# Default fall is 9999 (effectively never) to prevent load-induced false failover
 # during stress tests — a capsule under heavy registration load may fail the
 # /register/health check transiently even though it is still functioning.
 # Removing it from rotation would concentrate load on the remaining capsules
 # and cause cascading failures.
 #
-# Set to 3 for production-grade failover (removes capsule after ~90s of
-# consecutive failures at the default 30s check interval):
-#   haproxy_registration_fall: 3
-haproxy_registration_fall: 9999
+# Set _haproxy_registration_fall to 3 for production-grade failover (removes
+# capsule after ~90s of consecutive failures at the default 30s check interval).
+_haproxy_registration_fall: 9999
 
-# Timeouts for the host_registration frontend/backend (haproxy_registration_port
-# above). Registration requests can take minutes under high concurrency because
-# the capsule waits for Satellite to render the registration template.
-# The default `timeout client/server` of 1m/150s is too short — hosts
-# disconnect before the capsule can respond, producing SSL_read errors.
-haproxy_registration_timeout_client: 5m
-haproxy_registration_timeout_server: 5m
+# Registration requests can take minutes under high concurrency because the
+# capsule waits for Satellite to render the registration template. The default
+# HAProxy timeout client/server of 1m/150s is too short — hosts disconnect
+# before the capsule can respond, producing SSL_read errors.
+_haproxy_registration_timeout_client: 5m
+_haproxy_registration_timeout_server: 5m
 
-# Maximum concurrent connections per capsule backend in the
-# host_registration backend. Queues excess connections at the LB instead
-# of flooding capsules. Set to 0 to disable (no per-server limit).
-haproxy_registration_maxconn: 500
+# Maximum concurrent connections per capsule backend in the host_registration
+# backend. Queues excess connections at the LB instead of flooding capsules.
+# Set to 0 to disable (no per-server limit).
+_haproxy_registration_maxconn: 500
