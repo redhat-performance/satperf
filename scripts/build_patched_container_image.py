@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Build a patched Foreman container image from a list of GitHub PRs.
+"""Build a patched Foreman container image from a list of GitHub PRs or local diffs.
 
 Generates a Containerfile that layers PR diffs onto an RPM-based Foreman
 image (e.g. quay.io/foreman/foreman:nightly), builds it with podman, and
@@ -22,6 +22,17 @@ Usage (simple format):
         --pr Katello/katello:11701 \\
         --tag localhost/foreman:pr-test
 
+Usage (GitHub PR URLs also work):
+    ./build_patched_foreman.py \\
+        --pr https://github.com/theforeman/foreman/pull/10942 \\
+        --pr https://github.com/Katello/katello/pull/11701
+
+Usage (local diffs):
+    ./build_patched_foreman.py \\
+        --diff theforeman/foreman:/tmp/foreman.diff \\
+        --diff Katello/katello:/tmp/katello.diff \\
+        --tag localhost/foreman:local-test
+
 Gem dependencies are auto-detected from gemspec changes in PR diffs.
 
 Integration with foremanctl:
@@ -35,6 +46,7 @@ import argparse
 import json
 import logging
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -47,7 +59,16 @@ DEFAULT_FORGE = 'https://github.com'
 
 
 def parse_pr(spec):
-    """Parse 'org/repo:number' into (org, repo, number)."""
+    """Parse a PR reference into (org, repo, number).
+
+    Supported formats:
+      - org/repo:number
+      - https://github.com/org/repo/pull/number
+    """
+    url_match = re.match(r'^https?://github\.com/([^/]+)/([^/]+)/pull/(\d+)/?$', spec)
+    if url_match:
+        org, repo, number = url_match.groups()
+        return org, repo, int(number)
     try:
         repo_part, number = spec.rsplit(':', 1)
         org, repo = repo_part.split('/', 1)
@@ -57,6 +78,25 @@ def parse_pr(spec):
             f"Invalid PR format: '{spec}'. Expected org/repo:number "
             f"(e.g. theforeman/foreman:10942)"
         )
+
+
+def parse_diff(spec):
+    """Parse 'org/repo:/path/to.diff' into (org, repo, path)."""
+    try:
+        repo_part, diff_path = spec.split(':', 1)
+        org, repo = repo_part.split('/', 1)
+    except (ValueError, AttributeError):
+        raise argparse.ArgumentTypeError(
+            f"Invalid diff format: '{spec}'. Expected org/repo:/path/to.diff "
+            f"(e.g. theforeman/foreman:/tmp/foreman.diff)"
+        )
+
+    if not diff_path:
+        raise argparse.ArgumentTypeError(f"Missing diff path in '{spec}'")
+    if not os.path.isfile(diff_path):
+        raise argparse.ArgumentTypeError(f"Diff file not found: '{diff_path}'")
+
+    return org, repo, diff_path
 
 
 def parse_apply_prs(spec_string):
@@ -96,6 +136,20 @@ def fetch_diff(org, repo, pr_number, dest_dir, forge=DEFAULT_FORGE):
     size = os.path.getsize(dest)
     if size == 0:
         log.error('Empty diff for %s/%s#%d — PR may not exist', org, repo, pr_number)
+        sys.exit(1)
+    log.info('  %d bytes', size)
+    return filename
+
+
+def copy_diff(org, repo, diff_path, dest_dir):
+    """Copy a local diff file into the build dir. Returns the local filename."""
+    filename = f'{org}-{repo}-{os.path.basename(diff_path)}'
+    dest = os.path.join(dest_dir, filename)
+    log.info('Copying local diff %s → %s', diff_path, filename)
+    shutil.copy2(diff_path, dest)
+    size = os.path.getsize(dest)
+    if size == 0:
+        log.error('Empty diff file: %s', diff_path)
         sys.exit(1)
     log.info('  %d bytes', size)
     return filename
@@ -300,19 +354,22 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
     )
     parser.add_argument(
-        '--base', default='quay.io/foreman/foreman:nightly',
+        '--base', '--base-image', dest='base', default='quay.io/foreman/foreman:nightly',
         help='Base container image (default: %(default)s)',
     )
-
-    pr_group = parser.add_mutually_exclusive_group(required=True)
-    pr_group.add_argument(
+    parser.add_argument(
         '--apply-prs', metavar='JSON',
         help='apply_prs JSON/YAML string (same format as the Ansible role)',
     )
-    pr_group.add_argument(
+    parser.add_argument(
         '--pr', action='append', type=parse_pr,
         metavar='ORG/REPO:NUMBER',
-        help='PR to apply (repeatable). E.g. theforeman/foreman:10942',
+        help='PR to apply (repeatable). Accepts org/repo:number or GitHub PR URL.',
+    )
+    parser.add_argument(
+        '--diff', action='append', type=parse_diff,
+        metavar='ORG/REPO:/PATH/TO.diff',
+        help='Local diff to apply (repeatable). E.g. theforeman/foreman:/tmp/foreman.diff',
     )
 
     parser.add_argument(
@@ -340,6 +397,9 @@ def main():
         help='Enable debug logging',
     )
     args = parser.parse_args()
+
+    if not args.apply_prs and not args.pr and not args.diff:
+        parser.error('one of --apply-prs, --pr, or --diff is required')
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -370,12 +430,19 @@ def main():
                     )
         else:
             excludes = args.exclude or DEFAULT_EXCLUDES
-            for org, repo, pr_number in args.pr:
+            for org, repo, pr_number in args.pr or []:
                 diff_file = fetch_diff(org, repo, pr_number, build_dir)
                 base_dir = '/usr/share/foreman' if repo == 'foreman' else \
                     f'/usr/share/gems/gems/{repo}-*'
                 pr_entries.append(
                     (org, repo, pr_number, diff_file, base_dir, excludes)
+                )
+            for org, repo, diff_path in args.diff or []:
+                diff_file = copy_diff(org, repo, diff_path, build_dir)
+                base_dir = '/usr/share/foreman' if repo == 'foreman' else \
+                    f'/usr/share/gems/gems/{repo}-*'
+                pr_entries.append(
+                    (org, repo, os.path.basename(diff_path), diff_file, base_dir, excludes)
                 )
 
         auto_gems = []
