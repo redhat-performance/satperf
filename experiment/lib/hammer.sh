@@ -855,7 +855,8 @@ remote_execution() {
             j "${logs}/${test}.log"
         fi # num_matching_rex_ssh_hosts > 0
 
-        if ((num_matching_rex_mqtt_hosts > 0)); then
+        # MQTT broker (mosquitto) is not shipped in containerized deployments (>= 6.20)
+        if ((num_matching_rex_mqtt_hosts > 0)) && vercmp_lt "$sat_version" '6.20.0'; then
             test=61-rex-script_mqtt-date-${num_matching_rex_mqtt_hosts}
             skip_measurement=true h ${test}.log \
                 "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - Run %{command} (%{template_name})' --inputs command='date' --job-template '$job_template_ssh_default' --search-query '$search_query_mqtt'"
@@ -867,7 +868,7 @@ remote_execution() {
                 "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - Install %{package} (%{template_name})' --feature katello_package_install --inputs package='rust' --search-query '$search_query_mqtt'"
             jsr "${logs}/${test}.log"
             j "${logs}/${test}.log"
-        fi # num_matching_rex_mqtt_hosts > 0
+        fi # num_matching_rex_mqtt_hosts > 0 && < 6.20
 
         if vercmp_ge "$sat_version" '6.17.0'; then
             if $enable_iop; then
@@ -887,13 +888,14 @@ remote_execution() {
             j "${logs}/${test}.log"
         fi # num_matching_rex_ssh_hosts > 0
 
-        if ((num_matching_rex_mqtt_hosts > 0)); then
+        # MQTT broker (mosquitto) is not shipped in containerized deployments (>= 6.20)
+        if ((num_matching_rex_mqtt_hosts > 0)) && vercmp_lt "$sat_version" '6.20.0'; then
             test=69-rex-katello_package_update_mqtt-${num_matching_rex_mqtt_hosts}
             skip_measurement=true h ${test}.log \
                 "job-invocation create --async --description-format '${num_matching_rex_mqtt_hosts} hosts - (%{template_name})' --feature katello_package_update --search-query '$search_query_mqtt'"
             jsr "${logs}/${test}.log"
             j "${logs}/${test}.log"
-        fi # num_matching_rex_mqtt_hosts > 0
+        fi # num_matching_rex_mqtt_hosts > 0 && < 6.20
     done
 
     rex_search_query=container

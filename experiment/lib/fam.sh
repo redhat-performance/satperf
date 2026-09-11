@@ -976,7 +976,8 @@ remote_execution_fam() {
             ejji $test
         fi # num_matching_rex_ssh_hosts > 0
 
-        if ((num_matching_rex_mqtt_hosts > 0)); then
+        # MQTT broker (mosquitto) is not shipped in containerized deployments (>= 6.20)
+        if ((num_matching_rex_mqtt_hosts > 0)) && vercmp_lt "$sat_version" '6.20.0'; then
             test="61f-rex-script_mqtt-date-${num_matching_rex_mqtt_hosts}"
             apj $test \
                 -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt): %{command}'" \
@@ -996,7 +997,7 @@ remote_execution_fam() {
                 -e "task_timeout=$((num_matching_rex_mqtt_hosts < 450 ? 900 : num_matching_rex_mqtt_hosts * 2))" \
                 playbooks/tests/FAM/job_invocation_create.yaml
             ejji $test
-        fi # num_matching_rex_mqtt_hosts > 0
+        fi # num_matching_rex_mqtt_hosts > 0 && < 6.20
 
         # if $enable_iop && vercmp_ge "$sat_version" '6.18.0'; then
         #     test="66f-rex-apply_remediation-${num_matching_rex_hosts}"
@@ -1021,7 +1022,8 @@ remote_execution_fam() {
             ejji $test
         fi # num_matching_rex_ssh_hosts > 0
 
-        if ((num_matching_rex_mqtt_hosts > 0)); then
+        # MQTT broker (mosquitto) is not shipped in containerized deployments (>= 6.20)
+        if ((num_matching_rex_mqtt_hosts > 0)) && vercmp_lt "$sat_version" '6.20.0'; then
             test="69f-rex-katello_package_update_mqtt-${num_matching_rex_mqtt_hosts}"
             apj $test \
                 -e "description_format='${num_matching_rex_mqtt_hosts} hosts - %{template_name} (mqtt)'" \
@@ -1030,7 +1032,7 @@ remote_execution_fam() {
                 -e "task_timeout=$((num_matching_rex_mqtt_hosts < 450 ? 1350 : num_matching_rex_mqtt_hosts * 3))" \
                 playbooks/tests/FAM/job_invocation_create.yaml
             ejji $test
-        fi # num_matching_rex_mqtt_hosts > 0
+        fi # num_matching_rex_mqtt_hosts > 0 && < 6.20
     done
 
     # ReX cleanup
