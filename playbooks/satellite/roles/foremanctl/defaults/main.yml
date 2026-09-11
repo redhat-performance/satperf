@@ -9,3 +9,7 @@ foremanctl_deployer: satellitectl
 
 foremanctl_add_features: []
 foremanctl_remove_features: []
+
+foremanctl_proxy_add_features:
+  - ansible
+foremanctl_proxy_remove_features: []

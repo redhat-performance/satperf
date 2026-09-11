@@ -398,8 +398,10 @@
                '--auth-bundle ' ~ foremanctl_proxy_auth_bundle_dest_path,
                '--foreman-fqdn ' ~ (groups['satellite6'] | first)]
               + (['--registration-url ' ~ _foremanctl_capsule_lb_url,
-                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else []))
-             | join(' ') }}
+                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else [])
+              + [foremanctl_proxy_remove_features | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' '),
+                 foremanctl_proxy_add_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ')])
+             | reject('equalto', '') | join(' ') }}
 
     - name: Show proxy deployment command line
       ansible.builtin.debug:
