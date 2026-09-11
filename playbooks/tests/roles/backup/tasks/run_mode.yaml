@@ -1,0 +1,123 @@
+---
+- name: Define backup parent directory for {{ backup_mode }}
+  ansible.builtin.set_fact:
+    backup_parent_dir: "{{ backup_base_dir }}/backup-{{ backup_mode }}"
+
+- name: Prepare backup for {{ backup_mode }}
+  block:
+    - name: Create backup parent directory for {{ backup_mode }}
+      ansible.builtin.file:
+        path: "{{ backup_parent_dir }}"
+        state: directory
+        mode: "0775"
+        owner: "{{ 'postgres' if _deployment_method == 'rpm' else omit }}"
+
+    - name: Build backup command for {{ backup_mode }}
+      ansible.builtin.set_fact:
+        backup_cmd_line: >-
+          {{
+            ([_maintainer, 'backup', backup_mode, '-y'] + _backup_option_flags + [backup_parent_dir]) | join(' ')
+            if _deployment_method == 'rpm'
+            else ([_deployer, 'backup'] + _backup_option_flags + [backup_parent_dir]) | join(' ')
+          }}
+
+- name: Run backup for {{ backup_mode }}
+  ansible.builtin.command:
+    cmd: "{{ backup_cmd_line }}"
+  environment:
+    TZ: UTC
+    LANG: en_US.utf-8
+  register: backup_cmd
+  ignore_errors: true
+
+- name: Show backup output for {{ backup_mode }}
+  ansible.builtin.debug:
+    var: backup_cmd.stdout_lines
+
+- name: End play when backup for {{ backup_mode }} has failed
+  ansible.builtin.meta: end_play
+  when: backup_cmd is failed
+
+- name: Calculate backup duration for {{ backup_mode }}
+  ansible.builtin.set_fact:
+    backup_cmd_duration: >-
+      {{
+        (backup_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+        - (backup_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+      }}
+
+- name: Print backup duration for {{ backup_mode }}
+  ansible.builtin.debug:
+    msg: >-
+      Backup{{ backup_mode | capitalize }}{{ backup_metric_suffix }}
+      {{ backup_cmd.start }} to {{ backup_cmd.end }}
+      taking {{ backup_cmd_duration }} seconds
+
+- name: Restore backup for {{ backup_mode }}
+  when: backup_run_restore | bool
+  block:
+    - name: Find backup subdirectories for {{ backup_mode }}
+      ansible.builtin.find:
+        paths: "{{ backup_parent_dir }}"
+        file_type: directory
+        depth: 1
+      register: _backup_subdir_find
+
+    - name: Set latest backup directory for {{ backup_mode }}
+      ansible.builtin.set_fact:
+        backup_latest_dir: "{{ _backup_subdir_find.files | map(attribute='path') | sort | last }}"
+
+    - name: Assert a backup subdirectory exists for {{ backup_mode }}
+      ansible.builtin.assert:
+        that:
+          - _backup_subdir_find.matched > 0
+          - backup_latest_dir is defined
+          - backup_latest_dir | length > 0
+        fail_msg: "No backup subdirectory found under {{ backup_parent_dir }}"
+
+    - name: Build restore command for {{ backup_mode }}
+      ansible.builtin.set_fact:
+        restore_cmd_line: >-
+          {{
+            (_maintainer ~ ' restore -y ' ~ backup_latest_dir)
+            if _deployment_method == 'rpm'
+            else (_deployer ~ ' restore ' ~ backup_latest_dir ~ ' --force')
+          }}
+
+    - name: Restore from latest backup for {{ backup_mode }}
+      ansible.builtin.command:
+        cmd: "{{ restore_cmd_line }}"
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: restore_cmd
+      ignore_errors: true
+
+    - name: Show restore output for {{ backup_mode }}
+      ansible.builtin.debug:
+        var: restore_cmd.stdout_lines
+
+    - name: End play when restore for {{ backup_mode }} has failed
+      ansible.builtin.meta: end_play
+      when: restore_cmd is failed
+
+    - name: Calculate restore duration for {{ backup_mode }}
+      ansible.builtin.set_fact:
+        restore_cmd_duration: >-
+          {{
+            (restore_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+            - (restore_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+          }}
+
+    - name: Print restore duration for {{ backup_mode }}
+      ansible.builtin.debug:
+        msg: >-
+          Restore{{ backup_mode | capitalize }}{{ backup_metric_suffix }}
+          {{ restore_cmd.start }} to {{ restore_cmd.end }}
+          taking {{ restore_cmd_duration }} seconds
+
+- name: Cleanup backup parent directory for {{ backup_mode }}
+  ansible.builtin.file:
+    path: "{{ backup_parent_dir }}"
+    state: absent
+  when: backup_cleanup | bool

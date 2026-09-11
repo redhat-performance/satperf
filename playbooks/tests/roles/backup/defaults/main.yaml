@@ -1,0 +1,18 @@
+---
+# Parent directory for timestamped backup subdirectories.
+backup_base_dir: /export
+
+# Skip /var/lib/pulp to shorten runs and improve timing reproducibility.
+backup_skip_pulp_content: true
+
+# Run restore after each backup and record restore duration.
+backup_run_restore: true
+
+# Remove backup parent directory after each backup+restore cycle.
+backup_cleanup: true
+
+# When unset, online+offline for RPM and offline only for container deployments.
+backup_modes: null
+
+# Path to deployment_method tasks (detect.yaml / set_derived_facts.yaml).
+_deployment_method_tasks_dir: "{{ playbook_dir }}/../satellite/tasks/deployment_method"

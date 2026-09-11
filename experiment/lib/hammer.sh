@@ -282,14 +282,15 @@ backup() {
     h "${test}.log" \
         "--no-headers --csv task list --organization-id 1 --search 'state = running and result = pending'"
 
-    test=99-backup
+    test=99-backup-skip-pulp
     ap "${test}.log" \
-        -e "sat_version='$sat_version'" \
         playbooks/tests/sat-backup.yaml
-    e BackupOffline "${logs}/${test}.log"
-    e RestoreOffline "${logs}/${test}.log"
-    e BackupOnline "${logs}/${test}.log"
-    e RestoreOnline "${logs}/${test}.log"
+    e BackupOfflineSkipPulp "${logs}/${test}.log"
+    e RestoreOfflineSkipPulp "${logs}/${test}.log"
+    if [[ "$deployment_method" == 'rpm' ]]; then
+        e BackupOnlineSkipPulp "${logs}/${test}.log"
+        e RestoreOnlineSkipPulp "${logs}/${test}.log"
+    fi
 
 } # backup
 

@@ -3,6 +3,9 @@
   ansible.builtin.set_fact:
     _registration_proxy_port: "{{ 8443 if _deployment_method == 'container' else 9090 }}"
     _templates_proxy_port: "{{ 8443 if _deployment_method == 'container' else 8000 }}"
+    _maintainer: >-
+      {{ _deployer | regex_replace('-(installer|ctl)$', '-maintain')
+         if _deployer is not none else none }}
     _is_satellite_product: "{{ _deployer in ['satellitectl', 'satellite-installer'] }}"
     _is_foreman_product: "{{ _deployer in ['foremanctl', 'foreman-installer'] }}"
     _needs_foreman_repos: "{{ _deployer in ['foremanctl', 'foreman-installer'] }}"
