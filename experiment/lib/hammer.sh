@@ -285,11 +285,20 @@ backup() {
     test=99-backup-skip-pulp
     ap "${test}.log" \
         playbooks/tests/sat-backup.yaml
-    e BackupOfflineSkipPulp "${logs}/${test}.log"
-    e RestoreOfflineSkipPulp "${logs}/${test}.log"
+    e BackupOfflineSkipPulpSatellite "${logs}/${test}.log"
+    e RestoreOfflineSkipPulpSatellite "${logs}/${test}.log"
+    num_capsules="${num_capsules:-$(get_num_hosts capsules)}"
+    if (( num_capsules > 0 )); then
+        e BackupOfflineSkipPulpCapsule "${logs}/${test}.log"
+        e RestoreOfflineSkipPulpCapsule "${logs}/${test}.log"
+    fi
     if [[ "$deployment_method" == 'rpm' ]]; then
-        e BackupOnlineSkipPulp "${logs}/${test}.log"
-        e RestoreOnlineSkipPulp "${logs}/${test}.log"
+        e BackupOnlineSkipPulpSatellite "${logs}/${test}.log"
+        e RestoreOnlineSkipPulpSatellite "${logs}/${test}.log"
+        if (( num_capsules > 0 )); then
+            e BackupOnlineSkipPulpCapsule "${logs}/${test}.log"
+            e RestoreOnlineSkipPulpCapsule "${logs}/${test}.log"
+        fi
     fi
 
 } # backup

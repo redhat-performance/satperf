@@ -1,26 +1,13 @@
 ---
+# Satellite first: capsule restore redeploy needs the Satellite API up.
 - name: Satellite backup and restore test
   hosts: satellite6
   gather_facts: false
-  vars:
-    manage_collectd: true
-
   tasks:
-    - name: Stop collectd before backup test
-      ansible.builtin.include_tasks: includes/manage_collectd.yaml
-      vars:
-        manage_collectd_state: stopped
-      when: manage_collectd | d(false) | bool
+    - ansible.builtin.include_tasks: includes/run-backup-test.yaml
 
-    - name: Run backup test
-      block:
-        - name: Run backup and optional restore
-          ansible.builtin.include_role:
-            name: backup
-
-      always:
-        - name: Start collectd after backup test
-          ansible.builtin.include_tasks: includes/manage_collectd.yaml
-          vars:
-            manage_collectd_state: started
-          when: manage_collectd | d(false) | bool
+- name: Capsule backup and restore test
+  hosts: capsules
+  gather_facts: false
+  tasks:
+    - ansible.builtin.include_tasks: includes/run-backup-test.yaml

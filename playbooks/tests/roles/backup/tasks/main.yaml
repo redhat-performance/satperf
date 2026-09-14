@@ -9,6 +9,15 @@
       else (['online', 'offline'] if _deployment_method == 'rpm' else ['offline'])
     }}"
 
+- name: Set backup metric role suffix for timing lines
+  ansible.builtin.set_fact:
+    backup_metric_role_suffix_effective: >-
+      {{
+        backup_metric_role_suffix
+        if backup_metric_role_suffix is not none
+        else ('Capsule' if inventory_hostname in groups.get('capsules', []) else 'Satellite')
+      }}
+
 - name: Set backup metric suffix from skip-pulp setting
   ansible.builtin.set_fact:
     backup_metric_suffix: "{{ 'SkipPulp' if backup_skip_pulp_content | d(true) | bool else '' }}"
@@ -19,6 +28,27 @@
       (['--skip-pulp-content'] if backup_skip_pulp_content | d(true) | bool else [])
       + ['--wait-for-tasks']
     }}"
+
+- name: Build shared backup/restore target-host flags
+  ansible.builtin.set_fact:
+    _backup_target_host_flags: >-
+      {{
+        (['--target-host', backup_target_host]
+         if backup_target_host | default('', true) | length > 0 else [])
+      }}
+    _restore_target_host_flags: >-
+      {{
+        (['--target-host', backup_target_host]
+         if backup_target_host | default('', true) | length > 0 else [])
+      }}
+
+- name: Build shared restore command facts
+  ansible.builtin.set_fact:
+    _restore_command: "{{ _maintainer if _deployment_method == 'rpm' else _deployer }}"
+    _restore_prefix_flags: "{{ ['-y'] if _deployment_method == 'rpm' else [] }}"
+    _restore_option_flags: "{{ [] if _deployment_method == 'rpm' else ['--force'] }}"
+    _restore_validate_option_flags: >-
+      {{ ['--dry-run'] if _deployment_method == 'rpm' else ['--validate'] }}
 
 - name: Run backup and optional restore for each mode
   ansible.builtin.include_tasks: run_mode.yaml

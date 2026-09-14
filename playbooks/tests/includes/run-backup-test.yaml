@@ -1,0 +1,24 @@
+---
+# Backup and optional restore with collectd stopped for the duration.
+#
+# Optional variables:
+#   manage_collectd — stop/start collectd around the run (default: true)
+
+- name: Stop collectd before backup test
+  ansible.builtin.include_tasks: manage_collectd.yaml
+  vars:
+    manage_collectd_state: stopped
+  when: manage_collectd | d(true) | bool
+
+- name: Run backup test
+  block:
+    - name: Run backup and optional restore
+      ansible.builtin.include_role:
+        name: backup
+
+  always:
+    - name: Start collectd after backup test
+      ansible.builtin.include_tasks: manage_collectd.yaml
+      vars:
+        manage_collectd_state: started
+      when: manage_collectd | d(true) | bool

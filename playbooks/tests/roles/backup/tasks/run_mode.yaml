@@ -27,6 +27,7 @@
         else (
           [_deployer, 'backup']
           + _backup_option_flags
+          + _backup_target_host_flags
           + [backup_parent_dir]
         ) | join(' ')
       }}
@@ -61,7 +62,7 @@
 - name: Print backup duration for {{ backup_mode }}
   ansible.builtin.debug:
     msg: >-
-      Backup{{ backup_mode | capitalize }}{{ backup_metric_suffix }}
+      Backup{{ backup_mode | capitalize }}{{ backup_metric_suffix }}{{ backup_metric_role_suffix_effective }}
       {{ backup_cmd.start }} to {{ backup_cmd.end }}
       taking {{ backup_cmd_duration }} seconds
 
@@ -87,13 +88,48 @@
       ansible.builtin.set_fact:
         backup_latest_dir: "{{ backup_subdir_find.files | map(attribute='path') | sort | last }}"
 
+    - name: Build restore validate command for {{ backup_mode }}
+      ansible.builtin.set_fact:
+        backup_restore_validate_cmd_line: >-
+          {{
+            ([_restore_command, 'restore', backup_latest_dir]
+             + _restore_target_host_flags
+             + _restore_validate_option_flags) | join(' ')
+          }}
+      when: backup_restore_validate | d(true) | bool
+
+    - name: Validate backup before restore for {{ backup_mode }}
+      ansible.builtin.command:
+        cmd: "{{ backup_restore_validate_cmd_line }}"
+      environment:
+        TZ: UTC
+        LANG: en_US.utf-8
+      register: backup_restore_validate_cmd
+      changed_when: false
+      ignore_errors: true
+      when: backup_restore_validate | d(true) | bool
+
+    - name: Show restore validate output for {{ backup_mode }}
+      ansible.builtin.debug:
+        var: backup_restore_validate_cmd.stdout_lines
+      when: backup_restore_validate | d(true) | bool
+
+    - name: Fail after restore validate failure for {{ backup_mode }}
+      ansible.builtin.fail:
+        msg: "Restore validate for {{ backup_mode }} failed"
+      when:
+        - backup_restore_validate | d(true) | bool
+        - backup_restore_validate_cmd is failed
+
     - name: Build restore command for {{ backup_mode }}
       ansible.builtin.set_fact:
         backup_restore_cmd_line: >-
           {{
-            (_maintainer ~ ' restore -y ' ~ backup_latest_dir)
-            if _deployment_method == 'rpm'
-            else (_deployer ~ ' restore ' ~ backup_latest_dir ~ ' --force')
+            ([_restore_command, 'restore']
+             + _restore_prefix_flags
+             + [backup_latest_dir]
+             + _restore_target_host_flags
+             + _restore_option_flags) | join(' ')
           }}
 
     - name: Restore from latest backup for {{ backup_mode }}
@@ -126,7 +162,7 @@
     - name: Print restore duration for {{ backup_mode }}
       ansible.builtin.debug:
         msg: >-
-          Restore{{ backup_mode | capitalize }}{{ backup_metric_suffix }}
+          Restore{{ backup_mode | capitalize }}{{ backup_metric_suffix }}{{ backup_metric_role_suffix_effective }}
           {{ backup_restore_cmd.start }} to {{ backup_restore_cmd.end }}
           taking {{ backup_restore_cmd_duration }} seconds
 

@@ -2,11 +2,23 @@
 # Parent directory for timestamped backup subdirectories.
 backup_base_dir: /export
 
+# Optional foremanctl --target-host when backup runs from a controller against a remote node.
+# Leave empty when ansible runs foremanctl on the target host (normal satperf flow).
+backup_target_host: ''
+
 # Skip /var/lib/pulp to shorten runs and improve timing reproducibility.
 backup_skip_pulp_content: true
 
+# Role suffix for e()/reg-average.py timing lines (e.g. BackupOfflineSkipPulpSatellite).
+# When null, auto-detect from inventory: Satellite on [satellite6], Capsule on [capsules].
+backup_metric_role_suffix: null
+
 # Run restore after each backup and record restore duration.
 backup_run_restore: true
+
+# Pre-restore validation: foremanctl --validate (container) or
+# satellite-maintain restore --dry-run (RPM).
+backup_restore_validate: true
 
 # Remove backup parent directory after each backup+restore cycle.
 backup_cleanup: true
