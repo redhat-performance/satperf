@@ -1,25 +1,35 @@
 ---
-- name: Define backup parent directory for {{ backup_mode }}
+# --- setup -------------------------------------------------------------------
+
+- name: Define paths for {{ backup_mode }}
   ansible.builtin.set_fact:
     backup_parent_dir: "{{ backup_base_dir }}/backup-{{ backup_mode }}"
 
-- name: Prepare backup for {{ backup_mode }}
-  block:
-    - name: Create backup parent directory for {{ backup_mode }}
-      ansible.builtin.file:
-        path: "{{ backup_parent_dir }}"
-        state: directory
-        mode: "0775"
-        owner: "{{ 'postgres' if _deployment_method == 'rpm' else omit }}"
+- name: Create backup parent directory for {{ backup_mode }}
+  ansible.builtin.file:
+    path: "{{ backup_parent_dir }}"
+    state: directory
+    mode: "0775"
+    owner: "{{ 'postgres' if _deployment_method == 'rpm' else omit }}"
 
-    - name: Build backup command for {{ backup_mode }}
-      ansible.builtin.set_fact:
-        backup_cmd_line: >-
-          {{
-            ([_maintainer, 'backup', backup_mode, '-y'] + _backup_option_flags + [backup_parent_dir]) | join(' ')
-            if _deployment_method == 'rpm'
-            else ([_deployer, 'backup'] + _backup_option_flags + [backup_parent_dir]) | join(' ')
-          }}
+# --- backup ------------------------------------------------------------------
+
+- name: Build backup command for {{ backup_mode }}
+  ansible.builtin.set_fact:
+    backup_cmd_line: >-
+      {{
+        (
+          [_maintainer, 'backup', backup_mode, '-y']
+          + _backup_option_flags
+          + [backup_parent_dir]
+        ) | join(' ')
+        if _deployment_method == 'rpm'
+        else (
+          [_deployer, 'backup']
+          + _backup_option_flags
+          + [backup_parent_dir]
+        ) | join(' ')
+      }}
 
 - name: Run backup for {{ backup_mode }}
   ansible.builtin.command:
@@ -28,14 +38,16 @@
     TZ: UTC
     LANG: en_US.utf-8
   register: backup_cmd
+  changed_when: true
   ignore_errors: true
 
 - name: Show backup output for {{ backup_mode }}
   ansible.builtin.debug:
     var: backup_cmd.stdout_lines
 
-- name: End play when backup for {{ backup_mode }} has failed
-  ansible.builtin.meta: end_play
+- name: Fail after backup failure for {{ backup_mode }}
+  ansible.builtin.fail:
+    msg: "Backup for {{ backup_mode }} failed"
   when: backup_cmd is failed
 
 - name: Calculate backup duration for {{ backup_mode }}
@@ -53,31 +65,31 @@
       {{ backup_cmd.start }} to {{ backup_cmd.end }}
       taking {{ backup_cmd_duration }} seconds
 
+# --- restore -----------------------------------------------------------------
+
 - name: Restore backup for {{ backup_mode }}
-  when: backup_run_restore | bool
+  when: backup_run_restore | d(false) | bool
   block:
     - name: Find backup subdirectories for {{ backup_mode }}
       ansible.builtin.find:
         paths: "{{ backup_parent_dir }}"
         file_type: directory
         depth: 1
-      register: _backup_subdir_find
-
-    - name: Set latest backup directory for {{ backup_mode }}
-      ansible.builtin.set_fact:
-        backup_latest_dir: "{{ _backup_subdir_find.files | map(attribute='path') | sort | last }}"
+      register: backup_subdir_find
 
     - name: Assert a backup subdirectory exists for {{ backup_mode }}
       ansible.builtin.assert:
         that:
-          - _backup_subdir_find.matched > 0
-          - backup_latest_dir is defined
-          - backup_latest_dir | length > 0
+          - backup_subdir_find.matched > 0
         fail_msg: "No backup subdirectory found under {{ backup_parent_dir }}"
+
+    - name: Set latest backup directory for {{ backup_mode }}
+      ansible.builtin.set_fact:
+        backup_latest_dir: "{{ backup_subdir_find.files | map(attribute='path') | sort | last }}"
 
     - name: Build restore command for {{ backup_mode }}
       ansible.builtin.set_fact:
-        restore_cmd_line: >-
+        backup_restore_cmd_line: >-
           {{
             (_maintainer ~ ' restore -y ' ~ backup_latest_dir)
             if _deployment_method == 'rpm'
@@ -86,38 +98,42 @@
 
     - name: Restore from latest backup for {{ backup_mode }}
       ansible.builtin.command:
-        cmd: "{{ restore_cmd_line }}"
+        cmd: "{{ backup_restore_cmd_line }}"
       environment:
         TZ: UTC
         LANG: en_US.utf-8
-      register: restore_cmd
+      register: backup_restore_cmd
+      changed_when: true
       ignore_errors: true
 
     - name: Show restore output for {{ backup_mode }}
       ansible.builtin.debug:
-        var: restore_cmd.stdout_lines
+        var: backup_restore_cmd.stdout_lines
 
-    - name: End play when restore for {{ backup_mode }} has failed
-      ansible.builtin.meta: end_play
-      when: restore_cmd is failed
+    - name: Fail after restore failure for {{ backup_mode }}
+      ansible.builtin.fail:
+        msg: "Restore for {{ backup_mode }} failed"
+      when: backup_restore_cmd is failed
 
     - name: Calculate restore duration for {{ backup_mode }}
       ansible.builtin.set_fact:
-        restore_cmd_duration: >-
+        backup_restore_cmd_duration: >-
           {{
-            (restore_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
-            - (restore_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+            (backup_restore_cmd.end | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
+            - (backup_restore_cmd.start | to_datetime('%Y-%m-%d %H:%M:%S.%f')).timestamp()
           }}
 
     - name: Print restore duration for {{ backup_mode }}
       ansible.builtin.debug:
         msg: >-
           Restore{{ backup_mode | capitalize }}{{ backup_metric_suffix }}
-          {{ restore_cmd.start }} to {{ restore_cmd.end }}
-          taking {{ restore_cmd_duration }} seconds
+          {{ backup_restore_cmd.start }} to {{ backup_restore_cmd.end }}
+          taking {{ backup_restore_cmd_duration }} seconds
+
+# --- cleanup -----------------------------------------------------------------
 
 - name: Cleanup backup parent directory for {{ backup_mode }}
   ansible.builtin.file:
     path: "{{ backup_parent_dir }}"
     state: absent
-  when: backup_cleanup | bool
+  when: backup_cleanup | d(false) | bool

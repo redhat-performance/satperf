@@ -1,0 +1,14 @@
+---
+# Start or stop collectd.service.
+#
+# Required variables:
+#   manage_collectd_state — stopped or started
+#
+# The postgresql plugin holds persistent DB connections. Stop collectd for
+# backup/restore runs so DROP DATABASE on foreman and candlepin can succeed.
+
+- name: "{{ manage_collectd_state | capitalize }} collectd"
+  ansible.builtin.service:
+    name: collectd
+    state: "{{ manage_collectd_state }}"
+  failed_when: false

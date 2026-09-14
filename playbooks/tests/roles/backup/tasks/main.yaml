@@ -1,17 +1,24 @@
 ---
-- ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir }}/detect.yaml"
+- name: Detect deployment method
+  ansible.builtin.include_tasks: "{{ _deployment_method_tasks_dir }}/detect.yaml"
 
 - name: Determine backup modes for this deployment
   ansible.builtin.set_fact:
-    backup_modes_effective: "{{ backup_modes if backup_modes is not none else (['online', 'offline'] if _deployment_method == 'rpm' else ['offline']) }}"
+    backup_modes_effective: "{{
+      backup_modes if backup_modes is not none
+      else (['online', 'offline'] if _deployment_method == 'rpm' else ['offline'])
+    }}"
 
 - name: Set backup metric suffix from skip-pulp setting
   ansible.builtin.set_fact:
-    backup_metric_suffix: "{{ 'SkipPulp' if backup_skip_pulp_content | bool else '' }}"
+    backup_metric_suffix: "{{ 'SkipPulp' if backup_skip_pulp_content | d(true) | bool else '' }}"
 
 - name: Build shared backup option flags
   ansible.builtin.set_fact:
-    _backup_option_flags: "{{ (['--skip-pulp-content'] if backup_skip_pulp_content | bool else []) + ['--wait-for-tasks'] }}"
+    _backup_option_flags: "{{
+      (['--skip-pulp-content'] if backup_skip_pulp_content | d(true) | bool else [])
+      + ['--wait-for-tasks']
+    }}"
 
 - name: Run backup and optional restore for each mode
   ansible.builtin.include_tasks: run_mode.yaml
