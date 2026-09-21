@@ -1,0 +1,45 @@
+---
+# Expects: _foremanctl_features_deploy_cmd, _foremanctl_features_add, _foremanctl_features_remove
+- name: Add/remove features deployment
+  when:
+    - (_foremanctl_features_add | length > 0) or (_foremanctl_features_remove | length > 0)
+  block:
+    - name: Set features deployment command line
+      ansible.builtin.set_fact:
+        _foremanctl_add_features_cmd: >-
+          {{ [_foremanctl_features_deploy_cmd,
+              _foremanctl_features_remove
+                | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' '),
+              _foremanctl_features_add
+                | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ')]
+             | reject('equalto', '') | join(' ') }}
+
+    - name: Show features deployment command line
+      ansible.builtin.debug:
+        msg: "{{ _foremanctl_add_features_cmd }}"
+
+    - name: Run features deployment
+      ansible.builtin.command:
+        cmd: "{{ _foremanctl_add_features_cmd }}"
+      register: _foremanctl_add_features_cmd_out
+      # XXX: Ignore errors to be able to show `_foremanctl_add_features_cmd_out.stdout_lines`
+      ignore_errors: true
+      changed_when: true
+
+    - name: Show features deployment output
+      ansible.builtin.debug:
+        var: _foremanctl_add_features_cmd_out.stdout_lines
+
+    - name: Show features deployment error output
+      ansible.builtin.debug:
+        var: _foremanctl_add_features_cmd_out.stderr_lines
+
+    - name: Assert features deployment succeeded
+      ansible.builtin.assert:
+        that:
+          - _foremanctl_add_features_cmd_out.rc == 0
+        fail_msg: >-
+          foremanctl add/remove features failed (rc={{ _foremanctl_add_features_cmd_out.rc }});
+          see output above
+        success_msg: foremanctl add/remove features succeeded
+...

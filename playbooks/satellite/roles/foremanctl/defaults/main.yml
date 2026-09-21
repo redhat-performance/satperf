@@ -12,4 +12,5 @@ foremanctl_remove_features: []
 
 foremanctl_proxy_add_features:
   - ansible
+  - remote-execution
 foremanctl_proxy_remove_features: []

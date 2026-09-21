@@ -252,43 +252,11 @@
             # foremanctl_remove_features: "{{ (foremanctl_remove_features | d([])) + ['cloud-connector'] }}"
 
         - name: Add/remove features deployment
-          when:
-            - (foremanctl_add_features | length > 0) or (foremanctl_remove_features | length > 0)
-          block:
-            - name: Set features deployment command line
-              ansible.builtin.set_fact:
-                _foremanctl_add_features_cmd: >-
-                  {{ [_foremanctl_deploy_cmd,
-                      foremanctl_remove_features | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' '),
-                      foremanctl_add_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ')]
-                     | reject('equalto', '') | join(' ') }}
-
-            - name: Show features deployment command line
-              ansible.builtin.debug:
-                msg: "{{ _foremanctl_add_features_cmd }}"
-
-            - name: Run features deployment
-              ansible.builtin.command:
-                cmd: "{{ _foremanctl_add_features_cmd }}"
-              register: _foremanctl_add_features_cmd_out
-              # XXX: Ignore errors in order to be able to show `_foremanctl_add_features_cmd_out.stdout_lines`
-              ignore_errors: true
-              changed_when: true
-
-            - name: Show features deployment output
-              ansible.builtin.debug:
-                var: _foremanctl_add_features_cmd_out.stdout_lines
-
-            - name: Show features deployment error output
-              ansible.builtin.debug:
-                var: _foremanctl_add_features_cmd_out.stderr_lines
-
-            - name: Assert features deployment succeeded
-              ansible.builtin.assert:
-                that:
-                  - _foremanctl_add_features_cmd_out.rc == 0
-                fail_msg: "foremanctl add/remove features failed (rc={{ _foremanctl_add_features_cmd_out.rc }}); see output above"
-                success_msg: foremanctl add/remove features succeeded
+          ansible.builtin.include_tasks: add_remove_features.yaml
+          vars:
+            _foremanctl_features_deploy_cmd: "{{ _foremanctl_deploy_cmd }}"
+            _foremanctl_features_add: "{{ foremanctl_add_features }}"
+            _foremanctl_features_remove: "{{ foremanctl_remove_features }}"
 
 - name: Foreman smart proxy deployment
   when:
@@ -398,9 +366,7 @@
                '--auth-bundle ' ~ foremanctl_proxy_auth_bundle_dest_path,
                '--foreman-fqdn ' ~ (groups['satellite6'] | first)]
               + (['--registration-url ' ~ _foremanctl_capsule_lb_url,
-                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else [])
-              + [foremanctl_proxy_remove_features | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' '),
-                 foremanctl_proxy_add_features | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ')])
+                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else []))
              | reject('equalto', '') | join(' ') }}
 
     - name: Show proxy deployment command line
@@ -438,4 +404,11 @@
           ForemanctlDeployProxy {{ _foremanctl_deploy_proxy_cmd_out.start }}
           to {{ _foremanctl_deploy_proxy_cmd_out.end }}
           taking {{ _foremanctl_deploy_proxy_duration }} seconds
+
+    - name: Add/remove features deployment
+      ansible.builtin.include_tasks: add_remove_features.yaml
+      vars:
+        _foremanctl_features_deploy_cmd: "{{ _foremanctl_deploy_proxy_cmd }}"
+        _foremanctl_features_add: "{{ foremanctl_proxy_add_features }}"
+        _foremanctl_features_remove: "{{ foremanctl_proxy_remove_features }}"
 ...
