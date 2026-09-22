@@ -49,7 +49,7 @@
             --satellite-password {{ sat_pass }} \
             --satellite-org_id 1 \
             --satellite-version {{ sat_version }} \
-            --locust-host https://localhost \
+            --locust-host https://{{ inventory_hostname }} \
             --locust-num-clients {{ ui_concurrency }} \
             --test-duration {{ ui_duration }} \
             --test-set SatelliteWebUIPerfMenu \

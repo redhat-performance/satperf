@@ -17,7 +17,7 @@
 
     - name: "Validate data scale - hosts"
       ansible.builtin.uri:
-        url: "https://localhost/api/hosts?per_page=1&page=1"
+        url: "https://{{ inventory_hostname }}/api/hosts?per_page=1&page=1"
         method: GET
         user: "{{ sat_user }}"
         password: "{{ sat_pass }}"
@@ -27,7 +27,7 @@
 
     - name: "Validate data scale - job invocations"
       ansible.builtin.uri:
-        url: "https://localhost/api/job_invocations?per_page=1&page=1"
+        url: "https://{{ inventory_hostname }}/api/job_invocations?per_page=1&page=1"
         method: GET
         user: "{{ sat_user }}"
         password: "{{ sat_pass }}"
@@ -86,7 +86,7 @@
             --satellite-password {{ sat_pass }} \
             --satellite-org_id 1 \
             --satellite-version {{ sat_version }} \
-            --locust-host https://localhost \
+            --locust-host https://{{ inventory_hostname }} \
             --locust-num-clients {{ ui_concurrency }} \
             --test-duration {{ ui_duration }} \
             --test-set SatelliteWebUIPerfAtScale \
