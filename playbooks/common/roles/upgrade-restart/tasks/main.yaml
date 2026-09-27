@@ -6,24 +6,41 @@
   community.general.timezone:
     name: UTC
 
-# Ensure redhat-release is up to date before upgrading to avoid conflicts
-# with packages that depend on a specific redhat-release version.
-# See: https://access.redhat.com/solutions/3449341
-- name: Update redhat-release before upgrade when version is below 10.1-17
+- name: RHEL 10 redhat-release/librepo bootstrap
   when:
     - ansible_distribution == "RedHat"
-    - ansible_distribution_version == "10.1"
+    - ansible_distribution_major_version == "10"
   block:
-    - name: Gather package facts for redhat-release version check
+    - name: Gather package facts for redhat-release/librepo version checks
       ansible.builtin.package_facts:
         manager: rpm
 
-    - name: Update redhat-release within current minor version if version is below 10.1-17
+    # Older librepo fails with "Parsing armored OpenPGP packet(s) failed" on the
+    # PQC-embedded GPG key shipped since ~Oct 2025.
+    # https://access.redhat.com/errata/RHBA-2025:10345 (JIRA:RHEL-101176)
+    - name: Bootstrap librepo past the PQC GPG-key parsing bug before trusting new keys
+      ansible.builtin.dnf:
+        name: librepo
+        state: latest
+        disable_gpg_check: true
+      when:
+        - (ansible_facts.packages['librepo'][0].version is version('1.18.0', '<')) or
+          (ansible_facts.packages['librepo'][0].version == '1.18.0' and ansible_facts.packages['librepo'][0].release is version('5', '<'))
+
+    # Stale redhat-release causes "GPG keys ... not correct for this package"
+    # conflicts during the Upgrade task below.
+    # https://access.redhat.com/solutions/3449341
+    - name: Update redhat-release before upgrade when below the known-good build
       ansible.builtin.dnf:
         name: "redhat-release-{{ ansible_distribution_version }}"
         state: latest
+      vars:
+        redhat_release_min_build:
+          "10.0": 35
+          "10.1": 17
       when:
-        - ansible_facts.packages['redhat-release'][0].release.split('.')[0] | int < 17
+        - ansible_distribution_version in redhat_release_min_build
+        - ansible_facts.packages['redhat-release'][0].release.split('.')[0] | int < redhat_release_min_build[ansible_distribution_version]
 
 - name: Upgrade
   ansible.builtin.dnf:
