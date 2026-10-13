@@ -31,11 +31,21 @@ Example (apply_prs format):
              prs: [11701]}
         ]
     }' --container-unit foreman --tag pr-bundle
+
+Example (per-file mounts for independent per-PR layers):
+    sudo ./patch_container_image.py \\
+        --pr theforeman/foreman:10969 \\
+        --container-unit foreman \\
+        --tag pr-10969 \\
+        --dropin-name 11-pr-10969.conf \\
+        --per-file-mounts \\
+        --no-restart
 """
 
 from __future__ import annotations
 
 import argparse
+import fnmatch
 import json
 import logging
 import os
@@ -46,6 +56,7 @@ import shutil
 import subprocess
 import sys
 import tempfile
+import time
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 if str(SCRIPT_DIR) not in sys.path:
@@ -58,8 +69,13 @@ from build_patched_container_image import (  # noqa: E402
     parse_gemspec_changes,
     parse_pr,
     fetch_diff,
+    fetch_pr_head,
+    fetch_pr_changed_files,
+    fetch_raw_file,
     copy_diff,
 )
+
+GEMSPEC_PATTERNS = ('*.gemspec', 'Gemfile', 'Gemfile.lock')
 
 log = logging.getLogger(__name__)
 
@@ -161,10 +177,144 @@ def collect_patch_entries(args, work_dir):
     return entries
 
 
+def _is_excluded(filename, excludes):
+    """Match a repo-relative path against filterdiff-style exclude patterns.
+
+    The patterns (e.g. '*/test/*') are written assuming the 'a/'/'b/' prefix
+    unified diffs put in front of every path, so a bare top-level path like
+    'test/foo.rb' needs a leading '/' added before matching or '*/test/*'
+    never matches anything at the repo root.
+    """
+    return any(fnmatch.fnmatch(f"/{filename}", pattern) for pattern in excludes)
+
+
+def _collect_whole_file_pr(org, repo, pr_number, base_dir, excludes, work_dir):
+    """Fetch every non-excluded changed file at a PR's branch tip.
+
+    Returns an entry dict shaped like collect_patch_entries' output, but
+    carrying fetched file contents ("pr_files") instead of a diff to apply -
+    the caller writes them directly rather than invoking patch.
+    """
+    head_repo, head_ref = fetch_pr_head(org, repo, pr_number)
+    log.info("Fetching %s/%s#%s files from %s@%s", org, repo, pr_number, head_repo, head_ref)
+    changed = fetch_pr_changed_files(org, repo, pr_number)
+
+    pr_files = []
+    for change in changed:
+        filename = change["filename"]
+        if change["status"] == "removed":
+            log.warning("Skipping removed file %s (bind mounts can't delete)", filename)
+            continue
+        if _is_excluded(filename, excludes):
+            continue
+        local_path = Path(work_dir) / f"{org}-{repo}-{pr_number}" / filename
+        if not fetch_raw_file(head_repo, head_ref, filename, str(local_path)):
+            log.error("Failed to fetch %s from %s@%s", filename, head_repo, head_ref)
+            sys.exit(1)
+        pr_files.append({"filename": filename, "local_path": local_path})
+
+    return {
+        "org": org,
+        "repo": repo,
+        "ref": str(pr_number),
+        "pr_files": pr_files,
+        "base_dir": base_dir,
+        "excludes": excludes,
+    }
+
+
+def collect_whole_file_entries(args, work_dir):
+    """Like collect_patch_entries, but fetches whole files instead of diffs."""
+    entries = []
+    if args.apply_prs:
+        data = parse_apply_prs(args.apply_prs)
+        for target in data["targets"]:
+            excludes = target.get("exclude_patterns", DEFAULT_EXCLUDES)
+            for pr_number in target["prs"]:
+                entries.append(_collect_whole_file_pr(
+                    target["org"], target["repo"], int(pr_number),
+                    target["base_dir"], excludes, work_dir,
+                ))
+    else:
+        excludes = args.exclude or DEFAULT_EXCLUDES
+        for org, repo, pr_number in args.pr or []:
+            entries.append(_collect_whole_file_pr(
+                org, repo, pr_number, default_base_dir_for_repo(repo), excludes, work_dir,
+            ))
+    return entries
+
+
+MIGRATION_PATTERN = "db/migrate/*.rb"
+
+
+def write_whole_files(entry, work_tree):
+    """Overlay fetched whole-file contents onto an extracted base tree.
+
+    Paths under a dangling symlink (db/log/public point outside the app
+    tree to runtime-data paths with no content in a bare extraction) can't
+    be created this way. Returns the migration files among those (handled
+    separately via apply_live_migrations); anything else is just skipped.
+    """
+    migrations = []
+    for pr_file in entry["pr_files"]:
+        dest = work_tree / pr_file["filename"]
+        try:
+            dest.parent.mkdir(parents=True, exist_ok=True)
+        except (FileNotFoundError, FileExistsError):
+            if fnmatch.fnmatch(pr_file["filename"], MIGRATION_PATTERN):
+                migrations.append(pr_file)
+            else:
+                log.warning(
+                    "Skipping %s: %s is a dangling symlink (runtime-data "
+                    "path, not present in a bare extraction).",
+                    pr_file["filename"], dest.parent,
+                )
+            continue
+        shutil.copyfile(pr_file["local_path"], dest)
+        log.info("  wrote %s", pr_file["filename"])
+    return migrations
+
+
+def apply_live_migrations(migration_files):
+    """Copy migrations into the live foreman container and run them.
+
+    db/migrate isn't reachable through the bind-mounted tree (it's a
+    dangling symlink in a bare extraction), and podman cp only persists to
+    a container's own writable layer anyway - so this runs independently of
+    the Volume= drop-in, against whatever foreman container is live right
+    now. The migration itself lands in Postgres, which is what needs to
+    survive, not the copied .rb file.
+    """
+    for migration in migration_files:
+        log.info("Applying live migration %s", migration["filename"])
+        run(["podman", "cp", str(migration["local_path"]),
+             "foreman:/usr/share/foreman/db/migrate/"])
+        for attempt in range(10):
+            result = run(["podman", "exec", "foreman", "foreman-rake", "db:migrate"],
+                         capture_output=True, check=False)
+            if result.returncode == 0:
+                break
+            log.warning("foreman-rake db:migrate failed (attempt %d/10), retrying...", attempt + 1)
+            time.sleep(5)
+        else:
+            log.error("foreman-rake db:migrate failed for %s", migration["filename"])
+            if result.stdout:
+                log.error(result.stdout.rstrip())
+            if result.stderr:
+                log.error(result.stderr.rstrip())
+            sys.exit(result.returncode or 1)
+
+
 def reject_gemspec_changes(entries):
-    """Fail if any diff changes gem dependencies."""
+    """Fail if any diff/whole-file entry changes gem dependencies."""
     offenders = []
     for entry in entries:
+        if "pr_files" in entry:
+            touched = [f["filename"] for f in entry["pr_files"]
+                       if any(fnmatch.fnmatch(f["filename"], p) for p in GEMSPEC_PATTERNS)]
+            if touched:
+                offenders.append({"entry": entry, "install": touched, "remove": []})
+            continue
         to_install, to_remove, _ = parse_gemspec_changes(entry["diff_path"])
         if to_install or to_remove:
             offenders.append(
@@ -207,9 +357,20 @@ def resolve_image_path(base_image, base_dir):
 
 
 def extract_image_tree(container_id, resolved_path, destination_root):
-    """Copy a directory tree from a container image into destination_root."""
+    """Copy a directory tree from a container image into destination_root.
+
+    Uses podman mount + cp -a rather than podman cp, which always chowns
+    extracted files to the copying process (root) regardless of --archive -
+    a file only readable by a non-root group in the image (e.g. a secret
+    initializer readable by the app's own user) would otherwise become
+    unreadable once this tree is bind-mounted back over the live container.
+    """
     destination_root.mkdir(parents=True, exist_ok=True)
-    run(["podman", "cp", f"{container_id}:{resolved_path}", str(destination_root)])
+    mount_point = run(["podman", "mount", container_id], capture_output=True).stdout.strip()
+    try:
+        run(["cp", "-a", f"{mount_point}{resolved_path}", str(destination_root)])
+    finally:
+        run(["podman", "umount", container_id])
     copied_path = destination_root / Path(resolved_path).name
     if not copied_path.exists():
         log.error("Failed to extract %s from container %s", resolved_path, container_id)
@@ -217,21 +378,68 @@ def extract_image_tree(container_id, resolved_path, destination_root):
     return copied_path
 
 
-def apply_diff(diff_path, work_tree, excludes):
-    """Apply a diff to a work tree, failing hard on any patch error."""
+def apply_diff(diff_path, work_tree, excludes, allow_partial=False):
+    """Apply a diff to a work tree.
+
+    Returns True on clean success.  When allow_partial is True, a non-zero
+    exit from patch is tolerated as long as at least one hunk applied (the
+    caller detects actual changes via checksums).
+    """
     exclude_args = " ".join(f"--exclude={shlex.quote(pattern)}" for pattern in excludes)
     command = (
         f"filterdiff {exclude_args} < {shlex.quote(str(diff_path))} "
         f"| patch -p1 --forward --batch"
     )
-    result = run_shell(command, cwd=work_tree)
+    result = run(["bash", "-lc", command], cwd=work_tree, capture_output=True, check=False)
     if result.returncode != 0:
+        output = (result.stdout or "") + (result.stderr or "")
+        if "Invalid file name" in output and ".rej" not in output:
+            # A target path under a dangling symlink (e.g. db/migrate - see
+            # write_whole_files) can't be created here either; patch itself
+            # already skipped just that file and applied the rest.
+            log.warning(
+                "Patch for %s skipped an unwritable path (dangling symlink); "
+                "other files still applied.",
+                diff_path,
+            )
+            log.warning(output.rstrip())
+            return True
+        if allow_partial and "patching file" in output:
+            log.warning(
+                "Partial patch for %s (rc=%d); some hunks may have been skipped.",
+                diff_path,
+                result.returncode,
+            )
+            if result.stdout:
+                log.warning(result.stdout.rstrip())
+            return True
         log.error("Patch failed for %s", diff_path)
         if result.stdout:
             log.error(result.stdout.rstrip())
         if result.stderr:
             log.error(result.stderr.rstrip())
         sys.exit(result.returncode or 1)
+    return True
+
+
+def snapshot_checksums(tree_root):
+    """Record mtime of every file under tree_root before patching."""
+    checksums = {}
+    for path in tree_root.rglob("*"):
+        if path.is_file():
+            checksums[path.relative_to(tree_root)] = path.stat().st_mtime_ns
+    return checksums
+
+
+def find_changed_files(tree_root, before_checksums):
+    """Return relative paths of files that were added or modified since the snapshot."""
+    changed = []
+    for path in tree_root.rglob("*"):
+        if path.is_file():
+            rel = path.relative_to(tree_root)
+            if rel not in before_checksums or path.stat().st_mtime_ns != before_checksums[rel]:
+                changed.append(rel)
+    return sorted(changed)
 
 
 def ensure_quadlet_units_exist(units):
@@ -339,6 +547,30 @@ def main():
         help=f"filterdiff exclude pattern (default: {DEFAULT_EXCLUDES})",
     )
     parser.add_argument(
+        "--per-file-mounts",
+        action="store_true",
+        help=(
+            "Mount individual changed files instead of whole directories. "
+            "Enables independent per-PR drop-in layers that don't conflict."
+        ),
+    )
+    parser.add_argument(
+        "--whole-file",
+        action="store_true",
+        help=(
+            "Fetch each PR's changed files whole, from the tip of its source "
+            "branch, instead of downloading and applying a diff. Avoids "
+            "patch-application mismatches against a non-matching base image, "
+            "at the cost of needing GitHub API access (not just raw/diff "
+            "URLs). Incompatible with --diff (no PR to look up files for)."
+        ),
+    )
+    parser.add_argument(
+        "--no-restart",
+        action="store_true",
+        help="Write drop-ins but skip systemctl restart. Useful when batching multiple patches.",
+    )
+    parser.add_argument(
         "--force",
         action="store_true",
         help="Replace an existing patch root for the same tag.",
@@ -358,6 +590,8 @@ def main():
 
     if not args.apply_prs and not args.pr and not args.diff:
         parser.error("one of --apply-prs, --pr, or --diff is required")
+    if args.whole_file and args.diff:
+        parser.error("--whole-file fetches files from a PR; --diff has no PR to look up")
 
     logging.basicConfig(
         level=logging.DEBUG if args.verbose else logging.INFO,
@@ -380,7 +614,11 @@ def main():
         sys.exit(1)
 
     with tempfile.TemporaryDirectory(prefix="container-patch-diffs-") as diff_dir:
-        entries = collect_patch_entries(args, diff_dir)
+        entries = (
+            collect_whole_file_entries(args, diff_dir)
+            if args.whole_file
+            else collect_patch_entries(args, diff_dir)
+        )
         reject_gemspec_changes(entries)
 
         if not args.dry_run:
@@ -414,13 +652,13 @@ def main():
                     "resolved_path": resolved_path,
                     "host_path": destination_root,
                 }
-                mount_specs.append(
-                    {
-                        "container_path": resolved_path,
-                        "host_path": str(destination_root),
-                    }
-                )
 
+            pre_checksums = {}
+            if args.per_file_mounts:
+                for base_dir, info in extracted.items():
+                    pre_checksums[base_dir] = snapshot_checksums(info["host_path"])
+
+            pending_migrations = []
             for entry in entries:
                 work_tree = extracted[entry["base_dir"]]["host_path"]
                 log.info(
@@ -430,13 +668,48 @@ def main():
                     entry["ref"],
                     work_tree,
                 )
-                apply_diff(entry["diff_path"], work_tree, entry["excludes"])
+                if "pr_files" in entry:
+                    pending_migrations += write_whole_files(entry, work_tree)
+                else:
+                    apply_diff(entry["diff_path"], work_tree, entry["excludes"],
+                               allow_partial=args.per_file_mounts)
+
+            all_changed_files = {}
+            if args.per_file_mounts:
+                for base_dir, info in extracted.items():
+                    changed = find_changed_files(info["host_path"], pre_checksums[base_dir])
+                    all_changed_files[base_dir] = changed
+                    resolved_path = info["resolved_path"]
+                    host_tree = info["host_path"]
+                    for rel_path in changed:
+                        mount_specs.append(
+                            {
+                                "container_path": f"{resolved_path}/{rel_path}",
+                                "host_path": str(host_tree / rel_path),
+                            }
+                        )
+                    log.info(
+                        "%d changed file(s) in %s",
+                        len(changed),
+                        resolved_path,
+                    )
+                if not mount_specs:
+                    log.warning("No files were changed by the applied diffs.")
+            else:
+                for base_dir, info in extracted.items():
+                    mount_specs.append(
+                        {
+                            "container_path": info["resolved_path"],
+                            "host_path": str(info["host_path"]),
+                        }
+                    )
 
             manifest = {
                 "tag": args.tag,
                 "base_image": args.base,
                 "units": units,
                 "dropin_name": args.dropin_name,
+                "per_file_mounts": args.per_file_mounts,
                 "mounts": mount_specs,
                 "entries": [
                     {
@@ -445,6 +718,15 @@ def main():
                         "ref": entry["ref"],
                         "base_dir": entry["base_dir"],
                         "resolved_path": extracted[entry["base_dir"]]["resolved_path"],
+                        **(
+                            {
+                                "changed_files": [
+                                    str(p) for p in all_changed_files.get(entry["base_dir"], [])
+                                ],
+                            }
+                            if args.per_file_mounts
+                            else {}
+                        ),
                     }
                     for entry in entries
                 ],
@@ -458,10 +740,17 @@ def main():
                 print("[Container]")
                 for spec in mount_specs:
                     print(f"Volume={spec['host_path']}:{spec['container_path']}:ro,z")
+                if pending_migrations:
+                    print("\nPlanned live migrations:")
+                    for migration in pending_migrations:
+                        print(f"  {migration['filename']}")
                 return
 
+            apply_live_migrations(pending_migrations)
+
             dropin_paths = write_dropins(units, args.dropin_name, mount_specs)
-            restart_units(units)
+            if not args.no_restart:
+                restart_units(units)
 
             print(f"\nLive patch applied from: {patch_root}")
             print(f"Manifest: {manifest_path}")

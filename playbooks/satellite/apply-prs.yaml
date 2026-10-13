@@ -6,8 +6,10 @@
   tasks:
     - name: Apply PRs
       when:
-        - apply_prs is defined
-        - apply_prs is string or apply_prs.targets | default([]) | length > 0
+        - apply_prs_deployer is defined
+        - apply_prs_deployer is string or apply_prs_deployer.targets | default([]) | length > 0
       ansible.builtin.include_role:
         name: apply_prs
+      vars:
+        apply_prs: "{{ apply_prs_deployer }}"
 ...

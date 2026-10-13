@@ -8,23 +8,64 @@
 #     targets         - list of:
 #       org           - organization/namespace
 #       repo          - repository name
-#       base_dir      - filesystem path of the codebase (supports globs)
+#       base_dir      - filesystem path of the codebase (supports globs),
+#                       or the path inside `container` when set
 #       prs           - list of PR/MR numbers
 #       forge         - VCS forge base URL (default: https://github.com)
 #       exclude_patterns - optional list of filterdiff --exclude patterns
 #                          (e.g. ['*/test/*', '*/tests/*', '*/spec/*']) requires patchutils
+#       container     - optional podman container (quadlet unit) name; when
+#                       set, the patch targets code baked into that container's
+#                       image rather than base_dir on the Ansible-connected
+#                       host (e.g. a gem with no host bind-mount). Applied by
+#                       scripts/patch_container_image.py: the runtime dirs are
+#                       extracted from the running image, patched on the host,
+#                       overlaid back via a quadlet Volume= bind-mount drop-in,
+#                       and the service restarted. base_dir is the path inside
+#                       the container. Always the diff method.
 
-- name: Parse apply_prs into _apply_prs (extra_vars cannot be overwritten by set_fact)
+- name: Parse apply_prs into a list of one-or-more entries (extra_vars cannot be overwritten by set_fact)
+  # Accepts, as a string or already-native YAML/JSON:
+  #   - a full {method, targets} object (possibly bracket-wrapped in a
+  #     one-element list)
+  #   - a single bare target dict
+  #   - multiple bare target dicts, comma-joined with no enclosing brackets
+  #     (the natural result of `var="${var:+$var,}$new"`-style shell
+  #     concatenation)
+  #   - an already-bracketed list of any of the above
+  # Strings not already starting with '[' are wrapped in brackets before
+  # parsing, which turns bare/comma-joined targets into a valid YAML list
+  # without disturbing an already-valid list or a single full object.
   ansible.builtin.set_fact:
-    _apply_prs: "{{ apply_prs | from_yaml if apply_prs is string else apply_prs }}"
+    _apply_prs_items: >-
+      {{ (apply_prs | from_yaml)
+           if (apply_prs is string and (apply_prs | trim)[0] == '[')
+         else (('[' + apply_prs + ']') | from_yaml)
+           if apply_prs is string
+         else [apply_prs]
+           if apply_prs is mapping
+         else apply_prs }}
+
+- name: Normalize into _apply_prs (full {method, targets} dict)
+  # A single parsed item that already has its own "targets" key is an
+  # old-style full object - use it as-is (preserving its own "method").
+  # Otherwise the parsed item(s) are themselves the targets: wrap them,
+  # deriving "method" from apply_prs_method (default 'diff').
+  ansible.builtin.set_fact:
+    _apply_prs: >-
+      {{ _apply_prs_items[0]
+         if (_apply_prs_items | length == 1 and _apply_prs_items[0].targets is defined)
+         else {'method': apply_prs_method | default('diff'), 'targets': _apply_prs_items} }}
 
 - name: Set default exclude patterns
   ansible.builtin.set_fact:
     _apply_prs_default_exclude_patterns:
       - '*/test/*'
       - '*/tests/*'
-      - 'tests/*'
       - '*/spec/*'
+      - '*/.github/*'
+      - '*/docs/*'
+      - '*/development/*'
 
 - name: Validate _apply_prs.targets
   run_once: true
@@ -61,7 +102,7 @@
       and _apply_prs_default_exclude_patterns | length > 0
     )
 
-- name: Apply PR
+- name: Apply PR (host path)
   ansible.builtin.shell:
     cmd: >-
       set -o pipefail
@@ -77,9 +118,59 @@
   loop: "{{ _apply_prs.targets | subelements('prs') }}"
   loop_control:
     label: "{{ item.0.org }}/{{ item.0.repo }}#{{ item.1 }}"
+  when: item.0.container is not defined
   register: _apply_pr_result
   changed_when: _apply_pr_result.rc == 0
   failed_when:
     - _apply_pr_result.rc != 0
     - "'Reversed (or previously applied) patch detected' not in _apply_pr_result.stdout"
     - "'which already exists' not in _apply_pr_result.stdout"
+
+- name: Collect containers targeted for in-container patches
+  ansible.builtin.set_fact:
+    _apply_prs_containers: >-
+      {{ _apply_prs.targets | selectattr('container', 'defined')
+         | map(attribute='container') | unique | list }}
+
+- name: Copy the live container-patching script and its helper module
+  ansible.builtin.copy:
+    src: "{{ role_path }}/../../../../scripts/{{ item }}"
+    dest: "/tmp/{{ item }}"
+    mode: '0755'
+  loop:
+    - patch_container_image.py
+    - build_patched_container_image.py
+  when: _apply_prs_containers | length > 0
+
+- name: Resolve the running image for each targeted container
+  # patch_container_image.py extracts original files from a fresh pull of
+  # --base-image, not the live container - it must match what's actually
+  # running or the diff could apply against mismatched content.
+  ansible.builtin.command:
+    cmd: >-
+      podman inspect {{ item }} --format '{{ '{{.ImageName}}' }}'
+  loop: "{{ _apply_prs_containers }}"
+  loop_control:
+    label: "{{ item }}"
+  changed_when: false
+  register: _apply_prs_container_images
+
+- name: Apply PRs targeting each container via live bind-mount patching
+  # Patches on the host and overlays the result via a quadlet Volume=
+  # drop-in, restarting the service - no patch/git needed inside the
+  # container itself (unlike the host path above).
+  ansible.builtin.command:
+    cmd: >-
+      python3 /tmp/patch_container_image.py
+      --apply-prs '{{ {"targets": _apply_prs.targets | selectattr("container", "equalto", item.item)
+                       | list} | to_json }}'
+      --container-unit {{ item.item }}
+      --base-image {{ item.stdout | trim }}
+      --whole-file
+      --force
+  loop: "{{ _apply_prs_container_images.results }}"
+  loop_control:
+    label: "{{ item.item }}"
+  register: _apply_prs_container_result
+  changed_when: "'No files were changed by the applied diffs.' not in _apply_prs_container_result.stderr"
+  failed_when: _apply_prs_container_result.rc != 0

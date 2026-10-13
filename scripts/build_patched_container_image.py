@@ -56,6 +56,8 @@ log = logging.getLogger(__name__)
 
 DEFAULT_EXCLUDES = ['*/test/*', '*/spec/*']
 DEFAULT_FORGE = 'https://github.com'
+DEFAULT_API = 'https://api.github.com'
+DEFAULT_RAW = 'https://raw.githubusercontent.com'
 
 
 def parse_pr(spec):
@@ -139,6 +141,51 @@ def fetch_diff(org, repo, pr_number, dest_dir, forge=DEFAULT_FORGE):
         sys.exit(1)
     log.info('  %d bytes', size)
     return filename
+
+
+def _github_api_get(url):
+    """GET a GitHub API URL as JSON, using GITHUB_TOKEN if set."""
+    cmd = ['curl', '-sf', '-H', 'Accept: application/vnd.github+json']
+    token = os.environ.get('GITHUB_TOKEN')
+    if token:
+        cmd += ['-H', f'Authorization: Bearer {token}']
+    cmd.append(url)
+    result = subprocess.run(cmd, capture_output=True, text=True)
+    if result.returncode != 0:
+        log.error('Failed to fetch %s (curl exit %d)', url, result.returncode)
+        sys.exit(1)
+    return json.loads(result.stdout)
+
+
+def fetch_pr_head(org, repo, pr_number, forge_api=DEFAULT_API):
+    """Return (head_repo_full_name, head_ref) for a PR."""
+    data = _github_api_get(f'{forge_api}/repos/{org}/{repo}/pulls/{pr_number}')
+    return data['head']['repo']['full_name'], data['head']['ref']
+
+
+def fetch_pr_changed_files(org, repo, pr_number, forge_api=DEFAULT_API):
+    """Return [{'filename':..., 'status':...}] for a PR, across all pages."""
+    files = []
+    page = 1
+    while True:
+        url = f'{forge_api}/repos/{org}/{repo}/pulls/{pr_number}/files?per_page=100&page={page}'
+        batch = _github_api_get(url)
+        files.extend(batch)
+        if len(batch) < 100:
+            break
+        page += 1
+    return files
+
+
+def fetch_raw_file(head_repo, head_ref, filename, dest_path, forge_raw=DEFAULT_RAW):
+    """Download a file's content at the tip of a branch. Returns True if found."""
+    url = f'{forge_raw}/{head_repo}/{head_ref}/{filename}'
+    os.makedirs(os.path.dirname(dest_path), exist_ok=True)
+    result = subprocess.run(
+        ['curl', '-L', '-sf', '-o', dest_path, url],
+        capture_output=True, text=True,
+    )
+    return result.returncode == 0
 
 
 def copy_diff(org, repo, diff_path, dest_dir):
