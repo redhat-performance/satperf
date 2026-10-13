@@ -1,0 +1,25 @@
+---
+- name: Set organizations
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+  block:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
+    - name: Set default variable values
+      ansible.builtin.set_fact:
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
+
+    - name: Create organization
+      theforeman.foreman.organization:
+        name: "{{ organization }}"
+      delegate_to: localhost
+      register: __create_org
+      until: __create_org is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+...

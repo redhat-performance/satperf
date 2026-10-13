@@ -23,7 +23,7 @@ collections:
   - name: ansible.posix
     version: ">=2.0.0"
 
-  # Used by plain-network, define-topology (ipaddr filter)
+  # Used by plain-network, set_host_proxy_topology (ipaddr filter)
   - name: ansible.utils
     version: ">=2.0.0"
 

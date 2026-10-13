@@ -95,10 +95,12 @@
 
 - name: Apply PRs
   when:
-    - apply_prs is defined
-    - apply_prs is string or apply_prs.targets | default([]) | length > 0
+    - apply_prs_deployer is defined
+    - apply_prs_deployer is string or apply_prs_deployer.targets | default([]) | length > 0
   ansible.builtin.include_role:
     name: apply_prs
+  vars:
+    apply_prs: "{{ apply_prs_deployer }}"
 
 - name: run_before_installer
   when:
@@ -393,4 +395,47 @@
         cmd: |
           hammer -u {{ user }} -p {{ password }} capsule refresh-features --organization '{{ organization }}' --id {{ id }}
       delegate_to: "{{ groups['satellite6'] | first }}"
+
+- name: Set host location
+  # XXX: Temporary, until the RPM capsule install is refactored to set
+  # location at registration time like the foremanctl one does.
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+  block:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
+    - name: Set default variable values
+      ansible.builtin.set_fact:
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
+        location: "{{ location | default(sat_loc) | default('Default Location') }}"
+
+    - name: Get host information
+      theforeman.foreman.resource_info:
+        resource: hosts
+        search: "name = {{ inventory_hostname }}"
+      delegate_to: localhost
+      register: __host_info
+      until: __host_info is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Set host location
+      theforeman.foreman.host:
+        name: "{{ inventory_hostname }}"
+        location: "{{ location if location is string else location[0] }}"
+        organization: "{{ organization }}"
+      delegate_to: localhost
+      when: __host_info.resources | length > 0
+      register: __set_host_location
+      until: __set_host_location is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+- name: Set smart-proxy location
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/set_host_proxy_topology.yaml"
 ...

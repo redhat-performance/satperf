@@ -95,10 +95,12 @@
 
 - name: Apply PRs
   when:
-    - apply_prs is defined
-    - apply_prs is string or apply_prs.targets | default([]) | length > 0
+    - apply_prs_deployer is defined
+    - apply_prs_deployer is string or apply_prs_deployer.targets | default([]) | length > 0
   ansible.builtin.include_role:
     name: apply_prs
+  vars:
+    apply_prs: "{{ apply_prs_deployer }}"
 
 - name: run_before_installer
   when:
@@ -344,4 +346,7 @@
     - name: Run set of shell commands to run after installation
       ansible.builtin.shell:
         cmd: "{{ run_after_installer }}"
+
+- name: Set organizations
+  ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/set_organizations.yaml"
 ...

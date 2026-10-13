@@ -1,0 +1,46 @@
+---
+- name: Set smart-proxy location
+  # Organization/location/subnet already exist by this point -
+  # playbooks/satellite/set-topology.yaml runs before any capsule deploy.
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+  block:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
+    - name: Set default variable values
+      ansible.builtin.set_fact:
+        organization: "{{ organization | default(sat_org) | default('Default Organization') }}"
+        location: "{{ location | default(sat_loc) | default('Default Location') }}"
+
+    - name: Get smart-proxy information
+      theforeman.foreman.resource_info:
+        resource: smart_proxies
+        search: "name ~ {{ inventory_hostname }}"
+      delegate_to: localhost
+      register: __proxy_info
+      until: __proxy_info is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Set smart-proxy location
+      theforeman.foreman.smart_proxy:
+        name: "{{ item.name }}"
+        url: "{{ item.url }}"
+        locations: "{{ [location] if location is string else location }}"
+        organizations:
+          - "{{ organization }}"
+      loop: "{{ __proxy_info.resources }}"
+      loop_control:
+        label: "{{ item.name }}"
+      delegate_to: localhost
+      when: __proxy_info.resources | length > 0
+      register: __set_proxy_location
+      until: __set_proxy_location is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+...

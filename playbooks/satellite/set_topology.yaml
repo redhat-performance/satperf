@@ -1,0 +1,17 @@
+---
+- name: Set Satellite organization/location/subnet topology
+  hosts: satellite6:capsules
+  gather_facts: false
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+  tasks:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
+    - name: Set topology
+      ansible.builtin.include_tasks: tasks/set_topology.yaml
+...
