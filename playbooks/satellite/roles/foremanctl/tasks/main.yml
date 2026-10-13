@@ -1,15 +1,18 @@
 ---
-- ansible.builtin.include_tasks: ../../tasks/deployment_method/inherit.yaml
-  when: foremanctl_deployment_type == 'proxy'
-
 - name: Set deployment facts for server install
   when: foremanctl_deployment_type == 'server'
   block:
-    - ansible.builtin.set_fact:
+    - name: Set deployer and deployment method facts
+      ansible.builtin.set_fact:
         _deployer: "{{ foremanctl_deployer }}"
         _deployment_method: container
 
-    - ansible.builtin.include_tasks: ../../tasks/deployment_method/set_derived_facts.yaml
+    - name: Set derived deployment facts
+      ansible.builtin.include_tasks: ../../tasks/deployment_method/set_derived_facts.yaml
+
+- name: Inherit deployment method facts for proxy Install
+  when: foremanctl_deployment_type == 'proxy'
+  ansible.builtin.include_tasks: ../../tasks/deployment_method/inherit.yaml
 
 - name: Requirements
   block:
@@ -38,19 +41,16 @@
       when:
         - _is_satellite_product | bool
       block:
-        # XXX: HACK! satellitectl (containerized) only ships in the "satellite"
-        # repo, so force proxies onto satellite6's additional_repos too.
-        - name: Use satellite6's additional_repos for containerized proxies
-          # lookup('ansible.builtin.vars', ..., host=...) still resolves in the
-          # current host's context; hostvars templates in the source host's pantry.
-          ansible.builtin.set_fact:
-            additional_repos: "{{ hostvars[groups['satellite6'][0]].additional_repos }}"
-          when:
-            - foremanctl_deployment_type is defined and foremanctl_deployment_type == 'proxy'
-
         - name: Setup Satellite repositories
+          # Capsules registered against Satellite below get the deployer
+          # package through their activation key instead.
+          when: foremanctl_deployment_type is defined and foremanctl_deployment_type == 'server'
           ansible.builtin.include_role:
             name: repo_setup
+
+    - name: Register the capsule for container registry certs
+      when: foremanctl_deployment_type is defined and foremanctl_deployment_type == 'proxy'
+      ansible.builtin.include_tasks: register_for_container_registry.yaml
 
 - name: Install deployer package
   ansible.builtin.dnf:
@@ -59,16 +59,21 @@
 
 - name: Apply PRs
   when:
-    - apply_prs is defined
-    - apply_prs is string or apply_prs.targets | default([]) | length > 0
+    - apply_prs_deployer is defined
+    - apply_prs_deployer is string or apply_prs_deployer.targets | default([]) | length > 0
   ansible.builtin.include_role:
     name: apply_prs
+  vars:
+    apply_prs: "{{ apply_prs_deployer }}"
 
 - name: Red Hat registry
   when:
     - registry is defined and registry != "quay.io"
     - registry_username is defined and registry_username | length > 0
     - registry_password is defined and registry_password | length > 0
+    # A proxy already serving capsule images from Satellite's own gateway
+    # doesn't need external registry credentials at all.
+    - foremanctl_deployment_type != 'proxy'
   block:
     - name: Log in to the registry
       containers.podman.podman_login:
@@ -79,42 +84,14 @@
 
     - name: Redirect pulls to a different registry
       when: registry != "registry.redhat.io"
-      block:
-        - name: Redirect registry.redhat.io pulls to the configured registry
-          ansible.builtin.copy:
-            dest: /etc/containers/registries.conf.d/registry-mirror.conf
-            mode: '0644'
-            content: |
-              [[registry]]
-              prefix = "registry.redhat.io"
-              location = "{{ registry }}"
-
-        - name: Check for an existing local container signature policy
-          ansible.builtin.stat:
-            path: /etc/containers/policy.json
-          register: _foremanctl_local_policy_json
-
-        - name: Relax signature policy for registry.redhat.io
-          vars:
-            _foremanctl_policy_json_src: >-
-              {{ '/etc/containers/policy.json' if _foremanctl_local_policy_json.stat.exists
-                 else '/usr/share/containers/policy.json' }}
-          block:
-            - name: Read active container signature policy
-              ansible.builtin.slurp:
-                src: "{{ _foremanctl_policy_json_src }}"
-              register: _foremanctl_active_policy_json
-
-            - name: Write /etc/containers/policy.json with registry.redhat.io relaxed
-              ansible.builtin.copy:
-                dest: /etc/containers/policy.json
-                mode: '0644'
-                content: >-
-                  {{ (_foremanctl_active_policy_json.content | b64decode | from_json)
-                     | combine({'transports': {'docker': {
-                         'registry.redhat.io': [{'type': 'insecureAcceptAnything'}]}}},
-                               recursive=true)
-                     | to_nice_json }}
+      ansible.builtin.include_tasks: configure_registry_mirror.yaml
+      vars:
+        _registry_mirror_conf_dest: registry-mirror.conf
+        _registry_mirror_mappings:
+          - prefix: registry.redhat.io
+            location: "{{ registry }}"
+        _registry_mirror_relax_policy_for:
+          - registry.redhat.io
 
     - name: Set IOP engine extra packages
       when:
@@ -187,9 +164,6 @@
                   '--initial-admin-password ' ~ (password | default(foreman_password)),
                   '--flavor satellite' if _is_satellite_product | bool else '']
                  | reject('equalto', '') | join(' ') }}
-
-        - name: Set redacted basic deployment command line
-          ansible.builtin.set_fact:
             _foremanctl_initial_deploy_cmd_redacted: >-
               {{ [_foremanctl_deploy_cmd,
                   '--initial-admin-password [redacted]',
@@ -258,6 +232,24 @@
             _foremanctl_features_add: "{{ foremanctl_add_features }}"
             _foremanctl_features_remove: "{{ foremanctl_remove_features }}"
 
+    - name: Apply PRs to the deployed product
+      # Unlike the pre-deploy Apply PRs above, this targets code inside the
+      # running foreman container - it only exists once deploy succeeds.
+      when:
+        - apply_prs_product is defined
+        - apply_prs_product is string or apply_prs_product.targets | default([]) | length > 0
+      ansible.builtin.include_role:
+        name: apply_prs
+      vars:
+        apply_prs: "{{ apply_prs_product }}"
+
+    - name: Set organizations
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/set_organizations.yaml"
+
+    - name: Populate deployment content on Satellite
+      when: groups['capsules'] | default([]) | length > 0
+      ansible.builtin.include_tasks: deploy_content_via_satellite.yaml
+
 - name: Foreman smart proxy deployment
   when:
     - foremanctl_deployment_type == 'proxy'
@@ -291,15 +283,39 @@
       ansible.builtin.set_fact:
         _foremanctl_deploy_proxy_cmd: "{{ _deployer }} deploy-proxy"
 
+    - name: Redirect capsule image pulls to the Satellite Server registry
+      when: _is_satellite_product | bool
+      ansible.builtin.include_tasks: configure_registry_mirror.yaml
+      vars:
+        _foremanctl_capsule_images_location: >-
+          {{ [groups['satellite6'] | first,
+              foremanctl_capsule_images_org_label | lower,
+              foremanctl_capsule_images_product_label | lower] | join('/') }}
+        _registry_mirror_conf_dest: 50-foremanctl-mirror.conf
+        _registry_mirror_mappings:
+          - prefix: registry.redhat.io/satellite
+            location: "{{ _foremanctl_capsule_images_location }}"
+          - prefix: registry.redhat.io/rhel10
+            location: "{{ _foremanctl_capsule_images_location }}"
+        _registry_mirror_relax_policy_for:
+          - registry.redhat.io/satellite
+          - registry.redhat.io/rhel10
+
     - name: Generate proxy auth bundle on the Foreman server
       delegate_to: "{{ groups['satellite6'] | first }}"
       block:
         - name: Set auth bundle command line
+          # --proxy-alias replaced --server-alias in foremanctl 36d9d36b23d3,
+          # not yet picked up by 6.20.0's pinned foremanctl version.
+          vars:
+            _foremanctl_proxy_alias_flag: >-
+              {{ '--proxy-alias' if (sat_version | default('stream')) == 'stream' else '--server-alias' }}
           ansible.builtin.set_fact:
             _foremanctl_auth_bundle_cmd: >-
               {{ [_deployer,
                   'auth-bundle',
-                  ('--server-alias ' ~ _foremanctl_capsule_lb ~ ' --certificate-renew') if _foremanctl_capsule_lb is defined else '',
+                  (_foremanctl_proxy_alias_flag ~ ' ' ~ _foremanctl_capsule_lb ~ ' --certificate-renew')
+                  if _foremanctl_capsule_lb is defined else '',
                   inventory_hostname]
                  | reject('equalto', '') | join(' ') }}
 
@@ -411,4 +427,15 @@
         _foremanctl_features_deploy_cmd: "{{ _foremanctl_deploy_proxy_cmd }}"
         _foremanctl_features_add: "{{ foremanctl_proxy_add_features }}"
         _foremanctl_features_remove: "{{ foremanctl_proxy_remove_features }}"
+
+    - name: Apply PRs to the deployed product
+      # Unlike the pre-deploy Apply PRs, this targets code inside the
+      # running proxy containers - they only exist once deploy-proxy succeeds.
+      when:
+        - apply_prs_product_capsule is defined
+        - apply_prs_product_capsule is string or apply_prs_product_capsule.targets | default([]) | length > 0
+      ansible.builtin.include_role:
+        name: apply_prs
+      vars:
+        apply_prs: "{{ apply_prs_product_capsule }}"
 ...

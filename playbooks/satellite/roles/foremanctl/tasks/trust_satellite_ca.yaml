@@ -1,0 +1,20 @@
+---
+# Required variables:
+#   _foremanctl_trust_ca_for_host — hostname of the registry to trust (used
+#                                   as the certs.d directory name)
+
+- name: "Create certs.d directory for {{ _foremanctl_trust_ca_for_host }}"
+  ansible.builtin.file:
+    path: "/etc/containers/certs.d/{{ _foremanctl_trust_ca_for_host }}"
+    state: directory
+    mode: '0755'
+
+- name: "Trust Satellite's CA bundle for {{ _foremanctl_trust_ca_for_host }}"
+  # ca-bundle.crt only exists for certificate_source=custom_server; the published
+  # pub/katello-server-ca.crt is correct for internal and custom_server alike.
+  ansible.builtin.copy:
+    src: /var/www/html/pub/katello-server-ca.crt
+    dest: "/etc/containers/certs.d/{{ _foremanctl_trust_ca_for_host }}/ca.crt"
+    remote_src: true
+    mode: '0644'
+...

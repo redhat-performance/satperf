@@ -1,0 +1,80 @@
+---
+- name: Register the capsule for container registry certs
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+  block:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ role_path }}/../../../tests/includes/common_vars.yaml"
+
+    - name: Derive the satellite server's RHEL facts
+      # foremanctl_deployer_product needs these to match what
+      # deploy_content_via_satellite.yaml computed on a separate,
+      # earlier playbook run.
+      ansible.builtin.include_tasks: derive_satellite_rhel_facts.yaml
+
+    - name: Ensure the capsule images activation key exists
+      # Not run_once: the AK name is per-host (derived from major version).
+      # content_view_environments names the default org view's own
+      # ContentViewEnvironment by its lifecycle environment label alone -
+      # Katello only composes "<lce>/<cv>" labels for non-default views.
+      theforeman.foreman.activation_key:
+        organization: "{{ _organization }}"
+        name: "{{ foremanctl_capsule_images_ak }}"
+        unlimited_hosts: true
+        content_view_environments:
+          - "{{ foremanctl_capsule_images_lifecycle_environment }}"
+        content_overrides: >-
+          {{ [{'label': [foremanctl_capsule_images_org_label,
+                          foremanctl_deployer_product_label,
+                          foremanctl_deployer_repo_label] | join('_'),
+               'override': 'enabled'}]
+             if _foremanctl_additional_repos | length > 0 else [] }}
+      vars:
+        # Custom repos default to disabled, unlike Red Hat repos - only
+        # needs an override when the deployer repositories were actually
+        # mirrored (see deploy_content_via_satellite.yaml).
+        _foremanctl_additional_repos: "{{ hostvars[groups['satellite6'] | first].additional_repos }}"
+      delegate_to: localhost
+      register: __foremanctl_capsule_images_ak_result
+      until: __foremanctl_capsule_images_ak_result is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Generate the capsule registration command
+      # XXX: Submit PR - concurrent calls race on JwtSecret (missing unique
+      # index on jwt_secrets.user_id), causing "Failed to decode JWT". Now
+      # patched via apply_prs_product (PR #11315) before capsules register -
+      # keep this disabled fallback until that's verified reliable.
+      # throttle: 1
+      theforeman.foreman.registration_command:
+        organization: "{{ _organization }}"
+        location: "{{ location }}"
+        activation_keys:
+          - "{{ foremanctl_capsule_images_ak }}"
+        setup_insights: false
+        setup_container_registry_certs: true
+        insecure: true
+        force: true
+      delegate_to: localhost
+      register: _foremanctl_capsule_registration_command
+      until: _foremanctl_capsule_registration_command is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Show the capsule registration command
+      ansible.builtin.debug:
+        msg: "{{ _foremanctl_capsule_registration_command.registration_command }}"
+
+    - name: Run the capsule registration command  # noqa: command-instead-of-shell
+      ansible.builtin.shell:
+        cmd: "{{ _foremanctl_capsule_registration_command.registration_command }}"
+      changed_when: true
+      register: __foremanctl_capsule_registration_result
+      until: __foremanctl_capsule_registration_result is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+...

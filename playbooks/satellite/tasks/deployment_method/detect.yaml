@@ -1,6 +1,7 @@
 ---
 # Detect _deployer and _deployment_method from installed packages on this host
 # or on _deployment_method_detect_on when set (remote detect for inherit).
+# _maintainer and other derived facts are set in set_derived_facts.yaml.
 - name: Gather installed package facts
   ansible.builtin.package_facts:
   delegate_to: "{{ _deployment_method_detect_on | default(inventory_hostname) }}"

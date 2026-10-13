@@ -1,0 +1,17 @@
+---
+- name: Gather the satellite server's own facts
+  # Explicit delegate_facts keeps this correct whether the caller is
+  # satellite6 itself (facts already gathered) or a capsule play that
+  # never targets it.
+  ansible.builtin.setup:
+    gather_subset: min
+  delegate_to: "{{ groups['satellite6'] | first }}"
+  delegate_facts: true
+
+- name: Derive the satellite server's RHEL major version and architecture
+  ansible.builtin.set_fact:
+    _foremanctl_capsule_rhel_major: >-
+      {{ hostvars[groups['satellite6'] | first]['ansible_facts']['distribution_major_version'] }}
+    _foremanctl_capsule_rhel_arch: >-
+      {{ hostvars[groups['satellite6'] | first]['ansible_facts']['architecture'] }}
+...

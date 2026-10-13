@@ -10,7 +10,29 @@ foremanctl_deployer: satellitectl
 foremanctl_add_features: []
 foremanctl_remove_features: []
 
+# The stream snap's compose is currently missing hammer packages entirely,
+# failing deploy outright - drop the feature until fixed.
+foremanctl_initial_remove_features: >-
+  {{ ['hammer'] if (sat_version | default('stream')) == 'stream' else [] }}
+
 foremanctl_proxy_add_features:
   - ansible
   - remote-execution
 foremanctl_proxy_remove_features: []
+
+foremanctl_capsule_images_prefer_local_push: true
+foremanctl_capsule_images_product: "Foreman Infra Container Images"
+foremanctl_capsule_images_product_label: "Foreman_Infra_Container_Images"
+foremanctl_capsule_images_org_label: >-
+  {{ (sat_org | default('Default Organization')) | replace(' ', '_') }}
+foremanctl_capsule_images_lifecycle_environment: "Library"
+foremanctl_capsule_images_ak: >-
+  AK_{{ ansible_facts['distribution_major_version'] }}_Capsules
+
+foremanctl_deployer_product: >-
+  Red Hat Satellite {{ sat_version | default('stream') }} for RHEL
+  {{ _foremanctl_capsule_rhel_major }} {{ _foremanctl_capsule_rhel_arch }}
+foremanctl_deployer_product_label: >-
+  {{ foremanctl_deployer_product | regex_replace('[^A-Za-z0-9]+', '_') }}
+foremanctl_deployer_repo: "{{ foremanctl_deployer_product }} (RPMs)"
+foremanctl_deployer_repo_label: "{{ foremanctl_deployer_product_label }}_RPMs"

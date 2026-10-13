@@ -1,0 +1,61 @@
+---
+# Redirect matching pull prefixes to a registry via registries.conf.d, and relax
+# the local container signature policy for those prefixes so the redirected
+# pulls aren't rejected for failing signature verification. Caller is
+# responsible for authenticating (podman_login) against the target registry.
+#
+# Required variables:
+#   _registry_mirror_conf_dest        — filename under /etc/containers/registries.conf.d/
+#   _registry_mirror_mappings         — list of {prefix, location}
+#   _registry_mirror_relax_policy_for — list of prefixes to relax in policy.json
+
+- name: "Write {{ _registry_mirror_conf_dest }}"
+  ansible.builtin.copy:
+    dest: "/etc/containers/registries.conf.d/{{ _registry_mirror_conf_dest }}"
+    mode: '0644'
+    content: |
+      {% for _mapping in _registry_mirror_mappings %}
+      [[registry]]
+      prefix = "{{ _mapping.prefix }}"
+      location = "{{ _mapping.location }}"
+
+      {% endfor %}
+
+- name: Check for an existing local container signature policy
+  ansible.builtin.stat:
+    path: /etc/containers/policy.json
+  register: _foremanctl_local_policy_json
+
+- name: Relax signature policy for redirected prefixes
+  vars:
+    _foremanctl_policy_json_src: >-
+      {{ '/etc/containers/policy.json' if _foremanctl_local_policy_json.stat.exists
+         else '/usr/share/containers/policy.json' }}
+  block:
+    - name: Read active container signature policy
+      ansible.builtin.slurp:
+        src: "{{ _foremanctl_policy_json_src }}"
+      register: _foremanctl_active_policy_json
+
+    - name: Reset signature-policy relax map
+      ansible.builtin.set_fact:
+        _foremanctl_relax_policy_map: {}
+
+    - name: Build signature-policy relax map
+      ansible.builtin.set_fact:
+        _foremanctl_relax_policy_map: >-
+          {{ _foremanctl_relax_policy_map | combine(
+             {item: [{'type': 'insecureAcceptAnything'}]}) }}
+      loop: "{{ _registry_mirror_relax_policy_for }}"
+      loop_control:
+        label: "{{ item }}"
+
+    - name: Write /etc/containers/policy.json with redirected prefixes relaxed
+      ansible.builtin.copy:
+        dest: /etc/containers/policy.json
+        mode: '0644'
+        content: >-
+          {{ (_foremanctl_active_policy_json.content | b64decode | from_json)
+             | combine({'transports': {'docker': _foremanctl_relax_policy_map}}, recursive=true)
+             | to_nice_json }}
+...

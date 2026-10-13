@@ -6,3 +6,7 @@
     - role: foremanctl
       vars:
         foremanctl_deployment_type: proxy
+
+  post_tasks:
+    - name: Set smart-proxy location
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/set_host_proxy_topology.yaml"
