@@ -1,0 +1,1173 @@
+---
+- name: Gather bastion facts
+  hosts: bastion
+  gather_facts: true
+  tasks: []
+
+- name: Prepare and run Jetlag from the bastion
+  hosts: bastion
+  # gather_facts: true
+  vars:
+    jetlag_effective_inventory_name: "{{ jetlag_inventory_name | default('satperf-cnv.local') }}"
+    jetlag_inventory_file: "{{ jetlag_dest }}/ansible/inventory/{{ jetlag_effective_inventory_name }}"
+    jetlag_all_file: "{{ jetlag_dest }}/ansible/vars/all.yml"
+    jetlag_handoff_file: "{{ jetlag_dest }}/ansible/vars/satperf-cnv-handoff.yml"
+    jetlag_log_dir: "{{ jetlag_dest }}/satperf-logs"
+    jetlag_debug_dir: "{{ jetlag_log_dir }}/debug"
+    jetlag_ansible_playbook: "{{ jetlag_dest }}/.ansible/bin/ansible-playbook"
+    jetlag_effective_mno_monitor_interval_seconds: "{{ jetlag_mno_monitor_interval_seconds | default(15) | int }}"
+    jetlag_effective_mno_discovery_grace_seconds: "{{ jetlag_mno_discovery_grace_seconds | default(300) | int }}"
+    jetlag_bastion_host: "{{ groups['bastion'] | first }}"
+    jetlag_assisted_api_base: "http://{{ jetlag_bastion_host }}:8090/api/assisted-install/v2"
+    jetlag_controlplane_hosts: "{{ groups['cnv_controlplane'] | default([]) }}"
+    jetlag_all_worker_hosts: "{{ groups['cnv_workers'] | default([]) }}"
+    jetlag_worker_hosts: >-
+      {{ []
+         if (
+           (groups['cnv_controlplane'] | default([]) | length) == 3 and
+           (groups['cnv_workers'] | default([]) | sort) == (groups['cnv_controlplane'] | default([]) | sort)
+         )
+         else (
+           groups['cnv_workers'] | default([])
+           | reject('in', groups['cnv_controlplane'] | default([]))
+           | list
+         ) }}
+    jetlag_primary_controlplane_host: "{{ (groups['cnv_controlplane'] | default([]) | first) | default('') }}"
+    jetlag_controlplane_host_with_private_ipv4: >-
+      {% set ns = namespace(host='') %}
+      {% for h in groups['cnv_controlplane'] | default([]) %}
+      {% set iface = hostvars[h].cnv_install_nic | default(hostvars[h].private_nic | default(jetlag_network_interface | default('eth1', true), true), true) %}
+      {% set facts = hostvars[h]['ansible_' ~ iface] | default({}) %}
+      {% if ns.host == '' and (facts.get('ipv4', {}) | length > 0) %}
+      {% set ns.host = h %}
+      {% endif %}
+      {% endfor %}
+      {{ ns.host }}
+    jetlag_effective_public_vlan: "{{ jetlag_public_vlan | default(false) | bool }}"
+    jetlag_effective_install_network: >-
+      {{ jetlag_install_network
+         | default(jetlag_controlplane_network | default('')) }}
+    jetlag_effective_install_network_prefix: >-
+      {{ jetlag_install_network_prefix
+         | default(jetlag_controlplane_network_prefix | default('')) }}
+    jetlag_effective_install_network_cidr: >-
+      {{ jetlag_effective_install_network
+         if ('/' in (jetlag_effective_install_network | string))
+         else (
+           (jetlag_effective_install_network ~ '/' ~ jetlag_effective_install_network_prefix)
+           if (
+             (jetlag_effective_install_network | string | length > 0) and
+             (jetlag_effective_install_network_prefix | string | length > 0)
+           ) else (jetlag_effective_install_network | default(''))
+         ) }}
+    jetlag_effective_install_network_prefix_resolved: >-
+      {{ jetlag_effective_install_network_prefix
+         | default(
+             (
+               (jetlag_effective_install_network_cidr | string).split('/')[-1]
+             ) if ('/' in (jetlag_effective_install_network_cidr | string)) else ''
+           ) }}
+    jetlag_effective_install_network_gateway: >-
+      {{ jetlag_install_network_gateway
+         | default(
+             jetlag_controlplane_network_gateway
+             | default(
+                 (
+                   jetlag_effective_install_network_cidr
+                   | ansible.utils.nthhost(1)
+                 ) if ('/' in (jetlag_effective_install_network_cidr | string)) else ''
+               )
+           ) }}
+    jetlag_effective_install_dns1: >-
+      {{ jetlag_install_dns1
+         | default(jetlag_dns1 | default(jetlag_effective_install_network_gateway)) }}
+    jetlag_effective_lab_interface: >-
+      {{ jetlag_lab_interface
+         | default(hostvars[jetlag_primary_controlplane_host].management_nic)
+         | default(hostvars[jetlag_primary_controlplane_host].public_nic)
+         | default('eth0') }}
+    jetlag_effective_network_interface: >-
+      {{ jetlag_network_interface
+         | default(
+             hostvars[jetlag_controlplane_host_with_private_ipv4 | default(jetlag_primary_controlplane_host, true)].cnv_install_nic
+             | default(
+                 hostvars[jetlag_controlplane_host_with_private_ipv4 | default(jetlag_primary_controlplane_host, true)].private_nic,
+                 true
+               ),
+             true
+           )
+         | default('eth1', true) }}
+    jetlag_effective_bastion_controlplane_interface: >-
+      {{ hostvars[jetlag_bastion_host].cnv_install_nic
+         | default(hostvars[jetlag_bastion_host].private_nic, true)
+         | default('eth1', true) }}
+    jetlag_effective_controlplane_interface_facts: >-
+      {{ (
+           hostvars[jetlag_controlplane_host_with_private_ipv4 | default(jetlag_primary_controlplane_host)]['ansible_' ~ jetlag_effective_network_interface]
+           | default({})
+         ) if (jetlag_controlplane_host_with_private_ipv4 | default(jetlag_primary_controlplane_host)) else {} }}
+    jetlag_effective_controlplane_ipv4: >-
+      {{ jetlag_effective_controlplane_interface_facts.get('ipv4', {}) }}
+    jetlag_effective_controlplane_network: >-
+      {{ (
+          jetlag_effective_install_network_cidr
+           | default(
+               (jetlag_effective_controlplane_ipv4.network ~ '/' ~ jetlag_effective_controlplane_ipv4.prefix)
+               if (jetlag_effective_controlplane_ipv4 | length > 0) else ''
+             )
+         ) if not jetlag_effective_public_vlan
+         else (
+           jetlag_controlplane_network | default('')
+         ) }}
+    jetlag_effective_controlplane_network_prefix: >-
+      {{ (
+          jetlag_effective_install_network_prefix_resolved
+           | default(jetlag_effective_controlplane_ipv4.prefix | default(''))
+         ) if not jetlag_effective_public_vlan
+         else (
+           jetlag_controlplane_network_prefix | default('')
+         ) }}
+    jetlag_effective_controlplane_network_gateway: >-
+      {{ (
+          jetlag_effective_install_network_gateway
+           | default(
+               (jetlag_effective_controlplane_ipv4.network.rsplit('.', 1)[0] ~ '.1')
+               if (jetlag_effective_controlplane_ipv4 | length > 0) else ''
+             )
+         ) if not jetlag_effective_public_vlan
+         else (
+           jetlag_controlplane_network_gateway | default('')
+         ) }}
+    jetlag_effective_dns1: >-
+      {{ (
+          jetlag_effective_install_dns1
+           | default(jetlag_effective_controlplane_network_gateway)
+         ) if not jetlag_effective_public_vlan
+         else (
+           jetlag_dns1 | default('')
+         ) }}
+  pre_tasks:
+    - name: Check pull secret file on the controller
+      ansible.builtin.stat:
+        path: "{{ jetlag_pull_secret_file }}"
+      register: jetlag_pull_secret_stat
+      delegate_to: localhost
+      run_once: true
+
+    - name: Check SSH private key on the controller
+      ansible.builtin.stat:
+        path: "{{ jetlag_ssh_private_key_file }}"
+      register: jetlag_private_key_stat
+      delegate_to: localhost
+      run_once: true
+
+    - name: Check SSH public key on the controller
+      ansible.builtin.stat:
+        path: "{{ jetlag_ssh_public_key_file }}"
+      register: jetlag_public_key_stat
+      delegate_to: localhost
+      run_once: true
+
+    - name: Validate controller-side Jetlag assets
+      ansible.builtin.assert:
+        that:
+          - jetlag_pull_secret_stat.stat.exists
+          - jetlag_private_key_stat.stat.exists
+          - jetlag_public_key_stat.stat.exists
+        fail_msg: >-
+          Required Jetlag assets are missing on the controller. Check the pull secret
+          and SSH key paths passed through PARAM_jetlag_*.
+      run_once: true
+
+    - name: Check for an existing rendered Jetlag inventory on the bastion
+      ansible.builtin.stat:
+        path: "{{ jetlag_inventory_file }}"
+      register: jetlag_existing_inventory
+
+    - name: Parse cached control-plane values from the previous Jetlag inventory
+      ansible.builtin.shell:
+        cmd: |
+          python3 - {{ jetlag_inventory_file | quote }} <<'PY'
+          import json
+          import sys
+
+          path = sys.argv[1]
+          data = {"ips": {}, "mac_addresses": {}, "lab_macs": {}}
+          section = ""
+
+          with open(path, encoding="utf-8") as fh:
+              for raw_line in fh:
+                  line = raw_line.strip()
+                  if not line or line.startswith("#"):
+                      continue
+                  if line.startswith("[") and line.endswith("]"):
+                      section = line
+                      continue
+                  if section not in ("[controlplane]", "[worker]"):
+                      continue
+                  tokens = line.split()
+                  if not tokens:
+                      continue
+                  host = tokens[0]
+                  fields = {}
+                  for token in tokens[1:]:
+                      if "=" not in token:
+                          continue
+                      key, value = token.split("=", 1)
+                      fields[key] = value
+                  if "ip" in fields:
+                      data["ips"][host] = fields["ip"]
+                  if "mac_address" in fields:
+                      data["mac_addresses"][host] = fields["mac_address"]
+                  if "lab_mac" in fields:
+                      data["lab_macs"][host] = fields["lab_mac"]
+
+          print(json.dumps(data))
+          PY
+      register: jetlag_cached_inventory_parse
+      changed_when: false
+      when: jetlag_existing_inventory.stat.exists
+
+    - name: Derive deterministic CNV host IP plan from install subnet
+      ansible.builtin.shell:
+        cmd: |
+          python3 - <<'PY'
+          import ipaddress
+          import json
+
+          network = {{ jetlag_effective_controlplane_network | to_json }}
+          hosts = {{ (groups['cnv_hosts'] | default([])) | to_json }}
+
+          data = {"ips": {}}
+          if network and hosts:
+              net = ipaddress.ip_network(network, strict=False)
+              ordinals = []
+              candidate = 2
+              while len(ordinals) < len(hosts):
+                  if candidate not in (3, 4):
+                      ordinals.append(candidate)
+                  candidate += 1
+              for host, ordinal in zip(hosts, ordinals):
+                  data["ips"][host] = str(net[ordinal])
+
+          print(json.dumps(data))
+          PY
+      register: jetlag_derived_ip_plan
+      changed_when: false
+      when:
+        - not jetlag_effective_public_vlan
+        - jetlag_effective_controlplane_network | length > 0
+
+    - name: Derive CNV MAC addresses from Redfish when SSH facts are unavailable
+      ansible.builtin.shell:
+        cmd: |
+          python3 - <<'PY'
+          import json
+          import re
+          import requests
+          import urllib3
+
+          urllib3.disable_warnings()
+
+          hosts = {{ (groups['cnv_hosts'] | default([])) | to_json }}
+          host_interfaces = json.loads({{ dict((groups['cnv_hosts'] | default([])) | zip((groups['cnv_hosts'] | default([])) | map('extract', hostvars))) | to_json | quote }})
+          bmc_user = {{ jetlag_bmc_user | to_json }}
+          bmc_password = {{ jetlag_bmc_password | to_json }}
+
+          def sort_key(entry):
+              desc = entry.get("Description") or ""
+              match = re.search(r"Port\s+(\d+)", desc)
+              port = int(match.group(1)) if match else 999
+              return (desc, port)
+
+          def map_integrated(interface_name, integrated_entries):
+              if not integrated_entries:
+                  return ""
+              match = re.match(r"eno(\d+)(?:np(\d+))?$", interface_name)
+              port_index = None
+              if match:
+                  eno_number = match.group(1)
+                  np_number = match.group(2)
+                  if eno_number in ("1", "2", "3", "4"):
+                      port_index = int(eno_number)
+                  elif np_number is not None:
+                      port_index = int(np_number) + 1
+              if port_index is None:
+                  port_index = 1
+              if 1 <= port_index <= len(integrated_entries):
+                  return integrated_entries[port_index - 1].get("PermanentMACAddress") or integrated_entries[port_index - 1].get("MACAddress") or ""
+              return ""
+
+          def map_slot(interface_name, slot_entries):
+              match = re.match(r"ens(\d+)f(\d+)(?:np(\d+))?$", interface_name)
+              if not match:
+                  return ""
+              slot = int(match.group(1))
+              port = int(match.group(2)) + 1
+              for entry in slot_entries:
+                  desc = entry.get("Description") or ""
+                  slot_match = re.search(r"Slot\s+(\d+)\s+Port\s+(\d+)", desc)
+                  if slot_match and int(slot_match.group(1)) == slot and int(slot_match.group(2)) == port:
+                      return entry.get("PermanentMACAddress") or entry.get("MACAddress") or ""
+              return ""
+
+          data = {"mac_addresses": {}, "lab_macs": {}, "errors": {}}
+          session = requests.Session()
+
+          for host in hosts:
+              iface_vars = host_interfaces.get(host, {})
+              network_interface = iface_vars.get("cnv_install_nic") or iface_vars.get("private_nic") or "eth1"
+              lab_interface = iface_vars.get("management_nic") or iface_vars.get("public_nic") or "eth0"
+              bmc = f"mgmt-{host}"
+              try:
+                  collection = session.get(
+                      f"https://{bmc}/redfish/v1/Systems/System.Embedded.1/EthernetInterfaces",
+                      auth=(bmc_user, bmc_password),
+                      verify=False,
+                      timeout=20,
+                  ).json()
+                  members = collection.get("Members", [])
+                  details = []
+                  for member in members:
+                      path = member.get("@odata.id")
+                      if not path:
+                          continue
+                      body = session.get(
+                          f"https://{bmc}{path}",
+                          auth=(bmc_user, bmc_password),
+                          verify=False,
+                          timeout=20,
+                      ).json()
+                      details.append(body)
+                  integrated_entries = sorted(
+                      [entry for entry in details if str(entry.get("Id", "")).startswith("NIC.Integrated.")],
+                      key=sort_key,
+                  )
+                  slot_entries = sorted(
+                      [entry for entry in details if str(entry.get("Id", "")).startswith("NIC.Slot.")],
+                      key=sort_key,
+                  )
+
+                  def resolve_mac(interface_name):
+                      if interface_name.startswith("eno"):
+                          return map_integrated(interface_name, integrated_entries)
+                      if interface_name.startswith("ens"):
+                          return map_slot(interface_name, slot_entries)
+                      return ""
+
+                  network_mac = resolve_mac(network_interface)
+                  lab_mac = resolve_mac(lab_interface)
+                  if network_mac:
+                      data["mac_addresses"][host] = network_mac
+                  if lab_mac:
+                      data["lab_macs"][host] = lab_mac
+                  if not network_mac or not lab_mac:
+                      data["errors"][host] = {
+                          "network_interface": network_interface,
+                          "lab_interface": lab_interface,
+                          "resolved_network_mac": network_mac,
+                          "resolved_lab_mac": lab_mac,
+                      }
+              except Exception as exc:
+                  data["errors"][host] = {
+                      "network_interface": network_interface,
+                      "lab_interface": lab_interface,
+                      "error": repr(exc),
+                  }
+
+          print(json.dumps(data))
+          PY
+      register: jetlag_derived_macs
+      changed_when: false
+      when:
+        - groups['cnv_hosts'] | default([]) | length > 0
+        - jetlag_bmc_user | default('') | length > 0
+        - jetlag_bmc_password | default('') | length > 0
+
+    - name: Set effective Jetlag host fallback maps
+      ansible.builtin.set_fact:
+        jetlag_effective_controlplane_ips: >-
+          {{ (jetlag_cached_inventory_data.ips | default({}))
+             | combine(jetlag_derived_ip_plan_data.ips | default({}))
+             | combine(jetlag_controlplane_ips | default({})) }}
+        jetlag_effective_mac_addresses: >-
+          {{ (jetlag_cached_inventory_data.mac_addresses | default({}))
+             | combine(jetlag_derived_mac_data.mac_addresses | default({}))
+             | combine(jetlag_mac_addresses | default({})) }}
+        jetlag_effective_lab_macs: >-
+          {{ (jetlag_cached_inventory_data.lab_macs | default({}))
+             | combine(jetlag_derived_mac_data.lab_macs | default({}))
+             | combine(jetlag_lab_macs | default({})) }}
+      vars:
+        jetlag_cached_inventory_data: >-
+          {{ (jetlag_cached_inventory_parse.stdout | default('{}')) | from_json }}
+        jetlag_derived_ip_plan_data: >-
+          {{ (jetlag_derived_ip_plan.stdout | default('{}')) | from_json }}
+        jetlag_derived_mac_data: >-
+          {{ (jetlag_derived_macs.stdout | default('{}')) | from_json }}
+
+    - name: Validate required inventory groups and Jetlag inputs
+      ansible.builtin.assert:
+        that:
+          - groups['bastion'] | default([]) | length == 1
+          - groups['cnv_controlplane'] | default([]) | length == 3
+          - groups['cnv_hosts'] | default([]) | length >= 3
+          - jetlag_repo_url is defined
+          - jetlag_repo_url | length > 0
+          - jetlag_repo_ref is defined
+          - jetlag_repo_ref | length > 0
+          - jetlag_dest is defined
+          - jetlag_dest | length > 0
+          - jetlag_pull_secret_file is defined
+          - jetlag_pull_secret_file | length > 0
+          - jetlag_bmc_user is defined
+          - jetlag_bmc_user | length > 0
+          - jetlag_bmc_password is defined
+          - jetlag_bmc_password | length > 0
+          - jetlag_ssh_private_key_file is defined
+          - jetlag_ssh_private_key_file | length > 0
+          - jetlag_ssh_public_key_file is defined
+          - jetlag_ssh_public_key_file | length > 0
+          - jetlag_lab is defined
+          - jetlag_lab | length > 0
+          - jetlag_lab_cloud is defined
+          - jetlag_lab_cloud | length > 0
+          - jetlag_cluster_name is defined
+          - jetlag_cluster_name | length > 0
+          - jetlag_base_dns_name is defined
+          - jetlag_base_dns_name | length > 0
+          - (jetlag_effective_public_vlan) or (jetlag_effective_controlplane_network | length > 0)
+          - (jetlag_effective_public_vlan) or (jetlag_effective_controlplane_network_prefix | string | length > 0)
+          - (jetlag_effective_public_vlan) or (jetlag_effective_controlplane_network_gateway | length > 0)
+          - (jetlag_effective_public_vlan) or (jetlag_effective_dns1 | length > 0)
+          - (jetlag_effective_public_vlan) or ((groups['cnv_hosts'] | difference(jetlag_effective_controlplane_ips.keys() | list)) | length == 0)
+          - (groups['cnv_hosts'] | difference(jetlag_effective_mac_addresses.keys() | list)) | length == 0
+          - (groups['cnv_hosts'] | difference(jetlag_effective_lab_macs.keys() | list)) | length == 0
+        fail_msg: >-
+          Missing required CNV/Jetlag parameters. Provide the PARAM_jetlag_* values
+          expected by ansible-cnv-host-mgr/jetlag.yaml.
+
+  tasks:
+    - name: Check whether bastion prerequisites are already installed
+      ansible.builtin.command: bash -lc "command -v git && command -v rsync && command -v sshpass"
+      register: jetlag_bastion_prereq_binaries
+      changed_when: false
+      failed_when: false
+
+    - name: Enable bastion RHSM repositories when prerequisites are missing
+      when: jetlag_bastion_prereq_binaries.rc != 0
+      block:
+        - name: Enable base RHEL repositories for bastion
+          rhsm_repository:
+            name:
+              - "rhel-{{ ansible_distribution_major_version }}-for-{{ ansible_architecture }}-baseos-rpms"
+              - "rhel-{{ ansible_distribution_major_version }}-for-{{ ansible_architecture }}-appstream-rpms"
+            state: enabled
+
+    - name: Install bastion prerequisites
+      ansible.builtin.package:
+        name:
+          - git
+          - python3
+          - rsync
+          - sshpass
+          - tar
+        state: present
+
+    - name: Check whether Jetlag checkout already exists
+      ansible.builtin.stat:
+        path: "{{ jetlag_dest }}/.git"
+      register: jetlag_checkout_gitdir
+
+    - name: Remove non-git Jetlag destination before clone
+      ansible.builtin.file:
+        path: "{{ jetlag_dest }}"
+        state: absent
+      when:
+        - jetlag_checkout_gitdir.stat.exists is defined
+        - not jetlag_checkout_gitdir.stat.exists
+
+    - name: Clone or update Jetlag on the bastion
+      ansible.builtin.git:
+        repo: "{{ jetlag_repo_url }}"
+        version: "{{ jetlag_repo_ref }}"
+        dest: "{{ jetlag_dest }}"
+        force: true
+
+    - name: Create Jetlag working directories
+      ansible.builtin.file:
+        path: "{{ item }}"
+        state: directory
+        mode: "0755"
+      loop:
+        - "{{ jetlag_log_dir }}"
+        - "{{ jetlag_debug_dir }}"
+        - "{{ jetlag_dest }}/ansible/inventory"
+        - "{{ jetlag_dest }}/ansible/vars"
+
+    - name: Override Jetlag Dell boot-iso flow for stricter power sequencing
+      ansible.builtin.copy:
+        src: files/jetlag_boot_iso_dell.yml
+        dest: "{{ jetlag_dest }}/ansible/roles/boot-iso/tasks/dell.yml"
+        mode: "0644"
+
+    - name: Bootstrap Jetlag dependencies
+      ansible.builtin.shell:
+        cmd: "bash -lc 'cd {{ jetlag_dest | quote }} && source bootstrap.sh'"
+        creates: "{{ jetlag_ansible_playbook }}"
+
+    - name: Copy pull secret to the bastion
+      ansible.builtin.copy:
+        src: "{{ jetlag_pull_secret_file }}"
+        dest: "{{ jetlag_dest }}/pull-secret.txt"
+        mode: "0600"
+
+    - name: Copy SSH private key to the bastion
+      ansible.builtin.copy:
+        src: "{{ jetlag_ssh_private_key_file }}"
+        dest: "{{ jetlag_dest }}/satperf_id_rsa"
+        mode: "0600"
+
+    - name: Copy SSH public key to the bastion
+      ansible.builtin.copy:
+        src: "{{ jetlag_ssh_public_key_file }}"
+        dest: "{{ jetlag_dest }}/satperf_id_rsa.pub"
+        mode: "0644"
+
+    - name: Render Jetlag all.yml
+      ansible.builtin.template:
+        src: templates/jetlag_all.yml.j2
+        dest: "{{ jetlag_all_file }}"
+        mode: "0644"
+
+    - name: Render Jetlag inventory
+      ansible.builtin.template:
+        src: templates/jetlag_inventory.j2
+        dest: "{{ jetlag_inventory_file }}"
+        mode: "0644"
+
+    - name: Render satperf CNV handoff data
+      ansible.builtin.template:
+        src: templates/satperf_cnv_handoff.yml.j2
+        dest: "{{ jetlag_handoff_file }}"
+        mode: "0644"
+
+    - name: Persist effective Jetlag input summary
+      ansible.builtin.copy:
+        dest: "{{ jetlag_debug_dir }}/effective-inputs.yml"
+        mode: "0644"
+        content: |
+          cluster_name: {{ jetlag_cluster_name }}
+          base_dns_name: {{ jetlag_base_dns_name }}
+          public_vlan: {{ jetlag_effective_public_vlan | bool | to_json }}
+          setup_only: {{ (jetlag_setup_only | default(false) | bool) | to_json }}
+          effective_lab_interface: {{ jetlag_effective_lab_interface }}
+          effective_network_interface: {{ jetlag_effective_network_interface }}
+          effective_bastion_controlplane_interface: {{ jetlag_effective_bastion_controlplane_interface }}
+          effective_controlplane_network: {{ jetlag_effective_controlplane_network }}
+          effective_controlplane_network_prefix: {{ jetlag_effective_controlplane_network_prefix }}
+          effective_controlplane_network_gateway: {{ jetlag_effective_controlplane_network_gateway }}
+          effective_dns1: {{ jetlag_effective_dns1 }}
+          effective_controlplane_ips:
+          {{ jetlag_effective_controlplane_ips | to_nice_yaml(indent=2) | indent(2, true) }}
+          effective_mac_addresses:
+          {{ jetlag_effective_mac_addresses | to_nice_yaml(indent=2) | indent(2, true) }}
+          effective_lab_macs:
+          {{ jetlag_effective_lab_macs | to_nice_yaml(indent=2) | indent(2, true) }}
+
+    - name: Collect diagnostics before setup-bastion
+      ansible.builtin.shell:
+        cmd: |
+          python3 - <<'PY' {{ (jetlag_debug_dir ~ '/before-setup-bastion') | quote }} {{ jetlag_cluster_name | quote }} {{ jetlag_bmc_user | quote }} {{ jetlag_bmc_password | quote }} {{ (groups['cnv_controlplane'] | default([])) | to_json | quote }} {{ jetlag_assisted_api_base | quote }}
+          import json
+          import os
+          import shlex
+          import subprocess
+          import sys
+          import urllib3
+          import requests
+
+          out_dir, cluster_name, bmc_user, bmc_password, hosts_json, assisted_api_base = sys.argv[1:7]
+          hosts = json.loads(hosts_json)
+          os.makedirs(out_dir, exist_ok=True)
+
+          def write_json(name, value):
+              with open(os.path.join(out_dir, name), "w", encoding="utf-8") as fh:
+                  json.dump(value, fh, indent=2, sort_keys=True)
+
+          def write_cmd(name, command):
+              proc = subprocess.run(command, capture_output=True, text=True)
+              with open(os.path.join(out_dir, name), "w", encoding="utf-8") as fh:
+                  fh.write(f"$ {' '.join(shlex.quote(part) for part in command)}\n")
+                  fh.write(proc.stdout)
+                  if proc.stderr:
+                      fh.write("\n[stderr]\n")
+                      fh.write(proc.stderr)
+                  fh.write(f"\n[exit_code] {proc.returncode}\n")
+
+          urllib3.disable_warnings()
+          session = requests.Session()
+          base = assisted_api_base
+
+          assisted = {}
+          for endpoint in ("clusters", "infra-envs"):
+              try:
+                  data = session.get(f"{base}/{endpoint}", timeout=20).json()
+              except Exception as exc:
+                  data = {"error": repr(exc)}
+              assisted[endpoint] = data
+          write_json("assisted-index.json", assisted)
+
+          cluster_details = {}
+          for cluster in assisted.get("clusters", []):
+              if isinstance(cluster, dict) and cluster.get("name") == cluster_name:
+                  cluster_id = cluster.get("id")
+                  cluster_details["summary"] = cluster
+                  try:
+                      cluster_details["detail"] = session.get(f"{base}/clusters/{cluster_id}", timeout=20).json()
+                  except Exception as exc:
+                      cluster_details["detail_error"] = repr(exc)
+                  break
+          write_json("assisted-cluster.json", cluster_details)
+
+          redfish = {}
+          for host in hosts:
+              bmc = f"mgmt-{host}"
+              host_data = {}
+              for label, path in (
+                  ("virtual_media", "/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia/CD"),
+                  ("system", "/redfish/v1/Systems/System.Embedded.1"),
+                  ("boot_sources", "/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellBootSources"),
+              ):
+                  url = f"https://{bmc}{path}"
+                  try:
+                      response = session.get(url, auth=(bmc_user, bmc_password), verify=False, timeout=20)
+                      try:
+                          body = response.json()
+                      except Exception:
+                          body = response.text
+                      host_data[label] = {"status_code": response.status_code, "body": body}
+                  except Exception as exc:
+                      host_data[label] = {"error": repr(exc)}
+              redfish[host] = host_data
+          write_json("redfish.json", redfish)
+
+          for filename, command in (
+              ("ip-addr.txt", ["ip", "-4", "addr", "show"]),
+              ("ip-route.txt", ["ip", "route", "show"]),
+              ("ip-neigh.txt", ["ip", "neigh", "show"]),
+              ("iptables-nat.txt", ["iptables", "-t", "nat", "-S"]),
+              ("nmcli-devices.txt", ["nmcli", "device", "show"]),
+          ):
+              write_cmd(filename, command)
+          PY
+      changed_when: false
+
+    - name: Run Jetlag setup-bastion playbook
+      ansible.builtin.shell:
+        cmd: >-
+          bash -lc 'set -o pipefail &&
+          cd {{ jetlag_dest | quote }} &&
+          {{ jetlag_ansible_playbook | quote }}
+          -i {{ jetlag_inventory_file | quote }}
+          ansible/setup-bastion.yml
+          | tee {{ (jetlag_log_dir ~ "/setup-bastion.log") | quote }}'
+      register: jetlag_setup_bastion_result
+      failed_when: false
+
+    - name: Collect diagnostics after setup-bastion
+      ansible.builtin.shell:
+        cmd: |
+          python3 - <<'PY' {{ (jetlag_debug_dir ~ '/after-setup-bastion') | quote }} {{ jetlag_cluster_name | quote }} {{ jetlag_bmc_user | quote }} {{ jetlag_bmc_password | quote }} {{ (groups['cnv_controlplane'] | default([])) | to_json | quote }} {{ jetlag_assisted_api_base | quote }}
+          import json
+          import os
+          import shlex
+          import shutil
+          import subprocess
+          import sys
+          import urllib3
+          import requests
+
+          out_dir, cluster_name, bmc_user, bmc_password, hosts_json, assisted_api_base = sys.argv[1:7]
+          hosts = json.loads(hosts_json)
+          os.makedirs(out_dir, exist_ok=True)
+
+          def write_json(name, value):
+              with open(os.path.join(out_dir, name), "w", encoding="utf-8") as fh:
+                  json.dump(value, fh, indent=2, sort_keys=True)
+
+          def write_cmd(name, command):
+              proc = subprocess.run(command, capture_output=True, text=True)
+              with open(os.path.join(out_dir, name), "w", encoding="utf-8") as fh:
+                  fh.write(f"$ {' '.join(shlex.quote(part) for part in command)}\n")
+                  fh.write(proc.stdout)
+                  if proc.stderr:
+                      fh.write("\n[stderr]\n")
+                      fh.write(proc.stderr)
+                  fh.write(f"\n[exit_code] {proc.returncode}\n")
+
+          urllib3.disable_warnings()
+          session = requests.Session()
+          base = assisted_api_base
+
+          assisted = {}
+          for endpoint in ("clusters", "infra-envs"):
+              try:
+                  data = session.get(f"{base}/{endpoint}", timeout=20).json()
+              except Exception as exc:
+                  data = {"error": repr(exc)}
+              assisted[endpoint] = data
+          write_json("assisted-index.json", assisted)
+
+          cluster_details = {}
+          for cluster in assisted.get("clusters", []):
+              if isinstance(cluster, dict) and cluster.get("name") == cluster_name:
+                  cluster_id = cluster.get("id")
+                  cluster_details["summary"] = cluster
+                  try:
+                      cluster_details["detail"] = session.get(f"{base}/clusters/{cluster_id}", timeout=20).json()
+                  except Exception as exc:
+                      cluster_details["detail_error"] = repr(exc)
+                  break
+          write_json("assisted-cluster.json", cluster_details)
+
+          redfish = {}
+          for host in hosts:
+              bmc = f"mgmt-{host}"
+              host_data = {}
+              for label, path in (
+                  ("virtual_media", "/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia/CD"),
+                  ("system", "/redfish/v1/Systems/System.Embedded.1"),
+                  ("boot_sources", "/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellBootSources"),
+              ):
+                  url = f"https://{bmc}{path}"
+                  try:
+                      response = session.get(url, auth=(bmc_user, bmc_password), verify=False, timeout=20)
+                      try:
+                          body = response.json()
+                      except Exception:
+                          body = response.text
+                      host_data[label] = {"status_code": response.status_code, "body": body}
+                  except Exception as exc:
+                      host_data[label] = {"error": repr(exc)}
+              redfish[host] = host_data
+          write_json("redfish.json", redfish)
+
+          for filename, command in (
+              ("ip-addr.txt", ["ip", "-4", "addr", "show"]),
+              ("ip-route.txt", ["ip", "route", "show"]),
+              ("ip-neigh.txt", ["ip", "neigh", "show"]),
+              ("iptables-nat.txt", ["iptables", "-t", "nat", "-S"]),
+              ("nmcli-devices.txt", ["nmcli", "device", "show"]),
+          ):
+              write_cmd(filename, command)
+
+          for source in (
+              "/root/jetlag/ansible/vars/all.yml",
+              "/root/jetlag/ansible/inventory/satperf-cnv.local",
+              "/root/jetlag/satperf-logs/setup-bastion.log",
+          ):
+              if os.path.exists(source):
+                  shutil.copy2(source, os.path.join(out_dir, os.path.basename(source)))
+          PY
+      changed_when: false
+
+    - name: Fail when setup-bastion did not succeed
+      ansible.builtin.assert:
+        that:
+          - jetlag_setup_bastion_result.rc == 0
+        fail_msg: >-
+          Jetlag setup-bastion failed. Review {{ jetlag_log_dir }}/setup-bastion.log and
+          {{ jetlag_debug_dir }}/after-setup-bastion for rendered inputs and iDRAC state.
+
+    - name: Allow Jetlag ISO HTTP port through bastion firewalld
+      ansible.posix.firewalld:
+        port: "8081/tcp"
+        permanent: true
+        immediate: true
+        state: enabled
+
+    - name: Run Jetlag mno-deploy playbook
+      ansible.builtin.shell:
+        cmd: |
+          python3 - <<'PY' {{ jetlag_dest | quote }} {{ jetlag_ansible_playbook | quote }} {{ jetlag_inventory_file | quote }} {{ (jetlag_log_dir ~ "/mno-deploy.log") | quote }} {{ (jetlag_debug_dir ~ "/mno-deploy-monitor.json") | quote }} {{ jetlag_cluster_name | quote }} {{ jetlag_bmc_user | quote }} {{ jetlag_bmc_password | quote }} {{ (groups['cnv_controlplane'] | default([])) | to_json | quote }} {{ (jetlag_effective_controlplane_ips | default({})) | to_json | quote }} {{ jetlag_effective_mno_monitor_interval_seconds | quote }} {{ jetlag_effective_mno_discovery_grace_seconds | quote }} {{ jetlag_assisted_api_base | quote }}
+          import json
+          import os
+          import signal
+          import subprocess
+          import sys
+          import time
+
+          import requests
+          import urllib3
+
+          (
+              work_dir,
+              ansible_playbook,
+              inventory_file,
+              log_file,
+              monitor_file,
+              cluster_name,
+              bmc_user,
+              bmc_password,
+              hosts_json,
+              ips_json,
+              interval_seconds,
+              grace_seconds,
+              assisted_api_base,
+          ) = sys.argv[1:14]
+
+          hosts = json.loads(hosts_json)
+          controlplane_ips = json.loads(ips_json)
+          interval_seconds = int(interval_seconds)
+          grace_seconds = int(grace_seconds)
+          urllib3.disable_warnings()
+
+          os.makedirs(os.path.dirname(log_file), exist_ok=True)
+          os.makedirs(os.path.dirname(monitor_file), exist_ok=True)
+
+          command = [
+              ansible_playbook,
+              "-i",
+              inventory_file,
+              "ansible/mno-deploy.yml",
+          ]
+
+          with open(log_file, "w", encoding="utf-8") as logfh:
+              proc = subprocess.Popen(
+                  command,
+                  cwd=work_dir,
+                  stdout=logfh,
+                  stderr=subprocess.STDOUT,
+                  text=True,
+              )
+
+              session = requests.Session()
+              wait_started_at = None
+              monitor_summary = {
+                  "command": command,
+                  "cluster_name": cluster_name,
+                  "monitor_interval_seconds": interval_seconds,
+                  "discovery_grace_seconds": grace_seconds,
+                  "events": [],
+                  "latest_host_states": {},
+                  "host_state_history": {host: [] for host in hosts},
+              }
+
+              def read_log():
+                  try:
+                      with open(log_file, encoding="utf-8", errors="replace") as fh2:
+                          return fh2.read()
+                  except FileNotFoundError:
+                      return ""
+
+              def get_cluster_detail():
+                  base = assisted_api_base
+                  clusters = session.get(f"{base}/clusters", timeout=20).json()
+                  for cluster in clusters:
+                      if isinstance(cluster, dict) and cluster.get("name") == cluster_name:
+                          return session.get(f"{base}/clusters/{cluster['id']}", timeout=20).json()
+                  return {}
+
+              def ping_host(ip_addr):
+                  result = subprocess.run(
+                      ["ping", "-c", "1", "-W", "1", ip_addr],
+                      stdout=subprocess.DEVNULL,
+                      stderr=subprocess.DEVNULL,
+                  )
+                  return result.returncode == 0
+
+              def get_redfish_state(host):
+                  bmc = f"mgmt-{host}"
+                  state = {"host": host}
+                  try:
+                      system = session.get(
+                          f"https://{bmc}/redfish/v1/Systems/System.Embedded.1",
+                          auth=(bmc_user, bmc_password),
+                          verify=False,
+                          timeout=20,
+                      ).json()
+                      state["power_state"] = system.get("PowerState")
+                      state["boot_progress"] = system.get("BootProgress")
+                      state["boot_source_override_enabled"] = system.get("Boot", {}).get("BootSourceOverrideEnabled")
+                      state["boot_source_override_target"] = system.get("Boot", {}).get("BootSourceOverrideTarget")
+                  except Exception as exc:
+                      state["system_error"] = repr(exc)
+                  try:
+                      virtual_media = session.get(
+                          f"https://{bmc}/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia/CD",
+                          auth=(bmc_user, bmc_password),
+                          verify=False,
+                          timeout=20,
+                      ).json()
+                      state["virtual_media"] = {
+                          "inserted": virtual_media.get("Inserted"),
+                          "image": virtual_media.get("Image"),
+                          "connected_via": virtual_media.get("ConnectedVia"),
+                      }
+                  except Exception as exc:
+                      state["virtual_media_error"] = repr(exc)
+                  return state
+
+              def compact_redfish_state(state):
+                  boot_progress = state.get("boot_progress") or {}
+                  virtual_media = state.get("virtual_media") or {}
+                  compact = {
+                      "power_state": state.get("power_state"),
+                      "boot_last_state": boot_progress.get("LastState"),
+                      "boot_oem_last_state": boot_progress.get("OemLastState"),
+                      "boot_source_override_enabled": state.get("boot_source_override_enabled"),
+                      "boot_source_override_target": state.get("boot_source_override_target"),
+                      "virtual_media_inserted": virtual_media.get("inserted"),
+                      "virtual_media_connected_via": virtual_media.get("connected_via"),
+                      "virtual_media_image": virtual_media.get("image"),
+                  }
+                  if state.get("system_error"):
+                      compact["system_error"] = state["system_error"]
+                  if state.get("virtual_media_error"):
+                      compact["virtual_media_error"] = state["virtual_media_error"]
+                  return compact
+
+              def record_host_states(redfish_states, elapsed_seconds):
+                  compact_states = {}
+                  for item in redfish_states:
+                      host = item["host"]
+                      compact = compact_redfish_state(item)
+                      compact_states[host] = compact
+                      previous = monitor_summary["latest_host_states"].get(host)
+                      if previous != compact:
+                          history = monitor_summary["host_state_history"].setdefault(host, [])
+                          history.append(
+                              {
+                                  "timestamp_epoch": time.time(),
+                                  "elapsed_since_wait_seconds": round(elapsed_seconds, 1),
+                                  "state": compact,
+                              }
+                          )
+                          monitor_summary["host_state_history"][host] = history[-60:]
+                          monitor_summary["latest_host_states"][host] = compact
+                  return compact_states
+
+              def write_monitor(summary):
+                  with open(monitor_file, "w", encoding="utf-8") as fh2:
+                      json.dump(summary, fh2, indent=2, sort_keys=True)
+
+              while True:
+                  rc = proc.poll()
+                  log_text = read_log()
+                  if wait_started_at is None and "Wait up to 40 min for nodes to be discovered" in log_text:
+                      wait_started_at = time.time()
+                      monitor_summary["wait_started_at_epoch"] = wait_started_at
+                      write_monitor(monitor_summary)
+
+                  if rc is not None:
+                      monitor_summary["process_return_code"] = rc
+                      monitor_summary["finished_at_epoch"] = time.time()
+                      write_monitor(monitor_summary)
+                      sys.exit(rc)
+
+                  if wait_started_at is not None:
+                      try:
+                          cluster_detail = get_cluster_detail()
+                      except Exception as exc:
+                          cluster_detail = {"error": repr(exc)}
+
+                      hosts_count = len(cluster_detail.get("hosts") or [])
+                      ping_results = {}
+                      for host in hosts:
+                          ip_addr = controlplane_ips.get(host)
+                          if ip_addr:
+                              ping_results[host] = {"ip": ip_addr, "reachable": ping_host(ip_addr)}
+                      redfish = [get_redfish_state(host) for host in hosts]
+                      host_states = record_host_states(redfish, time.time() - wait_started_at)
+
+                      snapshot = {
+                          "timestamp_epoch": time.time(),
+                          "elapsed_since_wait_seconds": round(time.time() - wait_started_at, 1),
+                          "assisted_hosts_count": hosts_count,
+                          "assisted_status": cluster_detail.get("status"),
+                          "ping_results": ping_results,
+                          "host_states": host_states,
+                      }
+                      monitor_summary["events"].append(snapshot)
+                      monitor_summary["events"] = monitor_summary["events"][-20:]
+                      write_monitor(monitor_summary)
+
+                      elapsed = time.time() - wait_started_at
+                      any_reachable = any(item.get("reachable") for item in ping_results.values())
+                      if hosts_count == 0 and elapsed >= grace_seconds:
+                          all_virtual_media_inserted = all(
+                              (item.get("virtual_media") or {}).get("inserted") is True
+                              for item in redfish
+                          )
+                          all_boot_override_consumed = all(
+                              item.get("boot_source_override_enabled") == "Disabled"
+                              for item in redfish
+                          )
+                          all_os_running = all(
+                              (item.get("boot_progress") or {}).get("LastState") == "OSRunning"
+                              for item in redfish
+                          )
+                          disk_fallback_detected = (
+                              any_reachable and
+                              all_virtual_media_inserted and
+                              all_boot_override_consumed and
+                              all_os_running
+                          )
+                          if not any_reachable:
+                              failure_reason = "No hosts discovered and no control-plane IPs reachable after discovery grace period."
+                          elif disk_fallback_detected:
+                              failure_reason = (
+                                  "No hosts were discovered even though control-plane IPs are reachable; "
+                                  "the discovery ISO stayed mounted, but Dell one-time boot was consumed "
+                                  "and the nodes are back in OSRunning instead of reaching Assisted Installer."
+                              )
+                          else:
+                              failure_reason = ""
+
+                          if failure_reason:
+                              failure_summary = {
+                                  "reason": failure_reason,
+                                  "elapsed_since_wait_seconds": round(elapsed, 1),
+                                  "assisted_cluster": {
+                                      "status": cluster_detail.get("status"),
+                                      "status_info": cluster_detail.get("status_info"),
+                                      "hosts_count": hosts_count,
+                                      "machine_networks": cluster_detail.get("machine_networks"),
+                                  },
+                                  "ping_results": ping_results,
+                                  "redfish": redfish,
+                              }
+                              monitor_summary["failure"] = failure_summary
+                              write_monitor(monitor_summary)
+                              proc.terminate()
+                              try:
+                                  proc.wait(timeout=20)
+                              except subprocess.TimeoutExpired:
+                                  proc.kill()
+                                  proc.wait(timeout=20)
+                              print(json.dumps(failure_summary, indent=2))
+                              sys.exit(42)
+
+                  time.sleep(interval_seconds)
+      register: jetlag_mno_deploy_result
+      failed_when: false
+      when: not (jetlag_setup_only | default(false) | bool)
+
+    - name: Collect diagnostics after mno-deploy
+      ansible.builtin.shell:
+        cmd: |
+          python3 - <<'PY' {{ (jetlag_debug_dir ~ '/after-mno-deploy') | quote }} {{ jetlag_cluster_name | quote }} {{ jetlag_bmc_user | quote }} {{ jetlag_bmc_password | quote }} {{ (groups['cnv_controlplane'] | default([])) | to_json | quote }} {{ jetlag_assisted_api_base | quote }}
+          import json
+          import os
+          import shlex
+          import shutil
+          import subprocess
+          import sys
+          import urllib3
+          import requests
+
+          out_dir, cluster_name, bmc_user, bmc_password, hosts_json, assisted_api_base = sys.argv[1:7]
+          hosts = json.loads(hosts_json)
+          os.makedirs(out_dir, exist_ok=True)
+
+          def write_json(name, value):
+              with open(os.path.join(out_dir, name), "w", encoding="utf-8") as fh:
+                  json.dump(value, fh, indent=2, sort_keys=True)
+
+          def write_cmd(name, command):
+              proc = subprocess.run(command, capture_output=True, text=True)
+              with open(os.path.join(out_dir, name), "w", encoding="utf-8") as fh:
+                  fh.write(f"$ {' '.join(shlex.quote(part) for part in command)}\n")
+                  fh.write(proc.stdout)
+                  if proc.stderr:
+                      fh.write("\n[stderr]\n")
+                      fh.write(proc.stderr)
+                  fh.write(f"\n[exit_code] {proc.returncode}\n")
+
+          urllib3.disable_warnings()
+          session = requests.Session()
+          base = assisted_api_base
+
+          assisted = {}
+          for endpoint in ("clusters", "infra-envs"):
+              try:
+                  data = session.get(f"{base}/{endpoint}", timeout=20).json()
+              except Exception as exc:
+                  data = {"error": repr(exc)}
+              assisted[endpoint] = data
+          write_json("assisted-index.json", assisted)
+
+          cluster_details = {}
+          for cluster in assisted.get("clusters", []):
+              if isinstance(cluster, dict) and cluster.get("name") == cluster_name:
+                  cluster_id = cluster.get("id")
+                  cluster_details["summary"] = cluster
+                  try:
+                      cluster_details["detail"] = session.get(f"{base}/clusters/{cluster_id}", timeout=20).json()
+                  except Exception as exc:
+                      cluster_details["detail_error"] = repr(exc)
+                  break
+          write_json("assisted-cluster.json", cluster_details)
+
+          redfish = {}
+          for host in hosts:
+              bmc = f"mgmt-{host}"
+              host_data = {}
+              for label, path in (
+                  ("virtual_media", "/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia/CD"),
+                  ("system", "/redfish/v1/Systems/System.Embedded.1"),
+                  ("boot_sources", "/redfish/v1/Systems/System.Embedded.1/Oem/Dell/DellBootSources"),
+              ):
+                  url = f"https://{bmc}{path}"
+                  try:
+                      response = session.get(url, auth=(bmc_user, bmc_password), verify=False, timeout=20)
+                      try:
+                          body = response.json()
+                      except Exception:
+                          body = response.text
+                      host_data[label] = {"status_code": response.status_code, "body": body}
+                  except Exception as exc:
+                      host_data[label] = {"error": repr(exc)}
+              redfish[host] = host_data
+          write_json("redfish.json", redfish)
+
+          for filename, command in (
+              ("ip-addr.txt", ["ip", "-4", "addr", "show"]),
+              ("ip-route.txt", ["ip", "route", "show"]),
+              ("ip-neigh.txt", ["ip", "neigh", "show"]),
+              ("iptables-nat.txt", ["iptables", "-t", "nat", "-S"]),
+              ("nmcli-devices.txt", ["nmcli", "device", "show"]),
+          ):
+              write_cmd(filename, command)
+
+          for source in (
+              "/root/jetlag/ansible/vars/all.yml",
+              "/root/jetlag/ansible/inventory/satperf-cnv.local",
+              "/root/jetlag/satperf-logs/setup-bastion.log",
+              "/root/jetlag/satperf-logs/mno-deploy.log",
+          ):
+              if os.path.exists(source):
+                  shutil.copy2(source, os.path.join(out_dir, os.path.basename(source)))
+          PY
+      changed_when: false
+      when: not (jetlag_setup_only | default(false) | bool)
+
+    - name: Fail when mno-deploy did not succeed
+      ansible.builtin.assert:
+        that:
+          - jetlag_mno_deploy_result.rc == 0
+        fail_msg: >-
+          Jetlag mno-deploy failed. Review {{ jetlag_log_dir }}/mno-deploy.log and
+          {{ jetlag_debug_dir }}/after-mno-deploy plus {{ jetlag_debug_dir }}/mno-deploy-monitor.json
+          for Assisted Installer, iDRAC, and discovery-phase boot diagnostics.
+      when: not (jetlag_setup_only | default(false) | bool)
+
+    - name: Summarize Jetlag artifacts
+      ansible.builtin.debug:
+        msg:
+          - "Jetlag inventory: {{ jetlag_inventory_file }}"
+          - "Jetlag vars: {{ jetlag_all_file }}"
+          - "Satperf handoff: {{ jetlag_handoff_file }}"
+          - "Jetlag logs: {{ jetlag_log_dir }}"
+          - "Jetlag diagnostics: {{ jetlag_debug_dir }}"

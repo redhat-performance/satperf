@@ -1,0 +1,47 @@
+---
+lab: "{{ jetlag_lab }}"
+lab_cloud: "{{ jetlag_lab_cloud }}"
+
+cluster_name: "{{ jetlag_cluster_name }}"
+base_dns_name: "{{ jetlag_base_dns_name }}"
+
+cluster_type: "{{ jetlag_cluster_type | default('mno') }}"
+worker_node_count: {{ jetlag_worker_hosts | length }}
+enable_cnv_install: {{ (jetlag_enable_cnv_install | default(true) | bool) | ternary('true', 'false') }}
+public_vlan: {{ jetlag_effective_public_vlan | ternary('true', 'false') }}
+sno_use_lab_dhcp: false
+enable_fips: false
+enable_techpreview: false
+
+ocp_build: "{{ jetlag_ocp_build | default('ga') }}"
+ocp_version: "{{ jetlag_ocp_version | default('latest-4.21') }}"
+
+ssh_private_key_file: "{{ jetlag_dest }}/satperf_id_rsa"
+ssh_public_key_file: "{{ jetlag_dest }}/satperf_id_rsa.pub"
+pull_secret:
+{{ lookup('ansible.builtin.file', jetlag_pull_secret_file) | trim | from_json | to_nice_yaml(indent=2) | indent(2, true) }}
+
+bastion_cluster_config_dir: "/root/mno"
+bastion_lab_interface: "{{ hostvars[jetlag_bastion_host].public_nic | default('eth0') }}"
+bastion_controlplane_interface: "{{ jetlag_effective_bastion_controlplane_interface }}"
+setup_bastion_gogs: false
+setup_bastion_registry: false
+use_bastion_registry: false
+setup_bastion_proxy: false
+reset_idrac: {{ (jetlag_reset_idrac | default(false) | bool) | ternary('true', 'false') }}
+controlplane_lab_interface: "{{ jetlag_effective_lab_interface }}"
+controlplane_network_interface: "{{ jetlag_effective_network_interface }}"
+
+{% if not jetlag_effective_public_vlan %}
+controlplane_network:
+  - "{{ jetlag_effective_controlplane_network }}"
+controlplane_network_prefix:
+  - {{ jetlag_effective_controlplane_network_prefix }}
+gateway:
+  - "{{ jetlag_effective_controlplane_network_gateway }}"
+dns:
+  - "{{ jetlag_effective_dns1 }}"
+{% if jetlag_dns2 | default('') | length > 0 %}
+  - "{{ jetlag_dns2 }}"
+{% endif %}
+{% endif %}

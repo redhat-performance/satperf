@@ -27,5 +27,17 @@ plain_network_yaml: |
         - "{{ (private_ip + '/' + private_netmask) | ansible.utils.ipaddr('host/prefix') }}"
     state: up
 
+{% if cnv_install_enabled | default(false) | bool and cnv_install_ip is defined and cnv_install_netmask is defined %}
+  - name: cnv_install
+    type: ethernet
+    interface_name: "{{ cnv_install_nic }}"
+    autoconnect: yes
+    ip:
+      dhcp4: no
+      address:
+        - "{{ (cnv_install_ip + '/' + cnv_install_netmask) | ansible.utils.ipaddr('host/prefix') }}"
+    state: up
+{% endif %}
+
   - persistent_state: absent   # remove all other profiles
 ...

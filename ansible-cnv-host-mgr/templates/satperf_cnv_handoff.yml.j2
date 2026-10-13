@@ -1,0 +1,39 @@
+---
+bastion: "{{ groups['bastion'] | first }}"
+
+cnv:
+  controlplane_hosts:
+{% for host in groups['cnv_controlplane'] | default([]) %}
+    - "{{ host }}"
+{% endfor %}
+  worker_capable_hosts:
+{% for host in groups['cnv_workers'] | default([]) %}
+    - "{{ host }}"
+{% endfor %}
+  worker_hosts:
+{% for host in jetlag_worker_hosts %}
+    - "{{ host }}"
+{% endfor %}
+  public_interface: "{{ hostvars[groups['cnv_controlplane'] | first].public_nic | default('eth0') }}"
+  private_interface: "{{ hostvars[groups['cnv_controlplane'] | first].private_nic | default('eth1') }}"
+
+guest_workloads:
+{% if groups['cnv_workers'] | default([]) | length > 0 %}
+  guests_count: {{ hostvars[groups['cnv_workers'] | first].guests_count | default(0) }}
+  guests_rels: {{ hostvars[groups['cnv_workers'] | first].guests_rels | default([]) }}
+{% else %}
+  guests_count: 0
+  guests_rels: []
+{% endif %}
+
+locations:
+{% for group_name in groups.keys() | sort if group_name.startswith('location_') %}
+  {{ group_name | regex_replace('^location_', '') }}:
+    private_netmask: "{{ hostvars[groups[group_name] | first].private_netmask | default('') }}"
+    tests_registration_target: "{{ hostvars[groups[group_name] | first].tests_registration_target | default('') }}"
+    hosts:
+{% for host in groups[group_name] %}
+      - name: "{{ host }}"
+        private_ip: "{{ hostvars[host].private_ip | default('') }}"
+{% endfor %}
+{% endfor %}

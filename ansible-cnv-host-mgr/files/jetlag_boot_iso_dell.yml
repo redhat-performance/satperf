@@ -1,0 +1,271 @@
+---
+# Dell tasks for booting an iso
+#
+# Satperf override:
+# - use Redfish PowerForceOff instead of best-effort ipmitool power off
+# - verify PowerState is actually Off before arming one-time virtual media boot
+# - allow Dell OEM boot-once import a brief settle period before powering on
+
+- name: Set Virtual Media ISO
+  ansible.builtin.set_fact:
+    _virtual_media_iso: "{{ virtual_media_iso | default(hostvars[item]['boot_iso']) }}"
+
+- name: "Dell - Force power off machine prior to booting iso for {{ item }}"
+  community.general.redfish_command:
+    category: Systems
+    command: PowerForceOff
+    baseuri: "{{ hostvars[item]['bmc_address'] }}"
+    username: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    timeout: 60
+  register: dell_poweroff
+  until: not dell_poweroff.failed
+  retries: 5
+  delay: 15
+
+- name: "Dell - Wait for power state Off for {{ item }}"
+  ansible.builtin.uri:
+    url: "https://{{ hostvars[item]['bmc_address'] }}/redfish/v1/Systems/System.Embedded.1"
+    force_basic_auth: yes
+    user: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    method: GET
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    validate_certs: no
+    status_code: 200
+    return_content: yes
+  register: dell_power_state
+  until: dell_power_state.json.PowerState == "Off"
+  retries: 20
+  delay: 10
+
+- name: "Dell - Pause to allow machine to fully power off for {{ item }}"
+  ansible.builtin.pause:
+    seconds: 10
+
+- name: "Dell - Check for Virtual Media for {{ item }}"
+  ansible.builtin.uri:
+    url: "https://{{ hostvars[item]['bmc_address'] }}/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia/CD"
+    force_basic_auth: yes
+    user: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    method: Get
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    validate_certs: no
+    status_code: 200
+    return_content: yes
+  register: check_virtual_media
+  retries: 10
+  delay: 10
+  until: check_virtual_media.status == 200
+
+- name: Block to rescue incase of stuck virtual media
+  when: check_virtual_media.json.Image
+  block:
+  - name: "Dell - Eject any CD Virtual Media for {{ item }}"
+    ansible.builtin.uri:
+      url: "https://{{ hostvars[item]['bmc_address'] }}/redfish/v1/Managers/iDRAC.Embedded.1/VirtualMedia/CD/Actions/VirtualMedia.EjectMedia"
+      force_basic_auth: yes
+      user: "{{ hostvars[item]['bmc_user'] }}"
+      password: "{{ hostvars[item]['bmc_password'] }}"
+      method: POST
+      headers:
+        content-type: application/json
+        Accept: application/json
+      body: {}
+      body_format: json
+      validate_certs: no
+      status_code: 204
+      return_content: yes
+
+  rescue:
+    # Use racadm to address the failed redfish unmount of old virtual media
+    - name: "Force mount of a existing image for {{ item }}"
+      ansible.builtin.raw: >-
+        racadm remoteimage -c -u "" -p "" -l http://{{ http_store_host }}:{{ http_store_port }}/{{ _virtual_media_iso }}
+      delegate_to: "{{ hostvars[item]['bmc_address'] }}"
+      vars:
+        ansible_user: "{{ hostvars[item]['bmc_user'] }}"
+        ansible_password: "{{ hostvars[item]['bmc_password'] }}"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+    - name: "Force unmount of the existing image for {{ item }}"
+      ansible.builtin.raw: >-
+        racadm remoteimage -d
+      delegate_to: "{{ hostvars[item]['bmc_address'] }}"
+      vars:
+        ansible_user: "{{ hostvars[item]['bmc_user'] }}"
+        ansible_password: "{{ hostvars[item]['bmc_password'] }}"
+        ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+
+- name: "DELL - Insert Virtual Media for {{ item }}"
+  community.general.redfish_command:
+    category: Manager
+    command: VirtualMediaInsert
+    baseuri: "{{ hostvars[item]['bmc_address'] }}"
+    username: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    virtual_media:
+      image_url: "http://{{ http_store_host }}:{{ http_store_port }}/{{ _virtual_media_iso }}"
+      media_types:
+        - CD
+        - DVD
+    resource_id: iDRAC.Embedded.1
+    timeout: 60
+  register: result
+  until: not result.failed
+  retries: 10
+  delay: 30
+
+- name: Dell - Set OneTimeBoot VirtualCD
+  ansible.builtin.uri:
+    url: "https://{{ hostvars[item]['bmc_address'] }}/redfish/v1/Managers/iDRAC.Embedded.1/Actions/Oem/EID_674_Manager.ImportSystemConfiguration"
+    force_basic_auth: yes
+    user: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    method: POST
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body:
+      {
+        "ShareParameters": { "Target": "ALL" },
+        "ImportBuffer": '<SystemConfiguration><Component FQDD="iDRAC.Embedded.1"><Attribute Name="ServerBoot.1#BootOnce">Enabled</Attribute><Attribute Name="ServerBoot.1#FirstBootDevice">VCD-DVD</Attribute></Component></SystemConfiguration>',
+        "HostPowerState": "Off",
+        "ShutdownType": "NoReboot",
+      }
+    body_format: json
+    validate_certs: no
+    status_code: 202
+    return_content: yes
+  register: dell_bootonce_import
+
+- name: "Dell - Extract one-time boot import job URI for {{ item }}"
+  ansible.builtin.set_fact:
+    dell_import_job_uri: >-
+      {{
+        dell_bootonce_import.location
+        | default(dell_bootonce_import.Location, true)
+        | default((dell_bootonce_import.headers | default({})).get('location', ''), true)
+        | default((dell_bootonce_import.headers | default({})).get('Location', ''), true)
+      }}
+
+- name: "Dell - Fail when one-time boot import job URI is missing for {{ item }}"
+  ansible.builtin.fail:
+    msg: "ImportSystemConfiguration returned 202 but no Location header for {{ item }}"
+  when: dell_import_job_uri | length == 0
+
+- name: "Dell - Wait for one-time boot import job completion for {{ item }}"
+  ansible.builtin.uri:
+    url: >-
+      {{
+        dell_import_job_uri
+        if dell_import_job_uri.startswith('http')
+        else ('https://' ~ hostvars[item]['bmc_address'] ~ dell_import_job_uri)
+      }}
+    force_basic_auth: yes
+    user: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    method: GET
+    headers:
+      content-type: application/json
+      Accept: application/json
+    validate_certs: no
+    status_code: 200
+    return_content: yes
+  register: dell_import_job
+  until: >-
+    (dell_import_job.json.JobState | default('')) in ['Completed', 'CompletedWithErrors', 'Failed']
+    or (
+      'Waiting for System Reboot to complete the operation'
+      in (dell_import_job.content | default(''))
+    )
+  retries: 60
+  delay: 5
+  failed_when: false
+
+- name: "Dell - Fail when one-time boot import job did not reach a reboot-ready state for {{ item }}"
+  ansible.builtin.fail:
+    msg: >-
+      Import job {{ dell_import_job_uri.split('/')[-1] }} for {{ item }} did not complete successfully.
+      JobState={{ dell_import_job.json.JobState | default('unknown') }};
+      Message={{ ((dell_import_job.json.Oem | default({})).Dell | default({})).Message | default('n/a') }}
+  when: >-
+    (dell_import_job.json.JobState | default('')) not in ['Completed', 'CompletedWithErrors']
+    and not (
+      'Waiting for System Reboot to complete the operation'
+      in (dell_import_job.content | default(''))
+    )
+
+- name: "DELL - Power ON for {{ item }}"
+  community.general.redfish_command:
+    category: Systems
+    command: PowerOn
+    baseuri: "{{ hostvars[item]['bmc_address'] }}"
+    username: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    timeout: 60
+  register: result
+  until: not result.failed
+  retries: 10
+  delay: 30
+
+- name: "Dell - Wait for power state On for {{ item }}"
+  ansible.builtin.uri:
+    url: "https://{{ hostvars[item]['bmc_address'] }}/redfish/v1/Systems/System.Embedded.1"
+    force_basic_auth: yes
+    user: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    method: GET
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    validate_certs: no
+    status_code: 200
+    return_content: yes
+  register: dell_power_state_on
+  until: dell_power_state_on.json.PowerState == "On"
+  retries: 6
+  delay: 10
+  failed_when: false
+
+- name: "Dell - Fallback racadm powerup for {{ item }} when Redfish PowerOn did not transition to On"
+  ansible.builtin.raw: >-
+    racadm serveraction powerup
+  delegate_to: "{{ hostvars[item]['bmc_address'] }}"
+  vars:
+    ansible_user: "{{ hostvars[item]['bmc_user'] }}"
+    ansible_password: "{{ hostvars[item]['bmc_password'] }}"
+    ansible_ssh_common_args: '-o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null'
+  when: dell_power_state_on.json.PowerState | default('') != 'On'
+
+- name: "Dell - Wait for power state On after racadm fallback for {{ item }}"
+  ansible.builtin.uri:
+    url: "https://{{ hostvars[item]['bmc_address'] }}/redfish/v1/Systems/System.Embedded.1"
+    force_basic_auth: yes
+    user: "{{ hostvars[item]['bmc_user'] }}"
+    password: "{{ hostvars[item]['bmc_password'] }}"
+    method: GET
+    headers:
+      content-type: application/json
+      Accept: application/json
+    body: {}
+    body_format: json
+    validate_certs: no
+    status_code: 200
+    return_content: yes
+  register: dell_power_state_on_after_fallback
+  until: dell_power_state_on_after_fallback.json.PowerState == "On"
+  retries: 6
+  delay: 10
+  when: dell_power_state_on.json.PowerState | default('') != 'On'

@@ -1,0 +1,82 @@
+{% set primary_controlplane_host = (groups['cnv_controlplane'] | default([]) | first) | default('') %}
+{% set primary_lab_interface = jetlag_effective_lab_interface %}
+{% set primary_network_interface = jetlag_effective_network_interface %}
+[all:vars]
+allocation_node_count={{ (groups['cnv_hosts'] | default([]) | length) + (groups['bastion'] | default([]) | length) }}
+supermicro_nodes=False
+hv_vm=False
+cluster_name={{ jetlag_cluster_name }}
+base_dns_name={{ jetlag_base_dns_name }}
+{% if not jetlag_effective_public_vlan %}
+controlplane_network={{ jetlag_effective_controlplane_network }}
+controlplane_network_prefix={{ jetlag_effective_controlplane_network_prefix }}
+{% endif %}
+
+[bastion]
+{% set bastion_host = groups['bastion'] | first %}
+{{ bastion_host }} ansible_connection=local ansible_python_interpreter=/usr/bin/python3 lab_ip={{ hostvars[bastion_host].public_ip | default(hostvars[bastion_host].private_ip | default(hostvars[bastion_host].ansible_host | default(bastion_host))) }}
+
+[controlplane]
+{% for host in groups['cnv_controlplane'] | default([]) %}
+{% set host_lab_interface = hostvars[host].management_nic | default(hostvars[host].public_nic | default(primary_lab_interface)) %}
+{% set host_network_interface = hostvars[host].cnv_install_nic | default(hostvars[host].private_nic | default(primary_network_interface, true), true) %}
+{% set host_lab_facts = hostvars[host]['ansible_' ~ host_lab_interface] | default({}) %}
+{% set host_network_facts = hostvars[host]['ansible_' ~ host_network_interface] | default({}) %}
+{{ host }} bmc_address={{ hostvars[host].jetlag_bmc_address | default('mgmt-' ~ host) }} mac_address={{ hostvars[host].jetlag_mac_address | default((jetlag_effective_mac_addresses | default({})).get(host) | default(host_network_facts.macaddress | default(hostvars[host].ansible_default_ipv4.macaddress | default('')))) }} lab_mac={{ hostvars[host].jetlag_lab_mac | default((jetlag_effective_lab_macs | default({})).get(host) | default(host_lab_facts.macaddress | default(hostvars[host].ansible_default_ipv4.macaddress | default('')))) }} ip={{ hostvars[host].jetlag_controlplane_ip | default((jetlag_effective_controlplane_ips | default({})).get(host) | default(hostvars[host].private_ip | default(host_network_facts.ipv4.address | default(hostvars[host].ansible_host | default(hostvars[host].ansible_default_ipv4.address | default(host)))))) }} vendor={{ hostvars[host].jetlag_vendor | default('Dell') }} install_disk={{ hostvars[host].jetlag_install_disk | default('/dev/nvme0n1') }}{{ '\n' }}
+{% endfor %}
+
+[controlplane:vars]
+role=master
+boot_iso=discovery.iso
+bmc_user={{ jetlag_bmc_user }}
+bmc_password={{ jetlag_bmc_password }}
+lab_interface={{ primary_lab_interface }}
+network_interface={{ primary_network_interface }}
+{% if jetlag_effective_controlplane_network_prefix | string | length > 0 %}
+network_prefix={{ jetlag_effective_controlplane_network_prefix }}
+{% endif %}
+{% if jetlag_effective_controlplane_network_gateway | length > 0 %}
+gateway={{ jetlag_effective_controlplane_network_gateway }}
+{% endif %}
+{% if jetlag_effective_dns1 | length > 0 %}
+dns1={{ jetlag_effective_dns1 }}
+{% endif %}
+{% if jetlag_dns2 | default('') | length > 0 %}
+dns2={{ jetlag_dns2 }}
+{% endif %}
+
+[worker]
+{% for host in jetlag_worker_hosts %}
+{% set host_lab_interface = hostvars[host].management_nic | default(hostvars[host].public_nic | default(primary_lab_interface)) %}
+{% set host_network_interface = hostvars[host].cnv_install_nic | default(hostvars[host].private_nic | default(primary_network_interface, true), true) %}
+{% set host_lab_facts = hostvars[host]['ansible_' ~ host_lab_interface] | default({}) %}
+{% set host_network_facts = hostvars[host]['ansible_' ~ host_network_interface] | default({}) %}
+{{ host }} bmc_address={{ hostvars[host].jetlag_bmc_address | default('mgmt-' ~ host) }} mac_address={{ hostvars[host].jetlag_mac_address | default((jetlag_effective_mac_addresses | default({})).get(host) | default(host_network_facts.macaddress | default(hostvars[host].ansible_default_ipv4.macaddress | default('')))) }} lab_mac={{ hostvars[host].jetlag_lab_mac | default((jetlag_effective_lab_macs | default({})).get(host) | default(host_lab_facts.macaddress | default(hostvars[host].ansible_default_ipv4.macaddress | default('')))) }} ip={{ hostvars[host].jetlag_controlplane_ip | default((jetlag_effective_controlplane_ips | default({})).get(host) | default(hostvars[host].private_ip | default(host_network_facts.ipv4.address | default(hostvars[host].ansible_host | default(hostvars[host].ansible_default_ipv4.address | default(host)))))) }} vendor={{ hostvars[host].jetlag_vendor | default('Dell') }} install_disk={{ hostvars[host].jetlag_install_disk | default('/dev/nvme0n1') }}{{ '\n' }}
+{% endfor %}
+
+[worker:vars]
+role=worker
+boot_iso=discovery.iso
+bmc_user={{ jetlag_bmc_user }}
+bmc_password={{ jetlag_bmc_password }}
+lab_interface={{ primary_lab_interface }}
+network_interface={{ primary_network_interface }}
+{% if jetlag_effective_controlplane_network_prefix | string | length > 0 %}
+network_prefix={{ jetlag_effective_controlplane_network_prefix }}
+{% endif %}
+{% if jetlag_effective_controlplane_network_gateway | length > 0 %}
+gateway={{ jetlag_effective_controlplane_network_gateway }}
+{% endif %}
+{% if jetlag_effective_dns1 | length > 0 %}
+dns1={{ jetlag_effective_dns1 }}
+{% endif %}
+{% if jetlag_dns2 | default('') | length > 0 %}
+dns2={{ jetlag_dns2 }}
+{% endif %}
+
+[sno]
+[sno:vars]
+[hv]
+[hv:vars]
+[hv_vm]
+[hv_vm:vars]
