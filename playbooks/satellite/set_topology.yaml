@@ -2,6 +2,10 @@
 - name: Set Satellite organization/location/subnet topology
   hosts: satellite6:capsules
   gather_facts: false
+  # vars_files (not an include_vars task) so _server_url exists before
+  # module_defaults is templated on the first foreman task.
+  vars_files:
+    - ../tests/includes/common_vars.yaml
   module_defaults:
     group/theforeman.foreman.foreman:
       server_url: "{{ _server_url }}"
@@ -9,9 +13,14 @@
       password: "{{ _password }}"
       validate_certs: "{{ _validate_certs }}"
   tasks:
-    - name: Load shared FAM connection vars
-      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
-
     - name: Set topology
       ansible.builtin.include_tasks: tasks/set_topology.yaml
+
+    - name: Set host location
+      # Now that the location exists, place each host. Capsules not yet deployed
+      # are skipped (host/proxy don't exist) and get placed at their own deploy.
+      ansible.builtin.include_tasks: tasks/set_host_location.yaml
+
+    - name: Set smart-proxy location
+      ansible.builtin.include_tasks: tasks/set_host_proxy_topology.yaml
 ...

@@ -1,4 +1,9 @@
 ---
+# Load common_vars before the module_defaults block: module_defaults is
+# templated when the block is entered, so _server_url must exist by then.
+- name: Load shared FAM connection vars
+  ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
 - name: Set organizations
   module_defaults:
     group/theforeman.foreman.foreman:
@@ -7,9 +12,6 @@
       password: "{{ _password }}"
       validate_certs: "{{ _validate_certs }}"
   block:
-    - name: Load shared FAM connection vars
-      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
-
     - name: Set default variable values
       ansible.builtin.set_fact:
         organization: "{{ organization | default(sat_org) | default('Default Organization') }}"

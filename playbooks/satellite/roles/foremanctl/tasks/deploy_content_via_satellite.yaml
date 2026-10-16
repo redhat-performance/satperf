@@ -2,6 +2,10 @@
 # Katello rejects docker content uploads via API, so images already present
 # locally are pushed via `skopeo copy`; only missing ones sync from the CDN.
 
+# Load before the block: module_defaults templates _server_url at block entry.
+- name: Load shared FAM connection vars
+  ansible.builtin.include_vars: "{{ role_path }}/../../../tests/includes/common_vars.yaml"
+
 - name: Populate deployment content on Satellite
   module_defaults:
     group/theforeman.foreman.foreman:
@@ -11,9 +15,6 @@
       validate_certs: "{{ _validate_certs }}"
       organization: "{{ _organization }}"
   block:
-    - name: Load shared FAM connection vars
-      ansible.builtin.include_vars: "{{ role_path }}/../../../tests/includes/common_vars.yaml"
-
     - name: Derive the satellite server's RHEL facts
       ansible.builtin.include_tasks: "{{ role_path }}/../../tasks/derive_satellite_rhel_facts.yaml"
 

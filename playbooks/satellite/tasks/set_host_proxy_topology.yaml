@@ -1,4 +1,8 @@
 ---
+# Load before the block: module_defaults templates _server_url at block entry.
+- name: Load shared FAM connection vars
+  ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
 - name: Set smart-proxy location
   # Organization/location/subnet already exist by this point -
   # playbooks/satellite/set-topology.yaml runs before any capsule deploy.
@@ -9,9 +13,6 @@
       password: "{{ _password }}"
       validate_certs: "{{ _validate_certs }}"
   block:
-    - name: Load shared FAM connection vars
-      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
-
     - name: Set default variable values
       ansible.builtin.set_fact:
         organization: "{{ organization | default(sat_org) | default('Default Organization') }}"

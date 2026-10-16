@@ -1,4 +1,8 @@
 ---
+# Load before the block: module_defaults templates _server_url at block entry.
+- name: Load shared FAM connection vars
+  ansible.builtin.include_vars: "{{ role_path }}/../../../tests/includes/common_vars.yaml"
+
 - name: Register the capsule for container registry certs
   module_defaults:
     group/theforeman.foreman.foreman:
@@ -7,9 +11,6 @@
       password: "{{ _password }}"
       validate_certs: "{{ _validate_certs }}"
   block:
-    - name: Load shared FAM connection vars
-      ansible.builtin.include_vars: "{{ role_path }}/../../../tests/includes/common_vars.yaml"
-
     - name: Derive the satellite server's RHEL facts
       # foremanctl_deployer_product needs these to match what
       # deploy_content_via_satellite.yaml computed on a separate,

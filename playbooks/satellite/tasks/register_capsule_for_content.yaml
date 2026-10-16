@@ -5,6 +5,10 @@
 # on the Satellite by tasks/prepare_capsule_content.yaml. Uses global
 # registration, same as the container path and the registration tests.
 
+# Load before the block: module_defaults templates _server_url at block entry.
+- name: Load shared FAM connection vars
+  ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
 - name: Register the capsule against the Satellite for content
   module_defaults:
     group/theforeman.foreman.foreman:
@@ -13,9 +17,6 @@
       password: "{{ _password }}"
       validate_certs: "{{ _validate_certs }}"
   block:
-    - name: Load shared FAM connection vars
-      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
-
     - name: Generate the capsule content registration command
       theforeman.foreman.registration_command:
         organization: "{{ _organization }}"
