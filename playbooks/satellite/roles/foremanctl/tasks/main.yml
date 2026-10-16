@@ -1,4 +1,11 @@
 ---
+# Force the deployer's IPv6 network when the host has a public IPv6 (on-link v6
+# envs lack the default route foremanctl autodetects). public_ip6 is deterministic;
+# ansible_facts.all_ipv6_addresses is unreliable for noprefixroute addresses.
+- name: Detect a usable (global) IPv6 address on this host
+  ansible.builtin.set_fact:
+    _foremanctl_ipv6_available: "{{ public_ip6 is defined }}"
+
 - name: Set deployment facts for server install
   when: foremanctl_deployment_type == 'server'
   block:
@@ -150,10 +157,14 @@
 - name: Foreman server deployment
   when:
     - foremanctl_deployment_type == 'server'
+  environment:
+    OBSAH_ALLOW_EXTRA_VARS: "true"
   block:
     - name: Set command line to deploy
       ansible.builtin.set_fact:
-        _foremanctl_deploy_cmd: "{{ _deployer }} deploy"
+        _foremanctl_deploy_cmd: >-
+          {{ _deployer }} deploy{{ ' -e foreman_core_network_ipv6_available=true'
+             if _foremanctl_ipv6_available | bool else '' }}
 
     - name: Initial deployment
       block:
@@ -253,6 +264,8 @@
 - name: Foreman smart proxy deployment
   when:
     - foremanctl_deployment_type == 'proxy'
+  environment:
+    OBSAH_ALLOW_EXTRA_VARS: "true"
   block:
     - name: Assert required proxy deployment facts
       ansible.builtin.assert:
@@ -281,7 +294,9 @@
 
     - name: Set command line to deploy proxy
       ansible.builtin.set_fact:
-        _foremanctl_deploy_proxy_cmd: "{{ _deployer }} deploy-proxy"
+        _foremanctl_deploy_proxy_cmd: >-
+          {{ _deployer }} deploy-proxy{{ ' -e foreman_core_network_ipv6_available=true'
+             if _foremanctl_ipv6_available | bool else '' }}
 
     - name: Redirect capsule image pulls to the Satellite Server registry
       when: _is_satellite_product | bool
