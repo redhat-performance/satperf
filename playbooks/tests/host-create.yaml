@@ -1,0 +1,291 @@
+---
+- name: "Measure host creation performance at various concurrency levels"
+  hosts: satellite6
+  gather_facts: false
+  vars:
+    total_hosts: 100
+    concurrency_levels:
+      - 1
+      - 5
+      - 10
+      - 20
+    host_prefix: "perf-host"
+    hostgroup: "perf-test-hg"
+    results_dir: "/root/host-creation-perftest"
+    pause_between_runs: 10
+
+  tasks:
+    - name: "Gather minimal facts"
+      ansible.builtin.setup:
+        gather_subset:
+          - "!all"
+          - "network"
+
+    - name: "Display test plan"
+      ansible.builtin.debug:
+        msg: >-
+          HostCreate test: {{ total_hosts }} hosts x concurrency {{ concurrency_levels }}
+          on {{ inventory_hostname }} (org={{ sat_org }})
+
+    - name: "Create results directory"
+      ansible.builtin.file:
+        path: "{{ results_dir }}"
+        state: directory
+        mode: "0755"
+
+    - name: "Check if hostgroup exists"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          hostgroup info --name "{{ hostgroup }}" 2>&1
+      register: hg_check
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    - name: "Create hostgroup for perf testing"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          hostgroup create
+          --name "{{ hostgroup }}"
+          --organization "{{ sat_org }}"
+          --location "{{ sat_location }}"
+          --domain "{{ ansible_domain }}"
+          --architecture "x86_64"
+          --operatingsystem "{{ operatingsystem | default('RHEL 9.8') }}"
+          --partition-table "Kickstart default"
+          --content-view "Default Organization View"
+          --lifecycle-environment "Library"
+      when: hg_check.rc != 0
+      no_log: true
+
+    - name: "Get baseline host count"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          host list --per-page 10000 2>/dev/null | tail -n +2 | wc -l
+      register: baseline_hosts
+      changed_when: false
+      no_log: true
+
+    - name: "Show baseline"
+      ansible.builtin.debug:
+        msg: "Existing hosts: {{ baseline_hosts.stdout | trim }}"
+
+    - name: "Deploy helper scripts"
+      ansible.builtin.copy:
+        dest: "{{ results_dir }}/{{ item.name }}"
+        mode: "0755"
+        content: "{{ item.content }}"
+      loop:
+        - name: create_host.sh
+          content: |
+            #!/bin/bash
+            INDEX=$1
+            RESULTS_DIR=$2
+            HOST_NAME="{{ host_prefix }}-${INDEX}-$(date +%s%N | tail -c 10)"
+            MAC=$(printf '52:54:00:%02x:%02x:%02x' $(( (INDEX * 7 + RANDOM) % 256 )) $(( (INDEX * 13 + RANDOM) % 256 )) $(( (INDEX * 19 + RANDOM) % 256 )))
+
+            START_MS=$(date +%s%3N)
+
+            OUTPUT=$(hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" \
+              host create \
+              --name "${HOST_NAME}" \
+              --hostgroup "{{ hostgroup }}" \
+              --organization "{{ sat_org }}" \
+              --location "{{ sat_location }}" \
+              --mac "${MAC}" \
+              --managed true \
+              --build false 2>&1)
+            RC=$?
+
+            END_MS=$(date +%s%3N)
+            DURATION=$(awk "BEGIN{printf \"%.3f\", (${END_MS} - ${START_MS}) / 1000}")
+
+            echo "${INDEX},${HOST_NAME},${START_MS},${END_MS},${DURATION},${RC}" > "${RESULTS_DIR}/result_${INDEX}.csv"
+
+            if [ ${RC} -ne 0 ]; then
+              echo "[FAIL] [${INDEX}] ${HOST_NAME} — ${DURATION}s — ${OUTPUT}" >&2
+            else
+              echo "[OK]   [${INDEX}] ${HOST_NAME} — ${DURATION}s"
+            fi
+
+        - name: cleanup_hosts.sh
+          content: |
+            #!/bin/bash
+            HOSTS=$(hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}" \
+              host list --search "name ~ {{ host_prefix }}" --per-page 5000 2>/dev/null \
+              | tail -n +2 | cut -d',' -f2)
+            COUNT=$(echo "${HOSTS}" | grep -c . 2>/dev/null || echo 0)
+            echo "Deleting ${COUNT} test hosts..."
+            for HOST in ${HOSTS}; do
+              hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" host delete --name "${HOST}" 2>/dev/null
+            done
+            echo "Cleanup complete."
+
+        - name: collect_metrics.sh
+          content: |
+            #!/bin/bash
+            OUTFILE=$1
+            echo "timestamp,cpu_user,cpu_system,cpu_idle,mem_used_mb,mem_total_mb,pg_active_conns,pg_waiting" > "${OUTFILE}"
+            while true; do
+              TS=$(date +%s)
+              CPU=$(LANG=C top -bn1 | grep "Cpu(s)" | awk '{print $2","$4","$8}')
+              MEM_USED=$(free -m | awk '/Mem:/{print $3}')
+              MEM_TOTAL=$(free -m | awk '/Mem:/{print $2}')
+              PG_ACTIVE=$(su - postgres -c "psql -t -A foreman -c \"SELECT count(*) FROM pg_stat_activity WHERE state = 'active';\"" 2>/dev/null || echo "0")
+              PG_WAITING=$(su - postgres -c "psql -t -A foreman -c \"SELECT count(*) FROM pg_stat_activity WHERE wait_event IS NOT NULL AND state = 'active';\"" 2>/dev/null || echo "0")
+              echo "${TS},${CPU},${MEM_USED},${MEM_TOTAL},${PG_ACTIVE},${PG_WAITING}" >> "${OUTFILE}"
+              sleep 5
+            done
+      loop_control:
+        label: "{{ item.name }}"
+      no_log: true
+
+    - name: "Run host creation test — concurrency {{ item }}"
+      ansible.builtin.shell:
+        cmd: |
+          CONCURRENCY={{ item }}
+          TOTAL={{ total_hosts }}
+          RUN_DIR="{{ results_dir }}/run_c${CONCURRENCY}_$(date +%Y%m%d_%H%M%S)"
+          mkdir -p "${RUN_DIR}"
+          RESULTS_CSV="${RUN_DIR}/results.csv"
+          METRICS_CSV="${RUN_DIR}/metrics.csv"
+
+          echo "index,host_name,start_ms,end_ms,duration_sec,exit_code" > "${RESULTS_CSV}"
+
+          bash {{ results_dir }}/collect_metrics.sh "${METRICS_CSV}" &
+          METRICS_PID=$!
+
+          WALL_START=$(date +%s)
+
+          seq 1 ${TOTAL} | xargs -P ${CONCURRENCY} -I {} \
+            bash {{ results_dir }}/create_host.sh {} "${RUN_DIR}"
+
+          WALL_END=$(date +%s)
+          WALL_CLOCK=$((WALL_END - WALL_START))
+
+          kill ${METRICS_PID} 2>/dev/null
+          wait ${METRICS_PID} 2>/dev/null
+
+          # Merge per-worker results into single CSV
+          cat ${RUN_DIR}/result_*.csv >> "${RESULTS_CSV}" 2>/dev/null
+          rm -f ${RUN_DIR}/result_*.csv
+
+          # Compute stats
+          DATA=$(tail -n +2 "${RESULTS_CSV}")
+          TOTAL_N=$(echo "${DATA}" | grep -c . 2>/dev/null || echo 0)
+          SUCCESSES=$(echo "${DATA}" | awk -F',' '$6==0' | grep -c . 2>/dev/null || echo 0)
+          FAILURES=$(echo "${DATA}" | awk -F',' '$6!=0' | grep -c . 2>/dev/null || echo 0)
+
+          if [ "${SUCCESSES}" -gt 0 ]; then
+            AVG=$(echo "${DATA}" | awk -F',' '$6==0{sum+=$5; n++} END{printf "%.3f", sum/n}')
+            MIN=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | head -1)
+            MAX=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | tail -1)
+            MEDIAN=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | awk '{a[NR]=$1} END{if(NR%2==1) print a[int(NR/2)+1]; else printf "%.3f", (a[NR/2]+a[NR/2+1])/2}')
+            P90=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | awk '{a[NR]=$1} END{idx=int(NR*0.9)+1; if(idx>NR) idx=NR; print a[idx]}')
+            P95=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | awk '{a[NR]=$1} END{idx=int(NR*0.95)+1; if(idx>NR) idx=NR; print a[idx]}')
+            THROUGHPUT=$(awk "BEGIN{printf \"%.3f\", ${SUCCESSES} / (${WALL_CLOCK} > 0 ? ${WALL_CLOCK} : 1)}")
+          else
+            AVG="N/A"; MIN="N/A"; MAX="N/A"; MEDIAN="N/A"; P90="N/A"; P95="N/A"; THROUGHPUT="0"
+          fi
+          FAIL_PCT=$(awk "BEGIN{printf \"%.1f\", (${TOTAL_N} > 0 ? ${FAILURES} * 100 / ${TOTAL_N} : 0)}")
+
+          echo "HostCreate concurrency=${CONCURRENCY} total=${TOTAL_N} successes=${SUCCESSES} failures=${FAILURES} fail_pct=${FAIL_PCT} avg=${AVG} min=${MIN} median=${MEDIAN} p90=${P90} p95=${P95} max=${MAX} wall_clock=${WALL_CLOCK} throughput=${THROUGHPUT}"
+
+          # Cleanup hosts from this run
+          bash {{ results_dir }}/cleanup_hosts.sh >/dev/null 2>&1
+      environment:
+        TZ: UTC
+      timeout: 7200
+      register: run_host_create
+      loop: "{{ concurrency_levels }}"
+      loop_control:
+        pause: "{{ pause_between_runs }}"
+
+    - name: "Parse results"
+      ansible.builtin.set_fact:
+        host_create_results: >-
+          {{ host_create_results | default([]) +
+             [{ 'concurrency': item.item,
+                'line': item.stdout_lines | select('match', '^HostCreate ') | first | default(''),
+                'duration': item.delta }] }}
+      loop: "{{ run_host_create.results }}"
+      loop_control:
+        label: "concurrency={{ item.item }}"
+
+    - name: "Print results"
+      ansible.builtin.debug:
+        msg: "{{ item.line }}  (ansible_delta={{ item.duration }})"
+      loop: "{{ host_create_results }}"
+      loop_control:
+        label: "concurrency={{ item.concurrency }}"
+
+    - name: "Generate final report"
+      ansible.builtin.shell:
+        cmd: |
+          REPORT="{{ results_dir }}/final_report_$(date +%Y%m%d_%H%M%S).txt"
+          cat > "${REPORT}" << EOF
+          HOST CREATION PERFORMANCE TEST
+          ==============================
+          Satellite: {{ inventory_hostname }}
+          Katello:   $(rpm -q katello)
+          Org:       {{ sat_org }}
+          Hostgroup: {{ hostgroup }}
+          Hosts/run: {{ total_hosts }}
+          Date:      $(date -u -Iseconds)
+
+          EOF
+
+          printf "%-12s %-8s %-8s %-8s %-8s %-8s %-10s %-6s\n" \
+            "Concurrency" "Avg(s)" "Med(s)" "P90(s)" "P95(s)" "Max(s)" "Thru(h/s)" "Fail%" >> "${REPORT}"
+          echo "-------------------------------------------------------------" >> "${REPORT}"
+
+          for DIR in $(ls -d {{ results_dir }}/run_c* 2>/dev/null | sort -t'c' -k2 -n); do
+            CSV="${DIR}/results.csv"
+            [ ! -f "${CSV}" ] && continue
+
+            CONC=$(basename "${DIR}" | sed 's/run_c\([0-9]*\)_.*/\1/')
+            DATA=$(tail -n +2 "${CSV}")
+            TOTAL_N=$(echo "${DATA}" | grep -c . 2>/dev/null || echo 0)
+            SUCCESSES=$(echo "${DATA}" | awk -F',' '$6==0' | grep -c . 2>/dev/null || echo 0)
+            FAILURES=$(echo "${DATA}" | awk -F',' '$6!=0' | grep -c . 2>/dev/null || echo 0)
+
+            if [ "${SUCCESSES}" -gt 0 ]; then
+              AVG=$(echo "${DATA}" | awk -F',' '$6==0{sum+=$5;n++} END{printf "%.2f",sum/n}')
+              MEDIAN=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | awk '{a[NR]=$1} END{if(NR%2==1) print a[int(NR/2)+1]; else printf "%.2f",(a[NR/2]+a[NR/2+1])/2}')
+              P90=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | awk '{a[NR]=$1} END{idx=int(NR*0.9)+1; if(idx>NR) idx=NR; print a[idx]}')
+              P95=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | awk '{a[NR]=$1} END{idx=int(NR*0.95)+1; if(idx>NR) idx=NR; print a[idx]}')
+              MAX=$(echo "${DATA}" | awk -F',' '$6==0{print $5}' | sort -n | tail -1)
+              FIRST_START=$(echo "${DATA}" | awk -F',' 'NR==1{print $3}')
+              LAST_END=$(echo "${DATA}" | awk -F',' '{print $4}' | sort -n | tail -1)
+              WALL_SEC=$(awk "BEGIN{printf \"%d\", (${LAST_END} - ${FIRST_START}) / 1000}")
+              [ "${WALL_SEC}" -eq 0 ] && WALL_SEC=1
+              THROUGHPUT=$(awk "BEGIN{printf \"%.3f\", ${SUCCESSES} / ${WALL_SEC}}")
+            else
+              AVG="N/A"; MEDIAN="N/A"; P90="N/A"; P95="N/A"; MAX="N/A"; THROUGHPUT="0"
+            fi
+            FAIL_PCT=$(awk "BEGIN{printf \"%.1f\", (${TOTAL_N} > 0 ? ${FAILURES} * 100 / ${TOTAL_N} : 0)}")
+
+            printf "%-12s %-8s %-8s %-8s %-8s %-8s %-10s %-6s\n" \
+              "${CONC}" "${AVG}" "${MEDIAN}" "${P90}" "${P95}" "${MAX}" "${THROUGHPUT}" "${FAIL_PCT}%" >> "${REPORT}"
+          done
+
+          cat "${REPORT}"
+      register: final_report
+      changed_when: false
+
+    - name: "Show final report"
+      ansible.builtin.debug:
+        msg: "{{ final_report.stdout_lines }}"
+
+    - name: "Remove helper scripts containing credentials"
+      ansible.builtin.file:
+        path: "{{ results_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - create_host.sh
+        - cleanup_hosts.sh
+        - collect_metrics.sh
+...
