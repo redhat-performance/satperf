@@ -1,10 +1,7 @@
 ---
-# Enable and sync the Satellite's own RHSM-enabled repository sets (RHEL
-# BaseOS/AppStream etc.) into Katello, so capsules/content hosts can get that
-# content through the Satellite. The caller must have loaded the shared FAM
-# vars (tests/includes/common_vars.yaml), set theforeman.foreman
-# module_defaults, and run derive_satellite_rhel_facts.yaml first (for
-# _satellite_rhel_major).
+# Enable+sync the Satellite's own RHSM repository sets (RHEL BaseOS/AppStream)
+# into Katello so capsules/content hosts pull them through the Satellite. Caller
+# must set FAM vars + module_defaults and run derive_satellite_rhel_facts first.
 
 - name: Query the satellite server's own enabled repositories
   ansible.builtin.command:
@@ -40,9 +37,16 @@
   retries: "{{ _api_call_retries }}"
   delay: "{{ _api_call_delay }}"
 
+- name: Refresh the Red Hat subscription manifest
+  theforeman.foreman.subscription_manifest:
+    state: refreshed
+  register: __satellite_manifest_refresh_result
+  until: __satellite_manifest_refresh_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
 - name: Enable the satellite server's own repository sets
-  # Beta sets have no releasever/basearch variants (enable outright);
-  # GA sets do, so filter those by releasever instead.
+  # Beta sets have no releasever variants (enable outright); GA filter by releasever.
   theforeman.foreman.repository_set:
     label: "{{ item }}"
     all_repositories: "{{ item is search('-beta-rpms$') }}"
