@@ -1,0 +1,5 @@
+---
+# Activation key the capsule registers with for content; created Satellite-side
+# by tasks/prepare_capsule_content.yaml. Must match on both sides.
+capsule_content_ak: "AK_Capsule"
+...

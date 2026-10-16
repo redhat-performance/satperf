@@ -305,16 +305,11 @@
       delegate_to: "{{ groups['satellite6'] | first }}"
       block:
         - name: Set auth bundle command line
-          # --proxy-alias replaced --server-alias in foremanctl 36d9d36b23d3,
-          # not yet picked up by 6.20.0's pinned foremanctl version.
-          vars:
-            _foremanctl_proxy_alias_flag: >-
-              {{ '--proxy-alias' if (sat_version | default('stream')) == 'stream' else '--server-alias' }}
           ansible.builtin.set_fact:
             _foremanctl_auth_bundle_cmd: >-
               {{ [_deployer,
                   'auth-bundle',
-                  (_foremanctl_proxy_alias_flag ~ ' ' ~ _foremanctl_capsule_lb ~ ' --certificate-renew')
+                  ('--proxy-alias ' ~ _foremanctl_capsule_lb ~ ' --certificate-renew')
                   if _foremanctl_capsule_lb is defined else '',
                   inventory_hostname]
                  | reject('equalto', '') | join(' ') }}

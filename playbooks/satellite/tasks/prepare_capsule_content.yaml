@@ -1,0 +1,68 @@
+---
+# Satellite-side prep so RPM capsules can get satellite-capsule content THROUGH
+# their parent Satellite (dogfooding) instead of internal/direct repos: sync the
+# RHEL deps and the Capsule compose into Katello, and make an activation key the
+# capsule registers with. Runs on the Satellite during its own install, before
+# capsules deploy. The capsule side is roles/capsule + tasks/register_capsule_for_content.yaml.
+# Mirrors roles/foremanctl/tasks/deploy_content_via_satellite.yaml, reusing the
+# same shared content-sync includes.
+
+- name: Prepare capsule content on Satellite
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+      organization: "{{ _organization }}"
+  vars:
+    _capsule_additional_repos: >-
+      {{ hostvars[groups['capsules'] | first].additional_repos | default([]) }}
+    _capsule_product: >-
+      Red Hat Satellite Capsule {{ sat_version | default('stream') }} for RHEL
+      {{ _satellite_rhel_major }} {{ _satellite_rhel_arch }}
+    _capsule_product_label: "{{ _capsule_product | regex_replace('[^A-Za-z0-9]+', '_') }}"
+    _capsule_repo: "{{ _capsule_product }} (RPMs)"
+    _capsule_repo_label: "{{ _capsule_product_label }}_RPMs"
+    _capsule_org_label: "{{ (_organization | default('Default Organization')) | replace(' ', '_') }}"
+  block:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
+    - name: Derive the satellite server's RHEL facts
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/derive_satellite_rhel_facts.yaml"
+
+    - name: Sync the satellite server's RHEL content into Katello
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/sync_satellite_rhel_content.yaml"
+
+    - name: Mirror the capsule deployer compose
+      # Pre-release only - a GA capsule repo comes from the RHSM-sourced sets.
+      when: _capsule_additional_repos | length > 0
+      vars:
+        _compose_product: "{{ _capsule_product }}"
+        _compose_product_label: "{{ _capsule_product_label }}"
+        _compose_repo: "{{ _capsule_repo }}"
+        _compose_repo_label: "{{ _capsule_repo_label }}"
+        _compose_from_file: >-
+          {{ (_capsule_additional_repos | selectattr('from_file', 'defined')
+                                        | map(attribute='from_file') | list)[0] }}
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/mirror_compose_repo.yaml"
+
+    - name: Ensure the capsule activation key exists
+      # Custom repos default to disabled, unlike Red Hat repos - only the mirrored
+      # Capsule compose needs an override; RHEL BaseOS/AppStream come in enabled.
+      theforeman.foreman.activation_key:
+        organization: "{{ _organization }}"
+        name: "{{ capsule_content_ak | default('AK_Capsule') }}"
+        unlimited_hosts: true
+        content_view_environments:
+          - "Library"
+        content_overrides: >-
+          {{ [{'label': [_capsule_org_label, _capsule_product_label, _capsule_repo_label] | join('_'),
+               'override': 'enabled'}]
+             if _capsule_additional_repos | length > 0 else [] }}
+      register: _capsule_ak_result
+      until: _capsule_ak_result is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+...

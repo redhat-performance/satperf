@@ -6,10 +6,3 @@
     - role: foremanctl
       vars:
         foremanctl_deployment_type: server
-
-  post_tasks:
-    - name: Set the Satellite's own host location
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/set_host_location.yaml"
-
-    - name: Set the Satellite's own smart-proxy location
-      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/set_host_proxy_topology.yaml"

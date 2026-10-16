@@ -1,0 +1,41 @@
+---
+# Register this capsule against its parent Satellite as a content host, via the
+# capsule activation key, so it installs satellite-capsule and its deps from the
+# Satellite instead of internal/direct repos. The AK and content were prepared
+# on the Satellite by tasks/prepare_capsule_content.yaml. Uses global
+# registration, same as the container path and the registration tests.
+
+- name: Register the capsule against the Satellite for content
+  module_defaults:
+    group/theforeman.foreman.foreman:
+      server_url: "{{ _server_url }}"
+      username: "{{ _username }}"
+      password: "{{ _password }}"
+      validate_certs: "{{ _validate_certs }}"
+  block:
+    - name: Load shared FAM connection vars
+      ansible.builtin.include_vars: "{{ playbook_dir }}/../tests/includes/common_vars.yaml"
+
+    - name: Generate the capsule content registration command
+      theforeman.foreman.registration_command:
+        organization: "{{ _organization }}"
+        location: "{{ location }}"
+        activation_keys:
+          - "{{ capsule_content_ak }}"
+        insecure: true
+        force: true
+      delegate_to: localhost
+      register: _capsule_content_reg_cmd
+      until: _capsule_content_reg_cmd is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+
+    - name: Run the capsule content registration command  # noqa: command-instead-of-shell
+      ansible.builtin.shell:
+        cmd: "{{ _capsule_content_reg_cmd.registration_command }}"
+      changed_when: true
+      register: _capsule_content_reg_result
+      until: _capsule_content_reg_result is not failed
+      retries: "{{ _api_call_retries }}"
+      delay: "{{ _api_call_delay }}"
+...

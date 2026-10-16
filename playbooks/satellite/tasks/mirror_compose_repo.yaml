@@ -1,0 +1,56 @@
+---
+# Mirror a single pre-release "compose" yum repo (ohsnap-style, resolved from a
+# repo_file URL) into Katello as a custom product/repo, so the Satellite serves
+# it. Only needed for pre-release stream/snap testing - a GA environment gets
+# this content from its RHSM-sourced repository sets instead.
+#
+# The caller must have loaded the shared FAM vars and set theforeman.foreman
+# module_defaults, and passes:
+#   _compose_product, _compose_product_label  - Katello product name/label
+#   _compose_repo, _compose_repo_label        - Katello repository name/label
+#   _compose_from_file                        - repo_file URL to resolve baseurl from
+
+- name: Resolve the compose repo file
+  ansible.builtin.uri:
+    url: "{{ _compose_from_file }}"
+    return_content: true
+  register: __compose_repo_file
+
+- name: Extract the compose repo baseurl
+  # Re-resolve every run - the redirect target can change per snap.
+  ansible.builtin.set_fact:
+    _compose_repo_baseurl: >-
+      {{ (__compose_repo_file.content
+          | regex_search('baseurl\s*=\s*(\S+)', '\1')) | first }}
+
+- name: Create the compose product
+  theforeman.foreman.product:
+    name: "{{ _compose_product }}"
+    label: "{{ _compose_product_label }}"
+  register: __compose_product_result
+  until: __compose_product_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: Mirror the compose repository
+  theforeman.foreman.repository:
+    product: "{{ _compose_product }}"
+    name: "{{ _compose_repo }}"
+    label: "{{ _compose_repo_label }}"
+    content_type: yum
+    url: "{{ _compose_repo_baseurl }}"
+    download_policy: on_demand
+  register: __compose_repo_result
+  until: __compose_repo_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: Sync the compose repository
+  theforeman.foreman.repository_sync:
+    product: "{{ _compose_product }}"
+    repository: "{{ _compose_repo }}"
+  register: __compose_repo_sync_result
+  until: __compose_repo_sync_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+...

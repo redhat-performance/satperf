@@ -1,4 +1,16 @@
 ---
+# Prepare the capsule content on the Satellite first, as its own play on
+# hosts: satellite6 - so every (nested-included) task, e.g. the
+# subscription-manager query, runs natively on the Satellite. Delegating a
+# pre_task on the capsule play would not propagate through the nested includes.
+- name: Prepare capsule content on the Satellite
+  hosts: satellite6
+  gather_facts: false
+  tasks:
+    - name: Prepare capsule content
+      when: groups['capsules'] | default([]) | length > 0
+      ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/prepare_capsule_content.yaml"
+
 - name: "Specific configuration steps for capsule(s) servers"
   hosts: capsules
 

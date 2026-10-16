@@ -43,9 +43,10 @@
       when:
         - _is_satellite_product | bool
       block:
-        - name: Setup Satellite repositories
-          ansible.builtin.include_role:
-            name: repo_setup
+        - name: Register the capsule against its parent Satellite for content
+          # satellite-capsule + deps come from the Satellite (AK/content set up
+          # by tasks/prepare_capsule_content.yaml), not internal repos.
+          ansible.builtin.include_tasks: "{{ playbook_dir }}/tasks/register_capsule_for_content.yaml"
 
         # RHEL8 requirements
         - name: Enable satellite-capsule:el8 module
@@ -60,28 +61,6 @@
               - sat_version is defined
               - sat_version is string
             fail_msg: "Variable 'sat_version' has to be a string to avoid issues like one when we had 6.10 version interpretted as 6.1 (trailing '0' removed as it was interpreted as number)"
-
-        - name: use_repo_version
-          when:
-            - sat_version is defined and sat_version == 'stream'
-            - use_repo_version is defined and use_repo_version | length > 0
-          block:
-            - name: Get the current version number from the 'name' line
-              ansible.builtin.shell:
-                cmd: "awk '/^name = Satellite / {print $NF}' /etc/yum.repos.d/capsule.repo | cut -d'.' -f1 | uniq"
-              register: snap_version
-              changed_when: false
-              check_mode: false # This task must run, even in --check mode, to get the variable.
-
-            - name: Fix stream repo version
-              ansible.builtin.replace:
-                path: "/etc/yum.repos.d/capsule.repo"
-                # The 'regexp' is the version we just discovered in the previous task.
-                regexp: '{{ snap_version.stdout }}'
-                replace: '{{ use_repo_version }}'
-                backup: true # Recommended: creates a backup of the original file
-              when:
-                - snap_version is defined and snap_version.stdout | length > 0
 
         - name: Install satellite-capsule package
           ansible.builtin.dnf:

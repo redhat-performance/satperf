@@ -10,8 +10,8 @@
 
 - name: Derive the satellite server's RHEL major version and architecture
   ansible.builtin.set_fact:
-    _foremanctl_capsule_rhel_major: >-
+    _satellite_rhel_major: >-
       {{ hostvars[groups['satellite6'] | first]['ansible_facts']['distribution_major_version'] }}
-    _foremanctl_capsule_rhel_arch: >-
+    _satellite_rhel_arch: >-
       {{ hostvars[groups['satellite6'] | first]['ansible_facts']['architecture'] }}
 ...

@@ -1,0 +1,93 @@
+---
+# Enable and sync the Satellite's own RHSM-enabled repository sets (RHEL
+# BaseOS/AppStream etc.) into Katello, so capsules/content hosts can get that
+# content through the Satellite. The caller must have loaded the shared FAM
+# vars (tests/includes/common_vars.yaml), set theforeman.foreman
+# module_defaults, and run derive_satellite_rhel_facts.yaml first (for
+# _satellite_rhel_major).
+
+- name: Query the satellite server's own enabled repositories
+  ansible.builtin.command:
+    cmd: subscription-manager repos --list-enabled
+  changed_when: false
+  register: _satellite_enabled_repos_cmd
+
+- name: Extract the satellite server's enabled repository-set labels
+  ansible.builtin.set_fact:
+    _satellite_rhel_repo_set_labels: >-
+      {{ _satellite_enabled_repos_cmd.stdout
+         | regex_findall('Repo ID:\s*(\S+)') }}
+
+- name: Download a fresh Red Hat subscription manifest
+  theforeman.foreman.redhat_manifest:
+    validate_certs: "{{ foreman_rhsm_validate_certs }}"
+    uuid: "{{ foreman_manifest_uuid }}"
+    username: "{{ foreman_rhsm_username }}"
+    password: "{{ foreman_rhsm_password }}"
+    path: "{{ _satellite_manifest_path }}"
+  vars:
+    _satellite_manifest_path: ~/.ansible/tmp/manifest.zip
+  register: __satellite_manifest_download_result
+  until: __satellite_manifest_download_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: Import the Red Hat subscription manifest
+  theforeman.foreman.subscription_manifest:
+    manifest_path: ~/.ansible/tmp/manifest.zip
+  register: __satellite_manifest_import_result
+  until: __satellite_manifest_import_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: Enable the satellite server's own repository sets
+  # Beta sets have no releasever/basearch variants (enable outright);
+  # GA sets do, so filter those by releasever instead.
+  theforeman.foreman.repository_set:
+    label: "{{ item }}"
+    all_repositories: "{{ item is search('-beta-rpms$') }}"
+    repositories: >-
+      {{ [] if item is search('-beta-rpms$')
+         else [{'releasever': _satellite_rhel_major}] }}
+    state: enabled
+  loop: "{{ _satellite_rhel_repo_set_labels }}"
+  register: __satellite_rhel_reposet_result
+  until: __satellite_rhel_reposet_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: Look up the enabled RHEL BaseOS/AppStream repositories
+  theforeman.foreman.resource_info:
+    resource: repositories
+    search: "content_label={{ item }}"
+  loop: "{{ _satellite_rhel_repo_set_labels }}"
+  register: __satellite_rhel_repo_info
+
+- name: Set on-demand download policy for RHEL BaseOS/AppStream repositories
+  # Fetch packages lazily instead of mirroring everything upfront.
+  theforeman.foreman.repository:
+    name: "{{ item.resources[0].name }}"
+    product: "{{ item.resources[0].product.name }}"
+    content_type: yum
+    download_policy: on_demand
+    mirroring_policy: mirror_content_only
+  loop: "{{ __satellite_rhel_repo_info.results }}"
+  loop_control:
+    label: "{{ item.resources[0].name }}"
+  register: __satellite_rhel_repo_policy_result
+  until: __satellite_rhel_repo_policy_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: Sync RHEL BaseOS/AppStream repositories
+  theforeman.foreman.repository_sync:
+    product: "{{ item.resources[0].product.name }}"
+    repository: "{{ item.resources[0].name }}"
+  loop: "{{ __satellite_rhel_repo_info.results }}"
+  loop_control:
+    label: "{{ item.resources[0].name }}"
+  register: __satellite_rhel_repo_sync_result
+  until: __satellite_rhel_repo_sync_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+...

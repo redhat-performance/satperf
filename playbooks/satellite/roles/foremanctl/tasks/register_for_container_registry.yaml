@@ -14,7 +14,7 @@
       # foremanctl_deployer_product needs these to match what
       # deploy_content_via_satellite.yaml computed on a separate,
       # earlier playbook run.
-      ansible.builtin.include_tasks: derive_satellite_rhel_facts.yaml
+      ansible.builtin.include_tasks: "{{ role_path }}/../../tasks/derive_satellite_rhel_facts.yaml"
 
     - name: Ensure the capsule images activation key exists
       # Not run_once: the AK name is per-host (derived from major version).
