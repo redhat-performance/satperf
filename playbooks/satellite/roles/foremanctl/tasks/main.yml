@@ -5,6 +5,12 @@
 - name: Detect a usable (global) IPv6 address on this host
   ansible.builtin.set_fact:
     _foremanctl_ipv6_available: "{{ public_ip6 is defined }}"
+    _foremanctl_ipv6_opt: ""
+
+- name: Enable the --ipv6 deploy flag when a usable IPv6 address is present
+  when: _foremanctl_ipv6_available | bool
+  ansible.builtin.set_fact:
+    _foremanctl_ipv6_opt: "--ipv6 true"
 
 - name: Set deployment facts for server install
   when: foremanctl_deployment_type == 'server'
@@ -160,9 +166,7 @@
   block:
     - name: Set command line to deploy
       ansible.builtin.set_fact:
-        _foremanctl_deploy_cmd: >-
-          {{ _deployer }} deploy{{ ' --ipv6 true'
-             if _foremanctl_ipv6_available | bool else '' }}
+        _foremanctl_deploy_cmd: "{{ _deployer }} deploy"
 
     - name: Initial deployment
       block:
@@ -171,12 +175,14 @@
             _foremanctl_initial_deploy_cmd: >-
               {{ [_foremanctl_deploy_cmd,
                   '--initial-admin-password ' ~ (password | default(foreman_password)),
-                  '--flavor satellite' if _is_satellite_product | bool else '']
+                  '--flavor satellite' if _is_satellite_product | bool else '',
+                  _foremanctl_ipv6_opt]
                  | reject('equalto', '') | join(' ') }}
             _foremanctl_initial_deploy_cmd_redacted: >-
               {{ [_foremanctl_deploy_cmd,
                   '--initial-admin-password [redacted]',
-                  '--flavor satellite' if _is_satellite_product | bool else '']
+                  '--flavor satellite' if _is_satellite_product | bool else '',
+                  _foremanctl_ipv6_opt]
                  | reject('equalto', '') | join(' ') }}
 
         - name: Show redacted deployment command line
@@ -290,9 +296,7 @@
 
     - name: Set command line to deploy proxy
       ansible.builtin.set_fact:
-        _foremanctl_deploy_proxy_cmd: >-
-          {{ _deployer }} deploy-proxy{{ ' --ipv6 true'
-             if _foremanctl_ipv6_available | bool else '' }}
+        _foremanctl_deploy_proxy_cmd: "{{ _deployer }} deploy-proxy"
 
     - name: Redirect capsule image pulls to the Satellite Server registry
       when: _is_satellite_product | bool
@@ -388,7 +392,8 @@
                '--auth-bundle ' ~ foremanctl_proxy_auth_bundle_dest_path,
                '--foreman-fqdn ' ~ (groups['satellite6'] | first)]
               + (['--registration-url ' ~ _foremanctl_capsule_lb_url,
-                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else []))
+                  '--templates-url ' ~ _foremanctl_capsule_lb_url] if _foremanctl_capsule_lb is defined else [])
+              + [_foremanctl_ipv6_opt])
              | reject('equalto', '') | join(' ') }}
 
     - name: Show proxy deployment command line

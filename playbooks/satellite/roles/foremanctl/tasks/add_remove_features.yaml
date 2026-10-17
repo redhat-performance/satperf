@@ -11,7 +11,8 @@
               _foremanctl_features_remove
                 | map('regex_replace', '^(.+)$', '--remove-feature \1') | join(' '),
               _foremanctl_features_add
-                | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' ')]
+                | map('regex_replace', '^(.+)$', '--add-feature \1') | join(' '),
+              _foremanctl_ipv6_opt]
              | reject('equalto', '') | join(' ') }}
 
     - name: Show features deployment command line
