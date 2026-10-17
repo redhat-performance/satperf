@@ -2,15 +2,11 @@
 # Force the deployer's IPv6 network when the host has a public IPv6 (on-link v6
 # envs lack the default route foremanctl autodetects). public_ip6 is deterministic;
 # ansible_facts.all_ipv6_addresses is unreliable for noprefixroute addresses.
-- name: Detect a usable (global) IPv6 address on this host
+# XXX: --ipv6 comes from pablomh/foremanctl#48 (applied via apply_prs, not yet
+# merged); drop this flag and its apply_prs entry once #48 ships in a build.
+- name: Determine the --ipv6 deploy flag (on when the host has a public IPv6)
   ansible.builtin.set_fact:
-    _foremanctl_ipv6_available: "{{ public_ip6 is defined }}"
-    _foremanctl_ipv6_opt: ""
-
-- name: Enable the --ipv6 deploy flag when a usable IPv6 address is present
-  when: _foremanctl_ipv6_available | bool
-  ansible.builtin.set_fact:
-    _foremanctl_ipv6_opt: "--ipv6 true"
+    _foremanctl_ipv6_opt: "{{ '--ipv6 true' if public_ip6 is defined else '' }}"
 
 - name: Set deployment facts for server install
   when: foremanctl_deployment_type == 'server'
