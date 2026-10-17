@@ -51,11 +51,13 @@
   # old-style full object - use it as-is (preserving its own "method").
   # Otherwise the parsed item(s) are themselves the targets: wrap them,
   # deriving "method" from apply_prs_method (default 'diff').
+  # `targets`/items go through `| list`: comma-joined extra-vars can arrive as a
+  # tuple (ansible 2.19 templating), which `loop` rejects - coerce to a list.
   ansible.builtin.set_fact:
     _apply_prs: >-
       {{ _apply_prs_items[0]
          if (_apply_prs_items | length == 1 and _apply_prs_items[0].targets is defined)
-         else {'method': apply_prs_method | default('diff'), 'targets': _apply_prs_items} }}
+         else {'method': apply_prs_method | default('diff'), 'targets': _apply_prs_items | list} }}
 
 - name: Set default exclude patterns
   ansible.builtin.set_fact:
