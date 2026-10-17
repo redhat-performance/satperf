@@ -31,33 +31,35 @@
   #   - a single bare target dict
   #   - multiple bare target dicts, comma-joined with no enclosing brackets
   #     (the natural result of `var="${var:+$var,}$new"`-style shell
-  #     concatenation)
+  #     concatenation) - here the comma is the entry separator, so bracket-
+  #     wrapping turns "{..},{..}" into the valid YAML list "[{..},{..}]"
   #   - an already-bracketed list of any of the above
-  # Strings not already starting with '[' are wrapped in brackets before
-  # parsing, which turns bare/comma-joined targets into a valid YAML list
-  # without disturbing an already-valid list or a single full object.
+  # A sequence (list, or the tuple ansible 2.19 native-templating produces when
+  # it evaluates a comma-joined "{..},{..}" string in `apply_prs: "{{ ... }}"`)
+  # is round-tripped through to_json|from_json: that always yields a genuine
+  # list, so a tuple is never left for the folded scalar below to repr-stringify
+  # into "({..},{..})" (which a later `| list` would then split into characters).
   ansible.builtin.set_fact:
     _apply_prs_items: >-
-      {{ (apply_prs | from_yaml)
-           if (apply_prs is string and (apply_prs | trim)[0] == '[')
-         else (('[' + apply_prs + ']') | from_yaml)
-           if apply_prs is string
+      {{ (apply_prs | to_json | from_json)
+           if (apply_prs is sequence and apply_prs is not string and apply_prs is not mapping)
          else [apply_prs]
            if apply_prs is mapping
-         else apply_prs }}
+         else (apply_prs | from_yaml)
+           if (apply_prs | trim | first == '[')
+         else (('[' ~ apply_prs ~ ']') | from_yaml) }}
 
 - name: Normalize into _apply_prs (full {method, targets} dict)
   # A single parsed item that already has its own "targets" key is an
   # old-style full object - use it as-is (preserving its own "method").
   # Otherwise the parsed item(s) are themselves the targets: wrap them,
-  # deriving "method" from apply_prs_method (default 'diff').
-  # `targets`/items go through `| list`: comma-joined extra-vars can arrive as a
-  # tuple (ansible 2.19 templating), which `loop` rejects - coerce to a list.
+  # deriving "method" from apply_prs_method (default 'diff'). _apply_prs_items
+  # is already a genuine list (from_yaml/from_json above), so no coercion here.
   ansible.builtin.set_fact:
     _apply_prs: >-
       {{ _apply_prs_items[0]
          if (_apply_prs_items | length == 1 and _apply_prs_items[0].targets is defined)
-         else {'method': apply_prs_method | default('diff'), 'targets': _apply_prs_items | list} }}
+         else {'method': apply_prs_method | default('diff'), 'targets': _apply_prs_items} }}
 
 - name: Set default exclude patterns
   ansible.builtin.set_fact:
