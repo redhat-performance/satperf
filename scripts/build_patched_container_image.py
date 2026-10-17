@@ -158,9 +158,15 @@ def _github_api_get(url):
 
 
 def fetch_pr_head(org, repo, pr_number, forge_api=DEFAULT_API):
-    """Return (head_repo_full_name, head_ref) for a PR."""
+    """Return (repo, ref) to fetch a PR's files from, durable against branch deletion.
+
+    Resolves to the base repo at the PR head commit SHA, not the fork's named
+    branch: a merged/closed PR usually has its fork branch deleted (raw fetch
+    404s), but the head commit stays reachable on the base repo via
+    refs/pull/N/head.
+    """
     data = _github_api_get(f'{forge_api}/repos/{org}/{repo}/pulls/{pr_number}')
-    return data['head']['repo']['full_name'], data['head']['ref']
+    return f'{org}/{repo}', data['head']['sha']
 
 
 def fetch_pr_changed_files(org, repo, pr_number, forge_api=DEFAULT_API):
@@ -178,7 +184,7 @@ def fetch_pr_changed_files(org, repo, pr_number, forge_api=DEFAULT_API):
 
 
 def fetch_raw_file(head_repo, head_ref, filename, dest_path, forge_raw=DEFAULT_RAW):
-    """Download a file's content at the tip of a branch. Returns True if found."""
+    """Download a file's content at a ref (branch, tag, or commit SHA). Returns True if found."""
     url = f'{forge_raw}/{head_repo}/{head_ref}/{filename}'
     os.makedirs(os.path.dirname(dest_path), exist_ok=True)
     result = subprocess.run(

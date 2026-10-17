@@ -195,8 +195,8 @@ def _collect_whole_file_pr(org, repo, pr_number, base_dir, excludes, work_dir):
     carrying fetched file contents ("pr_files") instead of a diff to apply -
     the caller writes them directly rather than invoking patch.
     """
-    head_repo, head_ref = fetch_pr_head(org, repo, pr_number)
-    log.info("Fetching %s/%s#%s files from %s@%s", org, repo, pr_number, head_repo, head_ref)
+    source_repo, source_ref = fetch_pr_head(org, repo, pr_number)
+    log.info("Fetching %s/%s#%s files from %s@%s", org, repo, pr_number, source_repo, source_ref)
     changed = fetch_pr_changed_files(org, repo, pr_number)
 
     pr_files = []
@@ -208,8 +208,8 @@ def _collect_whole_file_pr(org, repo, pr_number, base_dir, excludes, work_dir):
         if _is_excluded(filename, excludes):
             continue
         local_path = Path(work_dir) / f"{org}-{repo}-{pr_number}" / filename
-        if not fetch_raw_file(head_repo, head_ref, filename, str(local_path)):
-            log.error("Failed to fetch %s from %s@%s", filename, head_repo, head_ref)
+        if not fetch_raw_file(source_repo, source_ref, filename, str(local_path)):
+            log.error("Failed to fetch %s from %s@%s", filename, source_repo, source_ref)
             sys.exit(1)
         pr_files.append({"filename": filename, "local_path": local_path})
 
