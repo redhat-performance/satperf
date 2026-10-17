@@ -157,13 +157,11 @@
 - name: Foreman server deployment
   when:
     - foremanctl_deployment_type == 'server'
-  environment:
-    OBSAH_ALLOW_EXTRA_VARS: "true"
   block:
     - name: Set command line to deploy
       ansible.builtin.set_fact:
         _foremanctl_deploy_cmd: >-
-          {{ _deployer }} deploy{{ ' -e foreman_core_network_ipv6_enabled=true'
+          {{ _deployer }} deploy{{ ' --ipv6 true'
              if _foremanctl_ipv6_available | bool else '' }}
 
     - name: Initial deployment
@@ -264,8 +262,6 @@
 - name: Foreman smart proxy deployment
   when:
     - foremanctl_deployment_type == 'proxy'
-  environment:
-    OBSAH_ALLOW_EXTRA_VARS: "true"
   block:
     - name: Assert required proxy deployment facts
       ansible.builtin.assert:
@@ -295,7 +291,7 @@
     - name: Set command line to deploy proxy
       ansible.builtin.set_fact:
         _foremanctl_deploy_proxy_cmd: >-
-          {{ _deployer }} deploy-proxy{{ ' -e foreman_core_network_ipv6_enabled=true'
+          {{ _deployer }} deploy-proxy{{ ' --ipv6 true'
              if _foremanctl_ipv6_available | bool else '' }}
 
     - name: Redirect capsule image pulls to the Satellite Server registry
