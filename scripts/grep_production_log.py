@@ -13,9 +13,9 @@ import re
 #
 # Output:
 #
-#   2021-02-19T09:42:35 [I|app|c68bc264] Started GET "/api/v2/job_invocations/27/outputs?search_query=name+%5E+(satperf006container70.usersys.redhat.com)" for 127.0.0.1 at 2021-02-19 09:42:35 -0500
+#   2021-02-19T09:42:35 [I|app|c68bc264] Started GET "/api/v2/job_invocations/27/outputs?search_query=name+%5E+(client.example.com)" for 127.0.0.1 at 2021-02-19 09:42:35 -0500
 #   2021-02-19T09:42:35 [I|app|c68bc264] Processing by Api::V2::JobInvocationsController#outputs as JSON
-#   2021-02-19T09:42:35 [I|app|c68bc264]   Parameters: {"search_query"=>"name ^ (satperf006container70.usersys.redhat.com)", "apiv"=>"v2", "id"=>"27"}
+#   2021-02-19T09:42:35 [I|app|c68bc264]   Parameters: {"search_query"=>"name ^ (client.example.com)", "apiv"=>"v2", "id"=>"27"}
 #   2021-02-19T09:42:35 [I|app|c68bc264] Completed 200 OK in 311ms (Views: 0.5ms | ActiveRecord: 40.9ms | Allocations: 83301)
 #   [...]
 #

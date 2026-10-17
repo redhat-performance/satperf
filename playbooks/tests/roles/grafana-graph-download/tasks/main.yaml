@@ -14,7 +14,7 @@
       output_filename_prefix: "{{ start_time }}_{{ end_time }}" 
   - name: Download the graphs
     get_url:
-      url: "http://{{ grafana_username }}:{{ grafana_password }}@grafana.perf.lab.eng.bos.redhat.com/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time }}&to={{ end_time }}&var-Cloud=satellite62&var-Node={{ satellite_hostname }}&var-Interface=interface-em2&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&panelId={{ item.value }}&width=1000&height=500"
+      url: "http://{{ grafana_username }}:{{ grafana_password }}@grafana.example.com/render/dashboard-solo/db/satellite6-general-system-performance?from={{ start_time }}&to={{ end_time }}&var-Cloud=satellite62&var-Node={{ satellite_hostname }}&var-Interface=interface-em2&var-Disk=disk-sda&var-cpus0=All&var-cpus00=All&panelId={{ item.value }}&width=1000&height=500"
       dest: "{{ output_filename_prefix }}_{{ item.key }}"
     with_dict: "{{ grafana_panels }}"
 ...

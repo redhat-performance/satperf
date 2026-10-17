@@ -23,7 +23,7 @@
   - name: settup the server for installation
     shell: |
         yum -y install centos-release-scl
-        curl -o /etc/yum.repos.d/satellite.repo http://perf54.perf.lab.eng.bos.redhat.com/pub/mirrors/2020-04-30-Katello_Nightly_Sat68_snap1/satellite.repo
+        curl -o /etc/yum.repos.d/satellite.repo http://mirror.example.com/pub/mirrors/Katello_Nightly_snap/satellite.repo
 
   - name: make a entry of IP & hostname in /etc/hosts file
     lineinfile:
