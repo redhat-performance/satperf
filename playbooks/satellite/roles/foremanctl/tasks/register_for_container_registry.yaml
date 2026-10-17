@@ -50,7 +50,6 @@
       # index on jwt_secrets.user_id), causing "Failed to decode JWT". Now
       # patched via apply_prs_product (PR #11315) before capsules register -
       # keep this disabled fallback until that's verified reliable.
-      # throttle: 1
       theforeman.foreman.registration_command:
         organization: "{{ _organization }}"
         location: "{{ location }}"
