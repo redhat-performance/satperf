@@ -12,7 +12,7 @@ repo_sat_client_8="${PARAM_repo_sat_client_8:-http://mirror.example.com/Satellit
 
 rhel_subscription="${PARAM_rhel_subscription:-Red Hat Enterprise Linux Server, Standard (Physical or Virtual Nodes)}"
 
-workdir_url="${PARAM_workdir_url:-https://workdir-exporter-jenkins-csb-perf.apps.ocp-c1.prod.psi.redhat.com/workspace}"
+workdir_url="${PARAM_workdir_url:-https://workdir-exporter.example.com/workspace}"
 job_name="${PARAM_job_name:-Sat_Experiment}"
 max_age_input="${PARAM_max_age_input:-19000}"
 proxy_id="${PARAM_proxy_id:-set-in-doit-sh}"
