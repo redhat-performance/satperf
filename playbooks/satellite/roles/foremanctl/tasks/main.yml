@@ -163,7 +163,7 @@
     - name: Set command line to deploy
       ansible.builtin.set_fact:
         _foremanctl_deploy_cmd: >-
-          {{ _deployer }} deploy{{ ' -e foreman_core_network_ipv6_available=true'
+          {{ _deployer }} deploy{{ ' -e foreman_core_network_ipv6_enabled=true'
              if _foremanctl_ipv6_available | bool else '' }}
 
     - name: Initial deployment
@@ -243,12 +243,6 @@
             _foremanctl_features_add: "{{ foremanctl_add_features }}"
             _foremanctl_features_remove: "{{ foremanctl_remove_features }}"
 
-    - name: Persist the IPv6 network before apply_prs restarts foreman
-      when: _foremanctl_ipv6_available | bool
-      ansible.builtin.include_tasks: persist_ipv6_network.yaml
-      vars:
-        _persist_ipv6_container: foreman
-
     - name: Apply PRs to the deployed product
       # Unlike the pre-deploy Apply PRs above, this targets code inside the
       # running foreman container - it only exists once deploy succeeds.
@@ -301,7 +295,7 @@
     - name: Set command line to deploy proxy
       ansible.builtin.set_fact:
         _foremanctl_deploy_proxy_cmd: >-
-          {{ _deployer }} deploy-proxy{{ ' -e foreman_core_network_ipv6_available=true'
+          {{ _deployer }} deploy-proxy{{ ' -e foreman_core_network_ipv6_enabled=true'
              if _foremanctl_ipv6_available | bool else '' }}
 
     - name: Redirect capsule image pulls to the Satellite Server registry
@@ -443,12 +437,6 @@
         _foremanctl_features_deploy_cmd: "{{ _foremanctl_deploy_proxy_cmd }}"
         _foremanctl_features_add: "{{ foremanctl_proxy_add_features }}"
         _foremanctl_features_remove: "{{ foremanctl_proxy_remove_features }}"
-
-    - name: Persist the IPv6 network before apply_prs restarts the proxy
-      when: _foremanctl_ipv6_available | bool
-      ansible.builtin.include_tasks: persist_ipv6_network.yaml
-      vars:
-        _persist_ipv6_container: foreman-proxy
 
     - name: Apply PRs to the deployed product
       # Unlike the pre-deploy Apply PRs, this targets code inside the
