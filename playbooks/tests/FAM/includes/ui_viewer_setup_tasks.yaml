@@ -1,0 +1,32 @@
+---
+- name: "Ensure viewer role list is set"
+  ansible.builtin.set_fact:
+    _ui_viewer_roles: "{{ ui_viewer_roles | default(['Viewer']) }}"
+
+- name: "Ensure viewer user is absent before recreation"
+  when: ui_viewer_recreate | default(false) | bool
+  theforeman.foreman.user:
+    login: "{{ ui_viewer_user | default('ui-perf-viewer') }}"
+    state: absent
+
+- name: "Ensure view-only user exists"
+  theforeman.foreman.user:
+    login: "{{ ui_viewer_user | default('ui-perf-viewer') }}"
+    firstname: UI
+    lastname: Perf Viewer
+    mail: "{{ (ui_viewer_user | default('ui-perf-viewer')) + '@example.com' }}"
+    user_password: "{{ ui_viewer_password | default('changeme') }}"
+    auth_source: Internal
+    admin: false
+    default_organization: "{{ ui_viewer_default_organization | default(omit) }}"
+    default_location: "{{ ui_viewer_default_location | default(omit) }}"
+    organizations: "{{ ui_viewer_organizations | default(omit) }}"
+    locations: "{{ ui_viewer_locations | default(omit) }}"
+    roles: "{{ _ui_viewer_roles }}"
+    state: present
+
+- name: "Show viewer user summary"
+  ansible.builtin.debug:
+    msg:
+      - "ui_viewer_user = {{ ui_viewer_user | default('ui-perf-viewer') }}"
+      - "ui_viewer_roles = {{ _ui_viewer_roles | join(', ') }}"
