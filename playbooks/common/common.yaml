@@ -2,6 +2,11 @@
 - hosts: satellite6:capsules:capsule_lbs:container_hosts
   gather_facts: false
 
+  pre_tasks:
+    - name: Configure development OS compose repositories
+      ansible.builtin.include_tasks: tasks/configure_development_repos.yaml
+      when: os_development | default(false) | bool
+
   roles:
     - role: common
     - role: linux-system-roles.timesync

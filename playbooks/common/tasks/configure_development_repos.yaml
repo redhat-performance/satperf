@@ -1,0 +1,64 @@
+---
+# Point the OS repos at the internal RHEL development compose (os_development
+# runs) instead of GA/RHSM channels, which aren't entitled for a pre-release
+# RHEL. The baseurls come from the inventory (os_*_repo_url, emitted by
+# conf/contperf/generate_ipam_inventory.py); this file only names the fixed repo
+# stanza ids that profile-generic / collectd-generic enable by name. debug and
+# source are defined but disabled, so --enablerepo works without slowing normal
+# installs.
+- name: Configure BaseOS development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-baseos
+    description: Development compose - BaseOS
+    baseurl: "{{ os_baseos_repo_url }}"
+    gpgcheck: false
+    enabled: true
+
+- name: Configure AppStream development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-appstream
+    description: Development compose - AppStream
+    baseurl: "{{ os_appstream_repo_url }}"
+    gpgcheck: false
+    enabled: true
+
+- name: Configure CRB development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-crb
+    description: Development compose - CRB
+    baseurl: "{{ os_crb_repo_url }}"
+    gpgcheck: false
+    enabled: true
+
+- name: Configure BaseOS debug development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-baseos-debug
+    description: Development compose - BaseOS debug
+    baseurl: "{{ os_baseos_debug_repo_url }}"
+    gpgcheck: false
+    enabled: false
+
+- name: Configure AppStream debug development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-appstream-debug
+    description: Development compose - AppStream debug
+    baseurl: "{{ os_appstream_debug_repo_url }}"
+    gpgcheck: false
+    enabled: false
+
+- name: Configure BaseOS source development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-baseos-source
+    description: Development compose - BaseOS source
+    baseurl: "{{ os_baseos_source_repo_url }}"
+    gpgcheck: false
+    enabled: false
+
+- name: Configure AppStream source development compose repo
+  ansible.builtin.yum_repository:
+    name: compose-appstream-source
+    description: Development compose - AppStream source
+    baseurl: "{{ os_appstream_source_repo_url }}"
+    gpgcheck: false
+    enabled: false
+...
