@@ -1,5 +1,5 @@
 ---
-- hosts: satellite6:capsules:capsule_lbs:container_hosts
+- hosts: satellite6:capsules:capsule_lbs:container_hosts:bastion
   gather_facts: false
 
   pre_tasks:
