@@ -41,6 +41,8 @@ for line in args.log_file:
     if re.match('.*"%s .*' % args.matcher, line):
         logging.debug("Processing line %d: %s" % (count, line.strip()))
         m = re.match('^.*"%s (?P<start>[0-9:. -]+) to (?P<end>[0-9:. -]+) taking (?P<duration>[0-9.]+) seconds".*$' % args.matcher, line)
+        if m is None:
+            continue
 
         start = parse_time(m.group('start'))
         end = parse_time(m.group('end'))
