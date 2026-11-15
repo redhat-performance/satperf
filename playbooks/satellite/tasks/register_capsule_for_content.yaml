@@ -18,6 +18,11 @@
       validate_certs: "{{ _validate_certs }}"
   block:
     - name: Generate the capsule content registration command
+      # XXX: concurrent calls race on JwtSecret (missing unique index on
+      # jwt_secrets.user_id) -> "Failed to decode JWT". Serialized here
+      # instead of patched: the RPM product carries no theforeman/foreman#11315;
+      # drop the throttle once a build ships it.
+      throttle: 1
       theforeman.foreman.registration_command:
         organization: "{{ _organization }}"
         location: "{{ location }}"
