@@ -1,0 +1,67 @@
+---
+# Wait for a product sync to complete. On failure, retry failed repos.
+#
+# Required variables:
+#   _product_name  — product name (for task search and logging)
+#   _task_name     — label for timing output
+#   _fired_at      — UTC timestamp captured before the sync was fired
+
+- block:
+    - ansible.builtin.include_tasks: wait_and_print.yaml
+      vars:
+        _task_search: >-
+          label = Actions::Katello::Repository::Sync
+          AND action ~ "{{ _product_name }}"
+          AND started_at > "{{ _fired_at }}"
+
+  rescue:
+    - name: "Find failed sync sub-tasks for {{ _product_name }}"
+      theforeman.foreman.resource_info:
+        resource: foreman_tasks
+        search: >-
+          parent_task_id = "{{ _foreman_task_id }}"
+          AND result != success
+        params:
+          order: "started_at DESC"
+          per_page: 100
+      register: __failed_sync_tasks_by_parent
+      when: _foreman_task_id is defined
+
+    - name: "Find failed sync tasks for {{ _product_name }} (by search)"
+      theforeman.foreman.resource_info:
+        resource: foreman_tasks
+        search: >-
+          label = "Actions::Katello::Repository::Sync"
+          AND action ~ "{{ _product_name }}"
+          AND started_at > "{{ _fired_at }}"
+          AND state = stopped
+          AND result != success
+        params:
+          order: "started_at DESC"
+          per_page: 100
+      register: __failed_sync_tasks_by_search
+      when: _foreman_task_id is not defined
+
+    - name: Extract failed repository IDs
+      ansible.builtin.set_fact:
+        _failed_repo_ids: >-
+          {{ ((__failed_sync_tasks_by_parent.resources | default([]))
+              + (__failed_sync_tasks_by_search.resources | default([])))
+             | map(attribute='input')
+             | map(attribute='repository')
+             | map(attribute='id')
+             | list }}
+      when: >-
+        ((__failed_sync_tasks_by_parent.resources | default([]))
+         + (__failed_sync_tasks_by_search.resources | default([]))) | length > 0
+
+    - name: "Retry failed repos for {{ _product_name }} ({{ _failed_repo_ids | default([]) | length }})"
+      ansible.builtin.include_tasks: fire_and_wait_one.yaml
+      vars:
+        _url: "{{ _server_url }}/katello/api/repositories/{{ item }}/sync"
+        _body: {}
+        _task_name: "RepositorySync"
+        _no_print: true
+      loop: "{{ _failed_repo_ids | default([]) }}"
+      loop_control:
+        label: "repo {{ item }}"

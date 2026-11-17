@@ -1,0 +1,75 @@
+---
+# Sync products: fire via FAM module (async), wait, retry failed repos.
+#
+# Required variables (must be in scope from caller):
+#   _products       — list of product dicts with at least 'name' key
+#   _task_name      — label for timing output
+#   _api_call_retries, _api_call_delay — retry config for submission
+#
+# Optional variables:
+#   _max_concurrent_syncs — sync this many repositories at a time per batch
+#                           instead of syncing whole products (default: 0, no cap)
+
+- name: "Pre-emptive wait for {{ _task_name }}"
+  theforeman.foreman.resource_info:
+    resource: foreman_tasks
+    search: >-
+      label = Actions::Katello::Repository::Sync
+      AND action ~ "{{ _product.name | default(_product) }}"
+      AND state = running
+    params:
+      per_page: 1
+  register: __pre_check
+  until: __pre_check.resources | length == 0
+  retries: "{{ (_task_timeout | default(14400) | int / _api_call_delay) | int }}"
+  delay: "{{ _api_call_delay }}"
+  loop: "{{ _products }}"
+  loop_control:
+    loop_var: _product
+    label: "{{ _product.name | default(_product) }}"
+
+- name: "Set {{ _task_name }} concurrency limit"
+  ansible.builtin.set_fact:
+    __max_concurrent: "{{ _max_concurrent_syncs | default(0) | int }}"
+    __batch_task_name: "{{ _task_name ~ 'Batch' if _max_concurrent_syncs | default(0) | int > 0 else _task_name }}"
+    __sync_units: []
+
+- name: "Capture {{ _task_name }} window start"
+  ansible.builtin.set_fact:
+    __sync_start_epoch: "{{ now(utc=true).strftime('%s') | int }}"
+    __sync_started_at: "{{ now(utc=true).strftime('%Y-%m-%d %H:%M:%S') }}"
+  when: __max_concurrent > 0
+
+- name: "Build per-repository {{ _task_name }} units"
+  ansible.builtin.set_fact:
+    __sync_units: "{{ __sync_units | default([]) + [{'product': item.0.name, 'repository': item.1.name}] }}"
+  loop: "{{ _products | selectattr('repositories', 'defined') | list | subelements('repositories') }}"
+  loop_control:
+    label: "{{ item.0.name }}/{{ item.1.name }}"
+  when: __max_concurrent > 0
+
+- name: "Build product-level {{ _task_name }} units"
+  ansible.builtin.set_fact:
+    __sync_units: "{{ __sync_units | default([]) + [{'product': item.name | default(item)}] }}"
+  loop: "{{ _products if __max_concurrent == 0 else (_products | rejectattr('repositories', 'defined') | list) }}"
+  loop_control:
+    label: "{{ item.name | default(item) }}"
+
+- name: "Fire and wait for {{ _task_name }}"
+  ansible.builtin.include_tasks: sync_products_batch.yaml
+  loop: "{{ [__sync_units] if __max_concurrent == 0 else (__sync_units | batch(__max_concurrent) | list) }}"
+  loop_control:
+    loop_var: _batch
+    label: "{{ _batch | length }} sync(s)"
+  vars:
+    _batch_units: "{{ _batch }}"
+    _task_name: "{{ __batch_task_name }}"
+
+- name: "Print {{ _task_name }} result"
+  ansible.builtin.debug:
+    msg: >-
+      {{ _task_name }} {{ __sync_started_at }} to
+      {{ now(utc=true).strftime('%Y-%m-%d %H:%M:%S') }} taking
+      {{ now(utc=true).strftime('%s') | int - __sync_start_epoch }} seconds
+  when: __max_concurrent > 0
+...

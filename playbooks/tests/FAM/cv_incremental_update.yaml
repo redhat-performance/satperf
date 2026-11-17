@@ -22,7 +22,7 @@
       # organization: "{{ foreman_organization }}"
 
   vars_files:
-    - includes/fam_common_vars.yaml
+    - ../includes/common_vars.yaml
 
   vars:
     _task_name: "IncrementalContentViewUpdate"
@@ -77,16 +77,10 @@
              | map(attribute='id')
              | list }}
 
-    - name: "{{ _task_name }}"
-      ansible.builtin.uri:
-        url: "{{ _server_url }}/katello/api/content_view_versions/incremental_update"
-        method: POST
-        user: "{{ _username }}"
-        password: "{{ _password }}"
-        force_basic_auth: true
-        validate_certs: "{{ _validate_certs }}"
-        body_format: json
-        body:
+    - ansible.builtin.include_tasks: ../includes/fire_and_wait_one.yaml
+      vars:
+        _url: "{{ _server_url }}/katello/api/content_view_versions/incremental_update"
+        _body:
           content_view_version_environments:
             - content_view_version_id: "{{ cv_version_id }}"
               environment_ids: "{{ env_ids }}"
@@ -94,16 +88,6 @@
             errata_ids: "{{ _errata_ids }}"
           resolve_dependencies: "{{ _resolve_dependencies }}"
           description: "{{ _description }}"
-        status_code: [200, 202]
-        timeout: 60
-      register: __fire_result
-      failed_when: >-
-        __fire_result is failed and
-        (_transient_errors | select('in', __fire_result.msg | default('')) | list | length == 0)
-
-    - ansible.builtin.include_tasks: ../includes/wait_and_print.yaml
-      vars:
-        _foreman_task_id: "{{ __fire_result.json.id }}"
         _task_timeout: "{{ _timeout }}"
-      when: __fire_result.status == 202
+        _task_id_output_file: "{{ task_id_output_file | default('') }}"
 ...

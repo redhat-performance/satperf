@@ -1,0 +1,47 @@
+---
+# Promote content views: fire via FAM module (async), wait, print timing.
+#
+# Required variables (must be in scope from caller):
+#   _content_views  — list of CVs to promote (name or dict with .name)
+#   _lces           — list of lifecycle environment names to promote to
+#   _task_name      — label for timing output
+#   _api_call_retries, _api_call_delay — retry config for submission
+
+- name: "Capture {{ _task_name }} start time"
+  ansible.builtin.set_fact:
+    __fired_at: "{{ now(utc=true).strftime('%Y-%m-%d %H:%M:%S') }}"
+
+- name: "{{ _task_name }}"
+  theforeman.foreman.content_view_version:
+    server_url: "{{ _server_url }}"
+    username: "{{ _username }}"
+    password: "{{ _password }}"
+    validate_certs: "{{ _validate_certs }}"
+    organization: "{{ _organization }}"
+    content_view: "{{ _cv.name | default(_cv) }}"
+    current_lifecycle_environment: Library
+    lifecycle_environments: "{{ _lces }}"
+  loop: "{{ _content_views }}"
+  loop_control:
+    loop_var: _cv
+    label: "{{ _cv.name | default(_cv) }}"
+  async: "{{ _task_timeout | default(10800) }}"
+  poll: 0
+  register: __promote_async_results
+  until: __promote_async_results is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: "Wait for {{ _task_name }}"
+  ansible.builtin.include_tasks: wait_and_print.yaml
+  vars:
+    _async_jid: "{{ _wait_item.ansible_job_id }}"
+    _task_search: >-
+      label = Actions::Katello::ContentView::Promote
+      AND action ~ "{{ _wait_item._cv.name | default(_wait_item._cv | default('')) }}"
+      AND started_at > "{{ __fired_at }}"
+  loop: "{{ __promote_async_results.results }}"
+  loop_control:
+    loop_var: _wait_item
+    label: "{{ _wait_item._cv.name | default(_wait_item._cv | default('CV')) }}"
+...

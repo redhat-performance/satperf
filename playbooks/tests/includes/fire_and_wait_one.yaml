@@ -1,9 +1,9 @@
 ---
-# Generic fire-and-wait for a Katello API POST that returns a Foreman task.
+# Fire a raw API POST and wait for the Foreman task it creates.
 #
-# Fires the POST, waits for the task via wait_and_print, and on
-# failure retries once (without printing, since the retry timing isn't
-# meaningful for measurement).
+# Used by retry paths (e.g., sync_product_wait_one rescue) to re-fire
+# individual failed sub-tasks at API granularity. Not for primary
+# measurement — callers typically pass _no_print: true.
 #
 # Required variables:
 #   _url          — Katello API endpoint to POST to
@@ -11,49 +11,41 @@
 #   _task_name    — label for wait_and_print (matched by e())
 #
 # Optional variables:
-#   _task_timeout — timeout in seconds (default: 14400)
-#   _delegate_to  — delegate fire+wait to this host
-#   _status_codes — accepted status codes (default: [200, 202])
+#   _task_timeout  — timeout in seconds (default: 14400)
+#   _delegate_to   — delegate fire+wait to this host
+#   _status_codes  — accepted status codes (default: [200, 202])
+#   _no_print      — skip printing timing (default: false)
+#   _task_id_output_file — write the Foreman task id to this path (optional)
 
-- block:
-    - name: "{{ _task_name }}"
-      ansible.builtin.uri:
-        url: "{{ _url }}"
-        method: POST
-        user: "{{ _username }}"
-        password: "{{ _password }}"
-        force_basic_auth: true
-        validate_certs: "{{ _validate_certs }}"
-        body_format: json
-        body: "{{ _body }}"
-        status_code: "{{ _status_codes | default([200, 202]) }}"
-        timeout: 60
-      register: __fire_result
-      delegate_to: "{{ _delegate_to | default(omit) }}"
+- name: "{{ _task_name }}"
+  ansible.builtin.uri:
+    url: "{{ _url }}"
+    method: POST
+    user: "{{ _username }}"
+    password: "{{ _password }}"
+    force_basic_auth: true
+    validate_certs: "{{ _validate_certs }}"
+    body_format: json
+    body: "{{ _body }}"
+    status_code: "{{ _status_codes | default([200, 202]) }}"
+    timeout: 60
+  register: __fire_result
+  delegate_to: "{{ _delegate_to | default(omit) }}"
+  until: __fire_result is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
 
-    - ansible.builtin.include_tasks: wait_and_print.yaml
-      vars:
-        _foreman_task_id: "{{ __fire_result.json.id }}"
-      when: __fire_result.status == 202
+- name: "Record {{ _task_name }} Foreman task id"
+  ansible.builtin.copy:
+    content: "{{ __fire_result.json.id }}\n"
+    dest: "{{ _task_id_output_file }}"
+    mode: '0644'
+  when:
+    - _task_id_output_file | default('') | length > 0
+    - __fire_result.json is defined
+    - __fire_result.json.id is defined
 
-  rescue:
-    - name: "Retry {{ _task_name }}"
-      ansible.builtin.uri:
-        url: "{{ _url }}"
-        method: POST
-        user: "{{ _username }}"
-        password: "{{ _password }}"
-        force_basic_auth: true
-        validate_certs: "{{ _validate_certs }}"
-        body_format: json
-        body: "{{ _body }}"
-        status_code: "{{ _status_codes | default([200, 202]) }}"
-        timeout: 60
-      register: __fire_result_retry
-      delegate_to: "{{ _delegate_to | default(omit) }}"
-
-    - ansible.builtin.include_tasks: wait_and_print.yaml
-      vars:
-        _foreman_task_id: "{{ __fire_result_retry.json.id }}"
-        _no_print: true
-      when: __fire_result_retry.status == 202
+- ansible.builtin.include_tasks: wait_and_print.yaml
+  vars:
+    _foreman_task_id: "{{ __fire_result.json.id }}"
+  when: __fire_result.status == 202

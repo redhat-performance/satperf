@@ -1,0 +1,38 @@
+---
+# Fire one batch of repository syncs via FAM (async) and wait for it.
+# Caller sets _batch_units to a list of {product, repository?} dicts.
+
+- name: "Capture {{ _task_name }} start time"
+  ansible.builtin.set_fact:
+    __batch_fired_at: "{{ now(utc=true).strftime('%Y-%m-%d %H:%M:%S') }}"
+
+- name: "{{ _task_name }}"
+  theforeman.foreman.repository_sync:
+    server_url: "{{ _server_url }}"
+    username: "{{ _username }}"
+    password: "{{ _password }}"
+    validate_certs: "{{ _validate_certs }}"
+    organization: "{{ _organization }}"
+    product: "{{ item.product }}"
+    repository: "{{ item.repository | default(omit) }}"
+  loop: "{{ _batch_units }}"
+  loop_control:
+    label: "{{ item.product }}{{ '/' ~ item.repository if item.repository is defined else '' }}"
+  async: "{{ _task_timeout | default(43200) }}"
+  poll: 0
+  register: __batch_async
+  until: __batch_async is not failed
+  retries: "{{ _api_call_retries }}"
+  delay: "{{ _api_call_delay }}"
+
+- name: "Wait for {{ _task_name }}"
+  ansible.builtin.include_tasks: sync_product_wait_one.yaml
+  vars:
+    _async_jid: "{{ _wait_item.ansible_job_id }}"
+    _product_name: "{{ _wait_item.item.product }}"
+    _fired_at: "{{ __batch_fired_at }}"
+  loop: "{{ __batch_async.results }}"
+  loop_control:
+    loop_var: _wait_item
+    label: "{{ _wait_item.item.product }}"
+...

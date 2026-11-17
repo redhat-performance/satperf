@@ -9,10 +9,9 @@
       username: "{{ foreman_username | default(omit) }}"
       password: "{{ foreman_password | default(omit) }}"
       validate_certs: "{{ foreman_validate_certs | default(omit) }}"
-      # organization: "{{ foreman_organization }}"
 
   vars_files:
-    - includes/fam_common_vars.yaml
+    - ../includes/common_vars.yaml
 
   vars:
     _task_name: "{{ task_name | default('ContentViewVersionPromote') }}"
@@ -22,82 +21,5 @@
     _content_views: "{{ content_views | from_yaml if content_views is string else content_views }}"
 
   tasks:
-    - name: Get lifecycle environment IDs
-      theforeman.foreman.resource_info:
-        resource: lifecycle_environments
-        search: 'name = "{{ item }}"'
-      loop: "{{ _lces }}"
-      register: _lce_info
-      until: _lce_info is succeeded
-      retries: "{{ _api_call_retries }}"
-      delay: "{{ _api_call_delay }}"
-
-    - name: Build environment IDs list
-      ansible.builtin.set_fact:
-        _env_ids: >-
-          {{ _lce_info.results
-             | map(attribute='resources')
-             | map('first')
-             | map(attribute='id')
-             | list }}
-
-    - name: "Get CV info for {{ _task_name }}"
-      theforeman.foreman.resource_info:
-        resource: content_views
-        search: 'name = "{{ _cv.name | default(_cv.content_view) | default(_cv) }}"'
-      loop: "{{ _content_views }}"
-      loop_control:
-        loop_var: _cv
-        label: "{{ _cv.name | default(_cv.content_view) | default(_cv) }}"
-      register: _cv_infos
-      until: _cv_infos is succeeded
-      retries: "{{ _api_call_retries }}"
-      delay: "{{ _api_call_delay }}"
-
-    - name: "Get CV versions for {{ _task_name }}"
-      theforeman.foreman.resource_info:
-        resource: content_view_versions
-        params:
-          content_view_id: "{{ (item.resources | first).id }}"
-      loop: "{{ _cv_infos.results }}"
-      loop_control:
-        label: "{{ (item.resources | first).name }}"
-      register: _cv_versions
-      until: _cv_versions is succeeded
-      retries: "{{ _api_call_retries }}"
-      delay: "{{ _api_call_delay }}"
-
-    - name: "{{ _task_name }}"
-      ansible.builtin.uri:
-        url: "{{ _server_url }}/katello/api/content_view_versions/{{ (_cv_ver.resources | sort(attribute='id') | last).id }}/promote"
-        method: POST
-        user: "{{ _username }}"
-        password: "{{ _password }}"
-        force_basic_auth: true
-        validate_certs: "{{ _validate_certs }}"
-        body_format: json
-        body:
-          environment_ids: "{{ _env_ids }}"
-        status_code: [200, 202]
-        timeout: 60
-      loop: "{{ _cv_versions.results }}"
-      loop_control:
-        loop_var: _cv_ver
-        label: "{{ (_cv_ver.resources | first).content_view.name | default('CV') }}"
-      register: __fire_results
-      failed_when: >-
-        __fire_results is failed and
-        (_transient_errors | select('in', __fire_results.msg | default('')) | list | length == 0)
-
-    - name: "Wait for {{ _task_name }}"
-      ansible.builtin.include_tasks: ../includes/wait_or_retry_one.yaml
-      vars:
-        _foreman_task_id: "{{ _wait_item.json.id }}"
-        _url: "{{ _server_url }}/katello/api/content_view_versions/{{ (_wait_item._cv_ver.resources | sort(attribute='id') | last).id }}/promote"
-        _body:
-          environment_ids: "{{ _env_ids }}"
-      loop: "{{ __fire_results.results | selectattr('status', 'equalto', 202) | list }}"
-      loop_control:
-        loop_var: _wait_item
-        label: "{{ (_wait_item._cv_ver.resources | first).content_view.name | default('CV') }}"
+    - ansible.builtin.include_tasks: ../includes/promote_content_views.yaml
 ...

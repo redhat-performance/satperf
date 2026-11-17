@@ -12,7 +12,7 @@
       organization: "{{ foreman_organization }}"
 
   vars_files:
-    - includes/fam_common_vars.yaml
+    - ../includes/common_vars.yaml
 
   vars:
     # Operation mode: 'cancel' (default) or 'stop'
@@ -128,10 +128,10 @@
               ansible.builtin.uri:
                 url: "{{ _server_url }}/foreman_tasks/api/tasks/bulk_stop"
                 method: POST
-                user: "{{ foreman_username }}"
-                password: "{{ foreman_password }}"
+                user: "{{ _username }}"
+                password: "{{ _password }}"
                 force_basic_auth: true
-                validate_certs: "{{ foreman_validate_certs | default(false) }}"
+                validate_certs: "{{ _validate_certs }}"
                 body_format: json
                 body:
                   search: "{{ _task_ids_query }} and state = running and result = pending"
