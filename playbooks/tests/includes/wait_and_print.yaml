@@ -1,21 +1,29 @@
 ---
-# Shared wait-and-print logic for Katello API playbooks.
+# Universal wait-and-print for Foreman tasks.
 #
-# Waits for a Foreman task to complete, then prints its server-side
-# duration in a format parseable by e() + reg-average.py:
+# Waits for server-side work to complete, then prints timing in a format
+# parseable by e() + reg-average.py:
 #   "TaskName YYYY-MM-DD HH:MM:SS to YYYY-MM-DD HH:MM:SS taking NNN seconds"
 #
 # Required variables:
 #   _task_name       — label for the print line, matched by e()
 #
-# Caller must pass exactly one of:
-#   _async_jid       — Ansible async job ID (Pattern A: async module)
-#   _foreman_task_id — Foreman task UUID (Pattern B: API POST + poll)
+# Wait mode — caller passes exactly one of:
+#   _async_jid       — Ansible async job ID (waits for the module process to
+#                       exit, then polls the Foreman task by ID; the task ID
+#                       comes from the async result, or is recovered via
+#                       _task_search when the module exited without one)
+#   _foreman_task_id — Foreman task UUID (polls task API directly)
+#
+# Task data — for timing/result and async ID recovery, caller should pass:
+#   _task_search     — search query to find the task (used to recover the task
+#                       ID in async mode, and as a timing fallback)
+#   (or the task ID is extracted from the async result)
 #
 # Optional variables:
 #   _task_timeout    — timeout in seconds (default: 14400)
-#   _num_retries     — retry count (default: 999)
 #   _retry_delay     — seconds between retries (default: 60)
+#   _dynflow_settle  — seconds to wait before first poll (default: 0)
 #   _delegate_to     — delegate wait tasks to this host (for capsule sync)
 #   _no_print        — skip the print task (default: false)
 
@@ -23,21 +31,21 @@
   ansible.builtin.assert:
     that:
       - _async_jid is defined or _foreman_task_id is defined
-    msg: "wait_and_print requires either _async_jid or _foreman_task_id"
+    msg: "wait_and_print requires _async_jid or _foreman_task_id"
 
-- name: Define transient error patterns
+- name: "Compute {{ _task_name }} retry limits"
   ansible.builtin.set_fact:
-    transient_errors: "{{ transient_errors | default(_default_transient_errors) }}"
-  vars:
-    _default_transient_errors:
-      - 'Remote end closed connection without response'
-      - 'Internal Server Error'
-      - 'Connection timeout'
-      - 'Read timed out'
-      - 'Service Unavailable'
-      - 'Bad Gateway'
+    _max_retries: >-
+      {{ (_task_timeout | default(14400) | int /
+          _retry_delay | default(60) | int) | int }}
 
-# Pattern A: async module
+# Settle time for Dynflow to create task records
+- name: "Wait for Dynflow to schedule {{ _task_name }} tasks"
+  ansible.builtin.pause:
+    seconds: "{{ _dynflow_settle }}"
+  when: _dynflow_settle | default(0) | int > 0
+
+# --- Mode A: async module — wait for process exit, extract task ID ---
 - when: _async_jid is defined
   block:
     - name: "Wait4{{ _task_name }}"
@@ -46,15 +54,53 @@
       delegate_to: "{{ _delegate_to | default(omit) }}"
       register: __wait_async_jid
       until: >-
-        __wait_async_jid is finished and
-        (__wait_async_jid is succeeded or
-         (transient_errors | select('in', __wait_async_jid.msg | default('')) | list | length == 0))
-      retries: "{{ _num_retries | default(999) }}"
+        __wait_async_jid is finished or __wait_async_jid is failed
+      retries: "{{ _max_retries }}"
       delay: "{{ _retry_delay | default(60) }}"
-      failed_when: >-
-        __wait_async_jid is finished and __wait_async_jid is failed
+      failed_when: false
 
-# Pattern B: poll Foreman task API
+    - name: "Extract {{ _task_name }} Foreman task ID"
+      ansible.builtin.set_fact:
+        _foreman_task_id: "{{ __wait_async_jid.task.id }}"
+      when: __wait_async_jid.task is defined and __wait_async_jid.task.id is defined
+
+    # The async module can exit without returning a task ID (e.g. it failed
+    # because the task paused). Recover the ID from the task search so we
+    # always wait by ID (paused-aware) rather than counting running tasks.
+    - name: "Recover {{ _task_name }} Foreman task ID by search"
+      when:
+        - _foreman_task_id is not defined
+        - _task_search is defined
+      block:
+        - name: "Query {{ _task_name }} task ID by search"
+          ansible.builtin.uri:
+            url: >-
+              {{ _tasks_api }}?search={{ _task_search | urlencode
+              }}&order=started_at+DESC&per_page=1
+            method: GET
+            user: "{{ _username }}"
+            password: "{{ _password }}"
+            force_basic_auth: true
+            validate_certs: "{{ _validate_certs }}"
+            timeout: 30
+          delegate_to: "{{ _delegate_to | default(omit) }}"
+          register: __recover_task
+          until: >-
+            __recover_task is succeeded and
+            __recover_task.json is defined and
+            __recover_task.json.subtotal | default(0) > 0
+          retries: 30
+          delay: 2
+          failed_when: false
+
+        - name: "Set recovered {{ _task_name }} Foreman task ID"
+          ansible.builtin.set_fact:
+            _foreman_task_id: "{{ (__recover_task.json.results | first).id }}"
+          when:
+            - __recover_task.json is defined
+            - __recover_task.json.results | default([]) | length > 0
+
+# --- Mode B: poll Foreman task by ID until stopped/paused ---
 - when: _foreman_task_id is defined
   block:
     - name: "Wait4{{ _task_name }}"
@@ -65,39 +111,101 @@
         password: "{{ _password }}"
         force_basic_auth: true
         validate_certs: "{{ _validate_certs }}"
+        timeout: 30
       delegate_to: "{{ _delegate_to | default(omit) }}"
-      register: __wait_foreman_task_id
+      register: __wait_foreman_task
       until: >-
-        __wait_foreman_task_id is succeeded and
-        __wait_foreman_task_id.json is defined and
-        __wait_foreman_task_id.json.state in ['paused', 'stopped']
-      retries: "{{ (_task_timeout | default(14400) | int / _retry_delay | default(60) | int) | int }}"
+        __wait_foreman_task is succeeded and
+        __wait_foreman_task.json is defined and
+        __wait_foreman_task.json.state in ['paused', 'stopped']
+      retries: "{{ _max_retries }}"
       delay: "{{ _retry_delay | default(60) }}"
-      failed_when: >-
-        __wait_foreman_task_id is succeeded and
-        __wait_foreman_task_id.json is defined and
-        __wait_foreman_task_id.json.state in ['paused', 'stopped'] and
-        __wait_foreman_task_id.json.result != 'success'
 
-- name: "Unify {{ _task_name }} result"
+# --- Resolve task data for timing ---
+- name: "Resolve {{ _task_name }} task data"
   ansible.builtin.set_fact:
-    __wait_result: "{{ __wait_async_jid if (__wait_async_jid is defined and __wait_async_jid is not skipped) else __wait_foreman_task_id }}"
-  when: (__wait_async_jid is defined and __wait_async_jid is not skipped) or
-        (__wait_foreman_task_id is defined and __wait_foreman_task_id is not skipped)
+    __wait_task: >-
+      {{ __wait_foreman_task.json
+         if (__wait_foreman_task is defined and __wait_foreman_task is not skipped
+             and __wait_foreman_task.json is defined)
+         else {} }}
 
+# Fallback: query by task search when we don't have complete data from Mode B
+- when:
+    - __wait_task.started_at is not defined or __wait_task.ended_at is none
+    - _task_search is defined
+  block:
+    - name: "Query {{ _task_name }} task by ID"
+      ansible.builtin.uri:
+        url: "{{ _tasks_api }}/{{ __wait_task.id }}"
+        method: GET
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        timeout: 30
+      register: __query_task_result
+      when: __wait_task.id is defined
+
+    - name: "Query {{ _task_name }} task by search"
+      ansible.builtin.uri:
+        url: "{{ _tasks_api }}?{{ _qs }}"
+        method: GET
+        user: "{{ _username }}"
+        password: "{{ _password }}"
+        force_basic_auth: true
+        validate_certs: "{{ _validate_certs }}"
+        timeout: 30
+      vars:
+        _qs: >-
+          search={{ _task_search | urlencode
+          }}&order=started_at+DESC&per_page=1
+      register: __query_task_result
+      when: __wait_task.id is not defined
+
+    - name: "Use queried task data"
+      ansible.builtin.set_fact:
+        __wait_task: >-
+          {{ __query_task_result.json
+             if __query_task_result.json.id is defined
+             else (__query_task_result.json.results | first) }}
+      when:
+        - __query_task_result is succeeded
+        - __query_task_result is not skipped
+        - >-
+          __query_task_result.json.id is defined or
+          (__query_task_result.json.results
+           | default([]) | length > 0)
+
+# --- Print timing ---
 - name: "Print {{ _task_name }} result"
   ansible.builtin.debug:
     msg: >-
       {{ _task_name }}
-      {{ _foreman_task.started_at | regex_replace(' UTC$', '') }}
+      {{ __wait_task.started_at | regex_replace(' UTC$', '') }}
       to
-      {{ _foreman_task.ended_at | regex_replace(' UTC$', '') }}
+      {{ __wait_task.ended_at | regex_replace(' UTC$', '') }}
       taking
-      {{ _foreman_task.duration }}
+      {{ __wait_task.duration }}
       seconds
-  vars:
-    _foreman_task: "{{ __wait_result.json | default(__wait_result.task | default(__wait_result.entity | default({}))) }}"
   when:
     - not (_no_print | default(false))
-    - __wait_result is defined and __wait_result is not skipped and __wait_result is succeeded
+    - __wait_task.started_at is defined
+    - __wait_task.ended_at is not none
+
+# --- Fail if no task data was resolved ---
+- name: "Fail if {{ _task_name }} was not resolved"
+  ansible.builtin.fail:
+    msg: "{{ _task_name }}: no task data resolved — task may not have been scheduled"
+  when:
+    - __wait_task == {} or __wait_task.result is not defined
+
+# --- Fail if task did not succeed ---
+- name: "Fail if {{ _task_name }} did not succeed"
+  ansible.builtin.fail:
+    msg: >-
+      {{ _task_name }} failed:
+      {{ __wait_task.humanized.errors | default(__wait_async_jid.msg | default('unknown error')) }}
+  when: >-
+    __wait_task.result | default('success') != 'success'
 ...
