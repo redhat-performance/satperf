@@ -21,6 +21,14 @@ logs-*/
 
 run-*/
 
+# local run artifacts
+/iu-*/
+/logs/
+/tmp/
+/.ansible/
+playbooks/tests/execution_logs/
+*.orig
+
 lextab.py
 yacctab.py
 
