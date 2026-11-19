@@ -1,0 +1,467 @@
+---
+# ---------------------------------------------------------------------------
+# Complex Content View publish performance test
+# ---------------------------------------------------------------------------
+# Builds a deliberately expensive RHEL8 Content View (BaseOS + AppStream +
+# Supplementary + Satellite Client) frozen at a point in time, then measures
+# how long `content-view publish` takes with dependency solving ON vs OFF.
+#
+# The CV reproduces this configuration (JIRA perf & scale test case):
+#   * Solve Dependencies        = Yes
+#   * exclude_puppet  : RPM, exclude            -> puppet, puppet-agent
+#   * include_base    : RPM, include            -> all RPMs with no errata
+#   * include_modules : Module Stream, include  -> all module streams, no errata
+#   * include_errata  : Erratum by date, include-> all repos, updated,
+#                                                   end_date = freeze_date
+#
+# Headline metric: publish task wall-clock, deps-ON minus deps-OFF, which
+# isolates the cost of the dependency solver over the filtered content set.
+#
+# PRECONDITION: the four repositories below must already be enabled AND synced
+# in the target organization. Syncing RHEL8 content is out of scope here.
+#
+# Run (from repo root). NOTE: ansible's `-e key=value` form splits on spaces,
+# so any value containing a space (org/location names, repo names) MUST be
+# passed as JSON extra-vars, e.g.:
+#   ansible-playbook -i conf/hosts.ini playbooks/tests/cv-publish-complex.yaml \
+#       -e sat_user=admin -e sat_pass=secret \
+#       -e '{"sat_org":"Default Organization","sat_location":"Default Location"}'
+# Override the repo set the same way, e.g.:
+#       -e '{"cv_repos":[{"product":"My Product","name":"My Repo"}]}'
+# ---------------------------------------------------------------------------
+- name: "Measure complex (frozen, dep-solved) Content View publish performance"
+  hosts: satellite6
+  gather_facts: false
+  vars:
+    cv_name: "cv-complex-rhel8-frozen"
+    # Errata freeze point — "get everything frozen at" this date.
+    freeze_date: "2020-10-01"
+    # Timed publishes per mode (after one untimed warm-up publish per mode).
+    iterations: 3
+    # Dependency-solving modes to compare, in run order. OFF first so the
+    # solver cost shows up as a clean ON-minus-OFF delta on a warmed cache.
+    solve_modes:
+      - "false"
+      - "true"
+    results_dir: "/root/cv-publish-perftest"
+    # Remove the versions this test publishes when finished (keeps the CV lean
+    # across repeated runs). Set to false to inspect published versions.
+    cleanup_versions: true
+    # The four RHEL8 repositories that make up the CV. Override product/name to
+    # match your organization's actual repository labels if they differ.
+    cv_repos:
+      - product: "Red Hat Enterprise Linux for x86_64"
+        name: "Red Hat Enterprise Linux 8 for x86_64 - BaseOS RPMs 8"
+      - product: "Red Hat Enterprise Linux for x86_64"
+        name: "Red Hat Enterprise Linux 8 for x86_64 - AppStream RPMs 8"
+      - product: "Red Hat Enterprise Linux for x86_64"
+        name: "Red Hat Enterprise Linux 8 for x86_64 - Supplementary RPMs 8"
+      - product: "Red Hat Enterprise Linux for x86_64"
+        name: "Red Hat Satellite Client 6 for RHEL 8 x86_64 (RPMs)"
+
+  tasks:
+    - name: "Display test plan"
+      ansible.builtin.debug:
+        msg: >-
+          Complex CV publish test: cv={{ cv_name }} org={{ sat_org }}
+          repos={{ cv_repos | length }} freeze_date={{ freeze_date }}
+          modes(solve_deps)={{ solve_modes }} iterations={{ iterations }} (+1 warm-up/mode)
+
+    - name: "Create results directory"
+      ansible.builtin.file:
+        path: "{{ results_dir }}"
+        state: directory
+        mode: "0755"
+
+    # -------------------------------------------------------------------
+    # Precondition: all four repositories must exist (and be synced).
+    # -------------------------------------------------------------------
+    - name: "Verify each repository exists in the organization"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          repository info
+          --name "{{ item.name }}"
+          --product "{{ item.product }}"
+          --organization "{{ sat_org }}" >/dev/null 2>&1
+          && echo FOUND || echo MISSING
+      register: repo_checks
+      changed_when: false
+      no_log: true
+      loop: "{{ cv_repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: "Fail early if any repository is missing"
+      ansible.builtin.fail:
+        msg: >-
+          Missing repositories (enable + sync them first):
+          {{ repo_checks.results
+             | selectattr('stdout', 'search', 'MISSING')
+             | map(attribute='item')
+             | map(attribute='name') | list }}
+      when: >-
+        repo_checks.results | selectattr('stdout', 'search', 'MISSING') | list | length > 0
+
+    # -------------------------------------------------------------------
+    # Idempotent setup: CV, repositories, filters, filter rules.
+    # Done with hammer so the whole test is self-contained on the box.
+    # -------------------------------------------------------------------
+    - name: "Create Content View (if absent)"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          content-view info --name "{{ cv_name }}" --organization "{{ sat_org }}" >/dev/null 2>&1
+          || hammer -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          content-view create --name "{{ cv_name }}" --organization "{{ sat_org }}"
+      register: cv_create
+      changed_when: "'Content view created' in cv_create.stdout"
+      no_log: true
+
+    - name: "Add repositories to the Content View"
+      ansible.builtin.shell:
+        cmd: >-
+          hammer -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          content-view add-repository
+          --name "{{ cv_name }}"
+          --repository "{{ item.name }}"
+          --product "{{ item.product }}"
+          --organization "{{ sat_org }}" 2>&1 || true
+      register: add_repo
+      changed_when: "'added to content view' in add_repo.stdout"
+      no_log: true
+      loop: "{{ cv_repos }}"
+      loop_control:
+        label: "{{ item.name }}"
+
+    - name: "Deploy filter-setup helper"
+      ansible.builtin.copy:
+        dest: "{{ results_dir }}/setup_filters.sh"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          # Create the four filters + rules idempotently so the test can be
+          # re-run against an existing CV (cleanup removes versions, not
+          # filters). Creating something that already exists is treated as a
+          # skip; only unexpected errors set FAIL and fail the task.
+          H() { hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" "$@"; }
+          CV="{{ cv_name }}"; ORG="{{ sat_org }}"
+          FAIL=0
+
+          mkfilter() {  # name type inclusion [extra flags...]
+            local name="$1" type="$2" incl="$3"; shift 3
+            if H content-view filter info --name "$name" --content-view "$CV" \
+                 --organization "$ORG" >/dev/null 2>&1; then
+              echo "[skip] filter $name exists"; return 0
+            fi
+            if H content-view filter create --name "$name" --content-view "$CV" \
+                 --organization "$ORG" --type "$type" --inclusion "$incl" "$@" \
+                 >/dev/null 2>&1; then
+              echo "[ok]   filter $name created"
+            else
+              echo "[FAIL] filter $name could not be created"; FAIL=1
+            fi
+          }
+
+          mkrule() {   # filter [flags...]
+            local filter="$1"; shift
+            local out
+            out=$(H content-view filter rule create --content-view-filter "$filter" \
+              --content-view "$CV" --organization "$ORG" "$@" 2>&1)
+            if echo "$out" | grep -qiE 'created'; then
+              echo "[ok]   rule on $filter"
+            elif echo "$out" | grep -qiE 'already|taken|exists|existing rules|may not add'; then
+              echo "[skip] rule on $filter exists"
+            else
+              echo "[FAIL] rule on $filter: $out"; FAIL=1
+            fi
+          }
+
+          # exclude_puppet: RPM exclude puppet + puppet-agent
+          mkfilter exclude_puppet rpm false
+          mkrule exclude_puppet --name puppet
+          mkrule exclude_puppet --name puppet-agent
+
+          # include_base: RPM include, all RPMs with no errata
+          mkfilter include_base rpm true --original-packages true
+
+          # include_modules: Module Streams include, all streams with no errata
+          # (--original-module-streams requires Satellite 6.11+ / FAM 3.10+)
+          mkfilter include_modules modulemd true --original-module-streams true
+
+          # include_errata: Erratum by date, include, all repos, updated,
+          # end date = freeze date
+          mkfilter include_errata erratum true
+          mkrule include_errata --types bugfix,enhancement,security \
+            --date-type updated --end-date "{{ freeze_date }}"
+
+          exit $FAIL
+      no_log: true
+
+    - name: "Create filters and rules"
+      ansible.builtin.shell:
+        cmd: "bash {{ results_dir }}/setup_filters.sh"
+      register: setup_filters
+      changed_when: "'created' in setup_filters.stdout"
+
+    - name: "Show filter setup output"
+      ansible.builtin.debug:
+        var: setup_filters.stdout_lines
+
+    # -------------------------------------------------------------------
+    # Timed publish suite + resource sampling.
+    # -------------------------------------------------------------------
+    - name: "Deploy metrics collector"
+      ansible.builtin.copy:
+        dest: "{{ results_dir }}/collect_metrics.sh"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          OUTFILE=$1
+          # Run a psql query against the foreman DB. Works on both package
+          # installs (local postgres user) and containerized/foremanctl
+          # deployments (postgres runs in a podman container). Prints 0 if
+          # neither path is available.
+          pgsql() {
+            su - postgres -c "psql -t -A foreman -c \"$1\"" 2>/dev/null && return 0
+            local pgc
+            pgc=$(podman ps --filter name=postgres -q 2>/dev/null | head -1)
+            if [ -n "${pgc}" ]; then
+              podman exec "${pgc}" psql -U postgres -t -A -d foreman -c "$1" 2>/dev/null && return 0
+            fi
+            echo 0
+          }
+          echo "timestamp,cpu_user,cpu_system,cpu_idle,mem_used_mb,mem_total_mb,pg_active_conns,pg_waiting" > "${OUTFILE}"
+          while true; do
+            TS=$(date +%s)
+            CPU=$(LANG=C top -bn1 | grep "Cpu(s)" | awk '{print $2","$4","$8}')
+            MEM_USED=$(free -m | awk '/Mem:/{print $3}')
+            MEM_TOTAL=$(free -m | awk '/Mem:/{print $2}')
+            PG_ACTIVE=$(pgsql "SELECT count(*) FROM pg_stat_activity WHERE state = 'active';" | tr -d '[:space:]')
+            PG_WAITING=$(pgsql "SELECT count(*) FROM pg_stat_activity WHERE wait_event IS NOT NULL AND state = 'active';" | tr -d '[:space:]')
+            echo "${TS},${CPU},${MEM_USED},${MEM_TOTAL},${PG_ACTIVE:-0},${PG_WAITING:-0}" >> "${OUTFILE}"
+            sleep 5
+          done
+      no_log: true
+
+    - name: "Deploy publish-suite runner"
+      ansible.builtin.copy:
+        dest: "{{ results_dir }}/run_publish_suite.sh"
+        mode: "0755"
+        content: |
+          #!/bin/bash
+          # Runs: for each solve_dependencies mode -> toggle CV -> 1 untimed
+          # warm-up publish -> N timed synchronous publishes, sampling metrics.
+          RUN_DIR=$1
+          H() { hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" "$@"; }
+          CV="{{ cv_name }}"; ORG="{{ sat_org }}"
+          ITER={{ iterations }}
+          MODES="{{ solve_modes | join(' ') }}"
+
+          RESULTS_CSV="${RUN_DIR}/results.csv"
+          echo "mode,iteration,start_ms,end_ms,duration_sec,exit_code" > "${RESULTS_CSV}"
+
+          publish_once() {  # -> prints duration_sec and rc via globals
+            local start end
+            start=$(date +%s%3N)
+            H content-view publish --name "$CV" --organization "$ORG" >/dev/null 2>&1
+            RC=$?
+            end=$(date +%s%3N)
+            START_MS=$start; END_MS=$end
+            DURATION=$(awk "BEGIN{printf \"%.3f\", (${end} - ${start}) / 1000}")
+          }
+
+          for MODE in ${MODES}; do
+            echo "[$(date -R)] mode solve_dependencies=${MODE}: configuring"
+            H content-view update --name "$CV" --organization "$ORG" --solve-dependencies "${MODE}" >/dev/null 2>&1
+
+            echo "[$(date -R)] mode ${MODE}: warm-up publish (untimed)"
+            publish_once
+            echo "[$(date -R)] mode ${MODE}: warm-up done in ${DURATION}s (rc=${RC})"
+
+            METRICS_CSV="${RUN_DIR}/metrics_deps_${MODE}.csv"
+            bash {{ results_dir }}/collect_metrics.sh "${METRICS_CSV}" &
+            METRICS_PID=$!
+
+            for i in $(seq 1 ${ITER}); do
+              echo "[$(date -R)] mode ${MODE}: timed publish ${i}/${ITER}"
+              publish_once
+              echo "${MODE},${i},${START_MS},${END_MS},${DURATION},${RC}" >> "${RESULTS_CSV}"
+              echo "[$(date -R)] mode ${MODE}: publish ${i} = ${DURATION}s (rc=${RC})"
+            done
+
+            kill ${METRICS_PID} 2>/dev/null
+            wait ${METRICS_PID} 2>/dev/null
+          done
+          echo "[$(date -R)] publish suite finished"
+      no_log: true
+
+    - name: "Run complex CV publish suite"
+      ansible.builtin.shell:
+        cmd: |
+          RUN_DIR="{{ results_dir }}/run_$(date +%Y%m%d_%H%M%S)"
+          mkdir -p "${RUN_DIR}"
+          echo "${RUN_DIR}" > "{{ results_dir }}/.last_run"
+          bash {{ results_dir }}/run_publish_suite.sh "${RUN_DIR}"
+      environment:
+        TZ: UTC
+      timeout: 28800
+      register: publish_suite
+
+    - name: "Show publish suite log"
+      ansible.builtin.debug:
+        var: publish_suite.stdout_lines
+
+    # -------------------------------------------------------------------
+    # Characterize the complex (deps-ON) published version.
+    # -------------------------------------------------------------------
+    # hammer's `content-view version info` does not report content counts, so
+    # pull them from the Katello API (rpm_count / erratum_count /
+    # module_stream_count). Must use the FQDN -- localhost returns 403.
+    - name: "Capture latest published version content counts"
+      ansible.builtin.shell:
+        cmd: >-
+          vid=$(hammer --csv -u "{{ sat_user }}" -p "{{ sat_pass }}"
+          content-view version list --content-view "{{ cv_name }}"
+          --organization "{{ sat_org }}" --order 'version DESC' --per-page 1 2>/dev/null
+          | tail -n +2 | head -1 | cut -d',' -f1);
+          [ -n "${vid}" ] && curl -sk -u "{{ sat_user }}:{{ sat_pass }}"
+          "https://$(hostname -f)/katello/api/content_view_versions/${vid}" 2>/dev/null
+          | python3 -I -c 'import sys, json;
+          d = json.load(sys.stdin);
+          print("  RPMs:           %s" % d.get("rpm_count"));
+          print("  Errata:         %s" % d.get("erratum_count"));
+          print("  Module streams: %s" % d.get("module_stream_count"));
+          print("  Package groups: %s" % d.get("package_group_count"))'
+          || true
+      register: version_counts
+      changed_when: false
+      no_log: true
+
+    - name: "Detect Satellite/Foreman version (best effort)"
+      ansible.builtin.shell:
+        cmd: >-
+          curl -sk -u "{{ sat_user }}:{{ sat_pass }}" "https://$(hostname -f)/api/status" 2>/dev/null
+          | python3 -I -c 'import sys, json; print(json.load(sys.stdin).get("version", "unknown"))'
+          2>/dev/null || echo unknown
+      register: sat_version_info
+      changed_when: false
+      failed_when: false
+      no_log: true
+
+    # -------------------------------------------------------------------
+    # Report.
+    # -------------------------------------------------------------------
+    - name: "Generate final report"
+      ansible.builtin.shell:
+        cmd: |
+          RUN_DIR=$(cat "{{ results_dir }}/.last_run")
+          CSV="${RUN_DIR}/results.csv"
+          REPORT="${RUN_DIR}/final_report.txt"
+
+          stats() {  # mode -> "avg median p90 max fails"
+            local mode="$1"
+            awk -F',' -v m="$mode" '$1==m && $6==0{print $5}' "${CSV}" | sort -n > /tmp/_d
+            local n; n=$(grep -c . /tmp/_d 2>/dev/null || echo 0)
+            local fails; fails=$(awk -F',' -v m="$mode" '$1==m && $6!=0' "${CSV}" | grep -c . 2>/dev/null || echo 0)
+            if [ "${n}" -gt 0 ]; then
+              AVG=$(awk '{s+=$1} END{printf "%.2f", s/NR}' /tmp/_d)
+              MED=$(awk '{a[NR]=$1} END{if(NR%2==1) print a[int(NR/2)+1]; else printf "%.2f",(a[NR/2]+a[NR/2+1])/2}' /tmp/_d)
+              P90=$(awk '{a[NR]=$1} END{i=int(NR*0.9)+1; if(i>NR)i=NR; print a[i]}' /tmp/_d)
+              MAX=$(tail -1 /tmp/_d)
+            else
+              AVG="N/A"; MED="N/A"; P90="N/A"; MAX="N/A"
+            fi
+            echo "${AVG} ${MED} ${P90} ${MAX} ${fails}"
+          }
+
+          peak() {  # metrics_file column -> max
+            local f="$1" col="$2"
+            [ -f "$f" ] || { echo "N/A"; return; }
+            tail -n +2 "$f" | awk -F',' -v c="$col" 'NR==1||$c>m{m=$c} END{print m+0}'
+          }
+
+          {
+            echo "COMPLEX CONTENT VIEW PUBLISH PERFORMANCE TEST"
+            echo "============================================="
+            echo "Satellite:   $(hostname -f)"
+            echo "Version:     {{ sat_version_info.stdout | default('unknown') }}"
+            echo "Org:         {{ sat_org }}"
+            echo "CV:          {{ cv_name }}"
+            echo "Repos:       {{ cv_repos | length }} ({{ cv_repos | map(attribute='name') | join(', ') }})"
+            echo "Freeze date: {{ freeze_date }}  (errata updated_on <=)"
+            echo "Iterations:  {{ iterations }} timed / mode (+1 warm-up)"
+            echo "Date:        $(date -u -Iseconds)"
+            echo
+            printf "%-16s %-9s %-9s %-9s %-9s %-7s\n" "solve_deps" "avg(s)" "med(s)" "p90(s)" "max(s)" "fails"
+            echo "-------------------------------------------------------------------"
+            for MODE in {{ solve_modes | join(' ') }}; do
+              set -- $(stats "${MODE}"); A=$1; M=$2; P=$3; X=$4; F=$5
+              printf "%-16s %-9s %-9s %-9s %-9s %-7s\n" "${MODE}" "${A}" "${M}" "${P}" "${X}" "${F}"
+            done
+            echo
+
+            # Headline: ON minus OFF (median) if both present.
+            OFF_MED=$(stats false | awk '{print $2}')
+            ON_MED=$(stats true  | awk '{print $2}')
+            if [ "${OFF_MED}" != "N/A" ] && [ "${ON_MED}" != "N/A" ]; then
+              DELTA=$(awk "BEGIN{printf \"%.2f\", ${ON_MED}-${OFF_MED}}")
+              RATIO=$(awk "BEGIN{printf \"%.2fx\", (${OFF_MED}>0 ? ${ON_MED}/${OFF_MED} : 0)}")
+              echo "Dependency-solver cost (median): +${DELTA}s  (${RATIO} vs deps-off)"
+              echo
+            fi
+
+            echo "Resource peaks during publish (per mode):"
+            for MODE in {{ solve_modes | join(' ') }}; do
+              MF="${RUN_DIR}/metrics_deps_${MODE}.csv"
+              echo "  deps=${MODE}: mem_used_peak=$(peak "$MF" 5)MB  pg_active_peak=$(peak "$MF" 7)  pg_waiting_peak=$(peak "$MF" 8)"
+            done
+            echo
+            echo "Complex (latest) version content:"
+          } > "${REPORT}"
+
+          # Append the captured content counts verbatim.
+          cat >> "${REPORT}" <<'EOF'
+          {{ version_counts.stdout | default('  (counts unavailable)') }}
+          EOF
+
+          cat "${REPORT}"
+      register: final_report
+      changed_when: false
+
+    - name: "Show final report"
+      ansible.builtin.debug:
+        msg: "{{ final_report.stdout_lines }}"
+
+    # -------------------------------------------------------------------
+    # Cleanup.
+    # -------------------------------------------------------------------
+    - name: "Remove published versions created by this test"
+      ansible.builtin.shell:
+        cmd: |
+          H() { hammer -u "{{ sat_user }}" -p "{{ sat_pass }}" "$@"; }
+          # This is a dedicated test CV that is never promoted, so every version
+          # it has was published by this test. Attempt to delete each by ID;
+          # Katello refuses any version still in a lifecycle environment, which
+          # we swallow -- so this is safe even if something was promoted.
+          H --csv content-view version list --content-view "{{ cv_name }}" \
+            --organization "{{ sat_org }}" --per-page 1000 2>/dev/null \
+            | tail -n +2 | cut -d',' -f1 \
+            | while read -r vid; do
+                [ -n "${vid}" ] && H content-view version delete --id "${vid}" \
+                  --organization "{{ sat_org }}" >/dev/null 2>&1
+              done
+          echo "version cleanup done"
+      when: cleanup_versions | bool
+      changed_when: true
+      no_log: true
+
+    - name: "Remove helper scripts containing credentials"
+      ansible.builtin.file:
+        path: "{{ results_dir }}/{{ item }}"
+        state: absent
+      loop:
+        - setup_filters.sh
+        - collect_metrics.sh
+        - run_publish_suite.sh
+...
