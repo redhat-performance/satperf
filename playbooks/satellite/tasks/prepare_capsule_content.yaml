@@ -56,12 +56,21 @@
         organization: "{{ _organization }}"
         name: "{{ capsule_content_ak | default('AK_Capsule') }}"
         unlimited_hosts: true
-        content_view_environments:
-          - "Library"
+        content_view_environments: "{{ ['Library'] if _ak_supports_cve | bool else omit }}"
+        lifecycle_environment: "{{ omit if _ak_supports_cve | bool else 'Library' }}"
+        content_view: "{{ omit if _ak_supports_cve | bool else _default_cv }}"
         content_overrides: >-
           {{ [{'label': [_capsule_org_label, _capsule_product_label, _capsule_repo_label] | join('_'),
                'override': 'enabled'}]
              if _capsule_additional_repos | length > 0 else [] }}
+      vars:
+        # Katello 4.15 (Satellite 6.17) added content_view_environments; older
+        # servers drop it silently and leave the key with no environment, which
+        # Candlepin then rejects at registration.
+        _ak_supports_cve: >-
+          {{ (sat_version | default('stream')) in ['stream', 'foremanctl'] or
+             (sat_version | default('stream')) is version('6.17.0', '>=') }}
+        _default_cv: "Default Organization View"
       register: _capsule_ak_result
       until: _capsule_ak_result is not failed
       retries: "{{ _api_call_retries }}"
