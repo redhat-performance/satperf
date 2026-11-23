@@ -37,7 +37,9 @@
              {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log
 
       num_fails="$(grep -cw 'failed=1' {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log)"
-      while (( num_fails != 0 )); do
+      retries=0
+      while (( num_fails != 0 && retries < {{ num_max_retries }} )); do
+          retries=$(( retries + 1 ))
           iter_log="{{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log.$num_fails"
           cp -p {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log $iter_log
 
@@ -57,8 +59,15 @@
 
           num_fails="$(grep -cw 'failed=1' {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log)"
       done
+
+      if (( num_fails != 0 )); then
+          echo "Retry limit ({{ num_max_retries }}) reached, $num_fails host(s) still failing:"
+          awk '/[[:blank:]]+failed=1[[:blank:]]+/ {print $1}' \
+              {{ _concurrent_task_clients_yaml_cmd_base }}_registration_retries.log
+          exit 1
+      fi
   register: _concurrent_task_registration_retries_cmd
-  failed_when: _concurrent_task_registration_retries_cmd.rc == 2
+  failed_when: _concurrent_task_registration_retries_cmd.rc != 0
   changed_when: false
 
 - name: "{{ task_name }} - Fetch insights-client log"

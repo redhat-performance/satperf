@@ -11,6 +11,7 @@
 #   retry_failed:    bool - retry failed hosts, currently for registration only (default false)
 #   enable_iop:      bool - passed to host-registration_prepare.yaml (default false)
 #   num_retry_forks: ansible forks for prepare/retry steps (default 3)
+#   num_max_retries: max retry rounds for failed registrations (default 5)
 #   profile:         bool - enable BPF profiling (default false)
 #   profile_base_dir: directory for BPF profiles (default /root/profile)
 #   execution_logs:  directory for fetched logs (default execution_logs)
