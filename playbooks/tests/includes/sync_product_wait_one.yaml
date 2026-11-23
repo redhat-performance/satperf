@@ -42,6 +42,7 @@
       register: __failed_sync_tasks_by_search
       when: _foreman_task_id is not defined
 
+    # reset unconditionally: facts persist across loop iterations
     - name: Extract failed repository IDs
       ansible.builtin.set_fact:
         _failed_repo_ids: >-
@@ -51,9 +52,6 @@
              | map(attribute='repository')
              | map(attribute='id')
              | list }}
-      when: >-
-        ((__failed_sync_tasks_by_parent.resources | default([]))
-         + (__failed_sync_tasks_by_search.resources | default([]))) | length > 0
 
     - name: "Retry failed repos for {{ _product_name }} ({{ _failed_repo_ids | default([]) | length }})"
       ansible.builtin.include_tasks: fire_and_wait_one.yaml

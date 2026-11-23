@@ -38,7 +38,7 @@
   ansible.builtin.set_fact:
     __sync_start_epoch: "{{ now(utc=true).strftime('%s') | int }}"
     __sync_started_at: "{{ now(utc=true).strftime('%Y-%m-%d %H:%M:%S') }}"
-  when: __max_concurrent > 0
+  when: __max_concurrent | int > 0
 
 - name: "Build per-repository {{ _task_name }} units"
   ansible.builtin.set_fact:
@@ -46,18 +46,18 @@
   loop: "{{ _products | selectattr('repositories', 'defined') | list | subelements('repositories') }}"
   loop_control:
     label: "{{ item.0.name }}/{{ item.1.name }}"
-  when: __max_concurrent > 0
+  when: __max_concurrent | int > 0
 
 - name: "Build product-level {{ _task_name }} units"
   ansible.builtin.set_fact:
     __sync_units: "{{ __sync_units | default([]) + [{'product': item.name | default(item)}] }}"
-  loop: "{{ _products if __max_concurrent == 0 else (_products | rejectattr('repositories', 'defined') | list) }}"
+  loop: "{{ _products if __max_concurrent | int == 0 else (_products | rejectattr('repositories', 'defined') | list) }}"
   loop_control:
     label: "{{ item.name | default(item) }}"
 
 - name: "Fire and wait for {{ _task_name }}"
   ansible.builtin.include_tasks: sync_products_batch.yaml
-  loop: "{{ [__sync_units] if __max_concurrent == 0 else (__sync_units | batch(__max_concurrent) | list) }}"
+  loop: "{{ [__sync_units] if __max_concurrent | int == 0 else (__sync_units | batch(__max_concurrent | int) | list) }}"
   loop_control:
     loop_var: _batch
     label: "{{ _batch | length }} sync(s)"
@@ -71,5 +71,5 @@
       {{ _task_name }} {{ __sync_started_at }} to
       {{ now(utc=true).strftime('%Y-%m-%d %H:%M:%S') }} taking
       {{ now(utc=true).strftime('%s') | int - __sync_start_epoch }} seconds
-  when: __max_concurrent > 0
+  when: __max_concurrent | int > 0
 ...
